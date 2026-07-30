@@ -1,60 +1,60 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const crypto = require('crypto');
 const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] }
+  cors: { origin: '*', methods: ['GET', 'POST'] },
+  pingTimeout: 30000,
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ── Game constants ──────────────────────────────────────────────
+// ── Constants ───────────────────────────────────────────────────
 const SUITS = ['♠', '♥', '♦', '♣'];
 const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 const RV = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
 const SO = {'♠':0,'♥':1,'♦':2,'♣':3};
+const TOTAL_ROUNDS = 16;
 
-// ── In-memory rooms ─────────────────────────────────────────────
-const rooms = {}; // roomCode -> gameState
+const rooms = {};
 
+// ── Helpers ─────────────────────────────────────────────────────
 function makeCode() {
-  return Math.random().toString(36).substring(2, 7).toUpperCase();
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusing chars
+  let out = '';
+  for (let i = 0; i < 5; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return rooms[out] ? makeCode() : out;
 }
+function makeToken() { return crypto.randomBytes(16).toString('hex'); }
 
 function makeDeck() {
   const d = [];
   for (const s of SUITS) for (const r of RANKS) d.push({ suit: s, rank: r });
   return d;
 }
-
 function shuffle(a) {
   const arr = [...a];
   for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = crypto.randomInt(i + 1);
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
 }
-
 function cardVal(c) {
   if (c.suit === '♥') return -RV[c.rank];
   if (c.suit === '♠' && c.rank === 'Q') return -26;
   return 0;
 }
-
 function sortH(h) {
   return [...h].sort((a, b) => SO[a.suit] - SO[b.suit] || RV[a.rank] - RV[b.rank]);
 }
-
 function eqC(a, b) { return a.rank === b.rank && a.suit === b.suit; }
 
-function passDir(round) {
-  return ['left', 'right', 'across', 'keep'][(round - 1) % 4];
-}
-
+function passDir(round) { return ['left', 'right', 'across', 'keep'][(round - 1) % 4]; }
 function passTarget(from, round) {
   const d = passDir(round);
   if (d === 'left')   return (from + 1) % 4;
@@ -66,6 +66,7 @@ function passTarget(from, round) {
 function canPlay(G, pi, card) {
   const trick = G.currentTrick;
   if (trick.length === 0) {
+    // Restriction applies in round 1 only, until hearts/Q♠ are broken
     if (G.round === 1 && !G.heartsbroken) {
       if (card.suit === '♥' && G.players[pi].hand.some(c => c.suit !== '♥')) return false;
       if (card.suit === '♠' && card.rank === 'Q' &&
@@ -77,10 +78,7 @@ function canPlay(G, pi, card) {
   if (G.players[pi].hand.some(c => c.suit === led)) return card.suit === led;
   return true;
 }
-
-function legalCards(G, pi) {
-  return G.players[pi].hand.filter(c => canPlay(G, pi, c));
-}
+function legalCards(G, pi) { return G.players[pi].hand.filter(c => canPlay(G, pi, c)); }
 
 function trickWinner(trick) {
   const led = trick[0].card.suit;
@@ -100,13 +98,11 @@ function checkMoon(G) {
   return -1;
 }
 
-// ── AI logic ────────────────────────────────────────────────────
+// ── AI ──────────────────────────────────────────────────────────
 function aiSelectPass(G, i) {
-  const hand = G.players[i].hand;
-  const sorted = [...hand].sort((a, b) => {
-    const sa = a.suit === '♠' && a.rank === 'Q' ? 1000 : a.suit === '♥' ? RV[a.rank] + 50 : RV[a.rank];
-    const sb = b.suit === '♠' && b.rank === 'Q' ? 1000 : b.suit === '♥' ? RV[b.rank] + 50 : RV[b.rank];
-    return sb - sa;
+  const sorted = [...G.players[i].hand].sort((a, b) => {
+    const w = c => (c.suit === '♠' && c.rank === 'Q') ? 1000 : c.suit === '♥' ? RV[c.rank] + 50 : RV[c.rank];
+    return w(b) - w(a);
   });
   return sorted.slice(0, 2).map(c => ({ rank: c.rank, suit: c.suit }));
 }
@@ -136,11 +132,10 @@ function aiChoose(G, pi) {
     if (penInTrick > 0) {
       if (losers.length) return losers.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
       return (winners.length ? winners : following).sort((a, b) => RV[a.rank] - RV[b.rank])[0];
-    } else {
-      if (last && winners.length) return winners.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
-      if (losers.length) return losers.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
-      return following.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
     }
+    if (last && winners.length) return winners.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
+    if (losers.length) return losers.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+    return following.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
   }
 
   const qs = legal.find(c => c.suit === '♠' && c.rank === 'Q');
@@ -150,19 +145,19 @@ function aiChoose(G, pi) {
   return legal.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
 }
 
-// ── Game state helpers ──────────────────────────────────────────
+// ── Room lifecycle ──────────────────────────────────────────────
 function createRoom(hostName) {
   const code = makeCode();
   rooms[code] = {
     code,
-    phase: 'lobby',   // lobby | draw | pass | play | roundSummary | final
-    players: [
-      { name: hostName, isAI: false, socketId: null, score: 0, hand: [], tricks: [], connected: true },
-      { name: 'Waiting...', isAI: false, socketId: null, score: 0, hand: [], tricks: [], connected: false },
-      { name: 'Waiting...', isAI: false, socketId: null, score: 0, hand: [], tricks: [], connected: false },
-      { name: 'Waiting...', isAI: false, socketId: null, score: 0, hand: [], tricks: [], connected: false },
-    ],
+    phase: 'lobby',
+    players: Array.from({ length: 4 }, (_, i) => ({
+      name: i === 0 ? hostName : 'Empty seat',
+      isAI: false, socketId: null, token: null,
+      score: 0, hand: [], tricks: [], connected: false, hasPassed: false,
+    })),
     hostSocket: null,
+    hostToken: null,
     round: 1,
     dealer: -1,
     drawCards: [],
@@ -173,122 +168,97 @@ function createRoom(hostName) {
     trickNum: 1,
     passSelected: [null, null, null, null],
     roundBefore: [0, 0, 0, 0],
+    lastTrickMsg: '',
+    moonShooter: -1,
+    lastActivity: Date.now(),
   };
   return rooms[code];
 }
 
-function roomPublicState(G) {
-  // Strip hands — each player only gets their own hand via private emit
+function publicState(G) {
   return {
     code: G.code,
     phase: G.phase,
     players: G.players.map(p => ({
-      name: p.name,
-      isAI: p.isAI,
-      score: p.score,
-      connected: p.connected,
-      cardCount: p.hand.length,
-      hasPassed: p.hasPassed || false,
+      name: p.name, isAI: p.isAI, score: p.score,
+      connected: p.connected, cardCount: p.hand.length, hasPassed: p.hasPassed,
     })),
     round: G.round,
+    totalRounds: TOTAL_ROUNDS,
     dealer: G.dealer,
     heartsbroken: G.heartsbroken,
     currentTrick: G.currentTrick,
     trickLeader: G.trickLeader,
     trickNum: G.trickNum,
-    drawCards: G.drawCards,
+    drawCards: G.drawCards.map((c, i) => (G.drawRevealed[i] ? c : null)),
     drawRevealed: G.drawRevealed,
     roundBefore: G.roundBefore,
     lastTrickMsg: G.lastTrickMsg || '',
-    moonShooter: G.moonShooter ?? -1,
+    moonShooter: G.moonShooter,
   };
 }
 
-function emitRoom(G) {
-  const pub = roomPublicState(G);
-  // Send each human player their private hand
+function broadcastRoom(G) {
+  G.lastActivity = Date.now();
+  const pub = publicState(G);
   for (let i = 0; i < 4; i++) {
     const p = G.players[i];
     if (!p.isAI && p.socketId) {
       io.to(p.socketId).emit('gameState', {
         ...pub,
         myIndex: i,
+        isHost: p.token != null && p.token === G.hostToken,
         myHand: sortH(p.hand),
         legalCards: G.phase === 'play' ? legalCards(G, i).map(c => c.rank + '|' + c.suit) : [],
-        myPassSelected: G.passSelected[i] || [],
       });
     }
   }
 }
 
-function broadcastRoom(G) {
-  emitRoom(G);
-}
-
-// ── Start draw phase ────────────────────────────────────────────
+// ── Draw phase ──────────────────────────────────────────────────
 function startDraw(G) {
   G.phase = 'draw';
   const deck = shuffle(makeDeck());
   G.drawCards = deck.slice(0, 4);
   G.drawRevealed = [false, false, false, false];
   broadcastRoom(G);
-  // AI players auto-reveal
   for (let i = 0; i < 4; i++) {
-    if (G.players[i].isAI) {
-      setTimeout(() => revealDrawCard(G, i), 400 + i * 500);
-    }
+    if (G.players[i].isAI) setTimeout(() => revealDrawCard(G, i), 500 + i * 500);
   }
-  // If ALL are AI, auto-proceed
-  checkAllDrawn(G);
 }
 
 function revealDrawCard(G, i) {
-  if (G.drawRevealed[i]) return;
+  if (G.phase !== 'draw' || G.drawRevealed[i]) return;
   G.drawRevealed[i] = true;
-  if (G.drawRevealed.every(r => r)) {
-    let best = -1, bestV = -1;
-    for (let j = 0; j < 4; j++) {
-      const v = RV[G.drawCards[j].rank];
-      if (v > bestV) { bestV = v; best = j; }
-    }
+  if (G.drawRevealed.every(Boolean)) {
+    let best = 0;
+    for (let j = 1; j < 4; j++)
+      if (RV[G.drawCards[j].rank] > RV[G.drawCards[best].rank]) best = j;
     G.dealer = best;
     G.phase = 'drawDone';
-    broadcastRoom(G);
-    // If host is AI or all AI, auto-start
-    setTimeout(() => {
-      if (G.players.every(p => p.isAI)) dealRound(G);
-    }, 1500);
-  } else {
-    broadcastRoom(G);
   }
-}
-
-function checkAllDrawn(G) {
-  if (G.drawRevealed.every(r => r)) revealDrawCard(G, -1); // trigger resolution
+  broadcastRoom(G);
 }
 
 // ── Deal & pass ─────────────────────────────────────────────────
 function dealRound(G) {
   const deck = shuffle(makeDeck());
-  for (let i = 0; i < 4; i++) G.players[i].hand = deck.slice(i * 13, (i + 1) * 13);
+  for (let i = 0; i < 4; i++) {
+    G.players[i].hand = deck.slice(i * 13, (i + 1) * 13);
+    G.players[i].tricks = [];
+    G.players[i].hasPassed = false;
+  }
   G.passSelected = [null, null, null, null];
   G.heartsbroken = false;
   G.currentTrick = [];
   G.trickNum = 1;
+  G.moonShooter = -1;
+  G.lastTrickMsg = '';
   G.roundBefore = G.players.map(p => p.score);
-  for (let i = 0; i < 4; i++) {
-    G.players[i].tricks = [];
-    G.players[i].hasPassed = false;
-  }
 
-  const dir = passDir(G.round);
-  if (dir === 'keep') {
-    startTricks(G);
-    return;
-  }
+  if (passDir(G.round) === 'keep') { startTricks(G); return; }
 
   G.phase = 'pass';
-  // AI selects pass cards
   for (let i = 0; i < 4; i++) {
     if (G.players[i].isAI) {
       G.passSelected[i] = aiSelectPass(G, i);
@@ -300,25 +270,24 @@ function dealRound(G) {
 }
 
 function checkAllPassed(G) {
-  if (G.passSelected.every(s => s !== null && s.length === 2)) {
-    executePass(G);
-  }
+  if (G.passSelected.every(s => s && s.length === 2)) setTimeout(() => executePass(G), 400);
 }
 
 function executePass(G) {
+  if (G.phase !== 'pass') return;
   const toAdd = [[], [], [], []];
   for (let i = 0; i < 4; i++) {
     const tgt = passTarget(i, G.round);
     for (const c of G.passSelected[i]) {
       const idx = G.players[i].hand.findIndex(x => eqC(x, c));
-      toAdd[tgt].push(G.players[i].hand.splice(idx, 1)[0]);
+      if (idx !== -1) toAdd[tgt].push(G.players[i].hand.splice(idx, 1)[0]);
     }
   }
   for (let i = 0; i < 4; i++) G.players[i].hand.push(...toAdd[i]);
   startTricks(G);
 }
 
-// ── Tricks ──────────────────────────────────────────────────────
+// ── Trick play ──────────────────────────────────────────────────
 function startTricks(G) {
   G.phase = 'play';
   G.heartsbroken = false;
@@ -330,19 +299,19 @@ function startTricks(G) {
   scheduleAI(G);
 }
 
+function currentPlayer(G) { return (G.trickLeader + G.currentTrick.length) % 4; }
+
 function scheduleAI(G) {
-  const cp = (G.trickLeader + G.currentTrick.length) % 4;
-  if (G.players[cp].isAI && G.currentTrick.length < 4) {
-    setTimeout(() => doAIPlay(G), 900);
-  }
+  if (G.phase !== 'play' || G.currentTrick.length === 4) return;
+  const cp = currentPlayer(G);
+  if (G.players[cp].isAI) setTimeout(() => doAIPlay(G), 650);
 }
 
 function doAIPlay(G) {
-  if (G.phase !== 'play') return;
-  const cp = (G.trickLeader + G.currentTrick.length) % 4;
+  if (G.phase !== 'play' || G.currentTrick.length === 4) return;
+  const cp = currentPlayer(G);
   if (!G.players[cp].isAI) return;
-  const card = aiChoose(G, cp);
-  doPlayCard(G, cp, card);
+  doPlayCard(G, cp, aiChoose(G, cp));
 }
 
 function doPlayCard(G, pi, card) {
@@ -350,128 +319,136 @@ function doPlayCard(G, pi, card) {
   if (idx === -1) return;
   G.players[pi].hand.splice(idx, 1);
   G.currentTrick.push({ player: pi, card });
-  if (card.suit === '♥') G.heartsbroken = true;
-  if (card.suit === '♠' && card.rank === 'Q') G.heartsbroken = true;
+  if (card.suit === '♥' || (card.suit === '♠' && card.rank === 'Q')) G.heartsbroken = true;
+  G.lastTrickMsg = '';
   broadcastRoom(G);
 
-  if (G.currentTrick.length === 4) {
-    setTimeout(() => resolveTrick(G), 700);
-  } else {
-    scheduleAI(G);
-  }
+  if (G.currentTrick.length === 4) setTimeout(() => resolveTrick(G), 800);
+  else scheduleAI(G);
 }
 
 function resolveTrick(G) {
+  if (G.phase !== 'play' || G.currentTrick.length !== 4) return;
   const winner = trickWinner(G.currentTrick);
   const penPts = G.currentTrick.reduce((s, t) => s + cardVal(t.card), 0);
   G.players[winner].score += 10 + penPts;
   G.players[winner].tricks.push(...G.currentTrick.map(t => t.card));
-  const extra = penPts !== 0 ? ` (${penPts > 0 ? '+' : ''}${penPts})` : '';
-  G.lastTrickMsg = `${G.players[winner].name} wins trick ${G.trickNum} — +10${extra}`;
+  G.lastTrickMsg = `${G.players[winner].name} wins trick ${G.trickNum} · +10${penPts !== 0 ? ' ' + penPts : ''}`;
   G.currentTrick = [];
   G.trickNum++;
   G.trickLeader = winner;
-
   broadcastRoom(G);
 
-  if (G.trickNum > 13) {
-    setTimeout(() => endRound(G), 1000);
-  } else {
-    setTimeout(() => {
-      broadcastRoom(G);
-      scheduleAI(G);
-    }, 800);
-  }
+  if (G.trickNum > 13) setTimeout(() => endRound(G), 1200);
+  else setTimeout(() => scheduleAI(G), 850);
 }
 
 function endRound(G) {
   const moon = checkMoon(G);
   G.moonShooter = moon;
-  if (moon >= 0) {
-    for (let i = 0; i < 4; i++) G.players[i].score += i === moon ? 60 : -20;
-  }
-  G.phase = G.round >= 16 ? 'final' : 'roundSummary';
+  if (moon >= 0) for (let i = 0; i < 4; i++) G.players[i].score += (i === moon ? 60 : -20);
+  G.phase = G.round >= TOTAL_ROUNDS ? 'final' : 'roundSummary';
   broadcastRoom(G);
 }
 
-// ── Socket.io events ────────────────────────────────────────────
+// ── Socket handlers ─────────────────────────────────────────────
+function findRoom(code) { return rooms[String(code || '').toUpperCase()]; }
+function isHostSocket(G, socket) { return G.hostSocket === socket.id; }
+
 io.on('connection', (socket) => {
 
   socket.on('createRoom', ({ name }) => {
-    const G = createRoom(name);
+    const clean = String(name || '').trim().slice(0, 16) || 'Player';
+    const G = createRoom(clean);
+    const token = makeToken();
     G.players[0].socketId = socket.id;
     G.players[0].connected = true;
+    G.players[0].token = token;
     G.hostSocket = socket.id;
+    G.hostToken = token;
     socket.join(G.code);
-    socket.emit('roomCreated', { code: G.code, playerIndex: 0 });
+    socket.emit('joined', { code: G.code, playerIndex: 0, token, isHost: true });
     broadcastRoom(G);
   });
 
   socket.on('joinRoom', ({ code, name }) => {
-    const G = rooms[code.toUpperCase()];
-    if (!G) { socket.emit('error', { msg: 'Room not found.' }); return; }
-    if (G.phase !== 'lobby') { socket.emit('error', { msg: 'Game already started.' }); return; }
+    const G = findRoom(code);
+    if (!G) return socket.emit('errorMsg', { msg: 'Room not found. Check the code.' });
+    if (G.phase !== 'lobby') return socket.emit('errorMsg', { msg: 'That game has already started.' });
 
-    // Find first open human slot
     let slot = -1;
     for (let i = 1; i < 4; i++) {
       if (!G.players[i].connected && !G.players[i].isAI) { slot = i; break; }
     }
-    if (slot === -1) { socket.emit('error', { msg: 'Room is full.' }); return; }
+    if (slot === -1) return socket.emit('errorMsg', { msg: 'That room is full.' });
 
-    G.players[slot].name = name;
+    const token = makeToken();
+    G.players[slot].name = String(name || '').trim().slice(0, 16) || `Player ${slot + 1}`;
     G.players[slot].socketId = socket.id;
     G.players[slot].connected = true;
+    G.players[slot].token = token;
     socket.join(G.code);
-    socket.emit('roomJoined', { code: G.code, playerIndex: slot });
+    socket.emit('joined', { code: G.code, playerIndex: slot, token, isHost: false });
+    broadcastRoom(G);
+  });
+
+  // Reconnect after the phone backgrounds / network blips
+  socket.on('rejoin', ({ code, token }) => {
+    const G = findRoom(code);
+    if (!G) return socket.emit('rejoinFailed');
+    const idx = G.players.findIndex(p => p.token && p.token === token);
+    if (idx === -1) return socket.emit('rejoinFailed');
+    G.players[idx].socketId = socket.id;
+    G.players[idx].connected = true;
+    const host = G.hostToken === token;
+    if (host) G.hostSocket = socket.id;
+    socket.join(G.code);
+    socket.emit('joined', { code: G.code, playerIndex: idx, token, isHost: host });
     broadcastRoom(G);
   });
 
   socket.on('setAI', ({ code, slotIndex, isAI }) => {
-    const G = rooms[code];
-    if (!G || G.phase !== 'lobby') return;
-    if (socket.id !== G.hostSocket) return;
-    if (slotIndex === 0) return; // host can't make themselves AI
-    G.players[slotIndex].isAI = isAI;
-    G.players[slotIndex].connected = isAI;
-    G.players[slotIndex].name = isAI ? 'Computer ' + (slotIndex + 1) : 'Waiting...';
-    G.players[slotIndex].socketId = null;
+    const G = findRoom(code);
+    if (!G || G.phase !== 'lobby' || !isHostSocket(G, socket)) return;
+    if (slotIndex < 1 || slotIndex > 3) return;
+    const p = G.players[slotIndex];
+    if (p.connected && !p.isAI) return; // a human is sitting there
+    p.isAI = !!isAI;
+    p.connected = !!isAI;
+    p.name = isAI ? `Computer ${slotIndex + 1}` : 'Empty seat';
+    p.token = null;
+    p.socketId = null;
     broadcastRoom(G);
   });
 
   socket.on('startGame', ({ code }) => {
-    const G = rooms[code];
-    if (!G) return;
-    if (socket.id !== G.hostSocket) return;
-    // All slots must be filled (human connected or AI)
-    const allReady = G.players.every(p => p.connected || p.isAI);
-    if (!allReady) { socket.emit('error', { msg: 'Not all players have joined yet.' }); return; }
+    const G = findRoom(code);
+    if (!G || G.phase !== 'lobby' || !isHostSocket(G, socket)) return;
+    if (!G.players.every(p => p.connected || p.isAI))
+      return socket.emit('errorMsg', { msg: 'All four seats need a player or an AI.' });
     startDraw(G);
   });
 
   socket.on('revealDraw', ({ code, playerIndex }) => {
-    const G = rooms[code];
+    const G = findRoom(code);
     if (!G || G.phase !== 'draw') return;
-    if (G.players[playerIndex].socketId !== socket.id) return;
+    if (G.players[playerIndex]?.socketId !== socket.id) return;
     revealDrawCard(G, playerIndex);
   });
 
   socket.on('startRound', ({ code }) => {
-    const G = rooms[code];
-    if (!G || G.phase !== 'drawDone') return;
-    if (socket.id !== G.hostSocket) return;
+    const G = findRoom(code);
+    if (!G || G.phase !== 'drawDone' || !isHostSocket(G, socket)) return;
     dealRound(G);
   });
 
   socket.on('selectPass', ({ code, playerIndex, cards }) => {
-    const G = rooms[code];
+    const G = findRoom(code);
     if (!G || G.phase !== 'pass') return;
-    if (G.players[playerIndex].socketId !== socket.id) return;
-    if (cards.length !== 2) return;
-    // Validate cards are in hand
-    for (const c of cards) {
-      if (!G.players[playerIndex].hand.some(x => eqC(x, c))) return;
-    }
+    if (G.players[playerIndex]?.socketId !== socket.id) return;
+    if (!Array.isArray(cards) || cards.length !== 2) return;
+    if (eqC(cards[0], cards[1])) return;
+    for (const c of cards) if (!G.players[playerIndex].hand.some(x => eqC(x, c))) return;
     G.passSelected[playerIndex] = cards;
     G.players[playerIndex].hasPassed = true;
     broadcastRoom(G);
@@ -479,21 +456,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('playCard', ({ code, playerIndex, card }) => {
-    const G = rooms[code];
+    const G = findRoom(code);
     if (!G || G.phase !== 'play') return;
-    if (G.players[playerIndex].socketId !== socket.id) return;
-    const cp = (G.trickLeader + G.currentTrick.length) % 4;
-    if (playerIndex !== cp) return;
-    if (!canPlay(G, playerIndex, card)) return;
-    const realCard = G.players[playerIndex].hand.find(c => eqC(c, card));
-    if (!realCard) return;
-    doPlayCard(G, playerIndex, realCard);
+    if (G.players[playerIndex]?.socketId !== socket.id) return;
+    if (playerIndex !== currentPlayer(G)) return;
+    const real = G.players[playerIndex].hand.find(c => eqC(c, card));
+    if (!real || !canPlay(G, playerIndex, real)) return;
+    doPlayCard(G, playerIndex, real);
   });
 
   socket.on('nextRound', ({ code }) => {
-    const G = rooms[code];
-    if (!G || G.phase !== 'roundSummary') return;
-    if (socket.id !== G.hostSocket) return;
+    const G = findRoom(code);
+    if (!G || G.phase !== 'roundSummary' || !isHostSocket(G, socket)) return;
     G.round++;
     G.dealer = (G.dealer + 1) % 4;
     dealRound(G);
@@ -504,6 +478,7 @@ io.on('connection', (socket) => {
       const G = rooms[code];
       for (const p of G.players) {
         if (p.socketId === socket.id) {
+          p.socketId = null;
           p.connected = false;
           broadcastRoom(G);
         }
@@ -512,6 +487,11 @@ io.on('connection', (socket) => {
   });
 });
 
-// ── Start server ────────────────────────────────────────────────
+// Sweep abandoned rooms so memory doesn't grow forever
+setInterval(() => {
+  const cutoff = Date.now() - 3 * 60 * 60 * 1000; // 3 hours idle
+  for (const code in rooms) if (rooms[code].lastActivity < cutoff) delete rooms[code];
+}, 15 * 60 * 1000);
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Dame de Pique running on port ${PORT}`));

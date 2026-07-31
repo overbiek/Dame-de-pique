@@ -71,11 +71,12 @@ function passTarget(from, round) {
 function canPlay(G, pi, card) {
   const trick = G.currentTrick;
   if (trick.length === 0) {
-    // Restriction applies in round 1 only, until hearts/Q♠ are broken
-    if (G.round === 1 && !G.heartsbroken) {
-      if (card.suit === '♥' && G.players[pi].hand.some(c => c.suit !== '♥')) return false;
-      if (card.suit === '♠' && card.rank === 'Q' &&
-          G.players[pi].hand.some(c => !(c.suit === '♠' && c.rank === 'Q'))) return false;
+    // The single card that opens a round can't be a heart or the Q♠.
+    // Applies in every round; from the second card onwards anything goes.
+    if (G.trickNum === 1) {
+      const penalty = c => c.suit === '♥' || (c.suit === '♠' && c.rank === 'Q');
+      // Only binding while the opener still holds something safe.
+      if (penalty(card) && G.players[pi].hand.some(c => !penalty(c))) return false;
     }
     return true;
   }

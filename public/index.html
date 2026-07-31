@@ -166,6 +166,12 @@ input[type=text]::placeholder{color:var(--faint)}
 .seat-top{grid-area:top}
 .seat-left{grid-area:lft}
 .seat-right{grid-area:rgt}
+.seat-bottom{grid-area:bot;margin-top:2px}
+.seat.mine .avatar{border-color:rgba(63,191,136,.55);color:#a8ecce}
+.seat.mine .seat-name{color:var(--cream)}
+.seat-score small{font-size:.74em;font-weight:500;color:var(--faint);margin-left:3px}
+.seat-score small.up{color:#7fe0b4}
+.seat-score small.down{color:#f0968c}
 .mid{grid-area:mid;display:grid;
   grid-template-areas:". t ." "l . r" ". b .";
   place-items:center;gap:3px;min-width:calc(var(--cw)*2.6);min-height:calc(var(--ch)*2.3)}
@@ -187,6 +193,23 @@ input[type=text]::placeholder{color:var(--faint)}
 .seat-name{font-size:.72rem;color:var(--muted);max-width:76px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;text-align:center}
 .seat-score{font-family:'Playfair Display',serif;font-size:.9rem;font-weight:600;color:var(--gold-hi)}
+
+/* your own readout, sat right on top of your cards */
+.mystrip{
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  margin:12px 0 0;padding:10px 14px;border-radius:var(--r);
+  background:rgba(212,175,92,.09);border:1px solid rgba(212,175,92,.24);
+  transition:border-color .2s,background .2s;
+}
+.mystrip.turn{border-color:var(--gold);background:rgba(212,175,92,.16);
+  box-shadow:0 0 16px rgba(212,175,92,.16)}
+.mystrip .who{font-family:'Playfair Display',serif;font-size:1rem;color:var(--cream)}
+.mystrip .tot{margin-left:auto;font-family:'Playfair Display',serif;
+  font-size:1.35rem;font-weight:700;color:var(--gold-hi);line-height:1;white-space:nowrap}
+.mystrip .tot small{font-family:'DM Sans',sans-serif;font-size:.52em;font-weight:600;
+  color:var(--muted);margin-left:4px}
+.mystrip .tot small.up{color:#7fe0b4}
+.mystrip .tot small.down{color:#f0968c}
 .seat-cards{display:flex;justify-content:center}
 .seat-cards .card{margin-left:-16px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
 .seat-cards .card:first-child{margin-left:0}
@@ -474,6 +497,7 @@ input[type=text]::placeholder{color:var(--faint)}
   <div class="topbar" id="p-bar"></div>
   <div class="table" id="p-table"></div>
   <p class="prompt" id="p-prompt"></p>
+  <div class="mystrip" id="p-me"></div>
   <div class="hand" id="p-hand"></div>
   <button class="btn btn-primary btn-block" id="p-go" onclick="confirmPass()" disabled>Pass 2 cards</button>
 </section>
@@ -484,6 +508,7 @@ input[type=text]::placeholder{color:var(--faint)}
   <div class="table" id="g-table"></div>
   <p class="banner" id="g-banner"></p>
   <p class="prompt" id="g-prompt"></p>
+  <div class="mystrip" id="g-me"></div>
   <div class="hand" id="g-hand"></div>
 </section>
 
@@ -581,18 +606,37 @@ function handHTML(hand,mode,legal){
 function seatHTML(G,i,opts){
   const p=G.players[i];
   const turn=opts&&opts.turn;
-  const cls=[p.isAI?'ai':'',turn?'turn':'',(!p.connected&&!p.isAI)?'off':''].join(' ');
+  const mine=i===me;
+  const cls=[p.isAI?'ai':'',turn?'turn':'',mine?'mine':'',
+             (!p.connected&&!p.isAI)?'off':''].join(' ');
   const n=Math.min(p.cardCount,8);
   let fan='';
   if(opts&&opts.fan&&p.cardCount>0){
     for(let k=0;k<n;k++) fan+=backHTML('mini');
   }
+  const rs=typeof p.roundScore==='number'?p.roundScore:0;
+  const rcls=rs>0?'up':rs<0?'down':'';
+  const round=`<small class="${rcls}">(${rs>0?'+':''}${rs})</small>`;
   return `<div class="seat ${cls}">
     <div class="avatar">${esc(initial(p.name))}</div>
-    <div class="seat-name">${esc(p.name)}${i===G.dealer?' •':''}</div>
-    <div class="seat-score">${p.score}</div>
+    <div class="seat-name">${esc(p.name)}${mine?' · you':''}${i===G.dealer?' •':''}</div>
+    <div class="seat-score">${p.score}${round}</div>
     ${fan?`<div class="seat-cards">${fan}</div><span class="count-pill">${p.cardCount}</span>`:''}
   </div>`;
+}
+
+function myStrip(G,elId,isMyTurn){
+  const el=$(elId);
+  if(!el||me<0||!G.players[me])return;
+  const p=G.players[me];
+  const rs=typeof p.roundScore==='number'?p.roundScore:0;
+  const cls=rs>0?'up':rs<0?'down':'';
+  el.classList.toggle('turn',!!isMyTurn);
+  el.innerHTML=
+    `<span class="who">${esc(p.name)}</span>`
+    +(me===G.dealer?'<span class="badge badge-dealer">dealer</span>':'')
+    +(isMyTurn?'<span class="badge badge-turn">your turn</span>':'')
+    +`<span class="tot">${p.score}<small class="${cls}">(${rs>0?'+':''}${rs}) this round</small></span>`;
 }
 
 function tableHTML(G,opts){
@@ -623,7 +667,8 @@ function tableHTML(G,opts){
       <div class="slot-l">${played(1)}</div>
       <div class="slot-r">${played(3)}</div>
       <div class="slot-b">${played(0)}</div>
-    </div>`;
+    </div>
+    `;
 }
 
 /* ══════════ LANDING ══════════ */
@@ -852,6 +897,7 @@ function renderPass(G){
      <span class="chip">Dealer <b>${esc(G.players[G.dealer].name)}</b></span>
      <button class="chip chip-btn" onclick="askLeave(this)">Leave</button>`;
   $('p-table').innerHTML=tableHTML(G,{fan:true});
+  myStrip(G,'p-me',false);
 
   const mine=G.players[me];
   if(mine.hasPassed){
@@ -907,6 +953,7 @@ function renderPlay(G){
   else{ pr.className='prompt wait';
         pr.textContent=G.currentTrick.length===4?'…':`Waiting for ${G.players[cur].name}`; }
 
+  myStrip(G,'g-me',myTurn);
   $('g-hand').innerHTML=handHTML(G.myHand,myTurn?'play':null,legal);
 }
 $('g-hand').addEventListener('click',e=>{

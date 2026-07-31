@@ -300,13 +300,19 @@ function aiChoose(G, pi) {
 }
 
 // ── Room lifecycle ──────────────────────────────────────────────
-function createRoom(hostName) {
+function sanitizeAvatar(a) {
+  const s = String(a || '').trim().slice(0, 8);
+  return s || null;
+}
+
+function createRoom(hostName, hostAvatar) {
   const code = makeCode();
   rooms[code] = {
     code,
     phase: 'lobby',
     players: Array.from({ length: 4 }, (_, i) => ({
       name: i === 0 ? hostName : 'Empty seat',
+      avatar: i === 0 ? sanitizeAvatar(hostAvatar) : null,
       isAI: false, socketId: null, token: null,
       score: 0, hand: [], tricks: [], connected: false, hasPassed: false,
     })),
@@ -426,7 +432,7 @@ function publicState(G) {
     code: G.code,
     phase: G.phase,
     players: G.players.map((p, i) => ({
-      name: p.name, isAI: p.isAI, score: p.score,
+      name: p.name, avatar: p.avatar || null, isAI: p.isAI, score: p.score,
       roundScore: p.score - (G.roundBefore[i] || 0),
       connected: p.connected, cardCount: p.hand.length, hasPassed: p.hasPassed,
     })),
@@ -697,9 +703,9 @@ function isHostSocket(G, socket) { return G.hostSocket === socket.id; }
 
 io.on('connection', (socket) => {
 
-  socket.on('createRoom', ({ name }) => {
+  socket.on('createRoom', ({ name, avatar }) => {
     const clean = String(name || '').trim().slice(0, 16) || 'Player';
-    const G = createRoom(clean);
+    const G = createRoom(clean, sanitizeAvatar(avatar));
     const token = makeToken();
     G.players[0].socketId = socket.id;
     G.players[0].connected = true;
@@ -711,7 +717,7 @@ io.on('connection', (socket) => {
     broadcastRoom(G);
   });
 
-  socket.on('joinRoom', ({ code, name }) => {
+  socket.on('joinRoom', ({ code, name, avatar }) => {
     const G = findRoom(code);
     if (!G) return socket.emit('errorMsg', { msg: 'Room not found. Check the code.' });
     if (G.phase !== 'lobby') return socket.emit('errorMsg', { msg: 'That game has already started.' });
@@ -724,6 +730,7 @@ io.on('connection', (socket) => {
 
     const token = makeToken();
     G.players[slot].name = String(name || '').trim().slice(0, 16) || `Player ${slot + 1}`;
+    G.players[slot].avatar = sanitizeAvatar(avatar);
     G.players[slot].socketId = socket.id;
     G.players[slot].connected = true;
     G.players[slot].token = token;
@@ -756,6 +763,7 @@ io.on('connection', (socket) => {
     p.isAI = !!isAI;
     p.connected = !!isAI;
     p.name = isAI ? `Computer ${slotIndex + 1}` : 'Empty seat';
+    p.avatar = null;
     p.token = null;
     p.socketId = null;
     broadcastRoom(G);
@@ -865,12 +873,12 @@ io.on('connection', (socket) => {
     if (G.phase === 'lobby' || G.phase === 'final') {
       // Free the seat entirely
       Object.assign(G.players[idx], {
-        name: 'Empty seat', isAI: false, socketId: null, token: null,
+        name: 'Empty seat', avatar: null, isAI: false, socketId: null, token: null,
         connected: false, score: 0, hand: [], tricks: [], hasPassed: false,
       });
     } else {
       // Mid-game: hand the seat to the computer so the others can finish
-      Object.assign(G.players[idx], { isAI: true, connected: true, socketId: null, token: null });
+      Object.assign(G.players[idx], { isAI: true, avatar: null, connected: true, socketId: null, token: null });
     }
 
     if (wasHost) {

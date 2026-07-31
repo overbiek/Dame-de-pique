@@ -192,7 +192,10 @@ input[type=text]::placeholder{color:var(--faint)}
 .seat.ai .avatar{border-color:rgba(110,180,255,.5);color:#a8d4ff}
 .seat-name{font-size:.72rem;color:var(--muted);max-width:76px;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;text-align:center}
-.seat-score{font-family:'Playfair Display',serif;font-size:.9rem;font-weight:600;color:var(--gold-hi)}
+.seat-score{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--gold-hi)}
+.seat-score.up{color:#7fe0b4}.seat-score.down{color:#f0968c}.seat-score.flat{color:var(--muted)}
+.seat-score small{display:block;font-family:'DM Sans',sans-serif;font-size:.66rem;
+  font-weight:500;color:var(--faint);margin-top:1px}
 
 /* your own readout, sat right on top of your cards */
 .mystrip{
@@ -204,12 +207,13 @@ input[type=text]::placeholder{color:var(--faint)}
 .mystrip.turn{border-color:var(--gold);background:rgba(212,175,92,.16);
   box-shadow:0 0 16px rgba(212,175,92,.16)}
 .mystrip .who{font-family:'Playfair Display',serif;font-size:1rem;color:var(--cream)}
-.mystrip .tot{margin-left:auto;font-family:'Playfair Display',serif;
-  font-size:1.35rem;font-weight:700;color:var(--gold-hi);line-height:1;white-space:nowrap}
-.mystrip .tot small{font-family:'DM Sans',sans-serif;font-size:.52em;font-weight:600;
-  color:var(--muted);margin-left:4px}
-.mystrip .tot small.up{color:#7fe0b4}
-.mystrip .tot small.down{color:#f0968c}
+.mystrip .tot{margin-left:auto;text-align:right;font-family:'Playfair Display',serif;
+  font-size:1.6rem;font-weight:700;color:var(--gold-hi);line-height:1.05;white-space:nowrap}
+.mystrip .tot.up{color:#7fe0b4}
+.mystrip .tot.down{color:#f0968c}
+.mystrip .tot.flat{color:var(--muted)}
+.mystrip .tot small{display:block;font-family:'DM Sans',sans-serif;font-size:.42em;
+  font-weight:600;color:var(--faint);letter-spacing:.02em;margin-top:3px}
 .seat-cards{display:flex;justify-content:center}
 .seat-cards .card{margin-left:-16px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
 .seat-cards .card:first-child{margin-left:0}
@@ -759,29 +763,38 @@ function seatHTML(G,i,opts){
   if(opts&&opts.fan&&p.cardCount>0){
     for(let k=0;k<n;k++) fan+=backHTML('mini');
   }
-  const rs=typeof p.roundScore==='number'?p.roundScore:0;
-  const rcls=rs>0?'up':rs<0?'down':'';
-  const round=`<small class="${rcls}">(${rs>0?'+':''}${rs})</small>`;
+  const rs=roundOf(G,i);
+  const rcls=rs>0?'up':rs<0?'down':'flat';
   return `<div class="seat ${cls}">
     <div class="avatar">${esc(initial(p.name))}</div>
     <div class="seat-name">${esc(p.name)}${mine?' · you':''}${i===G.dealer?' •':''}</div>
-    <div class="seat-score">${p.score}${round}</div>
+    <div class="seat-score ${rcls}">${rs>0?'+':''}${rs}<small>(${p.score})</small></div>
     ${fan?`<div class="seat-cards">${fan}</div><span class="count-pill">${p.cardCount}</span>`:''}
   </div>`;
+}
+
+// Points picked up so far this round. Derived from roundBefore, which every
+// version of the server sends, so it can't go stale.
+function roundOf(G,i){
+  if(G.roundBefore && typeof G.roundBefore[i]==='number')
+    return G.players[i].score - G.roundBefore[i];
+  const p=G.players[i];
+  return typeof p.roundScore==='number' ? p.roundScore : 0;
 }
 
 function myStrip(G,elId,isMyTurn){
   const el=$(elId);
   if(!el||me<0||!G.players[me])return;
   const p=G.players[me];
-  const rs=typeof p.roundScore==='number'?p.roundScore:0;
-  const cls=rs>0?'up':rs<0?'down':'';
+  const rs=roundOf(G,me);
+  const cls=rs>0?'up':rs<0?'down':'flat';
   el.classList.toggle('turn',!!isMyTurn);
   el.innerHTML=
     `<span class="who">${esc(p.name)}</span>`
     +(me===G.dealer?'<span class="badge badge-dealer">dealer</span>':'')
     +(isMyTurn?'<span class="badge badge-turn">your turn</span>':'')
-    +`<span class="tot">${p.score}<small class="${cls}">(${rs>0?'+':''}${rs}) this round</small></span>`;
+    +`<span class="tot ${cls}">${rs>0?'+':''}${rs}`
+    +`<small>this round &middot; ${p.score} total</small></span>`;
 }
 
 function tableHTML(G,opts){

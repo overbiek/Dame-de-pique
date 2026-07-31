@@ -19,6 +19,10 @@ const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 const RV = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
 const SO = {'♠':0,'♥':1,'♦':2,'♣':3};
 const TOTAL_ROUNDS = 16;
+const AUTO_ADVANCE_MS = 60 * 1000;      // host has a minute, then it moves on by itself
+const IDLE_CLOSE_MS   = 10 * 60 * 1000; // nothing happening at all
+const EMPTY_CLOSE_MS   = 2 * 60 * 1000; // nobody connected
+const END_VOTE_MS      = 60 * 1000;     // how long an "end early" request stays open
 
 const rooms = {};
 
@@ -170,11 +174,100 @@ function createRoom(hostName) {
     passSelected: [null, null, null, null],
     roundBefore: [0, 0, 0, 0],
     history: [],
+    autoAt: 0,
+    autoTimer: null,
+    endVote: null,
+    voteAt: 0,
+    voteTimer: null,
+    voteMsg: '',
+    emptySince: null,
     lastTrickMsg: '',
     moonShooter: -1,
     lastActivity: Date.now(),
   };
   return rooms[code];
+}
+
+// ── Auto-advance & room closing ─────────────────────────────────
+function clearAuto(G) {
+  if (G.autoTimer) clearTimeout(G.autoTimer);
+  G.autoTimer = null;
+  G.autoAt = 0;
+}
+function armAuto(G, fn, ms) {
+  clearAuto(G);
+  G.autoAt = Date.now() + ms;
+  G.autoTimer = setTimeout(() => { G.autoTimer = null; G.autoAt = 0; fn(); }, ms);
+}
+function closeRoom(G, reason) {
+  clearAuto(G);
+  clearVote(G);
+  io.to(G.code).emit('roomClosed', { reason });
+  delete rooms[G.code];
+}
+
+// Re-arm whatever timer belongs to the phase we're sitting in.
+function rearmAuto(G) {
+  if (G.phase === 'roundSummary') {
+    armAuto(G, () => advanceRound(G), AUTO_ADVANCE_MS);
+  } else if (G.phase === 'drawDone') {
+    armAuto(G, () => { if (G.phase === 'drawDone') dealRound(G); }, AUTO_ADVANCE_MS);
+  } else if (G.phase === 'draw') {
+    armAuto(G, () => {
+      if (G.phase !== 'draw') return;
+      for (let i = 0; i < 4; i++) if (!G.drawRevealed[i]) revealDrawCard(G, i);
+    }, AUTO_ADVANCE_MS);
+  }
+}
+
+// ── Ending the game early (needs everyone's agreement) ──────────
+function clearVote(G) {
+  if (G.voteTimer) clearTimeout(G.voteTimer);
+  G.voteTimer = null;
+  G.voteAt = 0;
+}
+
+function flashVoteMsg(G, msg) {
+  G.voteMsg = msg;
+  broadcastRoom(G);
+  setTimeout(() => {
+    if (rooms[G.code] && G.voteMsg === msg) { G.voteMsg = ''; broadcastRoom(G); }
+  }, 4500);
+}
+
+function cancelVote(G, msg) {
+  clearVote(G);
+  G.endVote = null;
+  rearmAuto(G);           // the round countdown resumes where it left off
+  if (msg) flashVoteMsg(G, msg); else broadcastRoom(G);
+}
+
+function finishEarly(G) {
+  clearVote(G);
+  clearAuto(G);
+  G.endVote = null;
+  G.voteMsg = '';
+  G.phase = 'final';
+  broadcastRoom(G);
+}
+
+// Everyone who still has to say yes: real people only, and not the one asking.
+function votersNeeded(G, proposer) {
+  const out = [];
+  for (let i = 0; i < 4; i++) {
+    if (i === proposer) continue;
+    const p = G.players[i];
+    if (p.isAI || !p.token) continue;   // computers and empty seats always agree
+    out.push(i);
+  }
+  return out;
+}
+
+function checkVoteComplete(G) {
+  const v = G.endVote;
+  if (!v) return false;
+  if (v.needed.every(i => v.agreed.includes(i))) { finishEarly(G); return true; }
+  return false;
 }
 
 function publicState(G) {
@@ -199,6 +292,10 @@ function publicState(G) {
     lastTrickMsg: G.lastTrickMsg || '',
     moonShooter: G.moonShooter,
     history: G.history,
+    autoIn: G.autoAt ? Math.max(0, G.autoAt - Date.now()) : 0,
+    endVote: G.endVote ? { by: G.endVote.by, needed: G.endVote.needed, agreed: G.endVote.agreed } : null,
+    voteIn: G.voteAt ? Math.max(0, G.voteAt - Date.now()) : 0,
+    voteMsg: G.voteMsg || '',
     passLetters: Array.from({ length: TOTAL_ROUNDS }, (_, i) => passLetter(i + 1)),
   };
 }
@@ -230,6 +327,11 @@ function startDraw(G) {
   for (let i = 0; i < 4; i++) {
     if (G.players[i].isAI) setTimeout(() => revealDrawCard(G, i), 500 + i * 500);
   }
+  // Nobody should be able to hold the game up at the cut.
+  armAuto(G, () => {
+    if (G.phase !== 'draw') return;
+    for (let i = 0; i < 4; i++) if (!G.drawRevealed[i]) revealDrawCard(G, i);
+  }, AUTO_ADVANCE_MS);
 }
 
 function revealDrawCard(G, i) {
@@ -241,12 +343,14 @@ function revealDrawCard(G, i) {
       if (RV[G.drawCards[j].rank] > RV[G.drawCards[best].rank]) best = j;
     G.dealer = best;
     G.phase = 'drawDone';
+    armAuto(G, () => { if (G.phase === 'drawDone') dealRound(G); }, AUTO_ADVANCE_MS);
   }
   broadcastRoom(G);
 }
 
 // ── Deal & pass ─────────────────────────────────────────────────
 function dealRound(G) {
+  clearAuto(G);
   const deck = shuffle(makeDeck());
   for (let i = 0; i < 4; i++) {
     G.players[i].hand = deck.slice(i * 13, (i + 1) * 13);
@@ -374,7 +478,36 @@ function endRound(G) {
 
   // Always show a summary for the final round too, then move on to standings.
   G.phase = 'roundSummary';
+  // If the host doesn't press the button, carry on without them.
+  armAuto(G, () => advanceRound(G), AUTO_ADVANCE_MS);
   broadcastRoom(G);
+}
+
+function advanceRound(G) {
+  if (!rooms[G.code] || G.phase !== 'roundSummary') return;
+  clearAuto(G);
+  if (G.round >= TOTAL_ROUNDS) { G.phase = 'final'; broadcastRoom(G); return; }
+  G.round++;
+  G.dealer = (G.dealer + 1) % 4;
+  dealRound(G);
+}
+
+// A seat just became a computer — make sure play doesn't stall on it.
+function resumeAfterSeatChange(G) {
+  if (G.phase === 'draw') {
+    for (let i = 0; i < 4; i++)
+      if (G.players[i].isAI && !G.drawRevealed[i]) revealDrawCard(G, i);
+  } else if (G.phase === 'pass') {
+    for (let i = 0; i < 4; i++) {
+      if (G.players[i].isAI && !G.players[i].hasPassed) {
+        G.passSelected[i] = aiSelectPass(G, i);
+        G.players[i].hasPassed = true;
+      }
+    }
+    checkAllPassed(G);
+  } else if (G.phase === 'play') {
+    scheduleAI(G);
+  }
 }
 
 // ── Socket handlers ─────────────────────────────────────────────
@@ -494,10 +627,90 @@ io.on('connection', (socket) => {
   socket.on('nextRound', ({ code }) => {
     const G = findRoom(code);
     if (!G || G.phase !== 'roundSummary' || !isHostSocket(G, socket)) return;
-    if (G.round >= TOTAL_ROUNDS) { G.phase = 'final'; broadcastRoom(G); return; }
-    G.round++;
-    G.dealer = (G.dealer + 1) % 4;
-    dealRound(G);
+    advanceRound(G);
+  });
+
+  // Host asks to stop early. Everyone human has to agree; computers always do.
+  socket.on('endGame', ({ code }) => {
+    const G = findRoom(code);
+    if (!G || !isHostSocket(G, socket)) return;
+    if (G.phase === 'lobby' || G.phase === 'final') return;
+    if (G.endVote) return;
+
+    const by = G.players.findIndex(p => p.socketId === socket.id);
+    if (by === -1) return;
+
+    const needed = votersNeeded(G, by);
+    if (needed.length === 0) { finishEarly(G); return; }   // only computers left to ask
+
+    G.endVote = { by, needed, agreed: [] };
+    clearAuto(G);                                          // hold the round countdown
+    clearVote(G);
+    G.voteAt = Date.now() + END_VOTE_MS;
+    G.voteTimer = setTimeout(() => {
+      G.voteTimer = null; G.voteAt = 0;
+      if (!rooms[G.code] || !G.endVote) return;
+      cancelVote(G, 'No answer from everyone — the game carries on.');
+    }, END_VOTE_MS);
+    broadcastRoom(G);
+  });
+
+  socket.on('endVote', ({ code, agree }) => {
+    const G = findRoom(code);
+    if (!G || !G.endVote) return;
+    const idx = G.players.findIndex(p => p.socketId === socket.id);
+    if (idx === -1 || !G.endVote.needed.includes(idx)) return;
+
+    if (!agree) {
+      cancelVote(G, `${G.players[idx].name} would rather keep playing.`);
+      return;
+    }
+    if (!G.endVote.agreed.includes(idx)) G.endVote.agreed.push(idx);
+    if (!checkVoteComplete(G)) broadcastRoom(G);
+  });
+
+  socket.on('leaveRoom', ({ code }) => {
+    const G = findRoom(code);
+    if (!G) return;
+    const idx = G.players.findIndex(p => p.socketId === socket.id);
+    if (idx === -1) return;
+
+    const wasHost = !!(G.hostToken && G.players[idx].token === G.hostToken);
+    socket.leave(G.code);
+    socket.emit('leftRoom');
+
+    if (G.phase === 'lobby' || G.phase === 'final') {
+      // Free the seat entirely
+      Object.assign(G.players[idx], {
+        name: 'Empty seat', isAI: false, socketId: null, token: null,
+        connected: false, score: 0, hand: [], tricks: [], hasPassed: false,
+      });
+    } else {
+      // Mid-game: hand the seat to the computer so the others can finish
+      Object.assign(G.players[idx], { isAI: true, connected: true, socketId: null, token: null });
+    }
+
+    if (wasHost) {
+      const next = G.players.find(p => p.token && !p.isAI);
+      G.hostToken  = next ? next.token : null;
+      G.hostSocket = next ? next.socketId : null;
+    }
+
+    if (!G.players.some(p => p.token && !p.isAI)) { closeRoom(G, 'Everyone left the game.'); return; }
+
+    // Keep any open "end early" request honest after a seat changes hands
+    if (G.endVote) {
+      if (G.endVote.by === idx) {
+        cancelVote(G, 'The request to end early was dropped.');
+      } else {
+        G.endVote.needed = G.endVote.needed.filter(i => G.players[i].token && !G.players[i].isAI);
+        G.endVote.agreed = G.endVote.agreed.filter(i => G.endVote.needed.includes(i));
+        if (checkVoteComplete(G)) return;
+      }
+    }
+
+    resumeAfterSeatChange(G);
+    broadcastRoom(G);
   });
 
   socket.on('disconnect', () => {
@@ -514,11 +727,25 @@ io.on('connection', (socket) => {
   });
 });
 
-// Sweep abandoned rooms so memory doesn't grow forever
+// Close rooms that have gone quiet, or that everyone has walked away from.
 setInterval(() => {
-  const cutoff = Date.now() - 3 * 60 * 60 * 1000; // 3 hours idle
-  for (const code in rooms) if (rooms[code].lastActivity < cutoff) delete rooms[code];
-}, 15 * 60 * 1000);
+  const now = Date.now();
+  for (const code in rooms) {
+    const G = rooms[code];
+
+    const anyoneHere = G.players.some(p => p.token && !p.isAI && p.connected);
+    if (anyoneHere) {
+      G.emptySince = null;
+    } else {
+      if (!G.emptySince) G.emptySince = now;
+      if (now - G.emptySince > EMPTY_CLOSE_MS) { closeRoom(G, 'Everyone left.'); continue; }
+    }
+
+    if (now - G.lastActivity > IDLE_CLOSE_MS) {
+      closeRoom(G, 'Closed after 10 minutes with nothing happening.');
+    }
+  }
+}, 20 * 1000);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Dame de Pique running on port ${PORT}`));

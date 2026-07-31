@@ -118,6 +118,34 @@ function isKeeper(c) {
     (c.rank === 'A' || c.rank === 'K' || c.rank === '2' || c.rank === '3');
 }
 
+// Every card that's been played so far this round: already-resolved tricks
+// (captured by whoever won them) plus whatever's sitting in the trick in progress.
+function playedCardsThisRound(G) {
+  const out = [];
+  for (const p of G.players) out.push(...p.tricks);
+  for (const t of G.currentTrick) out.push(t.card);
+  return out;
+}
+
+// Once an Ace (♣/♦) has already fallen, its King becomes the new highest
+// surviving card of that suit — effectively a guaranteed trick-winner if led
+// later. This estimates the odds it's still worth holding onto rather than
+// giving it up in a discard: more tricks left in the round means more
+// chance to actually get to lead it and cash in the free win.
+function promotedKingKeepChance(G, card) {
+  if (card.rank !== 'K' || (card.suit !== '♣' && card.suit !== '♦')) return 0;
+  const aceGone = playedCardsThisRound(G).some(c => c.suit === card.suit && c.rank === 'A');
+  if (!aceGone) return 0;
+  const tricksLeft = Math.max(1, 14 - G.trickNum);
+  return Math.max(0.35, Math.min(0.95, tricksLeft / 13));
+}
+
+// Rolls the keep-chance for each candidate and filters out the ones that
+// "win" the roll (i.e. probabilistically protects promoted Kings).
+function withoutProbableKeepers(G, cards) {
+  return cards.filter(c => Math.random() >= promotedKingKeepChance(G, c));
+}
+
 function handRisk(hand) {
   const bySuit = { '♠': [], '♥': [], '♦': [], '♣': [] };
   for (const c of hand) bySuit[c.suit].push(c);
@@ -229,7 +257,9 @@ function aiChoose(G, pi) {
       // without spending a keeper card if a non-keeper loser is available.
       if (losers.length) {
         const nonKeeper = losers.filter(c => !isKeeper(c));
-        const pool = nonKeeper.length ? nonKeeper : losers;
+        const pool0 = nonKeeper.length ? nonKeeper : losers;
+        const protectedPool = withoutProbableKeepers(G, pool0);
+        const pool = protectedPool.length ? protectedPool : pool0;
         return pool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
       }
       return (winners.length ? winners : following).sort((a, b) => RV[a.rank] - RV[b.rank])[0];
@@ -240,7 +270,9 @@ function aiChoose(G, pi) {
     if (winners.length) return winners.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
     // Can't win: this loss is free either way, so protect keeper cards where possible.
     const nonKeeper = losers.filter(c => !isKeeper(c));
-    const pool = nonKeeper.length ? nonKeeper : losers;
+    const pool0 = nonKeeper.length ? nonKeeper : losers;
+    const protectedPool = withoutProbableKeepers(G, pool0);
+    const pool = protectedPool.length ? protectedPool : pool0;
     return pool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
   }
 
@@ -249,10 +281,13 @@ function aiChoose(G, pi) {
   const hearts = legal.filter(c => c.suit === '♥').sort((a, b) => RV[b.rank] - RV[a.rank]);
   if (hearts.length) return hearts[0];
   // Nothing dangerous to dump: this is a free discard, so protect keeper
-  // cards first, and among the rest, let go of the lowest one to keep
-  // higher plain-suit assets in hand (winning a trick is +10 here).
+  // cards (and any King newly promoted to top-of-suit) first, and among
+  // the rest, let go of the lowest one to keep higher plain-suit assets
+  // in hand (winning a trick is +10 here).
   const nonKeeper = legal.filter(c => !isKeeper(c));
-  const pool = nonKeeper.length ? nonKeeper : legal;
+  const pool0 = nonKeeper.length ? nonKeeper : legal;
+  const protectedPool = withoutProbableKeepers(G, pool0);
+  const pool = protectedPool.length ? protectedPool : pool0;
   return pool.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
 }
 
@@ -278,6 +313,7 @@ function createRoom(hostName) {
     trickLeader: 0,
     trickNum: 1,
     passSelected: [null, null, null, null],
+    receivedThisRound: [[], [], [], []],
     roundBefore: [0, 0, 0, 0],
     history: [],
     autoAt: 0,
@@ -418,6 +454,7 @@ function broadcastRoom(G) {
         myIndex: i,
         isHost: p.token != null && p.token === G.hostToken,
         myHand: sortH(p.hand),
+        myReceived: G.receivedThisRound ? G.receivedThisRound[i] : [],
         legalCards: G.phase === 'play' ? legalCards(G, i).map(c => c.rank + '|' + c.suit) : [],
       });
     }
@@ -465,6 +502,7 @@ function dealRound(G) {
     G.players[i].hasPassed = false;
   }
   G.passSelected = [null, null, null, null];
+  G.receivedThisRound = [[], [], [], []];
   G.heartsbroken = false;
   G.currentTrick = [];
   G.trickNum = 1;
@@ -500,6 +538,7 @@ function executePass(G) {
     }
   }
   for (let i = 0; i < 4; i++) G.players[i].hand.push(...toAdd[i]);
+  G.receivedThisRound = toAdd.map(cards => cards.map(c => ({ rank: c.rank, suit: c.suit })));
   startTricks(G);
 }
 

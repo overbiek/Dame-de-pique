@@ -888,12 +888,11 @@ function confirmPass(){
 /* ══════════ PLAY ══════════ */
 function renderPlay(G){
   show('play');
-  const broken=G.round===1&&G.heartsbroken;
   $('g-bar').innerHTML=
     `<span class="chip">Round <b>${G.round}</b>/${G.totalRounds}</span>
      <span class="chip">Trick <b>${G.trickNum}</b>/13</span>
-     ${G.round===1
-        ? `<span class="chip ${broken?'hot':''}">${broken?'♥ broken':'♥ locked'}</span>`
+     ${G.trickNum===1
+        ? `<span class="chip hot">Opening card: no ♥ or ♠Q</span>`
         : `<span class="chip cool">♥ ♠Q free</span>`}
      <button class="chip chip-btn" onclick="askLeave(this)">Leave</button>`;
   $('g-table').innerHTML=tableHTML(G,{fan:true});

@@ -312,6 +312,70 @@ input[type=text]::placeholder{color:var(--faint)}
 .or::before,.or::after{content:'';flex:1;height:1px;background:var(--line)}
 .row{display:flex;gap:8px}
 .row .grow{flex:1;min-width:0}
+.backlink{display:inline-block;margin-bottom:18px}
+
+/* ══ Main menu ══ */
+.menu-wrap{max-width:420px;margin:0 auto;padding-top:5.5vh;text-align:center}
+.menu-crest{font-size:1rem;letter-spacing:.5em;color:var(--gold-lo);opacity:.75;margin-bottom:4px}
+.menu-tiles{display:flex;flex-direction:column;gap:11px;margin-top:28px;text-align:left}
+.tile{
+  display:flex;align-items:center;gap:14px;width:100%;
+  font:inherit;text-align:left;color:inherit;appearance:none;
+  padding:15px 16px;border-radius:18px;cursor:pointer;
+  background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  border:1px solid var(--line);
+  transition:transform .13s,border-color .2s,background .2s,box-shadow .2s;
+  touch-action:manipulation;
+}
+.tile:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.tile:active{transform:scale(.98)}
+.tile:hover{border-color:rgba(212,175,92,.35);background:linear-gradient(160deg,rgba(212,175,92,.10),rgba(255,255,255,.02))}
+.tile-icon{
+  width:44px;height:44px;border-radius:13px;flex:0 0 auto;
+  display:grid;place-items:center;font-size:1.35rem;line-height:1;
+  background:rgba(212,175,92,.12);border:1px solid rgba(212,175,92,.25);
+}
+.tile.primary .tile-icon{
+  background:linear-gradient(175deg,var(--gold-hi),var(--gold) 45%,var(--gold-lo));
+  color:#2a1e05;border-color:transparent;
+  box-shadow:0 3px 10px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.4);
+}
+.tile-body{flex:1;min-width:0}
+.tile-title{
+  font-family:'Playfair Display',serif;font-weight:600;font-size:1.0rem;
+  color:var(--cream);display:flex;align-items:center;gap:7px;line-height:1.3;
+}
+.tile-sub{font-size:.76rem;color:var(--faint);margin-top:2px}
+.tile-arrow{color:var(--faint);font-size:1.2rem;flex:0 0 auto;opacity:.7}
+.pill-tag{font-size:.56rem;font-weight:800;letter-spacing:.05em;padding:2px 7px;
+  border-radius:999px;text-transform:uppercase;white-space:nowrap}
+.pill-tag.soon{background:rgba(255,255,255,.07);color:var(--faint);border:1px solid var(--line)}
+
+/* ══ Empty / placeholder states (ranked, rank) ══ */
+.empty-state{text-align:center;padding:30px 6px 6px}
+.empty-icon{font-size:2.2rem;margin-bottom:10px;opacity:.85}
+.empty-state h3{font-family:'Playfair Display',serif;color:var(--gold-hi);font-size:1.05rem;margin-bottom:7px}
+.empty-state p{max-width:320px;margin:0 auto;font-size:.87rem}
+
+/* ══ Personal / avatar picker ══ */
+.avatar-preview{
+  width:76px;height:76px;border-radius:50%;margin:4px auto 16px;
+  display:grid;place-items:center;font-size:2.1rem;
+  background:rgba(0,0,0,.30);border:2px solid var(--gold);
+  box-shadow:0 0 22px rgba(212,175,92,.24);
+}
+.avatar-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin:18px 0 22px}
+.avatar-opt{
+  aspect-ratio:1;border-radius:15px;display:grid;place-items:center;
+  font-size:1.4rem;background:rgba(0,0,0,.22);border:1.5px solid var(--line);
+  cursor:pointer;transition:border-color .16s,box-shadow .16s,transform .12s,background .16s;
+  touch-action:manipulation;
+}
+.avatar-opt:active{transform:scale(.93)}
+.avatar-opt.sel{
+  border-color:var(--gold);background:rgba(212,175,92,.12);
+  box-shadow:0 0 0 2px rgba(212,175,92,.3),0 0 14px rgba(212,175,92,.35);
+}
 
 /* ══ Lobby ══ */
 .codebox{
@@ -625,11 +689,68 @@ input[type=text]::placeholder{color:var(--faint)}
 
 <div id="app">
 
-<!-- ═══ LANDING ═══ -->
-<section id="s-landing" class="screen active">
-  <div class="center-wrap">
+<!-- ═══ MAIN MENU ═══ -->
+<section id="s-menu" class="screen active">
+  <div class="menu-wrap">
+    <div class="menu-crest">♠ ♥ ♦ ♣</div>
     <h1>Dame de Pique</h1>
     <p class="tagline">Hearts, spades, and cunning</p>
+
+    <div class="menu-tiles">
+      <button class="tile primary" onclick="show('landing')">
+        <div class="tile-icon">🂡</div>
+        <div class="tile-body">
+          <div class="tile-title">Casual Play</div>
+          <div class="tile-sub">Friends &amp; AI &middot; create or join a room</div>
+        </div>
+        <div class="tile-arrow">›</div>
+      </button>
+
+      <button class="tile" onclick="show('ranked')">
+        <div class="tile-icon">⚔️</div>
+        <div class="tile-body">
+          <div class="tile-title">Ranked Multiplayer <span class="pill-tag soon">Soon</span></div>
+          <div class="tile-sub">Humans only &middot; climb the ladder</div>
+        </div>
+        <div class="tile-arrow">›</div>
+      </button>
+
+      <button class="tile" onclick="show('rank')">
+        <div class="tile-icon">🏆</div>
+        <div class="tile-body">
+          <div class="tile-title">Rank</div>
+          <div class="tile-sub">Leaderboard &amp; your standing</div>
+        </div>
+        <div class="tile-arrow">›</div>
+      </button>
+
+      <button class="tile" onclick="goPersonal()">
+        <div class="tile-icon" id="menu-avatar-icon">👤</div>
+        <div class="tile-body">
+          <div class="tile-title">Personal</div>
+          <div class="tile-sub">Choose your avatar &amp; name</div>
+        </div>
+        <div class="tile-arrow">›</div>
+      </button>
+    </div>
+
+    <div class="exit-row" style="margin-top:22px">
+      <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
+    </div>
+    <div id="err-menu" class="note bad" style="display:none"></div>
+    <div id="install">
+      <button class="btn btn-ghost btn-block" id="install-btn" onclick="doInstall()">Install as an app</button>
+      <p id="install-how"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CASUAL PLAY (create / join) ═══ -->
+<section id="s-landing" class="screen">
+  <div class="center-wrap">
+    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Casual Play</h2>
+    <p class="tagline">Friends and AI &middot; pick up and play</p>
 
     <div class="stack">
       <input type="text" id="f-name" placeholder="Your name" maxlength="16" autocomplete="nickname"/>
@@ -650,10 +771,59 @@ input[type=text]::placeholder{color:var(--faint)}
       <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
     </div>
     <div id="err-landing" class="note bad" style="display:none"></div>
-    <div id="install">
-      <button class="btn btn-ghost btn-block" id="install-btn" onclick="doInstall()">Install as an app</button>
-      <p id="install-how"></p>
+  </div>
+</section>
+
+<!-- ═══ RANKED MULTIPLAYER (placeholder) ═══ -->
+<section id="s-ranked" class="screen">
+  <div class="center-wrap" style="max-width:440px">
+    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Ranked Multiplayer</h2>
+    <p class="tagline">Humans only &middot; no AI seats</p>
+    <div class="empty-state">
+      <div class="empty-icon">⚔️</div>
+      <h3>Coming soon</h3>
+      <p>Ranked will queue you with three other real players for a match that
+         counts &mdash; no bots, a proper rating, and a season leaderboard.
+         It's being built next.</p>
     </div>
+    <button class="btn btn-primary btn-block" disabled style="margin-top:8px">Find match</button>
+    <div class="exit-row" style="margin-top:14px">
+      <button class="btn btn-ghost btn-sm" onclick="show('landing')">Play casual instead</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ RANK / LEADERBOARD (placeholder) ═══ -->
+<section id="s-rank" class="screen">
+  <div class="center-wrap" style="max-width:440px">
+    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Rank</h2>
+    <p class="tagline">Season leaderboard</p>
+    <div class="empty-state">
+      <div class="empty-icon">🏆</div>
+      <h3>No ranked matches yet</h3>
+      <p>Once Ranked Multiplayer launches, everyone's rating and the full
+         leaderboard will show up right here &mdash; including where you stand.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PERSONAL (avatar & name) ═══ -->
+<section id="s-personal" class="screen">
+  <div class="center-wrap" style="max-width:420px">
+    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Personal</h2>
+    <p class="tagline">This is how the table sees you</p>
+
+    <div class="avatar-preview" id="pv-avatar">👤</div>
+    <input type="text" id="pv-name" placeholder="Your name" maxlength="16"
+           autocomplete="nickname" oninput="updateAvatarPreview()"/>
+
+    <div class="avatar-grid" id="avatar-grid"></div>
+
+    <button class="btn btn-primary btn-block" onclick="savePersonal()">Save</button>
+    <p id="pv-saved" class="note gold" style="display:none;margin-top:10px;text-align:center">Saved.</p>
   </div>
 </section>
 
@@ -761,6 +931,16 @@ function saveSession(){ try{localStorage.setItem(SK,JSON.stringify({room,token})
 function loadSession(){ try{return JSON.parse(localStorage.getItem(SK)||'null');}catch(e){return null;} }
 function clearSession(){ try{localStorage.removeItem(SK);}catch(e){} }
 
+/* ── profile (name + avatar, survives across games) ── */
+const PK='ddp.profile';
+const AVATARS=['👑','🃏','🦊','🐺','🦁','🐯','🦅','🐉','🎩','🕶️','💎','🎲','🍀','🔱','⚜️','🌙','⭐','🔥','⚔️','🛡️'];
+function loadProfile(){
+  try{ return Object.assign({name:'',avatar:''},JSON.parse(localStorage.getItem(PK)||'null')); }
+  catch(e){ return {name:'',avatar:''}; }
+}
+function saveProfileStore(){ try{localStorage.setItem(PK,JSON.stringify(profile));}catch(e){} }
+let profile=loadProfile();
+
 /* ── helpers ── */
 const $=id=>document.getElementById(id);
 function show(id){
@@ -830,8 +1010,9 @@ function seatHTML(G,i,opts){
   }
   const rs=roundOf(G,i);
   const rcls=rs>0?'up':rs<0?'down':'flat';
+  const avatarContent=p.isAI?'🤖':(p.avatar?esc(p.avatar):esc(initial(p.name)));
   return `<div class="seat ${cls}">
-    <div class="avatar">${esc(initial(p.name))}</div>
+    <div class="avatar">${avatarContent}</div>
     <div class="seat-name">${esc(p.name)}${mine?' · you':''}${i===G.dealer?' •':''}</div>
     <div class="seat-score ${rcls}">${rs>0?'+':''}${rs}<small>(${p.score})</small></div>
     ${fan?`<div class="seat-cards">${fan}</div><span class="count-pill">${p.cardCount}</span>`:''}
@@ -898,16 +1079,48 @@ function tableHTML(G,opts){
 function doCreate(){
   const n=$('f-name').value.trim();
   if(!n){ $('f-name').focus(); return; }
-  socket.emit('createRoom',{name:n});
+  profile.name=n; saveProfileStore();
+  socket.emit('createRoom',{name:n,avatar:profile.avatar||''});
 }
 function doJoin(){
   const n=$('f-name').value.trim();
   const c=$('f-code').value.trim().toUpperCase();
   if(!n){ toast('err-landing','Enter your name first.'); $('f-name').focus(); return; }
   if(!c){ $('f-code').focus(); return; }
-  socket.emit('joinRoom',{code:c,name:n});
+  profile.name=n; saveProfileStore();
+  socket.emit('joinRoom',{code:c,name:n,avatar:profile.avatar||''});
 }
 function newGame(){ clearSession(); location.href=location.pathname; }
+
+/* ══════════ PERSONAL (avatar & name) ══════════ */
+function renderAvatarGrid(){
+  const el=$('avatar-grid'); if(!el) return;
+  el.innerHTML=AVATARS.map(a=>
+    `<div class="avatar-opt${a===profile.avatar?' sel':''}" onclick="pickAvatar('${a}')">${a}</div>`
+  ).join('');
+}
+function pickAvatar(a){
+  profile.avatar=(profile.avatar===a)?'':a;   // tap again to clear
+  renderAvatarGrid();
+  updateAvatarPreview();
+}
+function updateAvatarPreview(){
+  const n=$('pv-name').value.trim()||profile.name;
+  $('pv-avatar').textContent=profile.avatar||initial(n||'?');
+}
+function goPersonal(){
+  show('personal');
+  $('pv-name').value=profile.name||'';
+  renderAvatarGrid();
+  updateAvatarPreview();
+}
+function savePersonal(){
+  profile.name=$('pv-name').value.trim().slice(0,16);
+  saveProfileStore();
+  $('f-name').value=profile.name;
+  $('menu-avatar-icon').textContent=profile.avatar||'👤';
+  toast('pv-saved','Saved.');
+}
 
 socket.on('joined',d=>{
   room=d.code; me=d.playerIndex; host=d.isHost; token=d.token;
@@ -996,8 +1209,8 @@ function goLanding(msg){
   autoDeadline=0; voteDeadline=0;
   clearInterval(autoTick); autoTick=null;
   $('votebox').style.display='none';
-  show('landing');
-  if(msg) toast('err-landing',msg);
+  show('menu');
+  if(msg) toast('err-menu',msg);
 }
 socket.on('leftRoom',()=>goLanding('You left the game.'));
 socket.on('roomClosed',d=>goLanding((d&&d.reason)||'The game was closed.'));
@@ -1384,10 +1597,12 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 }
 
-/* prefill code from invite link */
+/* prefill code from invite link, and remembered name/avatar */
 (function(){
+  if(profile.name) $('f-name').value=profile.name;
+  if(profile.avatar) $('menu-avatar-icon').textContent=profile.avatar;
   const c=new URLSearchParams(location.search).get('join');
-  if(c) $('f-code').value=c.toUpperCase();
+  if(c){ $('f-code').value=c.toUpperCase(); show('landing'); }
   const s=loadSession();
   if(s&&s.room){ room=s.room; token=s.token; }
 })();

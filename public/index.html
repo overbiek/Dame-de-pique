@@ -303,8 +303,51 @@ input[type=text]::placeholder{color:var(--faint)}
   display:none;
 }
 
+/* ══ Scoresheet ══ */
+.sheet-wrap{
+  max-height:48vh;overflow:auto;margin:.7rem 0;
+  border:1px solid var(--line);border-radius:var(--r);
+  background:rgba(0,0,0,.18);-webkit-overflow-scrolling:touch;
+}
+.sheet{width:100%;border-collapse:separate;border-spacing:0;font-size:.8rem}
+.sheet th,.sheet td{padding:7px 6px;text-align:center;white-space:nowrap}
+.sheet thead th{
+  position:sticky;top:0;z-index:2;
+  background:#0c3527;color:var(--faint);
+  font-size:.66rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  border-bottom:1px solid var(--line);
+  max-width:74px;overflow:hidden;text-overflow:ellipsis;
+}
+.sheet thead th.rd{text-align:left;padding-left:10px;width:46px}
+.sheet tbody th.rd{
+  text-align:left;padding-left:10px;font-weight:500;font-size:.72rem;
+  color:var(--faint);border-bottom:1px solid rgba(244,239,228,.05);
+}
+.sheet tbody th.rd i{
+  font-style:normal;display:inline-block;margin-left:4px;
+  font-size:.6rem;font-weight:700;color:var(--gold);opacity:.75;
+}
+.sheet tbody td{border-bottom:1px solid rgba(244,239,228,.05);color:var(--cream);font-variant-numeric:tabular-nums}
+.sheet tr.now th.rd,.sheet tr.now td{background:rgba(212,175,92,.10)}
+.sheet tr.ahead th.rd,.sheet tr.ahead td{color:rgba(244,239,228,.18)}
+.sheet td.moon{color:var(--gold-hi);font-weight:700}
+.sheet tfoot th,.sheet tfoot td{
+  position:sticky;bottom:0;z-index:2;
+  background:#0c3527;border-top:1px solid rgba(212,175,92,.30);
+  font-family:'Playfair Display',serif;font-size:.95rem;font-weight:700;
+}
+.sheet tfoot th{text-align:left;padding-left:10px;font-family:'DM Sans',sans-serif;
+  font-size:.66rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.sheet tfoot td.top{color:var(--gold-hi)}
+.sheet .you{color:var(--gold-hi)}
+.legend{font-size:.72rem;color:var(--faint);margin:-2px 0 8px;line-height:1.5}
+
 /* ══ Install prompt ══ */
-#install{display:none;margin-top:14px}
+#install{display:none;margin-top:18px}
+#install-how{display:none;margin-top:10px;text-align:left;font-size:.82rem;
+  line-height:1.65;color:var(--muted);background:rgba(0,0,0,.20);
+  border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+#install-how b{color:var(--gold-hi);font-weight:600}
 
 @media(min-width:620px){
   .table{padding:18px 16px;gap:10px}
@@ -341,7 +384,10 @@ input[type=text]::placeholder{color:var(--faint)}
     </div>
 
     <div id="err-landing" class="note bad" style="display:none"></div>
-    <div id="install"><button class="btn btn-ghost btn-block" onclick="doInstall()">Install as an app</button></div>
+    <div id="install">
+      <button class="btn btn-ghost btn-block" id="install-btn" onclick="doInstall()">Install as an app</button>
+      <p id="install-how"></p>
+    </div>
   </div>
 </section>
 
@@ -716,34 +762,71 @@ $('g-hand').addEventListener('click',e=>{
 });
 
 /* ══════════ SUMMARY ══════════ */
-function scoreRows(G,withDelta){
-  const rows=G.players.map((p,i)=>({...p,i})).sort((a,b)=>b.score-a.score);
-  let h='<table class="scores"><thead><tr><th>Player</th>'
-       +(withDelta?'<th>Round</th>':'')+'<th>Total</th></tr></thead><tbody>';
-  rows.forEach((p,n)=>{
-    let d='';
-    if(withDelta){
-      const v=p.score-G.roundBefore[p.i];
-      const cl=v>0?'d-pos':v<0?'d-neg':'d-neu';
-      d=`<td class="${cl}">${v>0?'+':''}${v}</td>`;
-    }
-    h+=`<tr class="${n===0?'lead':''}">
-      <td>${esc(p.name)}${p.isAI?' <span class="tag bot">AI</span>':''}${p.i===me?' <span class="tag you">you</span>':''}</td>
-      ${d}<td class="tot">${p.score}</td></tr>`;
-  });
-  return h+'</tbody></table>';
+
+/* ══════════ SCORESHEET ══════════ */
+function shortName(n){
+  const s=String(n).trim();
+  return s.length>8 ? s.slice(0,7)+'…' : s;
 }
+function sheetHTML(G){
+  const total=G.totalRounds;
+  const hist={};
+  (G.history||[]).forEach(h=>hist[h.round]=h);
+
+  let h='<div class="sheet-wrap"><table class="sheet"><thead><tr><th class="rd">#</th>';
+  G.players.forEach((p,i)=>{
+    h+=`<th class="${i===me?'you':''}" title="${esc(p.name)}">${esc(shortName(p.name))}</th>`;
+  });
+  h+='</tr></thead><tbody>';
+
+  for(let r=1;r<=total;r++){
+    const e=hist[r];
+    const letter=(G.passLetters&&G.passLetters[r-1])||'';
+    const cls=e?(r===G.round?'now':''):'ahead';
+    h+=`<tr class="${cls}"${r===G.round?' id="sheet-now"':''}>
+          <th class="rd">${r}<i>${letter}</i></th>`;
+    for(let i=0;i<4;i++){
+      if(!e){ h+='<td>·</td>'; continue; }
+      const v=e.deltas[i];
+      h+=`<td class="${e.moon===i?'moon':''}">${v>0?'+':''}${v}</td>`;
+    }
+    h+='</tr>';
+  }
+
+  h+='</tbody><tfoot><tr><th>Total</th>';
+  const best=Math.max(...G.players.map(p=>p.score));
+  G.players.forEach(p=>{
+    h+=`<td class="${p.score===best?'top':''}">${p.score}</td>`;
+  });
+  h+='</tr></tfoot></table></div>';
+  h+='<p class="legend"><b>L</b> pass left · <b>R</b> right · <b>O</b> over · <b>K</b> keep. '
+    +'Gold marks a shot moon.</p>';
+  return h;
+}
+function scrollSheet(){
+  const el=$('sheet-now');
+  if(el&&el.scrollIntoView) el.scrollIntoView({block:'center'});
+}
+
 function renderSummary(G){
   show('summary');
   $('r-title').textContent=`Round ${G.round} of ${G.totalRounds} complete`;
   let h='';
-  if(G.moonShooter>=0)
-    h+=`<div class="note gold"><b>${esc(G.players[G.moonShooter].name)}</b> shot the moon — +60, and −20 for everyone else.</div>`;
-  h+=scoreRows(G,true);
+  if(G.moonShooter>=0){
+    const mine=G.moonShooter===me;
+    h+=`<div class="note gold"><b>${mine?'You':esc(G.players[G.moonShooter].name)} shot the moon.</b> `
+      +`The round scores <b>+60</b> for ${mine?'you':'them'} and <b>&minus;20</b> for everyone else `
+      +`&mdash; tricks won this round don't count.</div>`;
+  }
+  h+=sheetHTML(G);
   $('r-body').innerHTML=h;
+  scrollSheet();
   $('r-next').style.display=host?'block':'none';
-  $('r-next').textContent=`Start round ${G.round+1}`;
+  $('r-next').textContent=G.isLastRound?'See final standings':`Start round ${G.round+1}`;
   $('r-wait').style.display=host?'none':'block';
+  $('r-wait').textContent=G.isLastRound
+    ? 'Waiting for the host to reveal the standings…'
+    : 'Waiting for the host…';
 }
 
 /* ══════════ FINAL ══════════ */
@@ -758,20 +841,46 @@ function renderFinal(G){
       <div class="who">${esc(p.name)}${p.i===me?' (you)':''}${p.isAI?' · AI':''}</div>
     </div>`;
   });
-  h+='</div>'+scoreRows(G,false);
+  h+='</div>'+sheetHTML(G);
   $('f-body').innerHTML=h;
   clearSession();
 }
 
 /* ══════════ PWA ══════════ */
 let deferredPrompt=null;
+
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches
+      || window.matchMedia('(display-mode: fullscreen)').matches
+      || navigator.standalone===true;
+}
+function showInstall(){ if(!isStandalone()) $('install').style.display='block'; }
+
+// Chrome fires this only when it feels like it — use it if it comes.
 window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault(); deferredPrompt=e; $('install').style.display='block';
+  e.preventDefault(); deferredPrompt=e; showInstall();
 });
+// ...but always offer the button anyway, with manual steps as a fallback.
+window.addEventListener('load',()=>setTimeout(showInstall,1500));
+
 function doInstall(){
-  if(!deferredPrompt)return;
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; $('install').style.display='none'; });
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; $('install').style.display='none'; });
+    return;
+  }
+  const ua=navigator.userAgent;
+  let msg;
+  if(/iPhone|iPad|iPod/.test(ua))
+    msg='In <b>Safari</b>, tap the Share button at the bottom, scroll down and choose <b>Add to Home Screen</b>.';
+  else if(/Android/.test(ua))
+    msg='In <b>Chrome</b>, tap the <b>⋮</b> menu at the top right, then <b>Add to Home screen</b> (it may read <b>Install app</b>).';
+  else
+    msg='In <b>Chrome</b> on desktop, click the install icon at the right of the address bar, or <b>⋮</b> → <b>Cast, save and share</b> → <b>Install page as app</b>.';
+  const el=$('install-how');
+  el.innerHTML=msg;
+  el.style.display='block';
+  $('install-btn').textContent='Installation steps';
 }
 window.addEventListener('appinstalled',()=>{ $('install').style.display='none'; });
 

@@ -161,7 +161,7 @@ input[type=text]::placeholder{color:var(--faint)}
 
 /* ══ Hand — held like a fan of cards ══ */
 .hand{
-  display:flex;align-items:flex-end;
+  display:flex;align-items:flex-end;justify-content:center;
   padding:38px 6px 10px;
   overflow-x:auto;overflow-y:visible;
   scrollbar-width:none;-webkit-overflow-scrolling:touch;
@@ -717,7 +717,7 @@ input[type=text]::placeholder{color:var(--faint)}
 <script>
 "use strict";
 
-const SUITS=['♠','♥','♦','♣'];
+const SUITS=['♣','♦','♠','♥'];
 const RED=new Set(['♥','♦']);
 const socket=io({reconnectionDelayMax:4000});
 

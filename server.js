@@ -68,6 +68,14 @@ function passTarget(from, round) {
   return from;
 }
 
+function passSource(to, round) {
+  const d = passDir(round);
+  if (d === 'left')   return (to + 3) % 4;
+  if (d === 'right')  return (to + 1) % 4;
+  if (d === 'across') return (to + 2) % 4;
+  return to;
+}
+
 function canPlay(G, pi, card) {
   const trick = G.currentTrick;
   if (trick.length === 0) {
@@ -306,6 +314,7 @@ function createRoom(hostName) {
     hostToken: null,
     round: 1,
     dealer: -1,
+    drawRound: 0,
     drawCards: [],
     drawRevealed: [false, false, false, false],
     heartsbroken: false,
@@ -425,6 +434,7 @@ function publicState(G) {
     totalRounds: TOTAL_ROUNDS,
     isLastRound: G.round >= TOTAL_ROUNDS,
     dealer: G.dealer,
+    drawRound: G.drawRound,
     heartsbroken: G.heartsbroken,
     currentTrick: G.currentTrick,
     trickLeader: G.trickLeader,
@@ -455,6 +465,9 @@ function broadcastRoom(G) {
         isHost: p.token != null && p.token === G.hostToken,
         myHand: sortH(p.hand),
         myReceived: G.receivedThisRound ? G.receivedThisRound[i] : [],
+        myPassed: G.passSelected ? (G.passSelected[i] || []) : [],
+        passToIndex: passDir(G.round) === 'keep' ? null : passTarget(i, G.round),
+        passFromIndex: passDir(G.round) === 'keep' ? null : passSource(i, G.round),
         legalCards: G.phase === 'play' ? legalCards(G, i).map(c => c.rank + '|' + c.suit) : [],
       });
     }
@@ -462,8 +475,9 @@ function broadcastRoom(G) {
 }
 
 // ── Draw phase ──────────────────────────────────────────────────
-function startDraw(G) {
+function startDraw(G, round) {
   G.phase = 'draw';
+  G.drawRound = round;
   const deck = shuffle(makeDeck());
   G.drawCards = deck.slice(0, 4);
   G.drawRevealed = [false, false, false, false];
@@ -478,16 +492,37 @@ function startDraw(G) {
   }, AUTO_ADVANCE_MS);
 }
 
+// Physically reassigns table seats (array position 0-3) based on the round-1
+// draw: highest card sits seat 0, then descending around the table. Player
+// objects move as a whole (token, socketId, isAI, name, connected all travel
+// together), so reconnection — which looks players up by token, never by
+// index — and host detection — keyed off hostToken/hostSocket, not seat
+// index — both keep working correctly after the shuffle.
+function reseatByDraw(G) {
+  const order = [0, 1, 2, 3].sort((a, b) => RV[G.drawCards[b].rank] - RV[G.drawCards[a].rank]);
+  G.players = order.map(i => G.players[i]);
+  G.drawCards = order.map(i => G.drawCards[i]);
+  G.drawRevealed = order.map(i => G.drawRevealed[i]);
+}
+
 function revealDrawCard(G, i) {
   if (G.phase !== 'draw' || G.drawRevealed[i]) return;
   G.drawRevealed[i] = true;
   if (G.drawRevealed.every(Boolean)) {
-    let best = 0;
-    for (let j = 1; j < 4; j++)
-      if (RV[G.drawCards[j].rank] > RV[G.drawCards[best].rank]) best = j;
-    G.dealer = best;
-    G.phase = 'drawDone';
-    armAuto(G, () => { if (G.phase === 'drawDone') dealRound(G); }, AUTO_ADVANCE_MS);
+    if (G.drawRound === 1) {
+      // Round 1 settles everyone into their seats around the table
+      // (highest card sits first). Now cut again to decide who deals first.
+      reseatByDraw(G);
+      G.phase = 'draw1Done';
+      armAuto(G, () => { if (G.phase === 'draw1Done') startDraw(G, 2); }, AUTO_ADVANCE_MS);
+    } else {
+      let best = 0;
+      for (let j = 1; j < 4; j++)
+        if (RV[G.drawCards[j].rank] > RV[G.drawCards[best].rank]) best = j;
+      G.dealer = best;
+      G.phase = 'drawDone';
+      armAuto(G, () => { if (G.phase === 'drawDone') dealRound(G); }, AUTO_ADVANCE_MS);
+    }
   }
   broadcastRoom(G);
 }
@@ -731,7 +766,7 @@ io.on('connection', (socket) => {
     if (!G || G.phase !== 'lobby' || !isHostSocket(G, socket)) return;
     if (!G.players.every(p => p.connected || p.isAI))
       return socket.emit('errorMsg', { msg: 'All four seats need a player or an AI.' });
-    startDraw(G);
+    startDraw(G, 1);
   });
 
   socket.on('revealDraw', ({ code, playerIndex }) => {
@@ -743,8 +778,9 @@ io.on('connection', (socket) => {
 
   socket.on('startRound', ({ code }) => {
     const G = findRoom(code);
-    if (!G || G.phase !== 'drawDone' || !isHostSocket(G, socket)) return;
-    dealRound(G);
+    if (!G || !isHostSocket(G, socket)) return;
+    if (G.phase === 'draw1Done') { startDraw(G, 2); return; }
+    if (G.phase === 'drawDone') { dealRound(G); return; }
   });
 
   socket.on('selectPass', ({ code, playerIndex, cards }) => {

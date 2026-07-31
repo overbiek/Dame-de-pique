@@ -1,4 +1,4 @@
-const CACHE = 'ddp-v1';
+const CACHE = 'ddp-v2';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {

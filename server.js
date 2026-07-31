@@ -105,12 +105,78 @@ function checkMoon(G) {
 }
 
 // ── AI ──────────────────────────────────────────────────────────
+// Estimates how dangerous a hand is to hold, from a purely defensive/offensive
+// blend appropriate to this ruleset (winning a trick is +10, not something to
+// avoid — only the hearts/Q♠ riding along in that trick cost points). Lower
+// is better. Used to pick which 2 cards to pass: try every combo, keep the
+// one whose *remaining* 11-card hand scores lowest risk.
+function handRisk(hand) {
+  const bySuit = { '♠': [], '♥': [], '♦': [], '♣': [] };
+  for (const c of hand) bySuit[c.suit].push(c);
+  for (const s of SUITS) bySuit[s].sort((a, b) => RV[a.rank] - RV[b.rank]);
+
+  let risk = 0;
+  const spades = bySuit['♠'];
+  const hasQS = spades.some(c => c.rank === 'Q');
+  const lowSpades = spades.filter(c => RV[c.rank] < RV.Q).length;   // guards to duck with
+  const highSpades = spades.filter(c => RV[c.rank] > RV.Q).length;  // A♠/K♠
+
+  if (hasQS) {
+    // Holding the queen herself: danger shrinks the more low spades you have
+    // to duck under a spade lead with until she can be unloaded safely.
+    const guardFactor = Math.max(0.12, 1 - lowSpades * 0.20);
+    risk += 26 * guardFactor;
+  } else if (highSpades > 0) {
+    // Queen-bait: holding A♠/K♠ without the queen risks being forced to
+    // overtake and scoop her if someone else leads spades. More low spades
+    // to duck with first makes this much safer.
+    const guardFactor = Math.max(0.10, 1 - lowSpades * 0.22);
+    risk += highSpades * 9 * guardFactor;
+  }
+
+  // Hearts cost scaled by rank; the very top hearts get an extra penalty
+  // since they're the hardest to unload without winning a fat trick.
+  for (const c of bySuit['♥']) {
+    risk += RV[c.rank] * 0.9;
+    if (RV[c.rank] >= RV.Q) risk += 4;
+  }
+
+  // Being void (or near-void) in a suit is good: it lets you dump danger
+  // cards for free whenever that suit gets led later in the round.
+  for (const s of SUITS) {
+    const n = bySuit[s].length;
+    if (n === 0) risk -= (s === '♠' ? 10 : s === '♥' ? 6 : 5);
+    else if (n === 1) risk -= (s === '♠' ? 4 : s === '♥' ? 2 : 2);
+  }
+
+  // High cards in the plain suits (♦/♣) are assets here, not liabilities —
+  // winning a trick is worth +10, so treat them as a small risk discount.
+  for (const s of ['♦', '♣']) {
+    for (const c of bySuit[s]) {
+      if (RV[c.rank] >= RV.A) risk -= 3;
+      else if (RV[c.rank] >= RV.K) risk -= 1.5;
+    }
+  }
+
+  return risk;
+}
+
 function aiSelectPass(G, i) {
-  const sorted = [...G.players[i].hand].sort((a, b) => {
-    const w = c => (c.suit === '♠' && c.rank === 'Q') ? 1000 : c.suit === '♥' ? RV[c.rank] + 50 : RV[c.rank];
-    return w(b) - w(a);
-  });
-  return sorted.slice(0, 2).map(c => ({ rank: c.rank, suit: c.suit }));
+  const hand = G.players[i].hand;
+  let best = null, bestRisk = Infinity;
+  // Try all C(13,2)=78 two-card passes, keep the one that leaves the
+  // safest 11-card hand behind.
+  for (let a = 0; a < hand.length; a++) {
+    for (let b = a + 1; b < hand.length; b++) {
+      const remaining = hand.filter((_, idx) => idx !== a && idx !== b);
+      const r = handRisk(remaining);
+      if (r < bestRisk) {
+        bestRisk = r;
+        best = [hand[a], hand[b]];
+      }
+    }
+  }
+  return best.map(c => ({ rank: c.rank, suit: c.suit }));
 }
 
 function aiChoose(G, pi) {
@@ -148,7 +214,10 @@ function aiChoose(G, pi) {
   if (qs) return qs;
   const hearts = legal.filter(c => c.suit === '♥').sort((a, b) => RV[b.rank] - RV[a.rank]);
   if (hearts.length) return hearts[0];
-  return legal.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+  // Nothing dangerous to dump: this is a free discard, so protect the
+  // highest plain-suit cards (they're assets — winning a trick is +10 here)
+  // and let go of the lowest one instead.
+  return legal.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
 }
 
 // ── Room lifecycle ──────────────────────────────────────────────
@@ -275,8 +344,9 @@ function publicState(G) {
   return {
     code: G.code,
     phase: G.phase,
-    players: G.players.map(p => ({
+    players: G.players.map((p, i) => ({
       name: p.name, isAI: p.isAI, score: p.score,
+      roundScore: p.score - (G.roundBefore[i] || 0),
       connected: p.connected, cardCount: p.hand.length, hasPassed: p.hasPassed,
     })),
     round: G.round,
@@ -618,6 +688,7 @@ io.on('connection', (socket) => {
   socket.on('playCard', ({ code, playerIndex, card }) => {
     const G = findRoom(code);
     if (!G || G.phase !== 'play') return;
+    if (G.currentTrick.length >= 4) return; // trick is full, waiting on resolveTrick — not anyone's turn
     if (G.players[playerIndex]?.socketId !== socket.id) return;
     if (playerIndex !== currentPlayer(G)) return;
     const real = G.players[playerIndex].hand.find(c => eqC(c, card));

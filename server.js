@@ -55,6 +55,7 @@ function sortH(h) {
 function eqC(a, b) { return a.rank === b.rank && a.suit === b.suit; }
 
 function passDir(round) { return ['left', 'right', 'across', 'keep'][(round - 1) % 4]; }
+function passLetter(round) { return { left: 'L', right: 'R', across: 'O', keep: 'K' }[passDir(round)]; }
 function passTarget(from, round) {
   const d = passDir(round);
   if (d === 'left')   return (from + 1) % 4;
@@ -168,6 +169,7 @@ function createRoom(hostName) {
     trickNum: 1,
     passSelected: [null, null, null, null],
     roundBefore: [0, 0, 0, 0],
+    history: [],
     lastTrickMsg: '',
     moonShooter: -1,
     lastActivity: Date.now(),
@@ -185,6 +187,7 @@ function publicState(G) {
     })),
     round: G.round,
     totalRounds: TOTAL_ROUNDS,
+    isLastRound: G.round >= TOTAL_ROUNDS,
     dealer: G.dealer,
     heartsbroken: G.heartsbroken,
     currentTrick: G.currentTrick,
@@ -195,6 +198,8 @@ function publicState(G) {
     roundBefore: G.roundBefore,
     lastTrickMsg: G.lastTrickMsg || '',
     moonShooter: G.moonShooter,
+    history: G.history,
+    passLetters: Array.from({ length: TOTAL_ROUNDS }, (_, i) => passLetter(i + 1)),
   };
 }
 
@@ -346,8 +351,29 @@ function resolveTrick(G) {
 function endRound(G) {
   const moon = checkMoon(G);
   G.moonShooter = moon;
-  if (moon >= 0) for (let i = 0; i < 4; i++) G.players[i].score += (i === moon ? 60 : -20);
-  G.phase = G.round >= TOTAL_ROUNDS ? 'final' : 'roundSummary';
+
+  if (moon >= 0) {
+    // Shooting the moon REPLACES everything scored this round:
+    // the shooter ends on exactly +60 and everyone else on exactly -20,
+    // regardless of which tricks were won along the way.
+    for (let i = 0; i < 4; i++) {
+      G.players[i].score = G.roundBefore[i] + (i === moon ? 60 : -20);
+    }
+  }
+
+  // Record this round on the scoresheet (guard against a double call)
+  if (!G.history.some(h => h.round === G.round)) {
+    G.history.push({
+      round: G.round,
+      dir: passLetter(G.round),
+      deltas: G.players.map((p, i) => p.score - G.roundBefore[i]),
+      totals: G.players.map(p => p.score),
+      moon,
+    });
+  }
+
+  // Always show a summary for the final round too, then move on to standings.
+  G.phase = 'roundSummary';
   broadcastRoom(G);
 }
 
@@ -468,6 +494,7 @@ io.on('connection', (socket) => {
   socket.on('nextRound', ({ code }) => {
     const G = findRoom(code);
     if (!G || G.phase !== 'roundSummary' || !isHostSocket(G, socket)) return;
+    if (G.round >= TOTAL_ROUNDS) { G.phase = 'final'; broadcastRoom(G); return; }
     G.round++;
     G.dealer = (G.dealer + 1) % 4;
     dealRound(G);

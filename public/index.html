@@ -159,6 +159,34 @@ input[type=text]::placeholder{color:var(--faint)}
 }
 .card.mini{--cw:clamp(24px,6vw,32px)}
 
+/* ══ Pass transition — cards flying between players ══ */
+.pfx-layer{position:fixed;inset:0;pointer-events:none;z-index:150;overflow:hidden}
+.pfx-card{
+  position:absolute;left:50%;bottom:110px;
+  width:calc(var(--cw)*.72);height:calc(var(--ch)*.72);
+  border-radius:calc(var(--cw)*.13);
+  background:linear-gradient(158deg,#fffdf7,var(--card-face) 55%,#f2ecdd);
+  border:1px solid var(--card-edge);
+  box-shadow:0 8px 20px rgba(0,0,0,.5);
+}
+.pfx-card .ix{
+  position:absolute;top:7%;left:10%;line-height:.98;
+  font-weight:700;font-size:calc(var(--cw)*.24);letter-spacing:-.02em;
+}
+.pfx-card .ix small{display:block;font-size:calc(var(--cw)*.22);font-weight:600}
+.pfx-card.red{color:var(--red)}
+.pfx-card.blk{color:var(--ink)}
+.pfx-card.out{animation:pfx-out .8s cubic-bezier(.32,.55,.35,1) both}
+.pfx-card.in{animation:pfx-in .8s cubic-bezier(.2,.7,.3,1) both}
+@keyframes pfx-out{
+  0%{transform:translate(-50%,-50%) translate(0,0) rotate(0deg) scale(1);opacity:1}
+  100%{transform:translate(-50%,-50%) translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(.4);opacity:0}
+}
+@keyframes pfx-in{
+  0%{transform:translate(-50%,-50%) translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(.4);opacity:0}
+  100%{transform:translate(-50%,-50%) translate(0,0) rotate(0deg) scale(1);opacity:1}
+}
+
 /* ══ Hand — held like a fan of cards ══ */
 .hand{
   display:flex;align-items:flex-end;justify-content:center;
@@ -653,8 +681,8 @@ input[type=text]::placeholder{color:var(--faint)}
 <!-- ═══ DRAW ═══ -->
 <section id="s-draw" class="screen">
   <div class="center-wrap" style="padding-top:3vh;max-width:460px">
-    <h2>Cut for dealer</h2>
-    <p>Highest card deals first.</p>
+    <h2 id="d-title">Cut for dealer</h2>
+    <p id="d-sub">Highest card deals first.</p>
     <div id="d-row" class="drawrow"></div>
     <div id="d-note" class="note gold" style="display:none"></div>
     <button class="btn btn-primary btn-block" id="d-begin" style="display:none" onclick="send('startRound')">Begin round 1</button>
@@ -719,6 +747,7 @@ input[type=text]::placeholder{color:var(--faint)}
 
 const SUITS=['♣','♦','♠','♥'];
 const RED=new Set(['♥','♦']);
+const RV={2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
 const socket=io({reconnectionDelayMax:4000});
 
 let S=null;            // latest game state
@@ -1004,6 +1033,7 @@ socket.on('gameState',G=>{
   switch(G.phase){
     case 'lobby':        renderLobby(G); break;
     case 'draw':
+    case 'draw1Done':
     case 'drawDone':     renderDraw(G);  break;
     case 'pass':         renderPass(G);  break;
     case 'play':         renderPlay(G);  break;
@@ -1049,16 +1079,32 @@ function renderLobby(G){
 }
 
 /* ══════════ DRAW ══════════ */
+function highestDrawIndex(G){
+  if(!G.drawRevealed.every(Boolean)) return -1;
+  let best=0;
+  for(let j=1;j<4;j++) if(RV[G.drawCards[j].rank] > RV[G.drawCards[best].rank]) best=j;
+  return best;
+}
 function renderDraw(G){
   show('draw');
+  const round1Waiting=G.phase==='draw1Done';
+  const round2Done=G.phase==='drawDone';
+  const winnerIdx=G.drawRound===1 ? highestDrawIndex(G) : G.dealer;
+
+  const h2=$('d-title'), sub=$('d-sub');
+  if(h2) h2.textContent = G.drawRound===1 ? 'Drawing for seats' : 'Cut for dealer';
+  if(sub) sub.textContent = G.drawRound===1
+    ? 'Everyone draws a card to settle into their seats around the table.'
+    : 'Highest card deals first.';
+
   let h='';
   for(let i=0;i<4;i++){
     const p=G.players[i], up=G.drawRevealed[i], c=G.drawCards[i];
     const mine=i===me && !up && G.phase==='draw';
     if(up&&c){
-      h+=`<div class="drawcard flip ${G.dealer===i?'win':''}">
+      h+=`<div class="drawcard flip ${winnerIdx===i?'win':''}">
         <div>
-          <div class="dcr ${RED.has(c.suit)?'':''}" style="color:${RED.has(c.suit)?'var(--red)':'var(--ink)'}">${c.rank}</div>
+          <div class="dcr" style="color:${RED.has(c.suit)?'var(--red)':'var(--ink)'}">${c.rank}</div>
           <div class="dcs" style="color:${RED.has(c.suit)?'var(--red)':'var(--ink)'}">${c.suit}</div>
           <div class="dcn">${esc(p.name)}</div>
         </div>
@@ -1071,14 +1117,19 @@ function renderDraw(G){
   }
   $('d-row').innerHTML=h;
 
-  const done=G.phase==='drawDone';
   const note=$('d-note');
-  if(done){
+  if(round1Waiting){
     note.style.display='block';
-    note.textContent=`${G.players[G.dealer].name} deals first.`;
-  } else note.style.display='none';
-  $('d-begin').style.display=done&&host?'block':'none';
-  $('d-wait').style.display=done&&!host?'block':'none';
+    note.textContent=`Seats are set! ${esc(G.players[winnerIdx].name)} drew the highest card. Now let's cut for the dealer.`;
+  }else if(round2Done){
+    note.style.display='block';
+    note.textContent=`${esc(G.players[G.dealer].name)} deals first.`;
+  }else note.style.display='none';
+
+  const advanceReady=round1Waiting||round2Done;
+  $('d-begin').textContent=round1Waiting?'Cut for dealer':'Begin round 1';
+  $('d-begin').style.display=advanceReady&&host?'block':'none';
+  $('d-wait').style.display=advanceReady&&!host?'block':'none';
 }
 
 /* ══════════ PASS ══════════ */
@@ -1126,9 +1177,46 @@ function confirmPass(){
   picked=[];
 }
 
+/* ══════════ PASS TRANSITION ══════════ */
+let passFxShownForRound=-1;
+const PFX_DIR={1:{dx:-130,dy:-115,rot:-8},2:{dx:0,dy:-190,rot:0},3:{dx:130,dy:-115,rot:8}};
+function pfxCardEl(c,cls,dir,delay){
+  const el=document.createElement('div');
+  const col=RED.has(c.suit)?'red':'blk';
+  el.className=`pfx-card ${col} ${cls}`;
+  el.style.setProperty('--dx',dir.dx+'px');
+  el.style.setProperty('--dy',dir.dy+'px');
+  el.style.setProperty('--rot',dir.rot+'deg');
+  el.style.animationDelay=delay+'ms';
+  el.innerHTML=`<span class="ix">${c.rank}<small>${c.suit}</small></span>`;
+  return el;
+}
+function maybeShowPassTransition(G){
+  if(G.trickNum!==1) return;
+  if(passFxShownForRound===G.round) return;
+  if(!G.myPassed||G.myPassed.length!==2||!G.myReceived||G.myReceived.length!==2) return;
+  passFxShownForRound=G.round;
+
+  const toSeat=G.passToIndex!=null?seatOf(G.passToIndex):null;
+  const fromSeat=G.passFromIndex!=null?seatOf(G.passFromIndex):null;
+  if(toSeat==null||fromSeat==null) return;
+  const dTo=PFX_DIR[toSeat]||PFX_DIR[2];
+  const dFrom=PFX_DIR[fromSeat]||PFX_DIR[2];
+
+  const layer=document.createElement('div');
+  layer.className='pfx-layer';
+  document.body.appendChild(layer);
+
+  G.myPassed.forEach((c,idx)=>layer.appendChild(pfxCardEl(c,'out',dTo,idx*110)));
+  G.myReceived.forEach((c,idx)=>layer.appendChild(pfxCardEl(c,'in',dFrom,260+idx*110)));
+
+  setTimeout(()=>layer.remove(),1300);
+}
+
 /* ══════════ PLAY ══════════ */
 function renderPlay(G){
   show('play');
+  maybeShowPassTransition(G);
   $('g-bar').innerHTML=
     `<span class="chip">Round <b>${G.round}</b>/${G.totalRounds}</span>
      <span class="chip">Trick <b>${G.trickNum}</b>/13</span>

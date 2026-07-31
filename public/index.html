@@ -393,8 +393,59 @@ input[type=text]::placeholder{color:var(--faint)}
 .vote-actions{display:flex;gap:8px;margin-top:12px}
 .vote-actions .btn{flex:1}
 .chip-btn{cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;
-  margin-left:auto;border-color:rgba(214,90,70,.35);color:#eaa89c}
+  border-color:rgba(214,90,70,.35);color:#eaa89c}
+.chip-btn.push{margin-left:auto}
+.chip-btn.info{border-color:rgba(212,175,92,.38);color:var(--gold-hi)}
 .chip-btn:active{background:rgba(214,90,70,.18)}
+
+/* ══ Rulebook ══ */
+#rules{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(3,16,11,.78);backdrop-filter:blur(3px);
+  padding:calc(env(safe-area-inset-top) + 14px) 12px calc(env(safe-area-inset-bottom) + 14px);
+}
+#rules.on{display:flex;align-items:flex-start;justify-content:center}
+.rulecard{
+  width:100%;max-width:540px;max-height:100%;display:flex;flex-direction:column;
+  background:linear-gradient(170deg,#0d4130,#0a3225 60%,#08281d);
+  border:1px solid rgba(212,175,92,.34);border-radius:18px;
+  box-shadow:0 18px 50px rgba(0,0,0,.6);animation:votein .22s ease;
+}
+.rulehead{
+  display:flex;align-items:center;gap:10px;flex-shrink:0;
+  padding:16px 18px 12px;border-bottom:1px solid var(--line);
+}
+.rulehead h2{margin:0;font-size:1.25rem}
+.rulex{
+  margin-left:auto;flex-shrink:0;width:34px;height:34px;border-radius:50%;
+  border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--cream);
+  font-size:1rem;line-height:1;cursor:pointer;
+}
+.rulex:active{background:rgba(0,0,0,.4)}
+.rulebody{overflow-y:auto;padding:14px 18px 20px;-webkit-overflow-scrolling:touch}
+.rulebody h3{
+  font-family:'DM Sans',sans-serif;font-size:.7rem;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--gold);
+  margin:20px 0 7px;
+}
+.rulebody h3:first-child{margin-top:0}
+.rulebody p{font-size:.88rem;color:rgba(244,239,228,.78);line-height:1.62;margin-bottom:9px}
+.rulebody b{color:var(--cream);font-weight:600}
+.rulebody .hi{color:var(--gold-hi);font-weight:600}
+.rulebody ul{margin:0 0 9px;padding-left:18px}
+.rulebody li{font-size:.88rem;color:rgba(244,239,228,.78);line-height:1.6;margin-bottom:5px}
+.rtable{width:100%;border-collapse:collapse;font-size:.86rem;margin:4px 0 10px}
+.rtable td{padding:8px 6px;border-bottom:1px solid rgba(244,239,228,.07);color:rgba(244,239,228,.8)}
+.rtable td:last-child{text-align:right;white-space:nowrap;font-weight:600;font-family:'Playfair Display',serif;font-size:1rem}
+.rtable tr:last-child td{border-bottom:none}
+.pos{color:#7fe0b4}.neg{color:#f0968c}
+.rnote{
+  background:rgba(212,175,92,.09);border:1px solid rgba(212,175,92,.22);
+  border-radius:10px;padding:11px 13px;margin:10px 0;
+  font-size:.83rem;color:var(--gold-hi);line-height:1.55;
+}
+.rkey{display:inline-block;min-width:19px;text-align:center;font-weight:700;
+  color:var(--gold);font-size:.82rem}
 
 /* ══ Install prompt ══ */
 #install{display:none;margin-top:18px}
@@ -413,6 +464,95 @@ input[type=text]::placeholder{color:var(--faint)}
 <body>
 
 <div id="conn">Reconnecting…</div>
+
+
+<div id="rules" onclick="if(event.target===this)closeRules()">
+  <div class="rulecard">
+    <div class="rulehead">
+      <h2>How to play</h2>
+      <button class="rulex" onclick="closeRules()" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="rulebody">
+
+      <h3>The idea</h3>
+      <p>Four players, a full deck, thirteen cards each. A game runs to
+         <b>16 rounds</b> and the <b>highest total wins</b>.</p>
+      <div class="rnote">Unlike most versions of this game, points here are something you
+         <b>want</b>. You score for winning tricks and lose points for the hearts and the
+         queen of spades you pick up along the way.</div>
+
+      <h3>Before the first round</h3>
+      <p>Everyone cuts a card. Highest card deals first, and the deal then passes
+         <b>clockwise</b> after every round.</p>
+
+      <h3>Passing</h3>
+      <p>After the deal you choose <b>2 cards</b> to hand to another player. The direction
+         changes each round and repeats in a cycle of four:</p>
+      <ul>
+        <li><span class="rkey">L</span> to the player on your left</li>
+        <li><span class="rkey">R</span> to the player on your right</li>
+        <li><span class="rkey">O</span> over the table, to the player opposite</li>
+        <li><span class="rkey">K</span> keep &mdash; nobody passes anything</li>
+      </ul>
+      <p>Everyone passes at the same time, so you give your cards away before seeing
+         what you get back.</p>
+
+      <h3>Playing a trick</h3>
+      <p>The player to the dealer's left plays the first card. Going clockwise, everyone
+         adds one card, and whoever played the <b>highest card of the suit that was led</b>
+         takes the trick and leads the next one.</p>
+      <p>You <b>must follow the suit that was led</b> if you hold it. Only when you have
+         none of that suit may you play whatever you like &mdash; which is your chance to
+         get rid of something expensive.</p>
+      <p>Suits never trump one another. A card of a different suit can never win a trick,
+         no matter how high it is.</p>
+
+      <h3>The opening card</h3>
+      <p>The very first card of a round may <b>not</b> be a heart or the queen of spades.
+         From the second card onwards there are no restrictions at all &mdash; hearts can
+         be led straight away on the next trick.</p>
+      <p>This resets every round. The only exception is if the player opening holds nothing
+         but hearts and the queen, in which case they may lead one.</p>
+
+      <h3>Scoring</h3>
+      <p>Everything in a trick goes to whoever <b>wins</b> it:</p>
+      <table class="rtable">
+        <tr><td>Winning a trick</td><td class="pos">+10</td></tr>
+        <tr><td>Each heart in that trick</td><td class="neg">&minus;its value</td></tr>
+        <tr><td>The queen of spades</td><td class="neg">&minus;26</td></tr>
+      </table>
+      <p>Hearts cost what they show: <span class="hi">2&hearts;</span> is &minus;2, right up
+         to <span class="hi">J&hearts;</span> &minus;11, <span class="hi">Q&hearts;</span>
+         &minus;12, <span class="hi">K&hearts;</span> &minus;13 and
+         <span class="hi">A&hearts;</span> &minus;14. Every other card is worth nothing.</p>
+      <p>So a clean trick is a straight <b class="pos">+10</b>. A trick holding the
+         <span class="hi">A&hearts;</span> is 10 &minus; 14 =
+         <b class="neg">&minus;4</b>. A trick with the queen of spades in it is
+         10 &minus; 26 = <b class="neg">&minus;16</b>.</p>
+
+      <h3>Shooting the moon</h3>
+      <p>If a single player takes <b>all thirteen hearts and the queen of spades</b> in one
+         round, the whole round is thrown out and scored like this instead:</p>
+      <table class="rtable">
+        <tr><td>The player who did it</td><td class="pos">+60</td></tr>
+        <tr><td>Everyone else</td><td class="neg">&minus;20</td></tr>
+      </table>
+      <p>Tricks won that round no longer count for anyone. It is a real gamble: fall one
+         heart short and you are left holding every penalty card instead.</p>
+
+      <h3>Reading the scoresheet</h3>
+      <p>After each round you get the full sheet &mdash; one row per round, one column per
+         player, with each round's letter (<span class="rkey">L</span>
+         <span class="rkey">R</span> <span class="rkey">O</span>
+         <span class="rkey">K</span>) showing which way the cards went. Totals sit along the
+         bottom, and a figure in gold marks a round where somebody shot the moon.</p>
+      <div class="rnote">A quirk worth knowing: every round adds up to exactly <b>zero</b>
+         across the four players. The 130 points from thirteen tricks cancel the 130 points
+         of penalties precisely. If a round doesn't total zero, something has gone wrong.</div>
+
+    </div>
+  </div>
+</div>
 
 <div id="votebox">
   <div class="vote-card">
@@ -448,6 +588,9 @@ input[type=text]::placeholder{color:var(--faint)}
       </div>
     </div>
 
+    <div class="exit-row" style="margin-top:16px">
+      <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
+    </div>
     <div id="err-landing" class="note bad" style="display:none"></div>
     <div id="install">
       <button class="btn btn-ghost btn-block" id="install-btn" onclick="doInstall()">Install as an app</button>
@@ -470,6 +613,7 @@ input[type=text]::placeholder{color:var(--faint)}
     <button class="btn btn-primary btn-block" id="l-start" onclick="send('startGame')" disabled>Start game</button>
     <p id="l-wait" class="prompt wait" style="display:none">Waiting for the host to start…</p>
     <div class="exit-row">
+      <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
       <button class="btn btn-ghost btn-sm" onclick="askLeave(this)">Leave lobby</button>
     </div>
     <div id="err-lobby" class="note bad" style="display:none"></div>
@@ -521,6 +665,7 @@ input[type=text]::placeholder{color:var(--faint)}
     <p id="r-wait" class="prompt wait" style="display:none">Waiting for the host…</p>
     <p id="r-auto" class="autoline"></p>
     <div class="exit-row">
+      <button class="btn btn-ghost btn-sm" onclick="openRules()">Rules</button>
       <button class="btn btn-ghost btn-sm" onclick="askLeave(this)">Leave game</button>
       <button class="btn btn-ghost btn-sm" id="r-end" style="display:none" onclick="askEnd(this)">End game now</button>
     </div>
@@ -895,6 +1040,7 @@ function renderPass(G){
     `<span class="chip">Round <b>${G.round}</b>/${G.totalRounds}</span>
      <span class="chip">Pass <b>${dir}</b></span>
      <span class="chip">Dealer <b>${esc(G.players[G.dealer].name)}</b></span>
+     <button class="chip chip-btn info push" onclick="openRules()">Rules</button>
      <button class="chip chip-btn" onclick="askLeave(this)">Leave</button>`;
   $('p-table').innerHTML=tableHTML(G,{fan:true});
   myStrip(G,'p-me',false);
@@ -940,6 +1086,7 @@ function renderPlay(G){
      ${G.trickNum===1
         ? `<span class="chip hot">Opening card: no ♥ or ♠Q</span>`
         : `<span class="chip cool">♥ ♠Q free</span>`}
+     <button class="chip chip-btn info push" onclick="openRules()">Rules</button>
      <button class="chip chip-btn" onclick="askLeave(this)">Leave</button>`;
   $('g-table').innerHTML=tableHTML(G,{fan:true});
   $('g-banner').textContent=G.lastTrickMsg||'';
@@ -1046,6 +1193,12 @@ function renderFinal(G){
   $('f-body').innerHTML=h;
   clearSession();
 }
+
+/* ══════════ RULEBOOK ══════════ */
+function openRules(){ $('rules').classList.add('on'); $('rules').scrollTop=0;
+  const b=document.querySelector('.rulebody'); if(b) b.scrollTop=0; }
+function closeRules(){ $('rules').classList.remove('on'); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeRules(); });
 
 /* ══════════ PWA ══════════ */
 let deferredPrompt=null;

@@ -358,7 +358,19 @@ input[type=text]::placeholder{color:var(--faint)}
 .empty-state p{max-width:320px;margin:0 auto;font-size:.87rem}
 
 /* ══ Personal / avatar picker ══ */
-.avatar-preview{
+.avatar.sm{width:28px;height:28px;font-size:.85rem;flex:0 0 auto}
+
+.profile-chip{
+  display:flex;align-items:center;gap:10px;width:100%;
+  font:inherit;text-align:left;color:inherit;appearance:none;cursor:pointer;
+  padding:9px 13px;border-radius:14px;margin-bottom:18px;
+  background:rgba(212,175,92,.08);border:1px solid rgba(212,175,92,.22);
+  transition:border-color .18s,background .18s;
+}
+.profile-chip:hover{border-color:rgba(212,175,92,.4);background:rgba(212,175,92,.13)}
+.profile-chip-name{flex:1;min-width:0;font-weight:600;color:var(--cream);font-size:.92rem;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-chip-edit{font-size:.72rem;color:var(--faint)}
   width:76px;height:76px;border-radius:50%;margin:4px auto 16px;
   display:grid;place-items:center;font-size:2.1rem;
   background:rgba(0,0,0,.30);border:2px solid var(--gold);
@@ -694,10 +706,10 @@ input[type=text]::placeholder{color:var(--faint)}
   <div class="menu-wrap">
     <div class="menu-crest">♠ ♥ ♦ ♣</div>
     <h1>Dame de Pique</h1>
-    <p class="tagline">Hearts, spades, and cunning</p>
+    <p class="tagline">Count your hearts, count your cards.</p>
 
     <div class="menu-tiles">
-      <button class="tile primary" onclick="show('landing')">
+      <button class="tile primary" onclick="goCasual()">
         <div class="tile-icon">🂡</div>
         <div class="tile-body">
           <div class="tile-title">Casual Play</div>
@@ -728,7 +740,7 @@ input[type=text]::placeholder{color:var(--faint)}
         <div class="tile-icon" id="menu-avatar-icon">👤</div>
         <div class="tile-body">
           <div class="tile-title">Personal</div>
-          <div class="tile-sub">Choose your avatar &amp; name</div>
+          <div class="tile-sub" id="menu-personal-sub">Choose your nickname &amp; avatar</div>
         </div>
         <div class="tile-arrow">›</div>
       </button>
@@ -752,18 +764,35 @@ input[type=text]::placeholder{color:var(--faint)}
     <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Casual Play</h2>
     <p class="tagline">Friends and AI &middot; pick up and play</p>
 
-    <div class="stack">
-      <input type="text" id="f-name" placeholder="Your name" maxlength="16" autocomplete="nickname"/>
-      <button class="btn btn-primary btn-block" onclick="doCreate()">Create a game</button>
+    <div id="casual-noprofile" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">👤</div>
+        <h3>Set up your profile first</h3>
+        <p>Pick a nickname once in Personal and it'll follow you into every
+           game mode &mdash; casual, ranked, all of it.</p>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="goPersonal()" style="margin-top:6px">Set up profile</button>
     </div>
 
-    <div class="or">or join one</div>
+    <div id="casual-ready" style="display:none">
+      <button class="profile-chip" onclick="goPersonal()">
+        <span class="avatar sm" id="cp-avatar">👤</span>
+        <span class="profile-chip-name" id="cp-name"></span>
+        <span class="profile-chip-edit">Edit</span>
+      </button>
 
-    <div class="stack">
-      <div class="row">
-        <input class="grow" type="text" id="f-code" placeholder="Room code" maxlength="5"
-               style="text-transform:uppercase;letter-spacing:.16em;font-weight:600"/>
-        <button class="btn" onclick="doJoin()">Join</button>
+      <div class="stack">
+        <button class="btn btn-primary btn-block" onclick="doCreate()">Create a game</button>
+      </div>
+
+      <div class="or">or join one</div>
+
+      <div class="stack">
+        <div class="row">
+          <input class="grow" type="text" id="f-code" placeholder="Room code" maxlength="5"
+                 style="text-transform:uppercase;letter-spacing:.16em;font-weight:600"/>
+          <button class="btn" onclick="doJoin()">Join</button>
+        </div>
       </div>
     </div>
 
@@ -789,7 +818,7 @@ input[type=text]::placeholder{color:var(--faint)}
     </div>
     <button class="btn btn-primary btn-block" disabled style="margin-top:8px">Find match</button>
     <div class="exit-row" style="margin-top:14px">
-      <button class="btn btn-ghost btn-sm" onclick="show('landing')">Play casual instead</button>
+      <button class="btn btn-ghost btn-sm" onclick="goCasual()">Play casual instead</button>
     </div>
   </div>
 </section>
@@ -814,7 +843,7 @@ input[type=text]::placeholder{color:var(--faint)}
   <div class="center-wrap" style="max-width:420px">
     <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
     <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Personal</h2>
-    <p class="tagline">This is how the table sees you</p>
+    <p class="tagline">Your nickname &amp; avatar &middot; used in every game mode</p>
 
     <div class="avatar-preview" id="pv-avatar">👤</div>
     <input type="text" id="pv-name" placeholder="Your name" maxlength="16"
@@ -823,6 +852,7 @@ input[type=text]::placeholder{color:var(--faint)}
     <div class="avatar-grid" id="avatar-grid"></div>
 
     <button class="btn btn-primary btn-block" onclick="savePersonal()">Save</button>
+    <div id="err-personal" class="note bad" style="display:none"></div>
     <p id="pv-saved" class="note gold" style="display:none;margin-top:10px;text-align:center">Saved.</p>
   </div>
 </section>
@@ -933,6 +963,9 @@ function clearSession(){ try{localStorage.removeItem(SK);}catch(e){} }
 
 /* ── profile (name + avatar, survives across games) ── */
 const PK='ddp.profile';
+// The Personal-tab avatar picker renders exactly this list, in this order.
+// It's just emoji characters — add, remove, or reorder freely, no other
+// code needs to change. Paste any emoji in; the grid re-flows automatically.
 const AVATARS=['👑','🃏','🦊','🐺','🦁','🐯','🦅','🐉','🎩','🕶️','💎','🎲','🍀','🔱','⚜️','🌙','⭐','🔥','⚔️','🛡️'];
 function loadProfile(){
   try{ return Object.assign({name:'',avatar:''},JSON.parse(localStorage.getItem(PK)||'null')); }
@@ -1035,8 +1068,10 @@ function myStrip(G,elId,isMyTurn){
   const rs=roundOf(G,me);
   const cls=rs>0?'up':rs<0?'down':'flat';
   el.classList.toggle('turn',!!isMyTurn);
+  const avatarContent=p.avatar?esc(p.avatar):esc(initial(p.name));
   el.innerHTML=
-    `<span class="who">${esc(p.name)}</span>`
+    `<span class="avatar sm">${avatarContent}</span>`
+    +`<span class="who">${esc(p.name)}</span>`
     +(me===G.dealer?'<span class="badge badge-dealer">dealer</span>':'')
     +(isMyTurn?'<span class="badge badge-turn">your turn</span>':'')
     +`<span class="tot ${cls}">${rs>0?'+':''}${rs}`
@@ -1075,24 +1110,36 @@ function tableHTML(G,opts){
     `;
 }
 
-/* ══════════ LANDING ══════════ */
+/* ══════════ CASUAL PLAY ══════════ */
+function goCasual(){
+  const has=!!profile.name;
+  $('casual-noprofile').style.display=has?'none':'block';
+  $('casual-ready').style.display=has?'block':'none';
+  if(has){
+    $('cp-avatar').textContent=profile.avatar||initial(profile.name);
+    $('cp-name').textContent=profile.name;
+  }
+  show('landing');
+}
 function doCreate(){
-  const n=$('f-name').value.trim();
-  if(!n){ $('f-name').focus(); return; }
-  profile.name=n; saveProfileStore();
-  socket.emit('createRoom',{name:n,avatar:profile.avatar||''});
+  if(!profile.name){ goPersonal(); return; }
+  socket.emit('createRoom',{name:profile.name,avatar:profile.avatar||''});
 }
 function doJoin(){
-  const n=$('f-name').value.trim();
   const c=$('f-code').value.trim().toUpperCase();
-  if(!n){ toast('err-landing','Enter your name first.'); $('f-name').focus(); return; }
+  if(!profile.name){ goPersonal(); return; }
   if(!c){ $('f-code').focus(); return; }
-  profile.name=n; saveProfileStore();
-  socket.emit('joinRoom',{code:c,name:n,avatar:profile.avatar||''});
+  socket.emit('joinRoom',{code:c,name:profile.name,avatar:profile.avatar||''});
 }
 function newGame(){ clearSession(); location.href=location.pathname; }
 
-/* ══════════ PERSONAL (avatar & name) ══════════ */
+/* ══════════ PERSONAL (account: nickname & avatar, shared by every mode) ══════════ */
+function updateMenuProfileUI(){
+  $('menu-avatar-icon').textContent=profile.avatar||'👤';
+  $('menu-personal-sub').textContent=profile.name
+    ? `Playing as ${profile.name}`
+    : 'Choose your nickname & avatar';
+}
 function renderAvatarGrid(){
   const el=$('avatar-grid'); if(!el) return;
   el.innerHTML=AVATARS.map(a=>
@@ -1115,10 +1162,11 @@ function goPersonal(){
   updateAvatarPreview();
 }
 function savePersonal(){
-  profile.name=$('pv-name').value.trim().slice(0,16);
+  const n=$('pv-name').value.trim().slice(0,16);
+  if(!n){ toast('err-personal','Pick a nickname first.'); $('pv-name').focus(); return; }
+  profile.name=n;
   saveProfileStore();
-  $('f-name').value=profile.name;
-  $('menu-avatar-icon').textContent=profile.avatar||'👤';
+  updateMenuProfileUI();
   toast('pv-saved','Saved.');
 }
 
@@ -1274,7 +1322,9 @@ function renderLobby(G){
   for(let i=0;i<4;i++){
     const p=G.players[i];
     const dot=p.isAI?'bot':p.connected?'on':'';
+    const avatarContent=p.isAI?'🤖':(p.avatar?esc(p.avatar):esc(initial(p.name)));
     h+=`<div class="slot">
+      <span class="avatar sm">${avatarContent}</span>
       <span class="dot ${dot}"></span>
       <span class="nm">${esc(p.name)}</span>
       ${i===me?'<span class="tag you">you</span>':''}
@@ -1597,12 +1647,11 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 }
 
-/* prefill code from invite link, and remembered name/avatar */
+/* prefill menu with remembered profile, and jump in from invite links */
 (function(){
-  if(profile.name) $('f-name').value=profile.name;
-  if(profile.avatar) $('menu-avatar-icon').textContent=profile.avatar;
+  updateMenuProfileUI();
   const c=new URLSearchParams(location.search).get('join');
-  if(c){ $('f-code').value=c.toUpperCase(); show('landing'); }
+  if(c){ $('f-code').value=c.toUpperCase(); goCasual(); }
   const s=loadSession();
   if(s&&s.room){ room=s.room; token=s.token; }
 })();

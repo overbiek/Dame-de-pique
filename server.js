@@ -110,6 +110,14 @@ function checkMoon(G) {
 // avoid — only the hearts/Q♠ riding along in that trick cost points). Lower
 // is better. Used to pick which 2 cards to pass: try every combo, keep the
 // one whose *remaining* 11-card hand scores lowest risk.
+// Cards the AI should mostly hold onto rather than pass or discard away:
+// aces/kings (trick-winning power) and 2s/3s (always-safe cards to have on
+// hand) in the plain suits.
+function isKeeper(c) {
+  return (c.suit === '♦' || c.suit === '♣') &&
+    (c.rank === 'A' || c.rank === 'K' || c.rank === '2' || c.rank === '3');
+}
+
 function handRisk(hand) {
   const bySuit = { '♠': [], '♥': [], '♦': [], '♣': [] };
   for (const c of hand) bySuit[c.suit].push(c);
@@ -149,13 +157,9 @@ function handRisk(hand) {
     else if (n === 1) risk -= (s === '♠' ? 4 : s === '♥' ? 2 : 2);
   }
 
-  // High cards in the plain suits (♦/♣) are assets here, not liabilities —
-  // winning a trick is worth +10, so treat them as a small risk discount.
-  for (const s of ['♦', '♣']) {
-    for (const c of bySuit[s]) {
-      if (RV[c.rank] >= RV.A) risk -= 3;
-      else if (RV[c.rank] >= RV.K) risk -= 1.5;
-    }
+  // Keeper cards (A/K/2/3 of ♦/♣): discourage passing these away.
+  for (const c of hand) {
+    if (isKeeper(c)) risk -= 3;
   }
 
   return risk;
@@ -185,9 +189,22 @@ function aiChoose(G, pi) {
   const trick = G.currentTrick;
 
   if (trick.length === 0) {
+    // Chase mode: if this hand holds none of Q♠/A♠/K♠ (so leading spades
+    // carries no risk of scooping the queen itself) and isn't already long
+    // in spades, lead spades low to help flush the queen out of hiding.
+    // Skip it once the queen has already fallen this round.
+    const hand = G.players[pi].hand;
+    const spadesHeld = hand.filter(c => c.suit === '♠');
+    const hasTopSpade = spadesHeld.some(c => c.rank === 'Q' || c.rank === 'A' || c.rank === 'K');
+    const qsCaptured = G.players.some(p => p.tricks.some(c => c.suit === '♠' && c.rank === 'Q'));
+    const legalSpades = legal.filter(c => c.suit === '♠');
+    if (!hasTopSpade && spadesHeld.length > 0 && spadesHeld.length < 6 && !qsCaptured && legalSpades.length) {
+      return legalSpades.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
+    }
+    // Otherwise, lead the highest safe (non-penalty) card to try to win it.
     const safe = legal.filter(c => cardVal(c) === 0);
     const pool = safe.length ? safe : legal;
-    return pool.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
+    return pool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
   }
 
   const led = trick[0].card.suit;
@@ -199,25 +216,44 @@ function aiChoose(G, pi) {
     const winners = following.filter(c => RV[c.rank] > RV[highInTrick.rank]);
     const losers  = following.filter(c => RV[c.rank] < RV[highInTrick.rank]);
     const penInTrick = trick.reduce((s, t) => s + Math.abs(cardVal(t.card)), 0);
-    const last = trick.length === 3;
 
-    if (penInTrick > 0) {
-      if (losers.length) return losers.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+    if (led === '♥') {
+      // Never chase a hearts trick — play the lowest heart to try to lose it,
+      // or the cheapest heart that still wins if there's no way to duck.
+      if (losers.length) return losers.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
       return (winners.length ? winners : following).sort((a, b) => RV[a.rank] - RV[b.rank])[0];
     }
-    if (last && winners.length) return winners.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
-    if (losers.length) return losers.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
-    return following.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
+
+    if (penInTrick > 0) {
+      // A penalty is already riding on this trick — duck under it, preferably
+      // without spending a keeper card if a non-keeper loser is available.
+      if (losers.length) {
+        const nonKeeper = losers.filter(c => !isKeeper(c));
+        const pool = nonKeeper.length ? nonKeeper : losers;
+        return pool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+      }
+      return (winners.length ? winners : following).sort((a, b) => RV[a.rank] - RV[b.rank])[0];
+    }
+
+    // Clean trick so far (no hearts, no Q♠ played yet): go for the +10 —
+    // play the highest card of the led suit to try to win it outright.
+    if (winners.length) return winners.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+    // Can't win: this loss is free either way, so protect keeper cards where possible.
+    const nonKeeper = losers.filter(c => !isKeeper(c));
+    const pool = nonKeeper.length ? nonKeeper : losers;
+    return pool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
   }
 
   const qs = legal.find(c => c.suit === '♠' && c.rank === 'Q');
   if (qs) return qs;
   const hearts = legal.filter(c => c.suit === '♥').sort((a, b) => RV[b.rank] - RV[a.rank]);
   if (hearts.length) return hearts[0];
-  // Nothing dangerous to dump: this is a free discard, so protect the
-  // highest plain-suit cards (they're assets — winning a trick is +10 here)
-  // and let go of the lowest one instead.
-  return legal.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
+  // Nothing dangerous to dump: this is a free discard, so protect keeper
+  // cards first, and among the rest, let go of the lowest one to keep
+  // higher plain-suit assets in hand (winning a trick is +10 here).
+  const nonKeeper = legal.filter(c => !isKeeper(c));
+  const pool = nonKeeper.length ? nonKeeper : legal;
+  return pool.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
 }
 
 // ── Room lifecycle ──────────────────────────────────────────────

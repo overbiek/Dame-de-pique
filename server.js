@@ -311,7 +311,13 @@ function aiSelectPass(G, i) {
   return best.map(c => ({ rank: c.rank, suit: c.suit }));
 }
 
-function aiChoose(G, pi) {
+// The old rule-based decision-maker. Kept in full — it's no longer the
+// live decision for the AI's own turn (that's now Monte Carlo, below),
+// but it's exactly what powers every simulated player (opponents *and*
+// the AI's own hypothetical future turns) inside each sampled world.
+// It's a strong, fast policy, which is what makes the simulations below
+// worth trusting.
+function heuristicChoose(G, pi) {
   const legal = legalCards(G, pi);
   if (legal.length === 1) return legal[0];
   const trick = G.currentTrick;
@@ -447,6 +453,246 @@ function aiChoose(G, pi) {
   const protectedPool = withoutProbableKeepers(G, pool0);
   const pool = protectedPool.length ? protectedPool : pool0;
   return pool.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
+}
+
+// ── AI: probabilistic opponent-hand modeling (Monte Carlo) ───────
+// This is the actual "true probability" layer. Nobody's hand is ever
+// peeked at. Instead, every legal card is tested against many complete,
+// *plausible* deals of the three opponents' hands — sampled so they're
+// consistent with everything a sharp human could legitimately infer
+// from the game so far — and the rest of the round is played out for
+// each one using heuristicChoose. Whichever card comes out best on
+// average, across all those simulated worlds, is the one actually
+// played. It's the same idea real-world bridge/whist-class engines use
+// (usually called Monte Carlo determinization): turn one hard problem
+// with hidden information into many easy problems with perfect
+// information, solve each cheaply, and average.
+
+// A full, trick-by-trick log of what's been played this round — who
+// played which card, in which trick — reset each round in dealRound and
+// appended to in resolveTrick. This is what makes void inference
+// possible: playedCardsThisRound only knows *which cards* have appeared,
+// not *who played them off-suit*, and that second fact is the single
+// most valuable piece of public information in the whole game.
+function roundPlayLog(G) {
+  const log = G.playLog ? [...G.playLog] : [];
+  if (G.currentTrick && G.currentTrick.length) log.push(G.currentTrick);
+  return log;
+}
+
+// Suits each player is *provably* void in: anyone who didn't follow the
+// led suit despite the trick requiring it can only have done that
+// because they hold none of it. Purely deductive — no guessing.
+function inferVoidSuits(G) {
+  const voids = { 0: new Set(), 1: new Set(), 2: new Set(), 3: new Set() };
+  for (const trick of roundPlayLog(G)) {
+    if (!trick.length) continue;
+    const led = trick[0].card.suit;
+    for (const play of trick) {
+      if (play.card.suit !== led) voids[play.player].add(led);
+    }
+  }
+  return voids;
+}
+
+// Cards a specific opponent is *provably* holding, beyond reasonable
+// doubt: whatever I personally passed them this round, as long as they
+// haven't played it yet. This is certain, not probabilistic — passing
+// happens before any tricks, hands only ever shrink by playing.
+function certainOpponentCards(G, pi) {
+  const certain = { 0: [], 1: [], 2: [], 3: [] };
+  if (G.passSelected && passDir(G.round) !== 'keep' && G.passSelected[pi] && G.passSelected[pi].length === 2) {
+    const tgt = passTarget(pi, G.round);
+    const played = playedCardsThisRound(G);
+    const myHand = G.players[pi].hand;
+    for (const c of G.passSelected[pi]) {
+      const stillOut = !played.some(x => eqC(x, c)) && !myHand.some(x => eqC(x, c));
+      if (stillOut) certain[tgt].push(c);
+    }
+  }
+  return certain;
+}
+
+// Deals a single plausible, fully-specified world: concrete (hypothetical)
+// hands for the three opponents, consistent with every hard constraint —
+// exact remaining hand sizes (public), known voids (deduced above), and
+// certain cards (also deduced above). Everything else genuinely unknown
+// gets shuffled in at random. Retries a few times if an unlucky shuffle
+// order makes a void temporarily impossible to satisfy; falls back to an
+// unconstrained deal in the vanishingly rare case that still fails, so
+// this can never throw or hang mid-game.
+function sampleWorld(G, pi) {
+  const myHand = G.players[pi].hand;
+  const played = playedCardsThisRound(G);
+  const voids = inferVoidSuits(G);
+  const certain = certainOpponentCards(G, pi);
+
+  const known = new Set();
+  for (const c of myHand) known.add(c.suit + c.rank);
+  for (const c of played) known.add(c.suit + c.rank);
+  for (const i of [0, 1, 2, 3]) for (const c of certain[i]) known.add(c.suit + c.rank);
+
+  const unknownPool = [];
+  for (const s of SUITS) for (const r of RANKS) {
+    if (!known.has(s + r)) unknownPool.push({ suit: s, rank: r });
+  }
+
+  const quota = {};
+  for (const i of [0, 1, 2, 3]) {
+    if (i === pi) continue;
+    quota[i] = G.players[i].hand.length - certain[i].length;
+  }
+
+  const bySuit = { '♠': [], '♥': [], '♦': [], '♣': [] };
+  for (const c of unknownPool) bySuit[c.suit].push(c);
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const hands = { 0: [], 1: [], 2: [], 3: [] };
+    for (const i of [0, 1, 2, 3]) if (i !== pi) hands[i] = [...certain[i]];
+    const left = { ...quota };
+
+    // Deal suit by suit, most-constrained suit first (fewest players still
+    // eligible to hold it). This is the difference between "almost always
+    // works" and "almost never works" once a couple of voids overlap —
+    // dealing a widely-eligible suit (say ♦, which anyone can hold) before
+    // a narrowly-eligible one (say ♥, with two players void in it) can
+    // easily eat up the only quota left for the players who *can* still
+    // take that ♥, leaving no legal home for it. Clearing the tightest
+    // suits first, while the most quota is still open, avoids that trap.
+    const suitOrder = [...SUITS].sort((a, b) => {
+      const ea = [0, 1, 2, 3].filter(i => i !== pi && !voids[i].has(a)).length;
+      const eb = [0, 1, 2, 3].filter(i => i !== pi && !voids[i].has(b)).length;
+      return ea - eb;
+    });
+
+    let ok = true;
+    for (const suit of suitOrder) {
+      for (const c of shuffle(bySuit[suit])) {
+        const eligible = [0, 1, 2, 3].filter(i => i !== pi && left[i] > 0 && !voids[i].has(c.suit));
+        if (!eligible.length) { ok = false; break; }
+        const pick = eligible[Math.floor(Math.random() * eligible.length)];
+        hands[pick].push(c);
+        left[pick]--;
+      }
+      if (!ok) break;
+    }
+    if (ok) return hands;
+  }
+
+  // Constraint set was still infeasible after 8 tries (would need very
+  // unusual, tightly-overlapping voids) — relax them and just deal by
+  // quota so there's always a usable world to simulate against.
+  const pool = shuffle(unknownPool);
+  const hands = { 0: [], 1: [], 2: [], 3: [] };
+  for (const i of [0, 1, 2, 3]) if (i !== pi) hands[i] = [...certain[i]];
+  let idx = 0;
+  for (const i of [0, 1, 2, 3]) {
+    if (i === pi) continue;
+    while (hands[i].length < quota[i] + certain[i].length && idx < pool.length) hands[i].push(pool[idx++]);
+  }
+  return hands;
+}
+
+// Plays a sampled world out to the end of the round using heuristicChoose
+// for every seat (this is the "perfect information" half of determinize-
+// and-solve — once a world is concrete, there's nothing left to guess
+// about, so the fast policy is exactly the right tool). Mutates simG in
+// place and returns the raw +10/trick scoring accrued *from this point
+// forward only* — the guard against a runaway loop is pure defensive
+// programming; a real game can never hit it.
+function simulateRoundFrom(simG) {
+  const delta = [0, 0, 0, 0];
+  let guard = 0;
+  while (simG.trickNum <= 13) {
+    while (simG.currentTrick.length < 4) {
+      if (++guard > 3000) return delta; // should be structurally impossible
+      const cp = (simG.trickLeader + simG.currentTrick.length) % 4;
+      const card = heuristicChoose(simG, cp);
+      const idx = simG.players[cp].hand.findIndex(c => eqC(c, card));
+      if (idx === -1) return delta; // defensive: never actually happens
+      simG.players[cp].hand.splice(idx, 1);
+      simG.currentTrick.push({ player: cp, card });
+    }
+    const winner = trickWinner(simG.currentTrick);
+    const penPts = simG.currentTrick.reduce((s, t) => s + cardVal(t.card), 0);
+    delta[winner] += 10 + penPts;
+    simG.players[winner].tricks.push(...simG.currentTrick.map(t => t.card));
+    simG.currentTrick = [];
+    simG.trickNum++;
+    simG.trickLeader = winner;
+  }
+  return delta;
+}
+
+// Scores exactly one (candidate card × sampled world) pairing: build a
+// disposable simulation from the real game's actual, already-resolved
+// history plus this one hypothetical world, play it out, and return what
+// it's worth to seat `pi`. Moon-shot scoring overrides everything else,
+// exactly like the real endRound — a candidate that lets someone else's
+// moon complete is worth a flat -20 (or +60 if *I'm* the one completing
+// it), regardless of how the raw trick points landed.
+function evaluateCandidate(G, pi, candidate, world) {
+  const simG = {
+    players: [0, 1, 2, 3].map(i => ({
+      hand: i === pi
+        ? G.players[pi].hand.filter(c => !eqC(c, candidate))
+        : [...world[i]],
+      tricks: [...G.players[i].tricks],
+    })),
+    currentTrick: G.currentTrick.map(t => ({ player: t.player, card: t.card })),
+    trickNum: G.trickNum,
+    trickLeader: G.trickLeader,
+  };
+  simG.currentTrick.push({ player: pi, card: candidate });
+
+  const delta = simulateRoundFrom(simG);
+  const moonShooter = checkMoon(simG);
+  if (moonShooter >= 0) return moonShooter === pi ? 60 : -20;
+  return delta[pi];
+}
+
+// How many sampled worlds to run per candidate card. Scaled down as the
+// decision gets more expensive (more candidates to compare, more tricks
+// left to simulate for each one) so worst case — the very first card of
+// the round, with a full 13-card hand of options — still finishes in a
+// reasonable fraction of a second, while cheap, late-round decisions get
+// to run with much higher precision essentially for free.
+function samplesFor(numCandidates, trickNum) {
+  const tricksRemaining = Math.max(1, 14 - trickNum);
+  const budget = Math.floor(1800 / (numCandidates * tricksRemaining));
+  return Math.max(8, Math.min(120, budget));
+}
+
+// The live decision. Every legal card gets tested against the same batch
+// of sampled worlds (so the comparison between candidates is apples to
+// apples within each sample), each one played out to the end of the
+// round, and whichever card comes out with the best average result wins.
+// Falls back to the plain heuristic if anything about the simulation
+// goes wrong — this must never be the thing that crashes a live game.
+function aiChoose(G, pi) {
+  const legal = legalCards(G, pi);
+  if (legal.length === 1) return legal[0];
+
+  try {
+    const samples = samplesFor(legal.length, G.trickNum);
+    const totals = new Array(legal.length).fill(0);
+
+    for (let s = 0; s < samples; s++) {
+      const world = sampleWorld(G, pi);
+      for (let ci = 0; ci < legal.length; ci++) {
+        totals[ci] += evaluateCandidate(G, pi, legal[ci], world);
+      }
+    }
+
+    let bestIdx = 0, bestAvg = -Infinity;
+    for (let ci = 0; ci < legal.length; ci++) {
+      const avg = totals[ci] / samples;
+      if (avg > bestAvg) { bestAvg = avg; bestIdx = ci; }
+    }
+    return legal[bestIdx];
+  } catch (e) {
+    return heuristicChoose(G, pi);
+  }
 }
 
 // ── Room lifecycle ──────────────────────────────────────────────
@@ -699,6 +945,7 @@ function dealRound(G) {
   G.trickNum = 1;
   G.moonShooter = -1;
   G.lastTrickMsg = '';
+  G.playLog = [];
   G.roundBefore = G.players.map(p => p.score);
 
   if (passDir(G.round) === 'keep') { startTricks(G); return; }
@@ -780,6 +1027,8 @@ function resolveTrick(G) {
   G.players[winner].score += 10 + penPts;
   G.players[winner].tricks.push(...G.currentTrick.map(t => t.card));
   G.lastTrickMsg = `${G.players[winner].name} wins trick ${G.trickNum} · +10${penPts !== 0 ? ' ' + penPts : ''}`;
+  if (!G.playLog) G.playLog = [];
+  G.playLog.push(G.currentTrick.map(t => ({ player: t.player, card: t.card })));
   G.currentTrick = [];
   G.trickNum++;
   G.trickLeader = winner;

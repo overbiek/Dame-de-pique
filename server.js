@@ -113,11 +113,14 @@ function checkMoon(G) {
 }
 
 // ── AI ──────────────────────────────────────────────────────────
-// Estimates how dangerous a hand is to hold, from a purely defensive/offensive
-// blend appropriate to this ruleset (winning a trick is +10, not something to
-// avoid — only the hearts/Q♠ riding along in that trick cost points). Lower
-// is better. Used to pick which 2 cards to pass: try every combo, keep the
-// one whose *remaining* 11-card hand scores lowest risk.
+// The computer seats play like a careful, counting-aware human: full
+// rule knowledge, real card counting (everything played this round is
+// tracked, so "is this the highest X left?" is a hard fact, not a
+// guess), and awareness of the moon shot (both chasing one themselves
+// and breaking someone else's). None of this peeks at other players'
+// hands — it only ever reasons from its own hand plus what's publicly
+// been played, the same information a sharp human opponent would have.
+
 // Cards the AI should mostly hold onto rather than pass or discard away:
 // aces/kings (trick-winning power) and 2s/3s (always-safe cards to have on
 // hand) in the plain suits.
@@ -133,6 +136,56 @@ function playedCardsThisRound(G) {
   for (const p of G.players) out.push(...p.tricks);
   for (const t of G.currentTrick) out.push(t.card);
   return out;
+}
+
+// How many cards of a suit are still unaccounted for this round (not yet
+// played by anyone) — the core "count the cards" primitive everything
+// else below is built on.
+function suitRemainingCount(G, suit) {
+  return 13 - playedCardsThisRound(G).filter(c => c.suit === suit).length;
+}
+
+// Total negative points still loose in the round: every heart not yet
+// played, plus the Q♠ if she hasn't fallen yet. Lets the AI gauge how
+// much danger is still in play versus how "clean" the round has gotten.
+function penaltyPointsRemaining(G) {
+  const played = playedCardsThisRound(G);
+  let pts = 0;
+  for (const r of RANKS) {
+    if (!played.some(c => c.suit === '♥' && c.rank === r)) pts += RV[r];
+  }
+  if (!played.some(c => c.suit === '♠' && c.rank === 'Q')) pts += 26;
+  return pts;
+}
+
+// True if `card` is provably unbeatable in its suit right now — every
+// higher rank of that suit is either already played this round or
+// sitting safely in my own hand (so nobody can play it against me). This
+// is what "knowing when to take with an Ace" really means: an Ace always
+// qualifies trivially (nothing outranks it); a King qualifies once its
+// Ace is gone; and so on down the suit.
+function isGuaranteedWinner(G, card, myHand) {
+  const played = playedCardsThisRound(G);
+  return RANKS.filter(r => RV[r] > RV[card.rank]).every(r =>
+    played.some(c => c.suit === card.suit && c.rank === r) ||
+    myHand.some(c => c.suit === card.suit && c.rank === r)
+  );
+}
+
+// Which player currently owns every heart/Q♠ trick captured so far this
+// round — i.e. who (if anyone) is on pace to shoot the moon. -1 once two
+// different players have each banked at least one penalty card, since
+// the moon is then mathematically dead for the round.
+function moonPaceOwner(G) {
+  let owner = -1;
+  for (let i = 0; i < 4; i++) {
+    const hasPenalty = G.players[i].tricks.some(c => c.suit === '♥' || (c.suit === '♠' && c.rank === 'Q'));
+    if (hasPenalty) {
+      if (owner !== -1 && owner !== i) return -1;
+      owner = i;
+    }
+  }
+  return owner;
 }
 
 // Once an Ace (♣/♦) has already fallen, its King becomes the new highest
@@ -154,6 +207,21 @@ function withoutProbableKeepers(G, cards) {
   return cards.filter(c => Math.random() >= promotedKingKeepChance(G, c));
 }
 
+// Ducking under a trick I'm not trying to win: which specific card I play
+// doesn't change this trick's outcome, only my hand's future safety. Lots
+// of the suit (or of danger generally) still unaccounted for → spend a
+// middling card now and keep the true low card in reserve for a tighter
+// spot later. Suit's thinning out, or the round's mostly clean already →
+// there may not be another safe chance, so cash the low card in now.
+function duckCard(cards, remainingOfSuit, penaltyLeft) {
+  const sorted = [...cards].sort((a, b) => RV[a.rank] - RV[b.rank]);
+  if (sorted.length <= 1) return sorted[0];
+  if (remainingOfSuit > 6 || penaltyLeft > 40) {
+    return sorted[Math.floor((sorted.length - 1) / 2)];
+  }
+  return sorted[0];
+}
+
 function handRisk(hand) {
   const bySuit = { '♠': [], '♥': [], '♦': [], '♣': [] };
   for (const c of hand) bySuit[c.suit].push(c);
@@ -173,9 +241,13 @@ function handRisk(hand) {
   } else if (highSpades > 0) {
     // Queen-bait: holding A♠/K♠ without the queen risks being forced to
     // overtake and scoop her if someone else leads spades. More low spades
-    // to duck with first makes this much safer.
+    // to duck with first makes this much safer. They're also the main tool
+    // for hunting her down later, so they're not pure liabilities — a
+    // small offsetting discount reflects that hunting value.
     const guardFactor = Math.max(0.10, 1 - lowSpades * 0.22);
     risk += highSpades * 9 * guardFactor;
+    if (spades.some(c => c.rank === 'A')) risk -= 2;
+    if (spades.some(c => c.rank === 'K')) risk -= 1;
   }
 
   // Hearts cost scaled by rank; the very top hearts get an extra penalty
@@ -186,11 +258,14 @@ function handRisk(hand) {
   }
 
   // Being void (or near-void) in a suit is good: it lets you dump danger
-  // cards for free whenever that suit gets led later in the round.
+  // cards for free whenever that suit gets led later in the round. This
+  // also drives pass selection to prefer freeing up any suit already down
+  // to 2-or-fewer cards.
   for (const s of SUITS) {
     const n = bySuit[s].length;
     if (n === 0) risk -= (s === '♠' ? 10 : s === '♥' ? 6 : 5);
     else if (n === 1) risk -= (s === '♠' ? 4 : s === '♥' ? 2 : 2);
+    else if (n === 2) risk -= (s === '♠' ? 2 : s === '♥' ? 1 : 1);
   }
 
   // Keeper cards (A/K/2/3 of ♦/♣): discourage passing these away.
@@ -203,16 +278,33 @@ function handRisk(hand) {
 
 function aiSelectPass(G, i) {
   const hand = G.players[i].hand;
-  let best = null, bestRisk = Infinity;
+  const isHighHeart = c => c.suit === '♥' && RV[c.rank] >= 8;
+  const lowHeartsBeside = c => hand.filter(x => x.suit === '♥' && RV[x.rank] <= 7 && !eqC(x, c)).length;
+
   // Try all C(13,2)=78 two-card passes, keep the one that leaves the
-  // safest 11-card hand behind.
+  // safest 11-card hand behind. A high heart is only allowed to leave in
+  // a candidate pass if the hand doesn't already have at least 2 low
+  // hearts (7 or under) to fall back on — otherwise it's safer buried
+  // behind that cover and dealt with later than handed away now.
+  let best = null, bestRisk = Infinity;
   for (let a = 0; a < hand.length; a++) {
     for (let b = a + 1; b < hand.length; b++) {
+      const c1 = hand[a], c2 = hand[b];
+      if (isHighHeart(c1) && lowHeartsBeside(c1) >= 2) continue;
+      if (isHighHeart(c2) && lowHeartsBeside(c2) >= 2) continue;
       const remaining = hand.filter((_, idx) => idx !== a && idx !== b);
       const r = handRisk(remaining);
-      if (r < bestRisk) {
-        bestRisk = r;
-        best = [hand[a], hand[b]];
+      if (r < bestRisk) { bestRisk = r; best = [c1, c2]; }
+    }
+  }
+  // Fallback for the vanishingly unlikely case every combo got filtered:
+  // ignore the high-heart guard and just take the safest one regardless.
+  if (!best) {
+    for (let a = 0; a < hand.length; a++) {
+      for (let b = a + 1; b < hand.length; b++) {
+        const remaining = hand.filter((_, idx) => idx !== a && idx !== b);
+        const r = handRisk(remaining);
+        if (r < bestRisk) { bestRisk = r; best = [hand[a], hand[b]]; }
       }
     }
   }
@@ -223,26 +315,67 @@ function aiChoose(G, pi) {
   const legal = legalCards(G, pi);
   if (legal.length === 1) return legal[0];
   const trick = G.currentTrick;
+  const hand = G.players[pi].hand;
+  const moonOwner = moonPaceOwner(G);
+  const amMoonPace = moonOwner === pi;
+  const oppMoonPace = moonOwner !== -1 && moonOwner !== pi;
 
+  // ══ LEADING ══════════════════════════════════════════════════
   if (trick.length === 0) {
-    // Chase mode: if this hand holds none of Q♠/A♠/K♠ (so leading spades
-    // carries no risk of scooping the queen itself) and isn't already long
-    // in spades, lead spades low to help flush the queen out of hiding.
-    // Skip it once the queen has already fallen this round.
-    const hand = G.players[pi].hand;
+    if (amMoonPace) {
+      // Nobody else has a single heart or the queen yet this round — worth
+      // pushing for the full +60 rather than playing it safe. Only lead
+      // the queen myself if I also hold both A♠ and K♠ (then nothing can
+      // beat her); a guaranteed-winner heart is fair game to lead too,
+      // since nothing can outrank it and it comes straight back to me.
+      const spadesHeld = hand.filter(c => c.suit === '♠');
+      const haveTopTwo = spadesHeld.some(c => c.rank === 'A') && spadesHeld.some(c => c.rank === 'K');
+      const qs = legal.find(c => c.suit === '♠' && c.rank === 'Q');
+      if (qs && haveTopTwo) return qs;
+      const heartWinners = legal.filter(c => c.suit === '♥' && isGuaranteedWinner(G, c, hand));
+      if (heartWinners.length) return heartWinners.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+      const safe = legal.filter(c => cardVal(c) === 0);
+      const pool = safe.length ? safe : legal;
+      return pool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+    }
+
+    // Hunt mode: holding none of Q♠/A♠/K♠ means leading spades carries no
+    // risk of scooping the queen myself — flush her out of hiding.
     const spadesHeld = hand.filter(c => c.suit === '♠');
     const hasTopSpade = spadesHeld.some(c => c.rank === 'Q' || c.rank === 'A' || c.rank === 'K');
     const qsCaptured = G.players.some(p => p.tricks.some(c => c.suit === '♠' && c.rank === 'Q'));
     const legalSpades = legal.filter(c => c.suit === '♠');
-    if (!hasTopSpade && spadesHeld.length > 0 && spadesHeld.length < 6 && !qsCaptured && legalSpades.length) {
+    if (!hasTopSpade && legalSpades.length && !qsCaptured) {
       return legalSpades.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
     }
-    // Otherwise, lead the highest safe (non-penalty) card to try to win it.
+
+    // Bank a free +10: lead a card that's provably unbeatable in its suit
+    // right now (every higher card is already gone or safe in my own hand).
     const safe = legal.filter(c => cardVal(c) === 0);
+    const guaranteed = safe.filter(c => isGuaranteedWinner(G, c, hand));
+    if (guaranteed.length) return guaranteed.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+
+    // No sure thing on offer. If I'm holding low hearts, this is close to
+    // a free way to shed one: as long as at least two higher hearts are
+    // still unaccounted for, someone else almost always has to cover it —
+    // no need to be afraid of a low heart when the math favors it.
+    const lowHearts = legal.filter(c => c.suit === '♥' && RV[c.rank] <= 7)
+      .sort((a, b) => RV[a.rank] - RV[b.rank]);
+    if (lowHearts.length) {
+      const cheapest = lowHearts[0];
+      const played = playedCardsThisRound(G);
+      const higherHeartsUnseen = RANKS.filter(r => RV[r] > RV[cheapest.rank])
+        .filter(r => !played.some(c => c.suit === '♥' && c.rank === r))
+        .filter(r => !hand.some(c => c.suit === '♥' && c.rank === r)).length;
+      if (higherHeartsUnseen >= 2) return cheapest;
+    }
+
+    // Nothing clever on offer — lead the highest safe card.
     const pool = safe.length ? safe : legal;
     return pool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
   }
 
+  // ══ FOLLOWING ════════════════════════════════════════════════
   const led = trick[0].card.suit;
   const following = legal.filter(c => c.suit === led);
 
@@ -252,45 +385,62 @@ function aiChoose(G, pi) {
     const winners = following.filter(c => RV[c.rank] > RV[highInTrick.rank]);
     const losers  = following.filter(c => RV[c.rank] < RV[highInTrick.rank]);
     const penInTrick = trick.reduce((s, t) => s + Math.abs(cardVal(t.card)), 0);
+    const remainingOfSuit = suitRemainingCount(G, led);
+    const penaltyLeft = penaltyPointsRemaining(G);
 
-    if (led === '♥') {
-      // Never chase a hearts trick — play the lowest heart to try to lose it,
-      // or the cheapest heart that still wins if there's no way to duck.
-      if (losers.length) return losers.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
-      return (winners.length ? winners : following).sort((a, b) => RV[a.rank] - RV[b.rank])[0];
+    // Take it: either it's a clean trick worth the +10, I'm chasing the
+    // moon myself and want every heart/queen I can get, or an opponent is
+    // on pace for the moon and this dirty trick is my chance to break it —
+    // almost any single trick's cost beats a guaranteed -20 later.
+    const wantToWin = penInTrick === 0 || amMoonPace || (oppMoonPace && penInTrick > 0);
+    if (wantToWin && winners.length) {
+      return winners.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
     }
 
-    if (penInTrick > 0) {
-      // A penalty is already riding on this trick — duck under it, preferably
-      // without spending a keeper card if a non-keeper loser is available.
-      if (losers.length) {
-        const nonKeeper = losers.filter(c => !isKeeper(c));
-        const pool0 = nonKeeper.length ? nonKeeper : losers;
-        const protectedPool = withoutProbableKeepers(G, pool0);
-        const pool = protectedPool.length ? protectedPool : pool0;
-        return pool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
-      }
-      return (winners.length ? winners : following).sort((a, b) => RV[a.rank] - RV[b.rank])[0];
+    if (losers.length) {
+      // Ducking under — this trick's outcome doesn't depend on which loser
+      // I play, so pick based on the count: preserve keepers/promoted
+      // kings first, then go low or mid depending on how much danger and
+      // how much of this suit is still loose in the round.
+      const nonKeeper = losers.filter(c => !isKeeper(c));
+      const base = nonKeeper.length ? nonKeeper : losers;
+      const protectedPool = withoutProbableKeepers(G, base);
+      const pool = protectedPool.length ? protectedPool : base;
+      return duckCard(pool, remainingOfSuit, penaltyLeft);
     }
 
-    // Clean trick so far (no hearts, no Q♠ played yet): go for the +10 —
-    // play the highest card of the led suit to try to win it outright.
-    if (winners.length) return winners.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
-    // Can't win: this loss is free either way, so protect keeper cards where possible.
-    const nonKeeper = losers.filter(c => !isKeeper(c));
-    const pool0 = nonKeeper.length ? nonKeeper : losers;
-    const protectedPool = withoutProbableKeepers(G, pool0);
-    const pool = protectedPool.length ? protectedPool : pool0;
+    // Forced to win regardless — every card I hold of this suit beats the
+    // board. Minimize the damage: take it with the cheapest one.
+    return winners.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
+  }
+
+  // Void in the led suit — a free discard.
+  if (amMoonPace) {
+    // Don't hand a heart or the queen to whoever wins this trick instead
+    // of me — protect them, dump something harmless instead.
+    const safe = legal.filter(c => cardVal(c) === 0);
+    const pool = safe.length ? safe : legal;
     return pool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
   }
 
-  const qs = legal.find(c => c.suit === '♠' && c.rank === 'Q');
-  if (qs) return qs;
-  const hearts = legal.filter(c => c.suit === '♥').sort((a, b) => RV[b.rank] - RV[a.rank]);
-  if (hearts.length) return hearts[0];
-  // Nothing dangerous to dump: this is a free discard, so protect keeper
-  // cards (and any King newly promoted to top-of-suit) first, and among
-  // the rest, let go of the lowest one to keep higher plain-suit assets
+  // If the pace-setter is already sitting on the winning card of this
+  // trick and I'm last to act, don't feed them another heart/queen — dump
+  // something harmless instead, same idea as the moon-pace case above.
+  const iAmLast = trick.length === 3;
+  const highSoFar = [...trick].filter(t => t.card.suit === led)
+    .sort((a, b) => RV[b.card.rank] - RV[a.card.rank])[0];
+  const feedsPace = oppMoonPace && iAmLast && highSoFar && highSoFar.player === moonOwner;
+
+  if (!feedsPace) {
+    const qs = legal.find(c => c.suit === '♠' && c.rank === 'Q');
+    if (qs) return qs;
+    const hearts = legal.filter(c => c.suit === '♥').sort((a, b) => RV[b.rank] - RV[a.rank]);
+    if (hearts.length) return hearts[0];
+  }
+
+  // Nothing dangerous to dump (or dangerous-but-shouldn't-feed-the-pace):
+  // protect keeper cards (and any King newly promoted to top-of-suit)
+  // first, then let go of the lowest one to keep higher plain-suit assets
   // in hand (winning a trick is +10 here).
   const nonKeeper = legal.filter(c => !isKeeper(c));
   const pool0 = nonKeeper.length ? nonKeeper : legal;

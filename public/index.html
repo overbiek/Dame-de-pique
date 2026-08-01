@@ -134,7 +134,11 @@ input[type=text]::placeholder{color:var(--faint)}
 .card.pen{background:linear-gradient(158deg,#fff8f4,#ffeee8 60%,#ffe2d8);border-color:#e9b9a6}
 .card.tap{cursor:pointer}
 .card.tap:active{transform:translateY(-14px) scale(1.04);box-shadow:0 12px 22px rgba(0,0,0,.45)}
-.card.sel{transform:translateY(-16px);box-shadow:0 12px 24px rgba(0,0,0,.45),0 0 0 2px var(--gold)}
+.card.sel{
+  transform:translateY(-58px) scale(1.09);
+  box-shadow:0 20px 30px rgba(0,0,0,.5),0 0 0 2px var(--gold),0 0 18px rgba(212,175,92,.45);
+  transition:transform .28s cubic-bezier(.22,.85,.25,1.28),box-shadow .28s ease-out;
+}
 .card.dim{opacity:.32;filter:saturate(.5)}
 .card.received{
   border-color:var(--gold);
@@ -197,10 +201,12 @@ input[type=text]::placeholder{color:var(--faint)}
 .hand::-webkit-scrollbar{display:none}
 .suitgrp{display:flex;align-items:flex-end;flex:0 0 auto}
 .suitgrp + .suitgrp{margin-left:var(--overlap)}
-.card-slot{position:relative;flex:0 0 auto;transform-origin:50% 100%}
+.card-slot{position:relative;flex:0 0 auto;transform-origin:50% 100%;pointer-events:none}
+.card-slot .card{pointer-events:auto}
 .suitgrp .card-slot + .card-slot{margin-left:var(--overlap)}
 .hand .card.tap:active,.hand .card.sel{z-index:5}
-.card-slot:has(.card.tap:active),.card-slot:has(.card.sel){z-index:50 !important}
+.card-slot:has(.card.tap:active){z-index:50 !important}
+.card-slot:has(.card.sel){z-index:60 !important}
 
 /* ══ Table ══ */
 .table{
@@ -1297,6 +1303,7 @@ socket.on('gameState',G=>{
     case 'draw1Done':
     case 'drawDone':     renderDraw(G);  break;
     case 'pass':         renderPass(G);  break;
+    case 'passReveal':   renderPassReveal(G); break;
     case 'play':         renderPlay(G);  break;
     case 'roundSummary': renderSummary(G); break;
     case 'final':        renderFinal(G); break;
@@ -1396,6 +1403,23 @@ function renderDraw(G){
 }
 
 /* ══════════ PASS ══════════ */
+function renderPassReveal(G){
+  show('pass');
+  const dir=['left','right','across','keep'][(G.round-1)%4];
+  $('p-bar').innerHTML=
+    `<span class="chip">Round <b>${G.round}</b>/${G.totalRounds}</span>
+     <span class="chip">Pass <b>${dir}</b></span>
+     <span class="chip">Dealer <b>${esc(G.players[G.dealer].name)}</b></span>
+     <button class="chip chip-btn info push" onclick="openRules()">Rules</button>
+     <button class="chip chip-btn" onclick="askLeave(this)">Leave</button>`;
+  $('p-table').innerHTML=tableHTML(G,{fan:true});
+  myStrip(G,'p-me',false);
+  $('p-prompt').className='prompt';
+  $('p-prompt').textContent='Cards received!';
+  $('p-hand').innerHTML=handHTML(G.myHand,null,null,G.myReceived);
+  $('p-go').style.display='none';
+  maybeShowPassTransition(G);
+}
 function renderPass(G){
   show('pass');
   const dir=['left','right','across','keep'][(G.round-1)%4];
@@ -1419,20 +1443,34 @@ function renderPass(G){
     $('p-prompt').className='prompt';
     $('p-prompt').textContent=`Choose 2 cards to pass ${dir}`;
     $('p-hand').innerHTML=handHTML(G.myHand,'pass',null);
-    const b=$('p-go');
-    b.style.display='block';
-    b.disabled=picked.length!==2;
-    b.textContent=picked.length===2?`Pass these 2 cards`:`Pass 2 cards (${picked.length}/2)`;
+    $('p-go').style.display='block';
+    updatePassButton();
   }
+}
+function updatePassButton(){
+  const b=$('p-go');
+  if(!b||b.style.display==='none')return;
+  b.disabled=picked.length!==2;
+  b.textContent=picked.length===2?`Pass these 2 cards`:`Pass 2 cards (${picked.length}/2)`;
 }
 $('p-hand').addEventListener('click',e=>{
   const el=e.target.closest('.card.tap'); if(!el||!S||S.phase!=='pass')return;
   const c={rank:el.dataset.r,suit:el.dataset.s};
   const at=picked.findIndex(p=>p.rank===c.rank&&p.suit===c.suit);
-  if(at>=0) picked.splice(at,1);
-  else if(picked.length<2) picked.push(c);
-  else { picked.shift(); picked.push(c); }
-  renderPass(S);
+  if(at>=0){
+    picked.splice(at,1);
+    el.classList.remove('sel');
+  }else if(picked.length<2){
+    picked.push(c);
+    el.classList.add('sel');
+  }else{
+    const bumped=picked.shift();
+    picked.push(c);
+    const bumpedEl=$('p-hand').querySelector(`.card[data-r="${bumped.rank}"][data-s="${bumped.suit}"]`);
+    if(bumpedEl) bumpedEl.classList.remove('sel');
+    el.classList.add('sel');
+  }
+  updatePassButton();
 });
 function confirmPass(){
   if(picked.length!==2)return;

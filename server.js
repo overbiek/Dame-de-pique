@@ -977,7 +977,15 @@ function executePass(G) {
   }
   for (let i = 0; i < 4; i++) G.players[i].hand.push(...toAdd[i]);
   G.receivedThisRound = toAdd.map(cards => cards.map(c => ({ rank: c.rank, suit: c.suit })));
-  startTricks(G);
+
+  // A brief, deliberate pause so everyone actually sees what landed in
+  // their hand before tricks start — same idea as the draw/deal beats,
+  // just short enough not to drag.
+  G.phase = 'passReveal';
+  broadcastRoom(G);
+  setTimeout(() => {
+    if (rooms[G.code] && G.phase === 'passReveal') startTricks(G);
+  }, 1500);
 }
 
 // ── Trick play ──────────────────────────────────────────────────

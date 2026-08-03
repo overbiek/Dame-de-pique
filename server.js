@@ -327,52 +327,60 @@ function aiSelectPass(G, i) {
   const isHighHeart = c => c.suit === '♥' && RV[c.rank] >= 8;
   const lowHeartsBeside = c => hand.filter(x => x.suit === '♥' && RV[x.rank] <= 7 && !eqC(x, c)).length;
   // Hard protections: low/mid clubs are safe, plentiful cards worth
-  // keeping all game for ducking, and hearts this low cost almost
-  // nothing to hold onto — never pass either away.
-  const neverPass = c => (c.suit === '♣' && RV[c.rank] <= 11) || (c.suit === '♥' && RV[c.rank] <= 5);
+  // keeping all game for ducking; hearts this low cost almost nothing
+  // to hold onto; and low/mid spades (2 through J) are the guards that
+  // let a spade lead be ducked safely instead of forcing a scoop of
+  // the queen — never pass any of these away.
+  const neverPass = c =>
+    (c.suit === '♣' && RV[c.rank] <= 11) ||
+    (c.suit === '♥' && RV[c.rank] <= 5) ||
+    (c.suit === '♠' && RV[c.rank] <= 11);
 
-  // Try all C(13,2)=78 two-card passes, keep the one that leaves the
-  // safest 11-card hand behind. A high heart is only allowed to leave in
-  // a candidate pass if the hand doesn't already have at least 2 low
-  // hearts (7 or under) to fall back on — otherwise it's safer buried
-  // behind that cover and dealt with later than handed away now.
-  let best = null, bestRisk = Infinity;
-  for (let a = 0; a < hand.length; a++) {
-    for (let b = a + 1; b < hand.length; b++) {
+  // A club or diamond down to a single card is worth passing on even
+  // though it would otherwise be protected: going fully void in that
+  // suit is worth far more than the one card, since every future lead
+  // in it becomes a free dump for a heart or the queen of spades.
+  const suitCount = s => hand.filter(c => c.suit === s).length;
+  const mustPass = hand.filter(c => (c.suit === '♣' || c.suit === '♦') && suitCount(c.suit) === 1);
+  if (mustPass.length >= 2) return mustPass.slice(0, 2).map(c => ({ rank: c.rank, suit: c.suit }));
+  const forced = mustPass[0] || null;
+  const exempt = c => forced && eqC(c, forced);
+
+  // Every two-card pass that includes the forced card (if any),
+  // otherwise all C(13,2) combos.
+  const pairs = [];
+  if (forced) {
+    const fi = hand.findIndex(c => eqC(c, forced));
+    for (let b = 0; b < hand.length; b++) if (b !== fi) pairs.push([fi, b]);
+  } else {
+    for (let a = 0; a < hand.length; a++)
+      for (let b = a + 1; b < hand.length; b++) pairs.push([a, b]);
+  }
+
+  // Keep whichever pass leaves the safest 11-card hand behind. A high
+  // heart is only allowed to leave in a candidate pass if the hand
+  // doesn't already have at least 2 low hearts (7 or under) to fall
+  // back on — otherwise it's safer buried behind that cover and dealt
+  // with later than handed away now. `level` relaxes the guards one at
+  // a time (least-important first) for the vanishingly unlikely case
+  // every combo got filtered, e.g. a hand that's nearly all protected
+  // clubs/hearts — rather than jumping straight to "anything goes".
+  function bestAt(level) {
+    let best = null, bestRisk = Infinity;
+    for (const [a, b] of pairs) {
       const c1 = hand[a], c2 = hand[b];
-      if (neverPass(c1) || neverPass(c2)) continue;
-      if (isHighHeart(c1) && lowHeartsBeside(c1) >= 2) continue;
-      if (isHighHeart(c2) && lowHeartsBeside(c2) >= 2) continue;
+      if (level === 0 && ((!exempt(c1) && neverPass(c1)) || (!exempt(c2) && neverPass(c2)))) continue;
+      if (level <= 1) {
+        if (isHighHeart(c1) && lowHeartsBeside(c1) >= 2) continue;
+        if (isHighHeart(c2) && lowHeartsBeside(c2) >= 2) continue;
+      }
       const remaining = hand.filter((_, idx) => idx !== a && idx !== b);
       const r = handRisk(remaining);
       if (r < bestRisk) { bestRisk = r; best = [c1, c2]; }
     }
+    return best;
   }
-  // Fallbacks for the vanishingly unlikely case every combo got filtered
-  // (e.g. a hand that's nearly all protected clubs/hearts) — relax the
-  // guards one at a time, least-important first, rather than jumping
-  // straight to "anything goes".
-  if (!best) {
-    for (let a = 0; a < hand.length; a++) {
-      for (let b = a + 1; b < hand.length; b++) {
-        const c1 = hand[a], c2 = hand[b];
-        if (isHighHeart(c1) && lowHeartsBeside(c1) >= 2) continue;
-        if (isHighHeart(c2) && lowHeartsBeside(c2) >= 2) continue;
-        const remaining = hand.filter((_, idx) => idx !== a && idx !== b);
-        const r = handRisk(remaining);
-        if (r < bestRisk) { bestRisk = r; best = [c1, c2]; }
-      }
-    }
-  }
-  if (!best) {
-    for (let a = 0; a < hand.length; a++) {
-      for (let b = a + 1; b < hand.length; b++) {
-        const remaining = hand.filter((_, idx) => idx !== a && idx !== b);
-        const r = handRisk(remaining);
-        if (r < bestRisk) { bestRisk = r; best = [hand[a], hand[b]]; }
-      }
-    }
-  }
+  const best = bestAt(0) || bestAt(1) || bestAt(2);
   return best.map(c => ({ rank: c.rank, suit: c.suit }));
 }
 

@@ -1006,6 +1006,7 @@ function publicState(G) {
     players: G.players.map((p, i) => ({
       name: p.name, avatar: p.avatar || null, isAI: p.isAI, score: p.score,
       roundScore: p.score - (G.roundBefore[i] || 0),
+      tricksWon: p.tricks.length / 4,
       connected: p.connected, cardCount: p.hand.length, hasPassed: p.hasPassed,
     })),
     round: G.round,
@@ -1017,6 +1018,7 @@ function publicState(G) {
     currentTrick: G.currentTrick,
     trickLeader: G.trickLeader,
     trickNum: G.trickNum,
+    lastTrick: G.lastTrick || null,
     drawCards: G.drawCards.map((c, i) => (G.drawRevealed[i] ? c : null)),
     drawRevealed: G.drawRevealed,
     roundBefore: G.roundBefore,
@@ -1221,6 +1223,12 @@ function resolveTrick(G) {
   G.lastTrickMsg = `${G.players[winner].name} wins trick ${G.trickNum} · +10${penPts !== 0 ? ' ' + penPts : ''}`;
   if (!G.playLog) G.playLog = [];
   G.playLog.push(G.currentTrick.map(t => ({ player: t.player, card: t.card })));
+  G.lastTrick = {
+    round: G.round,
+    trickNum: G.trickNum,
+    winner,
+    cards: G.currentTrick.map(t => ({ player: t.player, card: t.card })),
+  };
   G.currentTrick = [];
   G.trickNum++;
   G.trickLeader = winner;

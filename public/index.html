@@ -134,7 +134,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .card.pen{background:linear-gradient(158deg,#fff8f4,#ffeee8 60%,#ffe2d8);border-color:#e9b9a6}
 .card.tap{cursor:pointer}
 .card.tap:active{transform:translateY(-14px) scale(1.04);box-shadow:0 12px 22px rgba(0,0,0,.45)}
-.card.sel{
+.card.sel,.card.tap.sel:active{
   transform:translateY(calc(var(--ch) * -1.12)) scale(1.09);
   box-shadow:0 20px 30px rgba(0,0,0,.5),0 0 0 2px var(--gold),0 0 18px rgba(212,175,92,.45);
   transition:transform .32s cubic-bezier(.22,.85,.25,1.22),box-shadow .32s ease-out;
@@ -196,9 +196,9 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   padding:38px 6px 10px;
   overflow:visible;
 }
-/* swipe-to-select drags across the fan, so the browser must not
+/* swipe-to-select/pick drags across the fan, so the browser must not
    hijack that gesture for page scrolling */
-#p-hand{touch-action:none}
+#p-hand,#g-hand{touch-action:none}
 .suitgrp{display:flex;align-items:flex-end;flex:0 0 auto}
 .suitgrp + .suitgrp{margin-left:var(--overlap)}
 .card-slot{position:relative;flex:0 0 auto;transform-origin:50% 100%;pointer-events:none}
@@ -2003,10 +2003,37 @@ function renderPlay(G){
     $('g-banner').textContent=`You received ${list}`;
   }
 }
-$('g-hand').addEventListener('click',e=>{
+// Press a card to preview it, then — without lifting your finger/mouse —
+// slide across the fan to change your pick; release to play whichever
+// card is currently highlighted.
+let playPicking=false, playPickEl=null;
+function setPlayPick(el){
+  if(playPickEl===el)return;
+  if(playPickEl) playPickEl.classList.remove('sel');
+  playPickEl=el;
+  if(playPickEl) playPickEl.classList.add('sel');
+}
+$('g-hand').addEventListener('pointerdown',e=>{
   const el=e.target.closest('.card.tap'); if(!el||!S||S.phase!=='play')return;
-  socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
+  playPicking=true;
+  setPlayPick(el);
 });
+$('g-hand').addEventListener('pointermove',e=>{
+  if(!playPicking)return;
+  const under=document.elementFromPoint(e.clientX,e.clientY);
+  const el=under&&under.closest&&under.closest('.card.tap');
+  if(el) setPlayPick(el);
+});
+function releasePlayPick(){
+  if(!playPicking)return;
+  playPicking=false;
+  const el=playPickEl;
+  setPlayPick(null);
+  if(el) socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
+}
+function cancelPlayPick(){ playPicking=false; setPlayPick(null); }
+window.addEventListener('pointerup',releasePlayPick);
+window.addEventListener('pointercancel',cancelPlayPick);
 
 /* ══════════ SUMMARY ══════════ */
 

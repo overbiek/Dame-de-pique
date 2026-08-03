@@ -39,6 +39,16 @@ function recordLoginAttempt(usernameLower, failed) {
   if (failed) rec.count++; else rec.count = 0;
   loginAttempts.set(usernameLower, rec);
 }
+// Fire-and-forget stats writes — a DB hiccup here should never affect the
+// game itself, just get logged and silently skipped.
+function trackStat(fn) {
+  if (!DB_ENABLED) return;
+  Promise.resolve().then(fn).catch(err => console.error('Stats tracking error:', err.message));
+}
+async function lookupAccountByToken(accountToken) {
+  if (!DB_ENABLED || !accountToken) return null;
+  try { return await db.findAccountByToken(accountToken); } catch (e) { return null; }
+}
 
 // ── Constants ───────────────────────────────────────────────────
 const SUITS = ['♠', '♥', '♦', '♣'];
@@ -728,7 +738,7 @@ function sanitizeAvatar(a) {
   return s || null;
 }
 
-function createRoom(hostName, hostAvatar) {
+function createRoom(hostName, hostAvatar, hostAccountId) {
   const code = makeCode();
   rooms[code] = {
     code,
@@ -736,6 +746,7 @@ function createRoom(hostName, hostAvatar) {
     players: Array.from({ length: 4 }, (_, i) => ({
       name: i === 0 ? hostName : 'Empty seat',
       avatar: i === 0 ? sanitizeAvatar(hostAvatar) : null,
+      accountId: i === 0 ? (hostAccountId || null) : null,
       isAI: false, socketId: null, token: null,
       score: 0, hand: [], tricks: [], connected: false, hasPassed: false,
     })),
@@ -763,6 +774,7 @@ function createRoom(hostName, hostAvatar) {
     emptySince: null,
     lastTrickMsg: '',
     moonShooter: -1,
+    moonCounts: [0, 0, 0, 0], // per-seat moon shots this game, for the "most in one game" stat
     lastActivity: Date.now(),
   };
   return rooms[code];
@@ -822,12 +834,26 @@ function cancelVote(G, msg) {
   if (msg) flashVoteMsg(G, msg); else broadcastRoom(G);
 }
 
+// Called from both ways a game can actually conclude: the natural
+// 16-round finish and an early-end vote. Either way it's a real, complete
+// game as far as stats are concerned.
+function recordGameFinishedForAll(G) {
+  for (let i = 0; i < 4; i++) {
+    const acctId = G.players[i].accountId;
+    if (!acctId) continue;
+    const finalScore = G.players[i].score;
+    const moons = (G.moonCounts && G.moonCounts[i]) || 0;
+    trackStat(() => db.recordGameFinished(acctId, finalScore, moons));
+  }
+}
+
 function finishEarly(G) {
   clearVote(G);
   clearAuto(G);
   G.endVote = null;
   G.voteMsg = '';
   G.phase = 'final';
+  recordGameFinishedForAll(G);
   broadcastRoom(G);
 }
 
@@ -1059,8 +1085,13 @@ function resolveTrick(G) {
   if (G.phase !== 'play' || G.currentTrick.length !== 4) return;
   const winner = trickWinner(G.currentTrick);
   const penPts = G.currentTrick.reduce((s, t) => s + cardVal(t.card), 0);
-  G.players[winner].score += 10 + penPts;
+  const trickScore = 10 + penPts;
+  G.players[winner].score += trickScore;
   G.players[winner].tricks.push(...G.currentTrick.map(t => t.card));
+  if (G.players[winner].accountId) {
+    const acctId = G.players[winner].accountId;
+    trackStat(() => db.recordTrick(acctId, trickScore));
+  }
   G.lastTrickMsg = `${G.players[winner].name} wins trick ${G.trickNum} · +10${penPts !== 0 ? ' ' + penPts : ''}`;
   if (!G.playLog) G.playLog = [];
   G.playLog.push(G.currentTrick.map(t => ({ player: t.player, card: t.card })));
@@ -1095,6 +1126,10 @@ function endRound(G) {
       totals: G.players.map(p => p.score),
       moon,
     });
+    if (moon >= 0) {
+      if (!G.moonCounts) G.moonCounts = [0, 0, 0, 0];
+      G.moonCounts[moon]++;
+    }
   }
 
   // Always show a summary for the final round too, then move on to standings.
@@ -1107,7 +1142,7 @@ function endRound(G) {
 function advanceRound(G) {
   if (!rooms[G.code] || G.phase !== 'roundSummary') return;
   clearAuto(G);
-  if (G.round >= TOTAL_ROUNDS) { G.phase = 'final'; broadcastRoom(G); return; }
+  if (G.round >= TOTAL_ROUNDS) { G.phase = 'final'; recordGameFinishedForAll(G); broadcastRoom(G); return; }
   G.round++;
   G.dealer = (G.dealer + 1) % 4;
   dealRound(G);
@@ -1215,9 +1250,23 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('createRoom', ({ name, avatar }) => {
+  socket.on('getStats', async ({ token }) => {
+    if (!DB_ENABLED || !token) return socket.emit('statsError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('statsError', { msg: 'Your session expired — log in again.' });
+      const stats = await db.getStats(account.id);
+      socket.emit('statsOk', { stats });
+    } catch (e) {
+      console.error('getStats error:', e.message);
+      socket.emit('statsError', { msg: 'Could not load your stats. Try again.' });
+    }
+  });
+
+  socket.on('createRoom', async ({ name, avatar, accountToken }) => {
     const clean = String(name || '').trim().slice(0, 16) || 'Player';
-    const G = createRoom(clean, sanitizeAvatar(avatar));
+    const acct = await lookupAccountByToken(accountToken);
+    const G = createRoom(clean, sanitizeAvatar(avatar), acct ? acct.id : null);
     const token = makeToken();
     G.players[0].socketId = socket.id;
     G.players[0].connected = true;
@@ -1229,7 +1278,7 @@ io.on('connection', (socket) => {
     broadcastRoom(G);
   });
 
-  socket.on('joinRoom', ({ code, name, avatar }) => {
+  socket.on('joinRoom', async ({ code, name, avatar, accountToken }) => {
     const G = findRoom(code);
     if (!G) return socket.emit('errorMsg', { msg: 'Room not found. Check the code.' });
     if (G.phase !== 'lobby') return socket.emit('errorMsg', { msg: 'That game has already started.' });
@@ -1240,9 +1289,13 @@ io.on('connection', (socket) => {
     }
     if (slot === -1) return socket.emit('errorMsg', { msg: 'That room is full.' });
 
+    const acct = await lookupAccountByToken(accountToken);
+    if (!rooms[code] || G.players[slot].connected) return socket.emit('errorMsg', { msg: 'That seat just got taken — try again.' });
+
     const token = makeToken();
     G.players[slot].name = String(name || '').trim().slice(0, 16) || `Player ${slot + 1}`;
     G.players[slot].avatar = sanitizeAvatar(avatar);
+    G.players[slot].accountId = acct ? acct.id : null;
     G.players[slot].socketId = socket.id;
     G.players[slot].connected = true;
     G.players[slot].token = token;
@@ -1276,6 +1329,7 @@ io.on('connection', (socket) => {
     p.connected = !!isAI;
     p.name = isAI ? `Computer ${slotIndex + 1}` : 'Empty seat';
     p.avatar = null;
+    p.accountId = null;
     p.token = null;
     p.socketId = null;
     broadcastRoom(G);
@@ -1286,6 +1340,9 @@ io.on('connection', (socket) => {
     if (!G || G.phase !== 'lobby' || !isHostSocket(G, socket)) return;
     if (!G.players.every(p => p.connected || p.isAI))
       return socket.emit('errorMsg', { msg: 'All four seats need a player or an AI.' });
+    for (const p of G.players) {
+      if (p.accountId) trackStat(() => db.recordGameStarted(p.accountId));
+    }
     startDraw(G, 1);
   });
 
@@ -1385,12 +1442,12 @@ io.on('connection', (socket) => {
     if (G.phase === 'lobby' || G.phase === 'final') {
       // Free the seat entirely
       Object.assign(G.players[idx], {
-        name: 'Empty seat', avatar: null, isAI: false, socketId: null, token: null,
+        name: 'Empty seat', avatar: null, accountId: null, isAI: false, socketId: null, token: null,
         connected: false, score: 0, hand: [], tricks: [], hasPassed: false,
       });
     } else {
       // Mid-game: hand the seat to the computer so the others can finish
-      Object.assign(G.players[idx], { isAI: true, avatar: null, connected: true, socketId: null, token: null });
+      Object.assign(G.players[idx], { isAI: true, avatar: null, accountId: null, connected: true, socketId: null, token: null });
     }
 
     if (wasHost) {

@@ -46,6 +46,20 @@ async function ensureSchema() {
     );
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS sessions_account_id_idx ON sessions(account_id);`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS stats (
+      account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+      games_played INTEGER NOT NULL DEFAULT 0,
+      games_finished INTEGER NOT NULL DEFAULT 0,
+      best_trick INTEGER,
+      worst_trick INTEGER,
+      best_game INTEGER,
+      worst_game INTEGER,
+      moons_total INTEGER NOT NULL DEFAULT 0,
+      moons_best_game INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
 }
 
 function toPublic(row) {
@@ -100,8 +114,65 @@ async function updateProfile(accountId, { nickname, avatar }) {
   return rows[0];
 }
 
+// ── Stats ──────────────────────────────────────────────────────
+// Each of these is a single atomic upsert (INSERT ... ON CONFLICT), so
+// concurrent games finishing at the same moment for the same account
+// can never race each other or lose an update. GREATEST/LEAST ignore
+// NULLs in Postgres, so a brand-new row (no trick/game recorded yet)
+// is handled correctly the first time either lands, regardless of order.
+
+async function recordGameStarted(accountId) {
+  await pool.query(
+    `INSERT INTO stats (account_id, games_played) VALUES ($1, 1)
+     ON CONFLICT (account_id) DO UPDATE SET games_played = stats.games_played + 1, updated_at = now()`,
+    [accountId]
+  );
+}
+
+async function recordTrick(accountId, trickScore) {
+  await pool.query(
+    `INSERT INTO stats (account_id, best_trick, worst_trick) VALUES ($1, $2, $2)
+     ON CONFLICT (account_id) DO UPDATE SET
+       best_trick = GREATEST(stats.best_trick, $2),
+       worst_trick = LEAST(stats.worst_trick, $2),
+       updated_at = now()`,
+    [accountId, trickScore]
+  );
+}
+
+async function recordGameFinished(accountId, finalScore, moonsThisGame) {
+  await pool.query(
+    `INSERT INTO stats (account_id, games_finished, best_game, worst_game, moons_total, moons_best_game)
+     VALUES ($1, 1, $2, $2, $3, $3)
+     ON CONFLICT (account_id) DO UPDATE SET
+       games_finished = stats.games_finished + 1,
+       best_game = GREATEST(stats.best_game, $2),
+       worst_game = LEAST(stats.worst_game, $2),
+       moons_total = stats.moons_total + $3,
+       moons_best_game = GREATEST(stats.moons_best_game, $3),
+       updated_at = now()`,
+    [accountId, finalScore, moonsThisGame]
+  );
+}
+
+async function getStats(accountId) {
+  const { rows } = await pool.query(`SELECT * FROM stats WHERE account_id = $1`, [accountId]);
+  const s = rows[0];
+  return {
+    gamesPlayed: s ? s.games_played : 0,
+    gamesFinished: s ? s.games_finished : 0,
+    bestTrick: s ? s.best_trick : null,
+    worstTrick: s ? s.worst_trick : null,
+    bestGame: s ? s.best_game : null,
+    worstGame: s ? s.worst_game : null,
+    moonsTotal: s ? s.moons_total : 0,
+    moonsBestGame: s ? s.moons_best_game : 0,
+  };
+}
+
 module.exports = {
   pool, ensureSchema, toPublic,
   createAccount, findAccountByUsername, findAccountById,
   createSession, findAccountByToken, deleteSession, updateProfile,
+  recordGameStarted, recordTrick, recordGameFinished, getStats,
 };

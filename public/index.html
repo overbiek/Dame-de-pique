@@ -281,6 +281,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .opp-fan-wrap{
   position:relative;
   --cw:clamp(24px,6vw,32px);
+  --ch:calc(var(--cw) * 1.42);
   --ovl:calc(var(--cw) * -0.62);
   --step:calc(var(--cw) + var(--ovl));
   --lift:5px;
@@ -298,7 +299,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .opp-fan.rot-180{transform:translate(-50%,-50%) rotate(180deg)}
 .opp-fan.rot-270{transform:translate(-50%,-50%) rotate(270deg)}
 .opp-fan .card-slot{flex:0 0 auto}
-.opp-fan .card-slot+.card-slot{margin-left:var(--step)}
+.opp-fan .card-slot+.card-slot{margin-left:var(--ovl)}
 .opp-fan .card{box-shadow:0 1px 3px rgba(0,0,0,.4)}
 
 .count-pill{font-size:.62rem;color:var(--faint);letter-spacing:.04em}

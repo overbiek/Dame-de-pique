@@ -196,6 +196,9 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   padding:38px 6px 10px;
   overflow:visible;
 }
+/* swipe-to-select drags across the fan, so the browser must not
+   hijack that gesture for page scrolling */
+#p-hand{touch-action:none}
 .suitgrp{display:flex;align-items:flex-end;flex:0 0 auto}
 .suitgrp + .suitgrp{margin-left:var(--overlap)}
 .card-slot{position:relative;flex:0 0 auto;transform-origin:50% 100%;pointer-events:none}
@@ -224,6 +227,9 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .seat-left{grid-area:lft}
 .seat-right{grid-area:rgt}
 .seat-bottom{grid-area:bot;margin-top:2px}
+.corner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.corner-lt{grid-area:lt}
+.corner-rt{grid-area:rt}
 .seat.mine .avatar{border-color:rgba(63,191,136,.55);color:#a8ecce}
 .seat.mine .seat-name{color:var(--cream)}
 .seat-score small{font-size:.74em;font-weight:500;color:var(--faint);margin-left:3px}
@@ -310,15 +316,11 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .count-pill{font-size:.62rem;color:var(--faint);letter-spacing:.04em}
 
 /* ══ Chrome / info ══ */
-/* compact top bar: stacked info on the left, round icon buttons on the right */
-.topbar2{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
-.tb-info{display:flex;flex-direction:column;gap:2px;min-width:0;padding-top:2px}
-.tb-line{font-size:.68rem;font-weight:500;letter-spacing:.02em;color:var(--muted);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw}
+/* compact status text tucked into the table's top-left corner */
+.tb-line{font-size:.64rem;font-weight:500;letter-spacing:.02em;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:26vw;text-align:center}
 .tb-line b{color:var(--cream);font-weight:600}
-.tb-line.hot{color:#f0b49a}
-.tb-line.cool{color:#8fe0be}
-.tb-actions{display:flex;flex-direction:column;gap:6px;align-items:center;flex:0 0 auto}
+/* round icon buttons tucked into the table's top-right corner */
 .tb-round{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
   font-size:.85rem;line-height:1;background:rgba(0,0,0,.24);border:1px solid var(--line);
   color:var(--muted);cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;
@@ -1116,7 +1118,6 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 
 <!-- ═══ PASS ═══ -->
 <section id="s-pass" class="screen">
-  <div class="topbar2" id="p-bar"></div>
   <div class="table" id="p-table"></div>
   <p class="prompt" id="p-prompt"></p>
   <div class="mystrip" id="p-me"></div>
@@ -1126,7 +1127,6 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 
 <!-- ═══ PLAY ═══ -->
 <section id="s-play" class="screen">
-  <div class="topbar2" id="g-bar"></div>
   <div class="table-wrap">
     <div class="table" id="g-table"></div>
     <div class="lasttrick-ov" id="g-lasttrick"></div>
@@ -1303,11 +1303,14 @@ function seatHTML(G,i,opts){
        +`<div class="opp-fan ${rotClass}">${oppFanHTML(n)}</div></div>`;
   }
   const tw=typeof p.tricksWon==='number'?p.tricksWon:0;
+  // Frozen at the score before this round started — only moves once the
+  // hand finishes, never mid-trick, so it doesn't flicker during play.
+  const total=(G.roundBefore&&typeof G.roundBefore[i]==='number')?G.roundBefore[i]:p.score;
   const avatarContent=p.isAI?'🤖':(p.avatar?esc(p.avatar):esc(initial(p.name)));
   return `<div class="seat ${cls}">
     <div class="avatar">${avatarContent}</div>
     <div class="seat-name">${esc(p.name)}${mine?' · you':''}${i===G.dealer?' •':''}</div>
-    <div class="seat-score">${tw} trick${tw===1?'':'s'}<small>${p.score} total</small></div>
+    <div class="seat-score">${tw} trick${tw===1?'':'s'}<small>${total}</small></div>
     ${fan?`<div class="seat-cards">${fan}</div><span class="count-pill">${p.cardCount}</span>`:''}
   </div>`;
 }
@@ -1358,16 +1361,19 @@ function tableHTML(G,opts){
     return t?cardHTML(t.card,''):'<div class="ghost"></div>';
   };
 
+  const actions=opts.actions||{};
   return `
+    <div class="corner corner-lt">${actions.lt||''}</div>
     <div class="seat-top">${seat(2)}</div>
+    <div class="corner corner-rt">${actions.rt||''}</div>
     <div class="seat-left">${seat(1)}</div>
-    <div class="seat-right">${seat(3)}</div>
     <div class="mid">
       <div class="slot-t">${played(2)}</div>
       <div class="slot-l">${played(1)}</div>
       <div class="slot-r">${played(3)}</div>
       <div class="slot-b">${played(0)}</div>
     </div>
+    <div class="seat-right">${seat(3)}</div>
     `;
 }
 
@@ -1801,25 +1807,23 @@ function renderDraw(G){
 }
 
 /* ══════════ PASS ══════════ */
-function topbarActions(extraHTML){
-  return `<div class="tb-actions">
-     <button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
-     <button class="tb-round" title="Leave" onclick="askLeave(this)">🚪</button>
-     ${extraHTML||''}
-   </div>`;
+function cornerActions(leftHTML,rtExtraHTML){
+  return {
+    lt: leftHTML||'',
+    rt: `<button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
+         <button class="tb-round" title="Leave" onclick="askLeave(this)">🚪</button>
+         ${rtExtraHTML||''}`,
+  };
 }
-function passBarHTML(G,dir){
-  return `<div class="tb-info">
-     <div class="tb-line">Round <b>${G.round}</b>/${G.totalRounds}</div>
+function passInfoHTML(G,dir){
+  return `<div class="tb-line">Round <b>${G.round}</b>/${G.totalRounds}</div>
      <div class="tb-line">Pass <b>${dir}</b></div>
-     <div class="tb-line">Dealer <b>${esc(G.players[G.dealer].name)}</b></div>
-   </div>${topbarActions()}`;
+     <div class="tb-line">Dealer <b>${esc(G.players[G.dealer].name)}</b></div>`;
 }
 function renderPassReveal(G){
   show('pass');
   const dir=['left','right','across','keep'][(G.round-1)%4];
-  $('p-bar').innerHTML=passBarHTML(G,dir);
-  $('p-table').innerHTML=tableHTML(G,{fan:true});
+  $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir))});
   myStrip(G,'p-me',false);
   $('p-prompt').className='prompt';
   $('p-prompt').textContent='Cards received!';
@@ -1830,8 +1834,7 @@ function renderPassReveal(G){
 function renderPass(G){
   show('pass');
   const dir=['left','right','across','keep'][(G.round-1)%4];
-  $('p-bar').innerHTML=passBarHTML(G,dir);
-  $('p-table').innerHTML=tableHTML(G,{fan:true});
+  $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir))});
   myStrip(G,'p-me',false);
 
   const mine=G.players[me];
@@ -1855,8 +1858,7 @@ function updatePassButton(){
   b.disabled=picked.length!==2;
   b.textContent=picked.length===2?`Pass these 2 cards`:`Pass 2 cards (${picked.length}/2)`;
 }
-$('p-hand').addEventListener('click',e=>{
-  const el=e.target.closest('.card.tap'); if(!el||!S||S.phase!=='pass')return;
+function togglePassCard(el){
   const c={rank:el.dataset.r,suit:el.dataset.s};
   const at=picked.findIndex(p=>p.rank===c.rank&&p.suit===c.suit);
   if(at>=0){
@@ -1873,7 +1875,29 @@ $('p-hand').addEventListener('click',e=>{
     el.classList.add('sel');
   }
   updatePassButton();
+}
+// Press a card to select it, then — without lifting your finger/mouse —
+// swipe across neighboring cards to select them too, like a paint-select.
+let passDragging=false, passDragTouched=null;
+$('p-hand').addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.card.tap'); if(!el||!S||S.phase!=='pass')return;
+  passDragging=true;
+  passDragTouched=new Set([el.dataset.r+el.dataset.s]);
+  togglePassCard(el);
 });
+$('p-hand').addEventListener('pointermove',e=>{
+  if(!passDragging)return;
+  const under=document.elementFromPoint(e.clientX,e.clientY);
+  const el=under&&under.closest&&under.closest('.card.tap');
+  if(!el)return;
+  const key=el.dataset.r+el.dataset.s;
+  if(passDragTouched.has(key))return;
+  passDragTouched.add(key);
+  togglePassCard(el);
+});
+function endPassDrag(){ passDragging=false; passDragTouched=null; }
+window.addEventListener('pointerup',endPassDrag);
+window.addEventListener('pointercancel',endPassDrag);
 function confirmPass(){
   if(picked.length!==2)return;
   socket.emit('selectPass',{code:room,playerIndex:me,cards:picked});
@@ -1955,17 +1979,11 @@ function renderPlay(G){
   maybeShowPassTransition(G);
   hideLastTrick();
   const canWatch=!!(G.lastTrick&&G.lastTrick.round===G.round&&G.lastTrick.cards&&G.lastTrick.cards.length);
-  $('g-bar').innerHTML=
-    `<div class="tb-info">
-       <div class="tb-line">Round <b>${G.round}</b>/${G.totalRounds}</div>
-       <div class="tb-line">Trick <b>${Math.min(G.trickNum,13)}</b>/13</div>
-       ${G.trickNum===1
-          ? `<div class="tb-line hot">No ♥/♠Q opening</div>`
-          : `<div class="tb-line cool">♥ ♠Q free</div>`}
-     </div>
-     ${topbarActions(`<button class="tb-round trick" id="g-lt-btn" title="Hold to see last trick"${canWatch?'':' disabled'}>👁</button>`)}`;
+  const trickBtn=`<button class="tb-round trick" id="g-lt-btn" title="Hold to see last trick"${canWatch?'':' disabled'}>👁</button>`;
+  const playInfo=`<div class="tb-line">Round <b>${G.round}</b>/${G.totalRounds}</div>
+     <div class="tb-line">Trick <b>${Math.min(G.trickNum,13)}</b>/13</div>`;
+  $('g-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(playInfo,trickBtn)});
   bindLastTrickButton($('g-lt-btn'));
-  $('g-table').innerHTML=tableHTML(G,{fan:true});
   $('g-banner').textContent=G.lastTrickMsg||'';
 
   const cur=(G.trickLeader+G.currentTrick.length)%4;

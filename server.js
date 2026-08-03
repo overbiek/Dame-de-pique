@@ -13,6 +13,33 @@ const io = new Server(server, {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── Accounts (optional — only active if DATABASE_URL is set) ─────
+const DB_ENABLED = !!process.env.DATABASE_URL;
+const db = DB_ENABLED ? require('./db') : null;
+const bcrypt = DB_ENABLED ? require('bcryptjs') : null;
+if (DB_ENABLED) {
+  db.ensureSchema()
+    .then(() => console.log('Accounts: database schema ready'))
+    .catch(err => console.error('Accounts: schema setup failed —', err.message));
+} else {
+  console.log('Accounts: DATABASE_URL not set, account system disabled (guest play still works)');
+}
+const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
+const loginAttempts = new Map(); // username_lower -> { count, resetAt }
+function loginRateLimited(usernameLower) {
+  const now = Date.now();
+  const rec = loginAttempts.get(usernameLower);
+  if (!rec || now > rec.resetAt) return false;
+  return rec.count >= 8;
+}
+function recordLoginAttempt(usernameLower, failed) {
+  const now = Date.now();
+  let rec = loginAttempts.get(usernameLower);
+  if (!rec || now > rec.resetAt) rec = { count: 0, resetAt: now + 10 * 60 * 1000 };
+  if (failed) rec.count++; else rec.count = 0;
+  loginAttempts.set(usernameLower, rec);
+}
+
 // ── Constants ───────────────────────────────────────────────────
 const SUITS = ['♠', '♥', '♦', '♣'];
 const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
@@ -1109,6 +1136,84 @@ function findRoom(code) { return rooms[String(code || '').toUpperCase()]; }
 function isHostSocket(G, socket) { return G.hostSocket === socket.id; }
 
 io.on('connection', (socket) => {
+
+  // ── Accounts ─────────────────────────────────────────────────
+  socket.on('signup', async ({ username, password, nickname, avatar }) => {
+    if (!DB_ENABLED) return socket.emit('authError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    const u = String(username || '').trim();
+    const p = String(password || '');
+    const nick = String(nickname || u).trim().slice(0, 16) || u;
+    if (!USERNAME_RE.test(u)) {
+      return socket.emit('authError', { msg: 'Username must be 3-20 characters: letters, numbers, underscore only.' });
+    }
+    if (p.length < 6) {
+      return socket.emit('authError', { msg: 'Password needs to be at least 6 characters.' });
+    }
+    try {
+      const existing = await db.findAccountByUsername(u);
+      if (existing) return socket.emit('authError', { msg: 'That username is already taken.' });
+      const passwordHash = await bcrypt.hash(p, 10);
+      const account = await db.createAccount({ username: u, passwordHash, nickname: nick, avatar: sanitizeAvatar(avatar) });
+      const token = makeToken();
+      await db.createSession(account.id, token);
+      socket.emit('authOk', { token, account: db.toPublic(account) });
+    } catch (e) {
+      console.error('signup error:', e.message);
+      socket.emit('authError', { msg: 'Something went wrong creating your account. Try again.' });
+    }
+  });
+
+  socket.on('login', async ({ username, password }) => {
+    if (!DB_ENABLED) return socket.emit('authError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    const u = String(username || '').trim();
+    const p = String(password || '');
+    const uLower = u.toLowerCase();
+    if (loginRateLimited(uLower)) {
+      return socket.emit('authError', { msg: 'Too many attempts — wait a few minutes and try again.' });
+    }
+    try {
+      const account = await db.findAccountByUsername(u);
+      const ok = account && await bcrypt.compare(p, account.password_hash);
+      recordLoginAttempt(uLower, !ok);
+      if (!ok) return socket.emit('authError', { msg: 'Wrong username or password.' });
+      const token = makeToken();
+      await db.createSession(account.id, token);
+      socket.emit('authOk', { token, account: db.toPublic(account) });
+    } catch (e) {
+      console.error('login error:', e.message);
+      socket.emit('authError', { msg: 'Something went wrong logging in. Try again.' });
+    }
+  });
+
+  socket.on('resumeSession', async ({ token }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (account) socket.emit('authOk', { token, account: db.toPublic(account) });
+    } catch (e) {
+      console.error('resumeSession error:', e.message);
+    }
+  });
+
+  socket.on('logout', async ({ token }) => {
+    if (!DB_ENABLED || !token) return;
+    try { await db.deleteSession(token); } catch (e) { /* not actionable client-side */ }
+  });
+
+  socket.on('updateProfile', async ({ token, nickname, avatar }) => {
+    if (!DB_ENABLED || !token) return;
+    const nick = String(nickname || '').trim().slice(0, 16);
+    if (!nick) return socket.emit('authError', { msg: 'Pick a nickname first.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('authError', { msg: 'Your session expired — log in again.' });
+      const updated = await db.updateProfile(account.id, { nickname: nick, avatar: sanitizeAvatar(avatar) });
+      socket.emit('authOk', { token, account: db.toPublic(updated) });
+    } catch (e) {
+      console.error('updateProfile error:', e.message);
+      socket.emit('authError', { msg: 'Could not save your profile. Try again.' });
+    }
+  });
 
   socket.on('createRoom', ({ name, avatar }) => {
     const clean = String(name || '').trim().slice(0, 16) || 'Player';

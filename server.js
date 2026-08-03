@@ -43,7 +43,16 @@ function recordLoginAttempt(usernameLower, failed) {
 // game itself, just get logged and silently skipped.
 function trackStat(fn) {
   if (!DB_ENABLED) return;
-  Promise.resolve().then(fn).catch(err => console.error('Stats tracking error:', err.message));
+  const attempt = (triesLeft) => {
+    Promise.resolve().then(fn).catch(err => {
+      if (triesLeft > 0) {
+        setTimeout(() => attempt(triesLeft - 1), 400);
+      } else {
+        console.error('Stats tracking error (gave up after retries):', err.message);
+      }
+    });
+  };
+  attempt(2); // up to 3 total attempts — a real trick/round/game result should never be silently lost to a one-off connection blip
 }
 async function lookupAccountByToken(accountToken) {
   if (!DB_ENABLED || !accountToken) return null;
@@ -317,6 +326,10 @@ function aiSelectPass(G, i) {
   const hand = G.players[i].hand;
   const isHighHeart = c => c.suit === '♥' && RV[c.rank] >= 8;
   const lowHeartsBeside = c => hand.filter(x => x.suit === '♥' && RV[x.rank] <= 7 && !eqC(x, c)).length;
+  // Hard protections: low/mid clubs are safe, plentiful cards worth
+  // keeping all game for ducking, and hearts this low cost almost
+  // nothing to hold onto — never pass either away.
+  const neverPass = c => (c.suit === '♣' && RV[c.rank] <= 11) || (c.suit === '♥' && RV[c.rank] <= 5);
 
   // Try all C(13,2)=78 two-card passes, keep the one that leaves the
   // safest 11-card hand behind. A high heart is only allowed to leave in
@@ -327,6 +340,7 @@ function aiSelectPass(G, i) {
   for (let a = 0; a < hand.length; a++) {
     for (let b = a + 1; b < hand.length; b++) {
       const c1 = hand[a], c2 = hand[b];
+      if (neverPass(c1) || neverPass(c2)) continue;
       if (isHighHeart(c1) && lowHeartsBeside(c1) >= 2) continue;
       if (isHighHeart(c2) && lowHeartsBeside(c2) >= 2) continue;
       const remaining = hand.filter((_, idx) => idx !== a && idx !== b);
@@ -334,8 +348,22 @@ function aiSelectPass(G, i) {
       if (r < bestRisk) { bestRisk = r; best = [c1, c2]; }
     }
   }
-  // Fallback for the vanishingly unlikely case every combo got filtered:
-  // ignore the high-heart guard and just take the safest one regardless.
+  // Fallbacks for the vanishingly unlikely case every combo got filtered
+  // (e.g. a hand that's nearly all protected clubs/hearts) — relax the
+  // guards one at a time, least-important first, rather than jumping
+  // straight to "anything goes".
+  if (!best) {
+    for (let a = 0; a < hand.length; a++) {
+      for (let b = a + 1; b < hand.length; b++) {
+        const c1 = hand[a], c2 = hand[b];
+        if (isHighHeart(c1) && lowHeartsBeside(c1) >= 2) continue;
+        if (isHighHeart(c2) && lowHeartsBeside(c2) >= 2) continue;
+        const remaining = hand.filter((_, idx) => idx !== a && idx !== b);
+        const r = handRisk(remaining);
+        if (r < bestRisk) { bestRisk = r; best = [c1, c2]; }
+      }
+    }
+  }
   if (!best) {
     for (let a = 0; a < hand.length; a++) {
       for (let b = a + 1; b < hand.length; b++) {
@@ -382,6 +410,14 @@ function heuristicChoose(G, pi) {
       return pool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
     }
 
+    // Trick 1: an Ace of ♦/♣ is a completely safe, guaranteed win with
+    // zero information cost — play it immediately rather than let any
+    // other consideration (even queen-hunting) make this decision instead.
+    if (G.trickNum === 1) {
+      const openingAce = legal.find(c => (c.suit === '♦' || c.suit === '♣') && c.rank === 'A');
+      if (openingAce) return openingAce;
+    }
+
     // Hunt mode: holding none of Q♠/A♠/K♠ means leading spades carries no
     // risk of scooping the queen myself — flush her out of hiding.
     const spadesHeld = hand.filter(c => c.suit === '♠');
@@ -398,24 +434,37 @@ function heuristicChoose(G, pi) {
     const guaranteed = safe.filter(c => isGuaranteedWinner(G, c, hand));
     if (guaranteed.length) return guaranteed.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
 
-    // No sure thing on offer. If I'm holding low hearts, this is close to
-    // a free way to shed one: as long as at least two higher hearts are
-    // still unaccounted for, someone else almost always has to cover it —
-    // no need to be afraid of a low heart when the math favors it.
-    const lowHearts = legal.filter(c => c.suit === '♥' && RV[c.rank] <= 7)
-      .sort((a, b) => RV[a.rank] - RV[b.rank]);
-    if (lowHearts.length) {
-      const cheapest = lowHearts[0];
-      const played = playedCardsThisRound(G);
-      const higherHeartsUnseen = RANKS.filter(r => RV[r] > RV[cheapest.rank])
-        .filter(r => !played.some(c => c.suit === '♥' && c.rank === r))
-        .filter(r => !hand.some(c => c.suit === '♥' && c.rank === r)).length;
-      if (higherHeartsUnseen >= 2) return cheapest;
+    // Hearts of 5 or under are cheap enough to shed proactively — as long
+    // as at least two higher hearts are still unaccounted for, someone
+    // else almost always has to cover it. A heart above 5 is only safe to
+    // lead once every rank below it is already out of the game entirely:
+    // at that point nobody can duck under it with a lower heart even if
+    // they wanted to, so whoever follows with a heart is guaranteed to
+    // beat me. Never chase with a heart above 5 outside that exact case.
+    const played = playedCardsThisRound(G);
+    const heartsInHand = legal.filter(c => c.suit === '♥').sort((a, b) => RV[a.rank] - RV[b.rank]);
+    for (const c of heartsInHand) {
+      if (RV[c.rank] <= 5) {
+        const higherHeartsUnseen = RANKS.filter(r => RV[r] > RV[c.rank])
+          .filter(r => !played.some(p => p.suit === '♥' && p.rank === r))
+          .filter(r => !hand.some(p => p.suit === '♥' && p.rank === r)).length;
+        if (higherHeartsUnseen >= 2) return c;
+      } else {
+        const allLowerGone = RANKS.filter(r => RV[r] < RV[c.rank])
+          .every(r => played.some(p => p.suit === '♥' && p.rank === r));
+        if (allLowerGone) return c;
+      }
     }
 
-    // Nothing clever on offer — lead the highest safe card.
-    const pool = safe.length ? safe : legal;
-    return pool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+    // Nothing clever on offer — lead the highest safe (non-penalty) card.
+    if (safe.length) return safe.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+
+    // Truly forced to lead a penalty card (hand is nothing but hearts and
+    // maybe the queen): minimize the damage — lowest heart first, the
+    // Q♠ only as the very last resort.
+    const forcedHearts = legal.filter(c => c.suit === '♥').sort((a, b) => RV[a.rank] - RV[b.rank]);
+    if (forcedHearts.length) return forcedHearts[0];
+    return legal[0];
   }
 
   // ══ FOLLOWING ════════════════════════════════════════════════
@@ -435,9 +484,28 @@ function heuristicChoose(G, pi) {
     // moon myself and want every heart/queen I can get, or an opponent is
     // on pace for the moon and this dirty trick is my chance to break it —
     // almost any single trick's cost beats a guaranteed -20 later.
-    const wantToWin = penInTrick === 0 || amMoonPace || (oppMoonPace && penInTrick > 0);
-    if (wantToWin && winners.length) {
-      return winners.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+    let wantToWin = penInTrick === 0 || amMoonPace || (oppMoonPace && penInTrick > 0);
+
+    // Spades: A♠/K♠ are too valuable (queen-hunting, safety later) to
+    // spend just to win an ordinary clean spades trick. Only use them to
+    // overtake when it's provably safe — I'm last to act (nothing left
+    // to jump me) and the queen hasn't surfaced yet this round (so I'm
+    // not risking scooping her). Otherwise hold them back and duck with
+    // a lower spade instead, even though I technically could win.
+    let restrictedWinners = winners;
+    if (led === '♠' && wantToWin && !amMoonPace && penInTrick === 0) {
+      const qsOut = G.players.some(p => p.tricks.some(c => c.suit === '♠' && c.rank === 'Q'))
+        || trick.some(t => t.card.suit === '♠' && t.card.rank === 'Q');
+      const safeToOvertake = trick.length === 3 && !qsOut;
+      if (!safeToOvertake) {
+        const withoutTopSpades = winners.filter(c => c.rank !== 'A' && c.rank !== 'K');
+        if (withoutTopSpades.length) restrictedWinners = withoutTopSpades;
+        else wantToWin = false; // only A♠/K♠ would win it, and it's not safe — don't
+      }
+    }
+
+    if (wantToWin && restrictedWinners.length) {
+      return restrictedWinners.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
     }
 
     if (losers.length) {
@@ -700,6 +768,49 @@ function samplesFor(numCandidates, trickNum) {
   return Math.max(8, Math.min(120, budget));
 }
 
+// A thin hard-constraint layer applied only to the live decision (not the
+// rollout policy) — the few rules that should never be left to
+// probabilistic judgment: a free Ace on trick 1, never chasing with a
+// heart that isn't safe yet, and never spending A♠/K♠ to overtake an
+// ordinary clean spades trick unless it's provably safe to do so. Only
+// ever narrows the candidate list, and only when a legal alternative
+// actually remains — a genuinely forced move is always left untouched.
+function applyHardRules(G, pi, legal) {
+  const trick = G.currentTrick;
+
+  if (trick.length === 0) {
+    if (G.trickNum === 1) {
+      const openingAce = legal.find(c => (c.suit === '♦' || c.suit === '♣') && c.rank === 'A');
+      if (openingAce) return [openingAce];
+    }
+    const played = playedCardsThisRound(G);
+    const risky = legal.filter(c => c.suit === '♥' && RV[c.rank] > 5 &&
+      !RANKS.filter(r => RV[r] < RV[c.rank]).every(r => played.some(p => p.suit === '♥' && p.rank === r)));
+    if (risky.length && risky.length < legal.length) {
+      return legal.filter(c => !risky.includes(c));
+    }
+    return legal;
+  }
+
+  const led = trick[0].card.suit;
+  if (led === '♠') {
+    const penInTrick = trick.reduce((s, t) => s + Math.abs(cardVal(t.card)), 0);
+    if (penInTrick === 0 && moonPaceOwner(G) !== pi) {
+      const qsOut = G.players.some(p => p.tricks.some(c => c.suit === '♠' && c.rank === 'Q'))
+        || trick.some(t => t.card.suit === '♠' && t.card.rank === 'Q');
+      const safeToOvertake = trick.length === 3 && !qsOut;
+      if (!safeToOvertake) {
+        const topSpades = legal.filter(c => c.suit === '♠' && (c.rank === 'A' || c.rank === 'K'));
+        if (topSpades.length && topSpades.length < legal.length) {
+          return legal.filter(c => !topSpades.includes(c));
+        }
+      }
+    }
+  }
+
+  return legal;
+}
+
 // The live decision. Every legal card gets tested against the same batch
 // of sampled worlds (so the comparison between candidates is apples to
 // apples within each sample), each one played out to the end of the
@@ -711,22 +822,26 @@ function aiChoose(G, pi) {
   if (legal.length === 1) return legal[0];
 
   try {
-    const samples = samplesFor(legal.length, G.trickNum);
-    const totals = new Array(legal.length).fill(0);
+    const filtered = applyHardRules(G, pi, legal);
+    const pool = filtered.length ? filtered : legal;
+    if (pool.length === 1) return pool[0];
+
+    const samples = samplesFor(pool.length, G.trickNum);
+    const totals = new Array(pool.length).fill(0);
 
     for (let s = 0; s < samples; s++) {
       const world = sampleWorld(G, pi);
-      for (let ci = 0; ci < legal.length; ci++) {
-        totals[ci] += evaluateCandidate(G, pi, legal[ci], world);
+      for (let ci = 0; ci < pool.length; ci++) {
+        totals[ci] += evaluateCandidate(G, pi, pool[ci], world);
       }
     }
 
     let bestIdx = 0, bestAvg = -Infinity;
-    for (let ci = 0; ci < legal.length; ci++) {
+    for (let ci = 0; ci < pool.length; ci++) {
       const avg = totals[ci] / samples;
       if (avg > bestAvg) { bestAvg = avg; bestIdx = ci; }
     }
-    return legal[bestIdx];
+    return pool[bestIdx];
   } catch (e) {
     return heuristicChoose(G, pi);
   }
@@ -1119,16 +1234,21 @@ function endRound(G) {
 
   // Record this round on the scoresheet (guard against a double call)
   if (!G.history.some(h => h.round === G.round)) {
+    const deltas = G.players.map((p, i) => p.score - G.roundBefore[i]);
     G.history.push({
       round: G.round,
       dir: passLetter(G.round),
-      deltas: G.players.map((p, i) => p.score - G.roundBefore[i]),
+      deltas,
       totals: G.players.map(p => p.score),
       moon,
     });
     if (moon >= 0) {
       if (!G.moonCounts) G.moonCounts = [0, 0, 0, 0];
       G.moonCounts[moon]++;
+    }
+    for (let i = 0; i < 4; i++) {
+      const acctId = G.players[i].accountId;
+      if (acctId) trackStat(() => db.recordRound(acctId, deltas[i]));
     }
   }
 

@@ -18,6 +18,10 @@ const pool = new Pool({
   // If you're connecting to a Postgres instance that requires it (e.g.
   // an external/public connection string), set PGSSL=true.
   ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : false,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+  keepAlive: true,
 });
 
 pool.on('error', err => {
@@ -53,6 +57,8 @@ async function ensureSchema() {
       games_finished INTEGER NOT NULL DEFAULT 0,
       best_trick INTEGER,
       worst_trick INTEGER,
+      best_round INTEGER,
+      worst_round INTEGER,
       best_game INTEGER,
       worst_game INTEGER,
       moons_total INTEGER NOT NULL DEFAULT 0,
@@ -60,6 +66,11 @@ async function ensureSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  // Older deployments may already have a stats table from before
+  // best_round/worst_round existed — add them if missing so upgrading
+  // doesn't require a manual migration.
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS best_round INTEGER;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS worst_round INTEGER;`);
 }
 
 function toPublic(row) {
@@ -140,6 +151,17 @@ async function recordTrick(accountId, trickScore) {
   );
 }
 
+async function recordRound(accountId, roundDelta) {
+  await pool.query(
+    `INSERT INTO stats (account_id, best_round, worst_round) VALUES ($1, $2, $2)
+     ON CONFLICT (account_id) DO UPDATE SET
+       best_round = GREATEST(stats.best_round, $2),
+       worst_round = LEAST(stats.worst_round, $2),
+       updated_at = now()`,
+    [accountId, roundDelta]
+  );
+}
+
 async function recordGameFinished(accountId, finalScore, moonsThisGame) {
   await pool.query(
     `INSERT INTO stats (account_id, games_finished, best_game, worst_game, moons_total, moons_best_game)
@@ -163,6 +185,8 @@ async function getStats(accountId) {
     gamesFinished: s ? s.games_finished : 0,
     bestTrick: s ? s.best_trick : null,
     worstTrick: s ? s.worst_trick : null,
+    bestRound: s ? s.best_round : null,
+    worstRound: s ? s.worst_round : null,
     bestGame: s ? s.best_game : null,
     worstGame: s ? s.worst_game : null,
     moonsTotal: s ? s.moons_total : 0,
@@ -174,5 +198,5 @@ module.exports = {
   pool, ensureSchema, toPublic,
   createAccount, findAccountByUsername, findAccountById,
   createSession, findAccountByToken, deleteSession, updateProfile,
-  recordGameStarted, recordTrick, recordGameFinished, getStats,
+  recordGameStarted, recordTrick, recordRound, recordGameFinished, getStats,
 };

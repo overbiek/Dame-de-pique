@@ -380,6 +380,17 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 }
 .acct-tab.active{background:rgba(212,175,92,.18);color:var(--gold-hi)}
 .acct-form>*+*{margin-top:10px}
+
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+.stat-card{
+  padding:14px 10px;border-radius:14px;text-align:center;
+  background:rgba(255,255,255,.04);border:1px solid var(--line);
+}
+.stat-value{font-family:'Playfair Display',serif;font-size:1.45rem;font-weight:700;
+  color:var(--gold-hi);line-height:1.1;white-space:nowrap}
+.stat-value.pos{color:#7fe0b4}
+.stat-value.neg{color:#f0968c}
+.stat-label{font-size:.7rem;color:var(--faint);margin-top:5px;line-height:1.3}
 .avatar.sm{width:28px;height:28px;font-size:.85rem;flex:0 0 auto}
 
 .profile-chip{
@@ -393,15 +404,20 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .profile-chip-name{flex:1;min-width:0;font-weight:600;color:var(--cream);font-size:.92rem;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .profile-chip-edit{font-size:.72rem;color:var(--faint)}
+.avatar-preview{
   width:76px;height:76px;border-radius:50%;margin:4px auto 16px;
   display:grid;place-items:center;font-size:2.1rem;
   background:rgba(0,0,0,.30);border:2px solid var(--gold);
   box-shadow:0 0 22px rgba(212,175,92,.24);
 }
-.avatar-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin:18px 0 22px}
+.avatar-grid{
+  display:flex;gap:8px;overflow-x:auto;margin:16px 0 20px;padding:2px 2px 6px;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.avatar-grid::-webkit-scrollbar{display:none}
 .avatar-opt{
-  aspect-ratio:1;border-radius:15px;display:grid;place-items:center;
-  font-size:1.4rem;background:rgba(0,0,0,.22);border:1.5px solid var(--line);
+  flex:0 0 auto;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+  font-size:1.15rem;background:rgba(0,0,0,.22);border:1.5px solid var(--line);
   cursor:pointer;transition:border-color .16s,box-shadow .16s,transform .12s,background .16s;
   touch-action:manipulation;
 }
@@ -758,10 +774,19 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
         <div class="tile-arrow">›</div>
       </button>
 
+      <button class="tile" onclick="goStats()">
+        <div class="tile-icon">📊</div>
+        <div class="tile-body">
+          <div class="tile-title">Statistics</div>
+          <div class="tile-sub">Your all-time numbers</div>
+        </div>
+        <div class="tile-arrow">›</div>
+      </button>
+
       <button class="tile" onclick="goPersonal()">
         <div class="tile-icon" id="menu-avatar-icon">👤</div>
         <div class="tile-body">
-          <div class="tile-title">Personal</div>
+          <div class="tile-title">My Account</div>
           <div class="tile-sub" id="menu-personal-sub">Choose your nickname &amp; avatar</div>
         </div>
         <div class="tile-arrow">›</div>
@@ -864,7 +889,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 <section id="s-personal" class="screen">
   <div class="center-wrap" style="max-width:420px">
     <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
-    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Personal</h2>
+    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">My Account</h2>
     <p class="tagline">Your nickname &amp; avatar &middot; used in every game mode</p>
 
     <div class="acct-card" id="acct-guest">
@@ -913,6 +938,77 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
     <button class="btn btn-primary btn-block" onclick="savePersonal()">Save</button>
     <div id="err-personal" class="note bad" style="display:none"></div>
     <p id="pv-saved" class="note gold" style="display:none;margin-top:10px;text-align:center">Saved.</p>
+  </div>
+</section>
+
+<!-- ═══ STATISTICS ═══ -->
+<section id="s-stats" class="screen">
+  <div class="center-wrap" style="max-width:440px">
+    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Statistics</h2>
+    <p class="tagline">Your all-time numbers</p>
+
+    <div id="stats-noaccount" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">📊</div>
+        <h3>Log in to track your stats</h3>
+        <p>Statistics follow your account, not this device — log in or create one to start building a record.</p>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="goPersonal()" style="margin-top:8px">Go to My Account</button>
+    </div>
+
+    <div id="stats-loading" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">⏳</div>
+        <h3>Loading your stats…</h3>
+      </div>
+    </div>
+
+    <div id="stats-error" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <h3>Couldn't load your stats</h3>
+        <p id="stats-error-msg">Something went wrong. Try again.</p>
+      </div>
+      <button class="btn btn-ghost btn-block" onclick="goStats()" style="margin-top:8px">Retry</button>
+    </div>
+
+    <div id="stats-content" style="display:none">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value" id="st-played">0</div>
+          <div class="stat-label">Games played</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="st-finished">0</div>
+          <div class="stat-label">Games finished</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value pos" id="st-best-trick">—</div>
+          <div class="stat-label">Best single trick</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value neg" id="st-worst-trick">—</div>
+          <div class="stat-label">Worst single trick</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value pos" id="st-best-game">—</div>
+          <div class="stat-label">Best game total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value neg" id="st-worst-game">—</div>
+          <div class="stat-label">Worst game total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="st-moons-total">0</div>
+          <div class="stat-label">Moons shot, total</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="st-moons-best">0</div>
+          <div class="stat-label">Most moons, one game</div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1201,14 +1297,14 @@ function goCasual(){
 function doCreate(){
   const id=identity();
   if(!id.name){ goPersonal(); return; }
-  socket.emit('createRoom',{name:id.name,avatar:id.avatar||''});
+  socket.emit('createRoom',{name:id.name,avatar:id.avatar||'',accountToken:account?accountToken:''});
 }
 function doJoin(){
   const c=$('f-code').value.trim().toUpperCase();
   const id=identity();
   if(!id.name){ goPersonal(); return; }
   if(!c){ $('f-code').focus(); return; }
-  socket.emit('joinRoom',{code:c,name:id.name,avatar:id.avatar||''});
+  socket.emit('joinRoom',{code:c,name:id.name,avatar:id.avatar||'',accountToken:account?accountToken:''});
 }
 function newGame(){ clearSession(); location.href=location.pathname; }
 
@@ -1304,6 +1400,45 @@ function doLogout(){
   updateMenuProfileUI();
   renderAccountUI();
 }
+
+/* ══════════ STATISTICS ══════════ */
+function fmtStat(n){
+  if(n===null||n===undefined) return '—';
+  return (n>0?'+':'')+n;
+}
+function goStats(){
+  show('stats');
+  $('stats-noaccount').style.display='none';
+  $('stats-loading').style.display='none';
+  $('stats-error').style.display='none';
+  $('stats-content').style.display='none';
+  if(!account){
+    $('stats-noaccount').style.display='block';
+    return;
+  }
+  $('stats-loading').style.display='block';
+  socket.emit('getStats',{token:accountToken});
+}
+socket.on('statsOk',d=>{
+  const s=d.stats;
+  $('stats-loading').style.display='none';
+  $('stats-error').style.display='none';
+  $('stats-content').style.display='block';
+  $('st-played').textContent=s.gamesPlayed;
+  $('st-finished').textContent=s.gamesFinished;
+  $('st-best-trick').textContent=fmtStat(s.bestTrick);
+  $('st-worst-trick').textContent=fmtStat(s.worstTrick);
+  $('st-best-game').textContent=fmtStat(s.bestGame);
+  $('st-worst-game').textContent=fmtStat(s.worstGame);
+  $('st-moons-total').textContent=s.moonsTotal;
+  $('st-moons-best').textContent=s.moonsBestGame;
+});
+socket.on('statsError',d=>{
+  $('stats-loading').style.display='none';
+  $('stats-content').style.display='none';
+  $('stats-error').style.display='block';
+  $('stats-error-msg').textContent=d.msg;
+});
 
 socket.on('joined',d=>{
   room=d.code; me=d.playerIndex; host=d.isHost; token=d.token;

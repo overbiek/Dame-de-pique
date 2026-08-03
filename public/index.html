@@ -102,13 +102,13 @@ p{font-size:.9rem;color:var(--muted);line-height:1.6}
 .btn-block{display:block;width:100%}
 .btn-ghost{background:transparent;border-color:var(--line);color:var(--muted)}
 
-input[type=text]{
+input[type=text],input[type=password]{
   width:100%;font:500 1rem 'DM Sans',sans-serif;padding:14px 16px;
   border-radius:var(--r);border:1px solid rgba(212,175,92,.26);
   background:rgba(0,0,0,.22);color:var(--cream);
 }
-input[type=text]:focus{outline:none;border-color:var(--gold);background:rgba(0,0,0,.32)}
-input[type=text]::placeholder{color:var(--faint)}
+input[type=text]:focus,input[type=password]:focus{outline:none;border-color:var(--gold);background:rgba(0,0,0,.32)}
+input[type=text]::placeholder,input[type=password]::placeholder{color:var(--faint)}
 
 /* ══ Playing cards ══ */
 .card{
@@ -195,10 +195,8 @@ input[type=text]::placeholder{color:var(--faint)}
 .hand{
   display:flex;align-items:flex-end;justify-content:center;
   padding:38px 6px 10px;
-  overflow-x:auto;overflow-y:visible;
-  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  overflow:visible;
 }
-.hand::-webkit-scrollbar{display:none}
 .suitgrp{display:flex;align-items:flex-end;flex:0 0 auto}
 .suitgrp + .suitgrp{margin-left:var(--overlap)}
 .card-slot{position:relative;flex:0 0 auto;transform-origin:50% 100%;pointer-events:none}
@@ -364,6 +362,24 @@ input[type=text]::placeholder{color:var(--faint)}
 .empty-state p{max-width:320px;margin:0 auto;font-size:.87rem}
 
 /* ══ Personal / avatar picker ══ */
+.acct-card{
+  padding:14px 16px;border-radius:16px;margin-bottom:18px;text-align:left;
+  background:rgba(255,255,255,.04);border:1px solid var(--line);
+}
+.acct-row{display:flex;align-items:center;gap:12px}
+.acct-icon{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;
+  font-size:1.15rem;background:rgba(212,175,92,.12);border:1px solid rgba(212,175,92,.25);flex:0 0 auto}
+.acct-body{flex:1;min-width:0}
+.acct-title{font-weight:600;color:var(--cream);font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct-sub{font-size:.76rem;color:var(--faint);margin-top:2px}
+.acct-form{margin-bottom:18px;text-align:left}
+.acct-tabs{display:flex;gap:5px;margin-bottom:12px;background:rgba(0,0,0,.22);padding:4px;border-radius:13px}
+.acct-tab{
+  flex:1;padding:9px;border-radius:10px;border:none;background:transparent;color:var(--faint);
+  font:600 .84rem 'DM Sans',sans-serif;cursor:pointer;transition:background .16s,color .16s;
+}
+.acct-tab.active{background:rgba(212,175,92,.18);color:var(--gold-hi)}
+.acct-form>*+*{margin-top:10px}
 .avatar.sm{width:28px;height:28px;font-size:.85rem;flex:0 0 auto}
 
 .profile-chip{
@@ -851,6 +867,43 @@ input[type=text]::placeholder{color:var(--faint)}
     <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Personal</h2>
     <p class="tagline">Your nickname &amp; avatar &middot; used in every game mode</p>
 
+    <div class="acct-card" id="acct-guest">
+      <div class="acct-row">
+        <span class="acct-icon">👤</span>
+        <div class="acct-body">
+          <div class="acct-title">Playing as a guest</div>
+          <div class="acct-sub">Saved on this device only</div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn grow" onclick="openAuthForm('login')">Log in</button>
+        <button class="btn btn-primary grow" onclick="openAuthForm('signup')">Create account</button>
+      </div>
+    </div>
+
+    <div class="acct-card" id="acct-loggedin" style="display:none">
+      <div class="acct-row">
+        <span class="acct-icon">✅</span>
+        <div class="acct-body">
+          <div class="acct-title">Logged in as <span id="acct-username"></span></div>
+          <div class="acct-sub">Your nickname &amp; avatar sync across devices</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="doLogout()">Log out</button>
+    </div>
+
+    <div class="acct-form" id="acct-form" style="display:none">
+      <div class="acct-tabs">
+        <button class="acct-tab" id="tab-login" onclick="switchAuthTab('login')">Log in</button>
+        <button class="acct-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create account</button>
+      </div>
+      <input type="text" id="auth-username" placeholder="Username" maxlength="20" autocomplete="username"/>
+      <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password"/>
+      <button class="btn btn-primary btn-block" id="auth-submit" onclick="submitAuth()">Log in</button>
+      <button class="btn btn-ghost btn-sm btn-block" onclick="closeAuthForm()">Cancel</button>
+      <div id="err-auth" class="note bad" style="display:none"></div>
+    </div>
+
     <div class="avatar-preview" id="pv-avatar">👤</div>
     <input type="text" id="pv-name" placeholder="Your name" maxlength="16"
            autocomplete="nickname" oninput="updateAvatarPreview()"/>
@@ -979,6 +1032,23 @@ function loadProfile(){
 }
 function saveProfileStore(){ try{localStorage.setItem(PK,JSON.stringify(profile));}catch(e){} }
 let profile=loadProfile();
+
+/* ── account (real, cross-device login — takes priority over the guest profile when present) ── */
+const AK='ddp.account';
+function loadAccountToken(){ try{return localStorage.getItem(AK)||'';}catch(e){return '';} }
+function saveAccountToken(t){ try{ t?localStorage.setItem(AK,t):localStorage.removeItem(AK); }catch(e){} }
+let account=null;       // {id,username,nickname,avatar} once logged in
+let accountToken=loadAccountToken();
+
+// Whichever identity is currently "live" — the account if logged in,
+// otherwise the local guest profile. Every place that needs a name/avatar
+// to actually play with should go through this rather than reading
+// `profile` or `account` directly.
+function identity(){
+  return account
+    ? {name:account.nickname, avatar:account.avatar||''}
+    : {name:profile.name,     avatar:profile.avatar||''};
+}
 
 /* ── helpers ── */
 const $=id=>document.getElementById(id);
@@ -1118,62 +1188,121 @@ function tableHTML(G,opts){
 
 /* ══════════ CASUAL PLAY ══════════ */
 function goCasual(){
-  const has=!!profile.name;
+  const id=identity();
+  const has=!!id.name;
   $('casual-noprofile').style.display=has?'none':'block';
   $('casual-ready').style.display=has?'block':'none';
   if(has){
-    $('cp-avatar').textContent=profile.avatar||initial(profile.name);
-    $('cp-name').textContent=profile.name;
+    $('cp-avatar').textContent=id.avatar||initial(id.name);
+    $('cp-name').textContent=id.name;
   }
   show('landing');
 }
 function doCreate(){
-  if(!profile.name){ goPersonal(); return; }
-  socket.emit('createRoom',{name:profile.name,avatar:profile.avatar||''});
+  const id=identity();
+  if(!id.name){ goPersonal(); return; }
+  socket.emit('createRoom',{name:id.name,avatar:id.avatar||''});
 }
 function doJoin(){
   const c=$('f-code').value.trim().toUpperCase();
-  if(!profile.name){ goPersonal(); return; }
+  const id=identity();
+  if(!id.name){ goPersonal(); return; }
   if(!c){ $('f-code').focus(); return; }
-  socket.emit('joinRoom',{code:c,name:profile.name,avatar:profile.avatar||''});
+  socket.emit('joinRoom',{code:c,name:id.name,avatar:id.avatar||''});
 }
 function newGame(){ clearSession(); location.href=location.pathname; }
 
 /* ══════════ PERSONAL (account: nickname & avatar, shared by every mode) ══════════ */
+let draftAvatar='';    // scratch value while editing the avatar picker
+let authMode='login';
+let lastAuthAction='';
+
 function updateMenuProfileUI(){
-  $('menu-avatar-icon').textContent=profile.avatar||'👤';
-  $('menu-personal-sub').textContent=profile.name
-    ? `Playing as ${profile.name}`
+  const id=identity();
+  $('menu-avatar-icon').textContent=id.avatar||'👤';
+  $('menu-personal-sub').textContent=id.name
+    ? `Playing as ${id.name}`
     : 'Choose your nickname & avatar';
 }
 function renderAvatarGrid(){
   const el=$('avatar-grid'); if(!el) return;
   el.innerHTML=AVATARS.map(a=>
-    `<div class="avatar-opt${a===profile.avatar?' sel':''}" onclick="pickAvatar('${a}')">${a}</div>`
+    `<div class="avatar-opt${a===draftAvatar?' sel':''}" onclick="pickAvatar('${a}')">${a}</div>`
   ).join('');
 }
 function pickAvatar(a){
-  profile.avatar=(profile.avatar===a)?'':a;   // tap again to clear
+  draftAvatar=(draftAvatar===a)?'':a;   // tap again to clear
   renderAvatarGrid();
   updateAvatarPreview();
 }
 function updateAvatarPreview(){
-  const n=$('pv-name').value.trim()||profile.name;
-  $('pv-avatar').textContent=profile.avatar||initial(n||'?');
+  const n=$('pv-name').value.trim()||identity().name;
+  $('pv-avatar').textContent=draftAvatar||initial(n||'?');
 }
 function goPersonal(){
   show('personal');
-  $('pv-name').value=profile.name||'';
+  const id=identity();
+  $('pv-name').value=id.name||'';
+  draftAvatar=id.avatar||'';
   renderAvatarGrid();
   updateAvatarPreview();
+  renderAccountUI();
 }
 function savePersonal(){
   const n=$('pv-name').value.trim().slice(0,16);
   if(!n){ toast('err-personal','Pick a nickname first.'); $('pv-name').focus(); return; }
-  profile.name=n;
-  saveProfileStore();
+  if(account){
+    lastAuthAction='update';
+    socket.emit('updateProfile',{token:accountToken,nickname:n,avatar:draftAvatar});
+  }else{
+    profile.name=n;
+    profile.avatar=draftAvatar;
+    saveProfileStore();
+    updateMenuProfileUI();
+    toast('pv-saved','Saved.');
+  }
+}
+
+/* ── account: login / signup / logout ── */
+function renderAccountUI(){
+  $('acct-guest').style.display=account?'none':'block';
+  $('acct-loggedin').style.display=account?'block':'none';
+  if(account) $('acct-username').textContent=account.username;
+  $('acct-form').style.display='none';
+}
+function openAuthForm(mode){
+  $('acct-form').style.display='block';
+  $('acct-guest').style.display='none';
+  switchAuthTab(mode);
+  $('auth-username').value='';
+  $('auth-password').value='';
+  $('auth-username').focus();
+}
+function closeAuthForm(){
+  renderAccountUI();
+}
+function switchAuthTab(mode){
+  authMode=mode;
+  $('tab-login').classList.toggle('active',mode==='login');
+  $('tab-signup').classList.toggle('active',mode==='signup');
+  $('auth-submit').textContent=mode==='login'?'Log in':'Create account';
+  $('auth-password').autocomplete=mode==='login'?'current-password':'new-password';
+}
+function submitAuth(){
+  const u=$('auth-username').value.trim();
+  const p=$('auth-password').value;
+  if(!u||!p){ toast('err-auth','Fill in both fields.'); return; }
+  lastAuthAction=authMode;
+  if(authMode==='login') socket.emit('login',{username:u,password:p});
+  else socket.emit('signup',{username:u,password:p,nickname:profile.name||u,avatar:profile.avatar||''});
+}
+function doLogout(){
+  socket.emit('logout',{token:accountToken});
+  account=null;
+  saveAccountToken('');
+  accountToken='';
   updateMenuProfileUI();
-  toast('pv-saved','Saved.');
+  renderAccountUI();
 }
 
 socket.on('joined',d=>{
@@ -1188,12 +1317,44 @@ socket.on('errorMsg',d=>{
 socket.on('error',d=>{ if(d&&d.msg) toast('err-landing',d.msg); });
 socket.on('rejoinFailed',()=>{ clearSession(); });
 
+socket.on('authOk',d=>{
+  accountToken=d.token;
+  saveAccountToken(accountToken);
+  account=d.account;
+  updateMenuProfileUI();
+  if(lastAuthAction==='login'||lastAuthAction==='signup'){
+    renderAccountUI();
+    draftAvatar=account.avatar||'';
+    if($('pv-name')) $('pv-name').value=account.nickname||'';
+    updateAvatarPreview();
+  }else if(lastAuthAction==='update'){
+    renderAccountUI();
+    toast('pv-saved','Saved.');
+  }else{ // resume (silent — this fires on every page load if a token is stored)
+    renderAccountUI();
+    if($('s-personal').classList.contains('active')){
+      draftAvatar=account.avatar||'';
+      $('pv-name').value=account.nickname||'';
+      updateAvatarPreview();
+    }
+  }
+});
+socket.on('authError',d=>{
+  if(lastAuthAction==='resume'){
+    // stale/expired token from a previous visit — drop it quietly, no need to alarm anyone
+    accountToken=''; saveAccountToken('');
+    return;
+  }
+  toast('err-auth',d.msg);
+});
+
 /* connection status */
 socket.on('connect',()=>{
   $('conn').style.display='none';
   const s=loadSession();
   if(s&&s.room&&s.token&&me===-1){ socket.emit('rejoin',{code:s.room,token:s.token}); }
   else if(room&&token){ socket.emit('rejoin',{code:room,token}); }
+  if(accountToken&&!account){ lastAuthAction='resume'; socket.emit('resumeSession',{token:accountToken}); }
 });
 socket.on('disconnect',()=>{ $('conn').style.display='block'; });
 

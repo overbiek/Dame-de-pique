@@ -1037,6 +1037,26 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
           <div class="stat-value" id="st-moons-best">0</div>
           <div class="stat-label">Most moons, one game</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-value" id="st-queens-taken">0</div>
+          <div class="stat-label">Queen of Spades taken</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="st-avg-points">—</div>
+          <div class="stat-label">Average score per game</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value pos" id="st-ended-positive">0</div>
+          <div class="stat-label">Games ended positive</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value neg" id="st-ended-negative">0</div>
+          <div class="stat-label">Games ended negative</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="st-win-streak">0</div>
+          <div class="stat-label">Longest winning streak</div>
+        </div>
       </div>
     </div>
   </div>
@@ -1484,6 +1504,11 @@ socket.on('statsOk',d=>{
   $('st-worst-game').textContent=fmtStat(s.worstGame);
   $('st-moons-total').textContent=s.moonsTotal;
   $('st-moons-best').textContent=s.moonsBestGame;
+  $('st-queens-taken').textContent=s.queenSpadesTaken;
+  $('st-avg-points').textContent=fmtStat(s.avgPoints);
+  $('st-ended-positive').textContent=s.endedPositive;
+  $('st-ended-negative').textContent=s.endedNegative;
+  $('st-win-streak').textContent=s.winStreakBest;
 });
 socket.on('statsError',d=>{
   $('stats-loading').style.display='none';

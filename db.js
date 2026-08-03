@@ -63,14 +63,26 @@ async function ensureSchema() {
       worst_game INTEGER,
       moons_total INTEGER NOT NULL DEFAULT 0,
       moons_best_game INTEGER NOT NULL DEFAULT 0,
+      queen_spades_taken INTEGER NOT NULL DEFAULT 0,
+      points_total INTEGER NOT NULL DEFAULT 0,
+      ended_positive INTEGER NOT NULL DEFAULT 0,
+      ended_negative INTEGER NOT NULL DEFAULT 0,
+      win_streak_current INTEGER NOT NULL DEFAULT 0,
+      win_streak_best INTEGER NOT NULL DEFAULT 0,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
-  // Older deployments may already have a stats table from before
-  // best_round/worst_round existed — add them if missing so upgrading
-  // doesn't require a manual migration.
+  // Older deployments may already have a stats table from before these
+  // columns existed — add them if missing so upgrading doesn't require
+  // a manual migration.
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS best_round INTEGER;`);
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS worst_round INTEGER;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS queen_spades_taken INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS points_total INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS ended_positive INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS ended_negative INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS win_streak_current INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS win_streak_best INTEGER NOT NULL DEFAULT 0;`);
 }
 
 function toPublic(row) {
@@ -162,18 +174,39 @@ async function recordRound(accountId, roundDelta) {
   );
 }
 
-async function recordGameFinished(accountId, finalScore, moonsThisGame) {
+async function recordQueenTaken(accountId) {
   await pool.query(
-    `INSERT INTO stats (account_id, games_finished, best_game, worst_game, moons_total, moons_best_game)
-     VALUES ($1, 1, $2, $2, $3, $3)
+    `INSERT INTO stats (account_id, queen_spades_taken) VALUES ($1, 1)
+     ON CONFLICT (account_id) DO UPDATE SET
+       queen_spades_taken = stats.queen_spades_taken + 1,
+       updated_at = now()`,
+    [accountId]
+  );
+}
+
+async function recordGameFinished(accountId, finalScore, moonsThisGame) {
+  const endedPositive = finalScore > 0 ? 1 : 0;
+  const endedNegative = finalScore < 0 ? 1 : 0;
+  await pool.query(
+    `INSERT INTO stats (
+       account_id, games_finished, best_game, worst_game, moons_total, moons_best_game,
+       points_total, ended_positive, ended_negative, win_streak_current, win_streak_best
+     )
+     VALUES ($1, 1, $2, $2, $3, $3, $2, $4, $5, $4, $4)
      ON CONFLICT (account_id) DO UPDATE SET
        games_finished = stats.games_finished + 1,
        best_game = GREATEST(stats.best_game, $2),
        worst_game = LEAST(stats.worst_game, $2),
        moons_total = stats.moons_total + $3,
        moons_best_game = GREATEST(stats.moons_best_game, $3),
+       points_total = stats.points_total + $2,
+       ended_positive = stats.ended_positive + $4,
+       ended_negative = stats.ended_negative + $5,
+       win_streak_current = CASE WHEN $4 = 1 THEN stats.win_streak_current + 1 ELSE 0 END,
+       win_streak_best = GREATEST(stats.win_streak_best,
+         CASE WHEN $4 = 1 THEN stats.win_streak_current + 1 ELSE 0 END),
        updated_at = now()`,
-    [accountId, finalScore, moonsThisGame]
+    [accountId, finalScore, moonsThisGame, endedPositive, endedNegative]
   );
 }
 
@@ -191,6 +224,11 @@ async function getStats(accountId) {
     worstGame: s ? s.worst_game : null,
     moonsTotal: s ? s.moons_total : 0,
     moonsBestGame: s ? s.moons_best_game : 0,
+    queenSpadesTaken: s ? s.queen_spades_taken : 0,
+    avgPoints: s && s.games_finished > 0 ? Math.round((s.points_total / s.games_finished) * 10) / 10 : null,
+    endedPositive: s ? s.ended_positive : 0,
+    endedNegative: s ? s.ended_negative : 0,
+    winStreakBest: s ? s.win_streak_best : 0,
   };
 }
 
@@ -198,5 +236,5 @@ module.exports = {
   pool, ensureSchema, toPublic,
   createAccount, findAccountByUsername, findAccountById,
   createSession, findAccountByToken, deleteSession, updateProfile,
-  recordGameStarted, recordTrick, recordRound, recordGameFinished, getStats,
+  recordGameStarted, recordTrick, recordRound, recordGameFinished, recordQueenTaken, getStats,
 };

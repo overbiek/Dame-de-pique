@@ -1206,6 +1206,9 @@ function resolveTrick(G) {
   if (G.players[winner].accountId) {
     const acctId = G.players[winner].accountId;
     trackStat(() => db.recordTrick(acctId, trickScore));
+    if (G.currentTrick.some(t => t.card.suit === '♠' && t.card.rank === 'Q')) {
+      trackStat(() => db.recordQueenTaken(acctId));
+    }
   }
   G.lastTrickMsg = `${G.players[winner].name} wins trick ${G.trickNum} · +10${penPts !== 0 ? ' ' + penPts : ''}`;
   if (!G.playLog) G.playLog = [];

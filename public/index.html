@@ -161,7 +161,6 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
     linear-gradient(160deg,#1d5e8a,#123f5e);
   border-color:#0d2f47;
 }
-.card.mini{--cw:clamp(24px,6vw,32px)}
 
 /* ══ Pass transition — cards flying between players ══ */
 .pfx-layer{position:fixed;inset:0;pointer-events:none;z-index:150;overflow:hidden}
@@ -273,8 +272,35 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .mystrip .tot small{display:block;font-family:'DM Sans',sans-serif;font-size:.42em;
   font-weight:600;color:var(--faint);letter-spacing:.02em;margin-top:3px}
 .seat-cards{display:flex;justify-content:center}
-.seat-cards .card{margin-left:-16px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
-.seat-cards .card:first-child{margin-left:0}
+
+/* ══ Opponents' hands — a waving fan of face-down cards, rotated to
+   read correctly from each seat: left seat 90° clockwise, the seat
+   across 180°, right seat 270° (90° counter-clockwise). The wrap
+   reserves the post-rotation footprint so the fan never overlaps the
+   avatar/name/score above it or the trick area beside it. ══ */
+.opp-fan-wrap{
+  position:relative;
+  --cw:clamp(24px,6vw,32px);
+  --ovl:calc(var(--cw) * -0.62);
+  --step:calc(var(--cw) + var(--ovl));
+  --lift:5px;
+}
+.opp-fan-wrap.side{
+  width:calc(var(--ch) + var(--lift));
+  height:calc(var(--cw) + (var(--n) - 1) * var(--step));
+}
+.opp-fan-wrap.flip{
+  width:calc(var(--cw) + (var(--n) - 1) * var(--step));
+  height:calc(var(--ch) + var(--lift));
+}
+.opp-fan{position:absolute;top:50%;left:50%;display:flex;align-items:flex-end}
+.opp-fan.rot-90{transform:translate(-50%,-50%) rotate(90deg)}
+.opp-fan.rot-180{transform:translate(-50%,-50%) rotate(180deg)}
+.opp-fan.rot-270{transform:translate(-50%,-50%) rotate(270deg)}
+.opp-fan .card-slot{flex:0 0 auto}
+.opp-fan .card-slot+.card-slot{margin-left:var(--step)}
+.opp-fan .card{box-shadow:0 1px 3px rgba(0,0,0,.4)}
+
 .count-pill{font-size:.62rem;color:var(--faint);letter-spacing:.04em}
 
 /* ══ Chrome / info ══ */
@@ -1173,6 +1199,24 @@ function cardHTML(c,cls){
 }
 function backHTML(cls){ return `<div class="card back ${cls||''}"></div>`; }
 
+/* Face-down cards fanned like a hand of cards, same wave as handHTML
+   but smaller and without suit grouping (backs look identical). The
+   caller rotates the whole group to match the seat it belongs to. */
+function oppFanHTML(n){
+  if(!n) return '';
+  const mid=(n-1)/2;
+  const ANGLE_STEP=6, MAX_LIFT=6;
+  let h='';
+  for(let idx=0;idx<n;idx++){
+    const off=idx-mid;
+    const rot=(off*ANGLE_STEP).toFixed(2);
+    const lift=mid>0?(MAX_LIFT*(1-(off/mid)*(off/mid))).toFixed(2):0;
+    h+=`<div class="card-slot" style="transform:rotate(${rot}deg) translateY(${-lift}px);z-index:${idx}">${backHTML()}</div>`;
+  }
+  return h;
+}
+const SEAT_ROT={1:'rot-90',2:'rot-180',3:'rot-270'};
+
 function handHTML(hand,mode,legal,received){
   if(!hand||!hand.length) return '';
   const groups={'♠':[],'♥':[],'♦':[],'♣':[]};
@@ -1212,10 +1256,13 @@ function seatHTML(G,i,opts){
   const mine=i===me;
   const cls=[p.isAI?'ai':'',turn?'turn':'',mine?'mine':'',
              (!p.connected&&!p.isAI)?'off':''].join(' ');
-  const n=Math.min(p.cardCount,8);
+  const n=Math.min(p.cardCount,6);
   let fan='';
   if(opts&&opts.fan&&p.cardCount>0){
-    for(let k=0;k<n;k++) fan+=backHTML('mini');
+    const rotClass=SEAT_ROT[opts.pos]||'rot-90';
+    const wrapCls=rotClass==='rot-180'?'flip':'side';
+    fan=`<div class="opp-fan-wrap ${wrapCls}" style="--n:${n}">`
+       +`<div class="opp-fan ${rotClass}">${oppFanHTML(n)}</div></div>`;
   }
   const rs=roundOf(G,i);
   const rcls=rs>0?'up':rs<0?'down':'flat';
@@ -1263,7 +1310,7 @@ function tableHTML(G,opts){
 
   const seat=pos=>{
     const i=byPos[pos];
-    return seatHTML(G,i,{turn:i===active,fan:opts.fan});
+    return seatHTML(G,i,{turn:i===active,fan:opts.fan,pos});
   };
 
   // middle: played cards positioned by seat

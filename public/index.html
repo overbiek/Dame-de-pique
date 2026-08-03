@@ -984,12 +984,16 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
           <div class="stat-label">Games finished</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value pos" id="st-best-trick">—</div>
-          <div class="stat-label">Best single trick</div>
-        </div>
-        <div class="stat-card">
           <div class="stat-value neg" id="st-worst-trick">—</div>
           <div class="stat-label">Worst single trick</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value pos" id="st-best-round">—</div>
+          <div class="stat-label">Best hand</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value neg" id="st-worst-round">—</div>
+          <div class="stat-label">Worst hand</div>
         </div>
         <div class="stat-card">
           <div class="stat-value pos" id="st-best-game">—</div>
@@ -1426,8 +1430,9 @@ socket.on('statsOk',d=>{
   $('stats-content').style.display='block';
   $('st-played').textContent=s.gamesPlayed;
   $('st-finished').textContent=s.gamesFinished;
-  $('st-best-trick').textContent=fmtStat(s.bestTrick);
   $('st-worst-trick').textContent=fmtStat(s.worstTrick);
+  $('st-best-round').textContent=fmtStat(s.bestRound);
+  $('st-worst-round').textContent=fmtStat(s.worstRound);
   $('st-best-game').textContent=fmtStat(s.bestGame);
   $('st-worst-game').textContent=fmtStat(s.worstGame);
   $('st-moons-total').textContent=s.moonsTotal;

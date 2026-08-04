@@ -884,13 +884,33 @@ html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
   height:100%;
   padding:0;
 }
-html.landscape-mode #s-pass .table,html.landscape-mode #s-play .table{padding:4px 8px;gap:3px;flex:0 0 auto}
+html.landscape-mode #s-pass .table,html.landscape-mode #s-play .table{
+  padding:4px 8px;gap:3px;flex:0 0 auto;
+  /* widen the middle column well past what the now-compact .mid cluster
+     needs, so justify-self:start on .mid (below) parks the trick pile
+     toward the left-center of the table instead of dead-center under
+     the right-side info panel */
+  grid-template-columns:minmax(58px,1fr) 3fr minmax(58px,1fr);
+}
 html.landscape-mode #s-pass .table-wrap,html.landscape-mode #s-play .table-wrap{flex:0 0 auto}
 html.landscape-mode #s-pass .avatar,html.landscape-mode #s-play .avatar{width:32px;height:32px;font-size:.85rem}
 html.landscape-mode #s-pass .seat-name,html.landscape-mode #s-play .seat-name{font-size:.56rem;max-width:56px}
 html.landscape-mode #s-pass .seat-score,html.landscape-mode #s-play .seat-score{font-size:.66rem}
 html.landscape-mode #s-pass .seat-score small,html.landscape-mode #s-play .seat-score small{font-size:.56rem}
-html.landscape-mode #s-pass .mid,html.landscape-mode #s-play .mid{min-width:calc(var(--cw)*2.3);min-height:calc(var(--ch)*1.7);gap:2px}
+html.landscape-mode #s-pass .mid,html.landscape-mode #s-play .mid{
+  /* Portrait spreads the 4 trick slots into a wide cross with big gaps —
+     fine when there's height to spare, but in landscape that cross eats
+     most of the short vertical space and leaves the table looking mostly
+     empty. Cluster the slots into a tight overlapping stack instead
+     (cells smaller than the cards themselves, so place-items:center
+     pulls neighbors over each other) and pull the whole cluster toward
+     the left side of its grid cell so it doesn't just sit dead-center
+     under a wide, mostly-empty right-side info panel. */
+  min-width:0;min-height:0;gap:0;
+  grid-template-columns:calc(var(--cw)*.6) calc(var(--cw)*.6) calc(var(--cw)*.6);
+  grid-template-rows:calc(var(--ch)*.6) calc(var(--ch)*.6) calc(var(--ch)*.6);
+  justify-self:start;
+}
 html.landscape-mode #s-pass .mystrip,html.landscape-mode #s-play .mystrip{margin:2px 0 0;padding:4px 12px;gap:6px}
 html.landscape-mode #s-pass .mystrip .who,html.landscape-mode #s-play .mystrip .who{font-size:.85rem}
 html.landscape-mode #s-pass .mystrip .tot,html.landscape-mode #s-play .mystrip .tot{font-size:1.15rem}

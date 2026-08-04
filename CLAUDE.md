@@ -163,6 +163,23 @@ push to the connected branch.
 ## Not implemented
 - Password reset (no email service configured)
 
+## Solo-vs-AI casual rooms never expire on a timer
+- A casual room where exactly one seat isn't AI (`server.js`'s room-cleanup
+  `setInterval`, near the bottom) is exempt from both `EMPTY_CLOSE_MS` and
+  `IDLE_CLOSE_MS` — that player can be disconnected/logged off for any
+  length of time and `rejoin` (localStorage session token, no expiry) will
+  always work. The only way that room closes is the explicit "Leave"
+  button, which already closes it via the existing
+  `!G.players.some(p => p.token && !p.isAI)` check in `leaveRoom`. Ranked
+  is excluded from this (`!G.ranked` guard) since it never has AI seats to
+  begin with, and a stalled ranked game already has its own 15s
+  disconnect→AI-takeover mechanism instead
+- Caveat that doesn't have a fix without persisting `rooms` to the DB (out
+  of scope so far): all room state is in-memory only, so a server
+  restart/redeploy — which happens on every push to `main`, since this
+  auto-deploys — wipes even a solo-vs-AI game in progress. "Never expires"
+  only holds within one server process's uptime, not across deploys
+
 ## Testing convention
 - Copy `server.js` → `server.test.js`, sed the AI/round `setTimeout`
   delays down to ~5ms for fast local iteration; delete before shipping

@@ -1983,11 +1983,19 @@ io.on('connection', (socket) => {
   });
 });
 
-// Close rooms that have gone quiet, or that everyone has walked away from.
+// Close rooms that have gone quiet, or that everyone has walked away from —
+// except a solo player against AI opponents (casual only; ranked never has
+// AI seats to begin with). That game is theirs to sit on for as long as
+// they like — it only ends when they hit "Leave", never on a timer.
 setInterval(() => {
   const now = Date.now();
   for (const code in rooms) {
     const G = rooms[code];
+
+    if (!G.ranked && G.players.filter(p => !p.isAI).length === 1) {
+      G.emptySince = null;
+      continue;
+    }
 
     const anyoneHere = G.players.some(p => p.token && !p.isAI && p.connected);
     if (anyoneHere) {

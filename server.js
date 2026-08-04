@@ -801,17 +801,21 @@ function applyHardRules(G, pi, legal) {
   }
 
   const led = trick[0].card.suit;
-  if (led === '♠') {
-    const penInTrick = trick.reduce((s, t) => s + Math.abs(cardVal(t.card)), 0);
-    if (penInTrick === 0 && moonPaceOwner(G) !== pi) {
-      const qsOut = G.players.some(p => p.tricks.some(c => c.suit === '♠' && c.rank === 'Q'))
-        || trick.some(t => t.card.suit === '♠' && t.card.rank === 'Q');
-      const safeToOvertake = trick.length === 3 && !qsOut;
-      if (!safeToOvertake) {
-        const topSpades = legal.filter(c => c.suit === '♠' && (c.rank === 'A' || c.rank === 'K'));
-        if (topSpades.length && topSpades.length < legal.length) {
-          return legal.filter(c => !topSpades.includes(c));
-        }
+  if (led === '♠' && moonPaceOwner(G) !== pi) {
+    const qsInTrick = trick.some(t => t.card.suit === '♠' && t.card.rank === 'Q');
+    const qsCapturedEarlier = G.players.some(p => p.tricks.some(c => c.suit === '♠' && c.rank === 'Q'));
+    // Safe to play A/K only once the queen can no longer land in this
+    // trick: she's already gone from an earlier trick, or we're last to
+    // act and she isn't one of the four cards on the table. If she's
+    // sitting in the trick right now, playing top spades captures her
+    // for certain — that used to slip through whenever *any* penalty
+    // card (including her) was already in the trick, which was exactly
+    // backwards, since that's the one case that's never safe.
+    const safeToOvertake = !qsInTrick && (qsCapturedEarlier || trick.length === 3);
+    if (!safeToOvertake) {
+      const topSpades = legal.filter(c => c.suit === '♠' && (c.rank === 'A' || c.rank === 'K'));
+      if (topSpades.length && topSpades.length < legal.length) {
+        return legal.filter(c => !topSpades.includes(c));
       }
     }
   }

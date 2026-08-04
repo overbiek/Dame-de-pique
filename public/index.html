@@ -227,7 +227,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .seat-left{grid-area:lft}
 .seat-right{grid-area:rgt}
 .seat-bottom{grid-area:bot;margin-top:2px}
-.corner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.corner{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;align-self:flex-start}
 .corner-lt{grid-area:lt}
 .corner-rt{grid-area:rt}
 .seat.mine .avatar{border-color:rgba(63,191,136,.55);color:#a8ecce}
@@ -1878,15 +1878,21 @@ function togglePassCard(el){
 }
 // Press a card to select it, then — without lifting your finger/mouse —
 // swipe across neighboring cards to select them too, like a paint-select.
-let passDragging=false, passDragTouched=null;
+// A minimum travel distance between switches keeps big fingers / small
+// jitter from skating past the intended card.
+const SWIPE_SWITCH_GAP=34;
+let passDragging=false, passDragTouched=null, passDragX=0;
 $('p-hand').addEventListener('pointerdown',e=>{
   const el=e.target.closest('.card.tap'); if(!el||!S||S.phase!=='pass')return;
   passDragging=true;
   passDragTouched=new Set([el.dataset.r+el.dataset.s]);
+  passDragX=e.clientX;
   togglePassCard(el);
 });
 $('p-hand').addEventListener('pointermove',e=>{
   if(!passDragging)return;
+  if(Math.abs(e.clientX-passDragX)<SWIPE_SWITCH_GAP)return;
+  passDragX=e.clientX;
   const under=document.elementFromPoint(e.clientX,e.clientY);
   const el=under&&under.closest&&under.closest('.card.tap');
   if(!el)return;
@@ -2006,7 +2012,7 @@ function renderPlay(G){
 // Press a card to preview it, then — without lifting your finger/mouse —
 // slide across the fan to change your pick; release to play whichever
 // card is currently highlighted.
-let playPicking=false, playPickEl=null;
+let playPicking=false, playPickEl=null, playPickX=0;
 function setPlayPick(el){
   if(playPickEl===el)return;
   if(playPickEl) playPickEl.classList.remove('sel');
@@ -2016,10 +2022,13 @@ function setPlayPick(el){
 $('g-hand').addEventListener('pointerdown',e=>{
   const el=e.target.closest('.card.tap'); if(!el||!S||S.phase!=='play')return;
   playPicking=true;
+  playPickX=e.clientX;
   setPlayPick(el);
 });
 $('g-hand').addEventListener('pointermove',e=>{
   if(!playPicking)return;
+  if(Math.abs(e.clientX-playPickX)<SWIPE_SWITCH_GAP)return;
+  playPickX=e.clientX;
   const under=document.elementFromPoint(e.clientX,e.clientY);
   const el=under&&under.closest&&under.closest('.card.tap');
   if(el) setPlayPick(el);

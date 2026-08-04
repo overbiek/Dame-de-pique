@@ -430,16 +430,25 @@ function heuristicChoose(G, pi) {
     // risk of scooping the queen myself — flush her out of hiding.
     const spadesHeld = hand.filter(c => c.suit === '♠');
     const hasTopSpade = spadesHeld.some(c => c.rank === 'Q' || c.rank === 'A' || c.rank === 'K');
+    const qsHeld = spadesHeld.some(c => c.rank === 'Q');
     const qsCaptured = G.players.some(p => p.tricks.some(c => c.suit === '♠' && c.rank === 'Q'));
     const legalSpades = legal.filter(c => c.suit === '♠');
     if (!hasTopSpade && legalSpades.length && !qsCaptured) {
       return legalSpades.sort((a, b) => RV[a.rank] - RV[b.rank])[0];
     }
 
+    // Leading A♠/K♠ while the queen is still unaccounted for risks the
+    // same thing overtaking does — anyone void in spades can legally dump
+    // her straight into a trick we're about to win outright. Only exempt
+    // when we hold her ourselves, she's already gone, or we're on moon
+    // pace (then capturing her is the point, not a risk).
+    const spadeLeadUnsafe = !qsHeld && !qsCaptured && moonPaceOwner(G) !== pi;
+    const noRiskyLead = c => !(spadeLeadUnsafe && c.suit === '♠' && (c.rank === 'A' || c.rank === 'K'));
+
     // Bank a free +10: lead a card that's provably unbeatable in its suit
     // right now (every higher card is already gone or safe in my own hand).
     const safe = legal.filter(c => cardVal(c) === 0);
-    const guaranteed = safe.filter(c => isGuaranteedWinner(G, c, hand));
+    const guaranteed = safe.filter(c => isGuaranteedWinner(G, c, hand) && noRiskyLead(c));
     if (guaranteed.length) return guaranteed.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
 
     // Hearts of 5 or under are cheap enough to shed proactively — as long
@@ -464,8 +473,11 @@ function heuristicChoose(G, pi) {
       }
     }
 
-    // Nothing clever on offer — lead the highest safe (non-penalty) card.
-    if (safe.length) return safe.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
+    // Nothing clever on offer — lead the highest safe (non-penalty) card,
+    // still avoiding an unnecessary A♠/K♠ risk if a safer option exists.
+    const safeNoRisk = safe.filter(noRiskyLead);
+    const safePool = safeNoRisk.length ? safeNoRisk : safe;
+    if (safePool.length) return safePool.sort((a, b) => RV[b.rank] - RV[a.rank])[0];
 
     // Truly forced to lead a penalty card (hand is nothing but hearts and
     // maybe the queen): minimize the damage — lowest heart first, the
@@ -779,10 +791,11 @@ function samplesFor(numCandidates, trickNum) {
 // A thin hard-constraint layer applied only to the live decision (not the
 // rollout policy) — the few rules that should never be left to
 // probabilistic judgment: a free Ace on trick 1, never chasing with a
-// heart that isn't safe yet, and never spending A♠/K♠ to overtake an
-// ordinary clean spades trick unless it's provably safe to do so. Only
-// ever narrows the candidate list, and only when a legal alternative
-// actually remains — a genuinely forced move is always left untouched.
+// heart that isn't safe yet, and never leading or overtaking with
+// A♠/K♠ while the queen is still unaccounted for, unless it's provably
+// safe to do so. Only ever narrows the candidate list, and only when a
+// legal alternative actually remains — a genuinely forced move is
+// always left untouched.
 function applyHardRules(G, pi, legal) {
   const trick = G.currentTrick;
 
@@ -791,13 +804,32 @@ function applyHardRules(G, pi, legal) {
       const openingAce = legal.find(c => (c.suit === '♦' || c.suit === '♣') && c.rank === 'A');
       if (openingAce) return [openingAce];
     }
+    let pool = legal;
+
     const played = playedCardsThisRound(G);
-    const risky = legal.filter(c => c.suit === '♥' && RV[c.rank] > 5 &&
+    const risky = pool.filter(c => c.suit === '♥' && RV[c.rank] > 5 &&
       !RANKS.filter(r => RV[r] < RV[c.rank]).every(r => played.some(p => p.suit === '♥' && p.rank === r)));
-    if (risky.length && risky.length < legal.length) {
-      return legal.filter(c => !risky.includes(c));
+    if (risky.length && risky.length < pool.length) {
+      pool = pool.filter(c => !risky.includes(c));
     }
-    return legal;
+
+    // Never lead A♠/K♠ while the queen is still unaccounted for — any
+    // other player could easily be void in spades and dump her straight
+    // into a trick we're guaranteed to win with the top card. Exempt: we
+    // hold the queen ourselves (nothing at risk), she's already captured,
+    // or we're on moon pace (then capturing her ourselves is the point).
+    if (moonPaceOwner(G) !== pi) {
+      const qsHeld = G.players[pi].hand.some(c => c.suit === '♠' && c.rank === 'Q');
+      const qsCapturedEarlier = G.players.some(p => p.tricks.some(c => c.suit === '♠' && c.rank === 'Q'));
+      if (!qsHeld && !qsCapturedEarlier) {
+        const topSpadeLeads = pool.filter(c => c.suit === '♠' && (c.rank === 'A' || c.rank === 'K'));
+        if (topSpadeLeads.length && topSpadeLeads.length < pool.length) {
+          pool = pool.filter(c => !topSpadeLeads.includes(c));
+        }
+      }
+    }
+
+    return pool;
   }
 
   const led = trick[0].card.suit;

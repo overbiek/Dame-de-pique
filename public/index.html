@@ -1017,6 +1017,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 
     <div class="exit-row" style="margin-top:22px">
       <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
+      <button class="btn btn-ghost btn-sm" id="sfx-toggle" onclick="toggleSfxMuted()">🔊 Sound</button>
     </div>
     <div id="err-menu" class="note bad" style="display:none"></div>
     <div id="install">
@@ -1415,7 +1416,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   <div class="center-wrap" style="padding-top:2vh;max-width:460px;text-align:left">
     <h2 id="r-title">Round complete</h2>
     <div id="r-body"></div>
-    <button class="btn btn-primary btn-block" id="r-next" style="display:none" onclick="send('confirmRound')">Continue</button>
+    <button class="btn btn-primary btn-block" id="r-next" style="display:none" onclick="confirmRoundClick()">Continue</button>
     <p id="r-wait" class="prompt wait" style="display:none"></p>
     <p id="r-auto" class="autoline"></p>
     <div class="exit-row">
@@ -1439,6 +1440,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/sfx.js"></script>
 <script>
 "use strict";
 
@@ -1451,6 +1453,28 @@ let S=null;            // latest game state
 let me=-1, room='', host=false, token='';
 let picked=[];         // cards selected to pass
 let autoDeadline=0, autoTick=null, voteDeadline=0;
+
+/* ── sound effects (public/sfx.js) ── */
+const MK='ddp.sfxMuted';
+function loadSfxMuted(){ try{return localStorage.getItem(MK)==='1';}catch(e){return false;} }
+function saveSfxMuted(m){ try{localStorage.setItem(MK,m?'1':'0');}catch(e){} }
+SFX.setMuted(loadSfxMuted());
+SFX.loadCardSounds('/sounds/').catch(()=>{}); // fetch doesn't need a user gesture — playback does
+// Web Audio needs a user gesture before it'll actually make sound —
+// unlock on the very first tap/click anywhere, whichever screen that is.
+document.addEventListener('pointerdown',()=>SFX.unlock(),{once:true});
+function updateSfxToggleUI(){
+  const b=$('sfx-toggle'); if(!b) return;
+  const muted=loadSfxMuted();
+  b.textContent=muted?'🔇 Sound off':'🔊 Sound';
+}
+function toggleSfxMuted(){
+  const m=!loadSfxMuted();
+  saveSfxMuted(m);
+  SFX.setMuted(m);
+  updateSfxToggleUI();
+  if(!m) SFX.play('click');
+}
 
 /* ── storage (survives app backgrounding) ── */
 const SK='ddp.session';
@@ -2130,11 +2154,65 @@ function syncCountdown(G){
   if(autoDeadline||voteDeadline) autoTick=setInterval(paintCountdown,1000);
 }
 
+/* ══════════ SFX: state-driven cues (deal, trick outcome, turn) ══════════ */
+// null sentinels below mean "not yet observed this session" — the very
+// first gameState after a page load/reconnect just seeds them silently so
+// a mid-game rejoin doesn't replay a deal/trick sound for something that
+// already happened before this tab connected.
+let lastDealtRound=null;
+let seatingDrawPlayed=false;
+let lastAnnouncedTrickKey=null;
+let wasMyTurn=false;
+function handleSfxForState(G){
+  if(G.phase==='draw'||G.phase==='draw1Done'||G.phase==='drawDone'){
+    lastDealtRound=0; // arms the next 'pass'/'play' phase as a genuine fresh deal
+    if(G.phase==='drawDone'&&!seatingDrawPlayed){
+      seatingDrawPlayed=true;
+      SFX.play('seatingDraw');
+    }
+  }
+  const dealMoment=(G.phase==='pass')||(G.phase==='play'&&G.trickNum===1);
+  if(dealMoment){
+    if(lastDealtRound===null){
+      lastDealtRound=G.round;
+    }else if(G.round!==lastDealtRound){
+      lastDealtRound=G.round;
+      SFX.play('cardShuffle');
+      setTimeout(()=>SFX.play('cardDealAll'),350);
+      setTimeout(()=>SFX.play('cardFan'),350+13*90+150);
+    }
+  }
+
+  const lt=G.lastTrick;
+  const trickKey=lt?`${lt.round}-${lt.trickNum}`:'';
+  if(lastAnnouncedTrickKey===null){
+    lastAnnouncedTrickKey=trickKey;
+  }else if(trickKey&&trickKey!==lastAnnouncedTrickKey){
+    lastAnnouncedTrickKey=trickKey;
+    if(lt.winner===me){
+      const penalty=lt.cards.some(t=>t.card.suit==='♥'||(t.card.suit==='♠'&&t.card.rank==='Q'));
+      SFX.play(penalty?'penaltyCard':'trickWin');
+    }else{
+      SFX.play('trickLose');
+    }
+  }
+
+  if(G.phase==='play'){
+    const cur=(G.trickLeader+G.currentTrick.length)%4;
+    const myTurn=cur===me&&G.currentTrick.length<4;
+    if(myTurn&&!wasMyTurn) SFX.play('yourTurn');
+    wasMyTurn=myTurn;
+  }else{
+    wasMyTurn=false;
+  }
+}
+
 /* ══════════ ROUTER ══════════ */
 socket.on('gameState',G=>{
   S=G; me=G.myIndex; host=G.isHost;
   renderVote(G);
   syncCountdown(G);
+  handleSfxForState(G);
   switch(G.phase){
     case 'lobby':        renderLobby(G); break;
     case 'draw':
@@ -2193,6 +2271,10 @@ function highestDrawIndex(G){
   for(let j=1;j<4;j++) if(RV[G.drawCards[j].rank] > RV[G.drawCards[best].rank]) best=j;
   return best;
 }
+function revealDrawClick(){
+  SFX.play('cardFlip');
+  send('revealDraw');
+}
 function renderDraw(G){
   show('draw');
   const round1Waiting=G.phase==='draw1Done';
@@ -2218,7 +2300,7 @@ function renderDraw(G){
         </div>
       </div>`;
     }else{
-      h+=`<div class="drawcard ${mine?'tap':''}" ${mine?'onclick="send(\'revealDraw\')"':''}>
+      h+=`<div class="drawcard ${mine?'tap':''}" ${mine?'onclick="revealDrawClick()"':''}>
         <div><div style="font-size:1.5rem">🂠</div><div class="dcn">${esc(p.name)}</div></div>
       </div>`;
     }
@@ -2298,6 +2380,7 @@ function updatePassButton(){
   b.textContent=picked.length===2?`Pass these 2 cards`:`Pass 2 cards (${picked.length}/2)`;
 }
 function togglePassCard(el){
+  SFX.play('cardPickup');
   const c={rank:el.dataset.r,suit:el.dataset.s};
   const at=picked.findIndex(p=>p.rank===c.rank&&p.suit===c.suit);
   if(at>=0){
@@ -2345,6 +2428,7 @@ window.addEventListener('pointerup',endPassDrag);
 window.addEventListener('pointercancel',endPassDrag);
 function confirmPass(){
   if(picked.length!==2)return;
+  SFX.play('confirm');
   socket.emit('selectPass',{code:room,playerIndex:me,cards:picked});
   picked=[];
 }
@@ -2368,6 +2452,7 @@ function maybeShowPassTransition(G){
   if(passFxShownForRound===G.round) return;
   if(!G.myPassed||G.myPassed.length!==2||!G.myReceived||G.myReceived.length!==2) return;
   passFxShownForRound=G.round;
+  SFX.play('passCards');
 
   const toSeat=G.passToIndex!=null?seatOf(G.passToIndex):null;
   const fromSeat=G.passFromIndex!=null?seatOf(G.passFromIndex):null;
@@ -2412,6 +2497,7 @@ function showMoonFx(shooter){
   setTimeout(()=>{
     if(!layer.isConnected) return;
     layer.classList.add('impact');
+    SFX.play('gameWin');
     const suits=['♠','♥','♦','♣'];
     for(let i=0;i<16;i++){
       const p=document.createElement('div');
@@ -2464,10 +2550,25 @@ function bindLastTrickButton(btn){
   btn.onpointercancel=release;
   btn.oncontextmenu=e=>e.preventDefault();
 }
+// Diffed against the previous render so an opponent's card landing in the
+// trick gets a cardPlace sound too, not just my own plays (handled locally
+// in releasePlayPick). null = not yet observed this session (reconnect
+// guard, same idea as the deal/trick trackers above).
+let lastCurrentTrickLen=null;
 function renderPlay(G){
   show('play');
   maybeShowPassTransition(G);
   hideLastTrick();
+
+  const ctLen=G.currentTrick.length;
+  if(lastCurrentTrickLen===null){
+    lastCurrentTrickLen=ctLen;
+  }else if(ctLen>lastCurrentTrickLen){
+    const newest=G.currentTrick[ctLen-1];
+    if(newest.player!==me) SFX.play('cardPlace');
+  }
+  lastCurrentTrickLen=ctLen;
+
   const canWatch=!!(G.lastTrick&&G.lastTrick.round===G.round&&G.lastTrick.cards&&G.lastTrick.cards.length);
   const trickBtn=`<button class="tb-round trick" id="g-lt-btn" title="Hold to see last trick"${canWatch?'':' disabled'}>👁</button>`;
   const playInfo=roundBadgeHTML(G)+`<div class="tb-line">Trick <b>${Math.min(G.trickNum,13)}</b>/13</div>`;
@@ -2507,6 +2608,7 @@ $('g-hand').addEventListener('pointerdown',e=>{
   playPicking=true;
   playPickX=e.clientX;
   setPlayPick(el);
+  SFX.play('cardPickup');
 });
 $('g-hand').addEventListener('pointermove',e=>{
   if(!playPicking)return;
@@ -2521,7 +2623,10 @@ function releasePlayPick(){
   playPicking=false;
   const el=playPickEl;
   setPlayPick(null);
-  if(el) socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
+  if(el){
+    SFX.play('cardPlace');
+    socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
+  }
 }
 function cancelPlayPick(){ playPicking=false; setPlayPick(null); }
 window.addEventListener('pointerup',releasePlayPick);
@@ -2574,6 +2679,10 @@ function scrollSheet(){
   if(el&&el.scrollIntoView) el.scrollIntoView({block:'center'});
 }
 
+function confirmRoundClick(){
+  SFX.play('confirm');
+  send('confirmRound');
+}
 function renderSummary(G){
   show('summary');
   $('r-title').textContent=`Round ${G.round} of ${G.totalRounds} complete`;
@@ -2602,6 +2711,7 @@ function renderSummary(G){
 }
 
 /* ══════════ FINAL ══════════ */
+let finalFxPlayed=false;
 function renderFinal(G){
   show('final');
   const rows=G.players.map((p,i)=>({...p,i})).sort((a,b)=>b.score-a.score);
@@ -2616,6 +2726,12 @@ function renderFinal(G){
   h+='</div>'+sheetHTML(G);
   $('f-body').innerHTML=h;
   clearSession();
+
+  if(!finalFxPlayed){
+    finalFxPlayed=true;
+    const mine=G.players[me];
+    SFX.play(mine&&mine.score===rows[0].score?'gameWin':'gameLose');
+  }
 }
 
 /* ══════════ RULEBOOK ══════════ */
@@ -2672,6 +2788,7 @@ if('serviceWorker' in navigator){
 /* prefill menu with remembered profile, and jump in from invite links */
 (function(){
   updateMenuProfileUI();
+  updateSfxToggleUI();
   const c=new URLSearchParams(location.search).get('join');
   if(c){ $('f-code').value=c.toUpperCase(); goCasual(); }
   const s=loadSession();

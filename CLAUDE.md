@@ -163,6 +163,28 @@ push to the connected branch.
 ## Not implemented
 - Password reset (no email service configured)
 
+## Sound effects (public/sfx.js + public/sounds/*.ogg)
+- Self-contained module, own global `SFX` object (`SFX.play(name)`,
+  `.setMuted()`, `.unlock()`, `.loadCardSounds()`) — loaded via its own
+  `<script src="/sfx.js">` tag before the main inline script in
+  `index.html`. Card-handling sounds (deal/place/pass/fan/shuffle) are real
+  samples (Kenney Casino Audio, CC0); everything else (trick win/lose,
+  penalty, confirm, your-turn, seating draw, game win/lose, moon fanfare)
+  is synthesized live via Web Audio, no extra files needed
+- Web Audio requires a user gesture before it'll actually play — `SFX.play`
+  calls before the first tap are silently no-ops if the context is still
+  suspended; unlocked via a one-time `pointerdown` listener in `index.html`
+- All state-driven cues (fresh deal, trick outcome, your-turn) are wired
+  through `handleSfxForState(G)` in the `gameState` router — every tracker
+  in there uses a `null` sentinel meaning "not yet observed this session,"
+  seeded silently on the first `gameState` after a page load/reconnect so
+  rejoining mid-game doesn't replay a deal/trick sound for something that
+  already happened before this tab connected. Follow that same pattern for
+  any new state-diffed cue rather than assuming round/trick 1
+- Mute toggle (`#sfx-toggle` in the main menu) persists to `localStorage`
+  (`ddp.sfxMuted`) — `SFX.setMuted()` short-circuits `play()` entirely, so
+  muted-then-unmuted still works without reloading anything
+
 ## Solo-vs-AI casual rooms never expire on a timer
 - A casual room where exactly one seat isn't AI (`server.js`'s room-cleanup
   `setInterval`, near the bottom) is exempt from both `EMPTY_CLOSE_MS` and

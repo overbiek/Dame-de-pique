@@ -132,6 +132,39 @@ push to the connected branch.
   pass-transition fx pattern it otherwise resembles. Rocket launches
   from the shooting player's actual seat position via `seatOf()`.
   Purely decorative/emoji-based (🌕/🚀), no new image assets.
+- Landscape mode exists only on the pass/play ("table") screens — menu,
+  lobby, draw, round-summary, and final are portrait-only by design, not
+  yet-todo. `manifest.json`'s `orientation` is `"any"` (was hard-locked
+  to `"portrait"`, which would have blocked rotation entirely in the
+  installed PWA regardless of any CSS); `applyOrientationLock()` in
+  `show()` does a best-effort `screen.orientation.lock('portrait')` on
+  every other screen and `.unlock()` on pass/play — this only actually
+  does anything in an installed Android Chrome PWA, and silently no-ops
+  everywhere else (iOS Safari, plain browser tabs), which is fine since
+  the `@media (orientation:landscape)` CSS block (scoped to
+  `#s-pass`/`#s-play` only) is what actually does the work everywhere.
+  `--cw` is redefined **height**-driven (`8vh`) inside that block instead
+  of the normal width-driven clamp, since a rotated phone is wide but
+  short and the normal formula would render cards far too large.
+- `cornerActions()` (`index.html`) branches on
+  `matchMedia('(orientation:landscape)').matches` at render time to
+  merge the round/trick info + rules + last-trick-eye into one
+  right-side panel with a standalone home button on the left, vs.
+  portrait's split lt/rt layout — same underlying buttons/data, just
+  regrouped. Because rotating the phone doesn't itself produce a new
+  `gameState` broadcast, a debounced `resize` listener re-invokes
+  whichever of `renderPass`/`renderPassReveal`/`renderPlay` is current
+  so the corners don't go stale mid-game after a physical rotation.
+- Landscape play uses a different card-play gesture entirely: drag the
+  card to the table center (`isLandscapePlay()`/`startCardDrag()` etc.)
+  instead of portrait's hold-and-slide-then-release
+  (`playPicking`/`setPlayPick`). Drop within `.mid`'s bounding box (+30px
+  padding) plays the card; anywhere else snaps it back via a CSS
+  transition and cancels. These share the same `pointerup`/
+  `pointercancel` window listeners (`releasePlayPick`/`cancelPlayPick`),
+  which branch on whether `dragEl` is set — keep that branch first if
+  either function is touched, or drags will fall through into the
+  portrait release logic.
 
 ## Accounts & stats (needs DATABASE_URL — Railway Postgres plugin)
 - Username/password, bcrypt-hashed, session tokens

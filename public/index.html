@@ -342,6 +342,11 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .mid .slot-r{grid-area:r}.mid .slot-b{grid-area:b}
 .ghost{width:var(--cw);height:var(--ch);border-radius:calc(var(--cw)*.13);
   border:1px dashed rgba(255,255,255,.13)}
+/* landscape drag-to-play */
+.card.dragging{box-shadow:0 16px 34px rgba(0,0,0,.55);transform:scale(1.06)!important;
+  pointer-events:none;transition:none}
+.mid.drop-hover{box-shadow:inset 0 0 0 2px rgba(212,175,92,.6),0 0 24px rgba(212,175,92,.35);
+  border-radius:12px}
 
 .avatar{
   width:46px;height:46px;border-radius:50%;position:relative;
@@ -845,6 +850,64 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   .table{padding:18px 16px;gap:10px}
   .avatar{width:50px;height:50px;font-size:1.2rem}
   .seat-name{font-size:.70rem;max-width:94px}
+}
+
+/* ══ Landscape table mode (pass/play screens only — everything else
+   stays portrait; see manifest.json orientation + applyOrientationLock
+   for why physical rotation is even possible here) ══
+   Card size is driven by viewport HEIGHT here, not width — a rotated
+   phone is wide but short, and the normal --cw (width-driven) would
+   render cards far too large for the available vertical room. */
+@media (orientation:landscape){
+  /* #app's normal padding only accounts for top/bottom safe-area insets
+     — in landscape a phone's notch/rounded corners shift to the sides,
+     so left/right need covering too, and there's much less vertical
+     room to spend on padding to begin with. */
+  #app{
+    padding:calc(env(safe-area-inset-top) + 6px)
+            calc(env(safe-area-inset-right) + 8px)
+            calc(env(safe-area-inset-bottom) + 6px)
+            calc(env(safe-area-inset-left) + 8px);
+  }
+  #s-pass,#s-play{ --cw:clamp(34px,8vh,60px); }
+  #s-pass.active,#s-play.active{
+    display:flex;flex-direction:column;
+    height:100%;
+    padding:0;
+  }
+  #s-pass .table,#s-play .table{padding:4px 8px;gap:3px;flex:0 0 auto}
+  #s-pass .table-wrap,#s-play .table-wrap{flex:0 0 auto}
+  #s-pass .avatar,#s-play .avatar{width:32px;height:32px;font-size:.85rem}
+  #s-pass .seat-name,#s-play .seat-name{font-size:.56rem;max-width:56px}
+  #s-pass .seat-score,#s-play .seat-score{font-size:.66rem}
+  #s-pass .seat-score small,#s-play .seat-score small{font-size:.56rem}
+  #s-pass .mid,#s-play .mid{min-width:calc(var(--cw)*2.3);min-height:calc(var(--ch)*1.7);gap:2px}
+  #s-pass .mystrip,#s-play .mystrip{margin:2px 0 0;padding:4px 12px;gap:6px}
+  #s-pass .mystrip .who,#s-play .mystrip .who{font-size:.85rem}
+  #s-pass .mystrip .tot,#s-play .mystrip .tot{font-size:1.15rem}
+  #s-pass .banner,#s-play .banner{margin:2px 0 0;font-size:.74rem}
+  #s-pass .prompt,#s-play .prompt{margin:2px 0 0;font-size:.8rem}
+  /* the hand gets the rest of the vertical space, cards laid nearly
+     flat in a single row instead of a tight overlapping fan */
+  #s-pass .hand,#s-play .hand{
+    flex:1 1 auto;padding:6px 10px 6px;
+    --overlap:calc(var(--cw) * -0.12);
+  }
+  #s-pass #p-go{padding:8px 20px;font-size:.85rem}
+  #s-pass #p-auto{margin-top:2px}
+  /* corner content: home icon left, consolidated info panel right —
+     same cornerActions() markup, just restyled/repositioned here */
+  #s-pass .corner-lt,#s-play .corner-lt{align-self:flex-start}
+  #s-pass .corner-rt,#s-play .corner-rt{
+    flex-direction:row;align-self:flex-start;
+    background:rgba(4,20,14,.55);border:1px solid rgba(212,175,92,.22);
+    border-radius:12px;padding:5px 8px;gap:8px;align-items:center;
+  }
+  #s-pass .home-btn,#s-play .home-btn{
+    width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+    background:rgba(0,0,0,.24);border:1px solid var(--line);color:var(--gold-hi);
+    font-size:1rem;cursor:pointer;
+  }
 }
 </style>
 </head>
@@ -1561,6 +1624,25 @@ function show(id){
   const next=$('s-'+id);
   if(next) next.classList.add('active');
   document.querySelectorAll('.screen').forEach(s=>{ if(s!==next) s.classList.remove('active'); });
+  applyOrientationLock(id);
+}
+// Table screens (pass/play) can rotate to landscape; everything else stays
+// portrait-locked. Best-effort only — screen.orientation.lock() only
+// actually works in an installed/standalone Android Chrome PWA; it's
+// silently unavailable everywhere else (iOS Safari, plain browser tabs),
+// which is fine since the landscape CSS itself works regardless of
+// whether the OS-level lock succeeds.
+const LANDSCAPE_SCREENS=new Set(['pass','play']);
+function applyOrientationLock(id){
+  const so=screen.orientation;
+  if(!so||!so.lock) return;
+  try{
+    if(LANDSCAPE_SCREENS.has(id)){
+      if(so.unlock) so.unlock();
+    }else{
+      so.lock('portrait').catch(()=>{});
+    }
+  }catch(e){}
 }
 function send(ev,extra){ socket.emit(ev,Object.assign({code:room,playerIndex:me},extra||{})); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -2273,6 +2355,23 @@ socket.on('gameState',G=>{
   }
 });
 
+// Rotating the phone doesn't itself produce a new gameState broadcast,
+// but the corner layout (cornerActions()) reads the current orientation
+// at render time — so a rotation mid-game needs an explicit re-render of
+// whichever table screen is showing, or the corners stay stale until the
+// next unrelated game event. Debounced since 'resize' can fire repeatedly
+// during the rotation animation itself.
+let orientationRerenderTimer=null;
+window.addEventListener('resize',()=>{
+  clearTimeout(orientationRerenderTimer);
+  orientationRerenderTimer=setTimeout(()=>{
+    if(!S) return;
+    if(S.phase==='pass') renderPass(S);
+    else if(S.phase==='passReveal') renderPassReveal(S);
+    else if(S.phase==='play') renderPlay(S);
+  },150);
+});
+
 /* ══════════ LOBBY ══════════ */
 function copyLink(){
   const url=location.origin+location.pathname+'?join='+room;
@@ -2371,6 +2470,21 @@ function renderDraw(G){
 
 /* ══════════ PASS ══════════ */
 function cornerActions(leftHTML,rtExtraHTML){
+  // Landscape (table screens only) consolidates round/trick info + rules
+  // + last-trick eye into one right-side panel, with just a home button
+  // on the left — different arrangement of the exact same pieces, not
+  // new functionality. Checked at render time rather than via a
+  // permanent mode flag so a mid-game rotation re-renders correctly
+  // (see the 'resize' listener that re-invokes the current phase's
+  // render function).
+  if(matchMedia('(orientation:landscape)').matches){
+    return {
+      lt: `<button class="home-btn" title="Leave" onclick="askLeave(this)">🏠</button>`,
+      rt: `${leftHTML||''}
+           <button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
+           ${rtExtraHTML||''}`,
+    };
+  }
   return {
     lt: leftHTML||'',
     rt: `<button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
@@ -2650,7 +2764,9 @@ function renderPlay(G){
 }
 // Press a card to preview it, then — without lifting your finger/mouse —
 // slide across the fan to change your pick; release to play whichever
-// card is currently highlighted.
+// card is currently highlighted. (Portrait, or landscape screens other
+// than the table — see isLandscapePlay() below for the alternate
+// drag-to-play gesture used on the landscape play screen.)
 let playPicking=false, playPickEl=null;
 function setPlayPick(el){
   if(playPickEl===el)return;
@@ -2658,18 +2774,82 @@ function setPlayPick(el){
   playPickEl=el;
   if(playPickEl) playPickEl.classList.add('sel');
 }
+
+// ── Landscape: drag a card to the table center to play it ──
+function isLandscapePlay(){
+  return S&&S.phase==='play'&&matchMedia('(orientation:landscape)').matches;
+}
+let dragEl=null, dragStartRect=null, dragOffsetX=0, dragOffsetY=0;
+function isOverDropZone(x,y,zoneEl){
+  const r=zoneEl.getBoundingClientRect(), pad=30;
+  return x>=r.left-pad&&x<=r.right+pad&&y>=r.top-pad&&y<=r.bottom+pad;
+}
+function startCardDrag(e,el){
+  dragEl=el;
+  dragStartRect=el.getBoundingClientRect();
+  dragOffsetX=e.clientX-dragStartRect.left;
+  dragOffsetY=e.clientY-dragStartRect.top;
+  el.classList.add('dragging');
+  Object.assign(el.style,{
+    position:'fixed', left:dragStartRect.left+'px', top:dragStartRect.top+'px',
+    width:dragStartRect.width+'px', height:dragStartRect.height+'px',
+    margin:'0', zIndex:'200',
+  });
+  SFX.play('cardPickup');
+}
+function moveCardDrag(e){
+  if(!dragEl)return;
+  dragEl.style.left=(e.clientX-dragOffsetX)+'px';
+  dragEl.style.top=(e.clientY-dragOffsetY)+'px';
+  const mid=document.querySelector('#g-table .mid');
+  if(mid) mid.classList.toggle('drop-hover',isOverDropZone(e.clientX,e.clientY,mid));
+}
+function resetDragStyles(el){
+  el.classList.remove('dragging');
+  ['position','left','top','width','height','margin','zIndex','transition'].forEach(p=>el.style[p]='');
+}
+function endCardDrag(e){
+  if(!dragEl)return;
+  const el=dragEl; dragEl=null;
+  const mid=document.querySelector('#g-table .mid');
+  const dropped=mid&&isOverDropZone(e.clientX,e.clientY,mid);
+  if(mid) mid.classList.remove('drop-hover');
+  if(dropped){
+    SFX.play('cardPlace');
+    socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
+    return; // the next gameState render replaces this element entirely
+  }
+  el.style.transition='left .22s cubic-bezier(.2,.8,.3,1),top .22s cubic-bezier(.2,.8,.3,1)';
+  el.style.left=dragStartRect.left+'px';
+  el.style.top=dragStartRect.top+'px';
+  el.addEventListener('transitionend',function done(){
+    el.removeEventListener('transitionend',done);
+    resetDragStyles(el);
+  });
+}
+function cancelCardDrag(){
+  if(!dragEl)return;
+  const el=dragEl; dragEl=null;
+  const mid=document.querySelector('#g-table .mid');
+  if(mid) mid.classList.remove('drop-hover');
+  resetDragStyles(el);
+}
+
 $('g-hand').addEventListener('pointerdown',e=>{
   const el=e.target.closest('.card.tap'); if(!el||!S||S.phase!=='play')return;
+  if(isLandscapePlay()){ startCardDrag(e,el); return; }
   playPicking=true;
   setPlayPick(el);
   SFX.play('cardPickup');
 });
 $('g-hand').addEventListener('pointermove',e=>{
+  if(dragEl){ moveCardDrag(e); return; }
   if(!playPicking)return;
   const el=nearestTapCard($('g-hand'),e.clientX);
   if(el) setPlayPick(el);
 });
-function releasePlayPick(){
+function releasePlayPick(e){
+  if(dragEl){ endCardDrag(e); return; }
   if(!playPicking)return;
   playPicking=false;
   const el=playPickEl;
@@ -2679,7 +2859,10 @@ function releasePlayPick(){
     socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
   }
 }
-function cancelPlayPick(){ playPicking=false; setPlayPick(null); }
+function cancelPlayPick(){
+  if(dragEl){ cancelCardDrag(); return; }
+  playPicking=false; setPlayPick(null);
+}
 window.addEventListener('pointerup',releasePlayPick);
 window.addEventListener('pointercancel',cancelPlayPick);
 

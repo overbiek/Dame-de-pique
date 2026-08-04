@@ -134,27 +134,61 @@ push to the connected branch.
   Purely decorative/emoji-based (🌕/🚀), no new image assets.
 - Landscape mode exists only on the pass/play ("table") screens — menu,
   lobby, draw, round-summary, and final are portrait-only by design, not
-  yet-todo. `manifest.json`'s `orientation` is `"any"` (was hard-locked
-  to `"portrait"`, which would have blocked rotation entirely in the
-  installed PWA regardless of any CSS); `applyOrientationLock()` in
-  `show()` does a best-effort `screen.orientation.lock('portrait')` on
-  every other screen and `.unlock()` on pass/play — this only actually
-  does anything in an installed Android Chrome PWA, and silently no-ops
-  everywhere else (iOS Safari, plain browser tabs), which is fine since
-  the `@media (orientation:landscape)` CSS block (scoped to
-  `#s-pass`/`#s-play` only) is what actually does the work everywhere.
-  `--cw` is redefined **height**-driven (`8vh`) inside that block instead
-  of the normal width-driven clamp, since a rotated phone is wide but
-  short and the normal formula would render cards far too large.
-- `cornerActions()` (`index.html`) branches on
-  `matchMedia('(orientation:landscape)').matches` at render time to
-  merge the round/trick info + rules + last-trick-eye into one
-  right-side panel with a standalone home button on the left, vs.
-  portrait's split lt/rt layout — same underlying buttons/data, just
-  regrouped. Because rotating the phone doesn't itself produce a new
-  `gameState` broadcast, a debounced `resize` listener re-invokes
-  whichever of `renderPass`/`renderPassReveal`/`renderPlay` is current
-  so the corners don't go stale mid-game after a physical rotation.
+  yet-todo.
+- **Real physical rotation turned out to be unreliable in practice** and
+  is NOT the primary mechanism: an installed PWA's Android WebAPK bakes
+  the manifest's `orientation` in at install time and doesn't hot-swap
+  it (a manifest-only edit needs `sw.js`'s `CACHE` version bumped too,
+  see below, or it silently never reaches the client at all), and some
+  phones' OS-level rotation-lock setting blocks physical rotation
+  outright regardless of what the app requests. `manifest.json`'s
+  `orientation` is `"any"` (was hard-locked `"portrait"`) and
+  `applyOrientationLock()` in `show()` does a best-effort
+  `screen.orientation.lock('portrait')`/`.unlock()` per screen — this
+  still exists as a bonus for platforms where it works, but isn't
+  load-bearing.
+- **The actual, reliable mechanism is a manual toggle** (`⟳` button in
+  `cornerActions()`, `toggleManualLandscape()`), persisted to
+  `localStorage` (`ddp.forceLandscape`). All landscape CSS is scoped
+  under `html.landscape-mode` (not a plain `@media` query), and
+  `updateLandscapeMode()` keeps that class in sync with `manualLandscape
+  || matchMedia('(orientation:landscape)').matches` — real rotation
+  still works as a bonus when the platform cooperates, but the button is
+  what actually ships the feature reliably. `--cw` is redefined
+  **height**-driven (`8vh`) under `html.landscape-mode` instead of the
+  normal width-driven clamp, since a rotated/force-rotated phone is wide
+  but short and the normal formula would render cards far too large.
+- When `landscape-mode` is active but the device is still physically
+  portrait (real rotation didn't happen), `html.force-rotate` additionally
+  applies the classic CSS trick of rotating `<body>` itself 90° (absolute
+  position, width/height swapped to `100vh`/`100vw`, `transform:rotate(90deg)
+  translateY(-100%)`) — rotating `<body>` specifically (not just `#app`)
+  matters because a `transform` on an ancestor becomes the containing
+  block for `position:fixed` descendants, so this is what correctly
+  carries the rules modal / connection toast / vote box / moon-shot fx
+  along with the rotation too.
+  **This has a real consequence for any drag/pointer math**: pointer
+  events and `getBoundingClientRect()` always report true screen
+  coordinates regardless of the rotation, but a `transform:translate()`
+  applied to a descendant of the rotated `<body>` moves along the
+  *rotated local axes*, not the screen axes. `screenDeltaToLocal()`
+  converts a real screen-space pointer delta into the correct
+  pre-rotation local delta (the inverse of `rotate(90deg)`) before it's
+  used as a drag transform — drop-zone hit-testing itself needs no such
+  correction since it only compares real screen coordinates directly.
+  If any new landscape-mode drag/gesture code is added, route its
+  movement through this same conversion or it'll track sideways under
+  force-rotate specifically (real device rotation has no CSS transform
+  in play and needs no correction).
+- `cornerActions()` (`index.html`) branches on `isLandscapeModeActive()`
+  at render time to merge the round/trick info + rules + last-trick-eye
+  into one right-side panel with a standalone home button on the left,
+  vs. portrait's split lt/rt layout — same underlying buttons/data, just
+  regrouped. Because rotating the phone (or toggling the manual button)
+  doesn't itself produce a new `gameState` broadcast, a debounced
+  `resize` listener plus `toggleManualLandscape()` itself both
+  re-invoke whichever of `renderPass`/`renderPassReveal`/`renderPlay` is
+  current so the corners don't go stale.
 - Landscape play uses a different card-play gesture entirely: drag the
   card to the table center (`isLandscapePlay()`/`startCardDrag()` etc.)
   instead of portrait's hold-and-slide-then-release
@@ -164,7 +198,14 @@ push to the connected branch.
   `pointercancel` window listeners (`releasePlayPick`/`cancelPlayPick`),
   which branch on whether `dragEl` is set — keep that branch first if
   either function is touched, or drags will fall through into the
-  portrait release logic.
+  portrait release logic. The dragged card's z-index boost has to be
+  applied to its **parent** `.card-slot` (`.card-slot:has(.card.dragging)`),
+  not just the card itself — every `.card-slot` gets its own inline
+  `transform` from `handHTML()` for the fan rotation, and `transform`
+  on an element creates a new stacking context, so a z-index set only on
+  the inner `.card` is invisible to sibling slots outside that
+  context — same reason the pre-existing `.tap:active`/`.sel` z-index
+  boosts already use the same `:has()` pattern on the parent slot.
 
 ## `public/sw.js` caches `manifest.json` cache-first — bump `CACHE` on ANY manifest change
 - `ASSETS` includes `/manifest.json`, and the fetch handler is cache-first

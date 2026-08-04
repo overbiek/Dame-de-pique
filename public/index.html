@@ -307,6 +307,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .hand .card.tap:active,.hand .card.sel{z-index:5}
 .card-slot:has(.card.tap:active){z-index:50 !important}
 .card-slot:has(.card.sel){z-index:60 !important}
+.card-slot:has(.card.dragging){z-index:200 !important}
 
 /* ══ Table ══ */
 .table{
@@ -343,8 +344,8 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .ghost{width:var(--cw);height:var(--ch);border-radius:calc(var(--cw)*.13);
   border:1px dashed rgba(255,255,255,.13)}
 /* landscape drag-to-play */
-.card.dragging{box-shadow:0 16px 34px rgba(0,0,0,.55);transform:scale(1.06)!important;
-  pointer-events:none;transition:none}
+.card.dragging{box-shadow:0 16px 34px rgba(0,0,0,.55);
+  pointer-events:none;transition:none;z-index:200}
 .mid.drop-hover{box-shadow:inset 0 0 0 2px rgba(212,175,92,.6),0 0 24px rgba(212,175,92,.35);
   border-radius:12px}
 
@@ -853,61 +854,86 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 }
 
 /* ══ Landscape table mode (pass/play screens only — everything else
-   stays portrait; see manifest.json orientation + applyOrientationLock
-   for why physical rotation is even possible here) ══
+   stays portrait) ══
+   Driven by the `landscape-mode` class on <html>, kept in sync by JS
+   (updateLandscapeMode()) with EITHER real physical rotation
+   (matchMedia) OR the manual "force landscape" toggle — not a plain
+   @media query, because physical-rotation support turned out to be
+   unreliable across installed PWAs (WebAPK bakes the manifest's
+   orientation in at install time and doesn't hot-swap it, and some
+   phones' OS-level rotation-lock setting blocks it entirely regardless
+   of what the app requests). The manual toggle is the reliable path;
+   real rotation is just a bonus when the platform cooperates.
    Card size is driven by viewport HEIGHT here, not width — a rotated
-   phone is wide but short, and the normal --cw (width-driven) would
-   render cards far too large for the available vertical room. */
-@media (orientation:landscape){
+   (or force-rotated) phone is wide but short, and the normal --cw
+   (width-driven) would render cards far too large for the available
+   vertical room. */
+html.landscape-mode #app{
   /* #app's normal padding only accounts for top/bottom safe-area insets
      — in landscape a phone's notch/rounded corners shift to the sides,
      so left/right need covering too, and there's much less vertical
      room to spend on padding to begin with. */
-  #app{
-    padding:calc(env(safe-area-inset-top) + 6px)
-            calc(env(safe-area-inset-right) + 8px)
-            calc(env(safe-area-inset-bottom) + 6px)
-            calc(env(safe-area-inset-left) + 8px);
-  }
-  #s-pass,#s-play{ --cw:clamp(34px,8vh,60px); }
-  #s-pass.active,#s-play.active{
-    display:flex;flex-direction:column;
-    height:100%;
-    padding:0;
-  }
-  #s-pass .table,#s-play .table{padding:4px 8px;gap:3px;flex:0 0 auto}
-  #s-pass .table-wrap,#s-play .table-wrap{flex:0 0 auto}
-  #s-pass .avatar,#s-play .avatar{width:32px;height:32px;font-size:.85rem}
-  #s-pass .seat-name,#s-play .seat-name{font-size:.56rem;max-width:56px}
-  #s-pass .seat-score,#s-play .seat-score{font-size:.66rem}
-  #s-pass .seat-score small,#s-play .seat-score small{font-size:.56rem}
-  #s-pass .mid,#s-play .mid{min-width:calc(var(--cw)*2.3);min-height:calc(var(--ch)*1.7);gap:2px}
-  #s-pass .mystrip,#s-play .mystrip{margin:2px 0 0;padding:4px 12px;gap:6px}
-  #s-pass .mystrip .who,#s-play .mystrip .who{font-size:.85rem}
-  #s-pass .mystrip .tot,#s-play .mystrip .tot{font-size:1.15rem}
-  #s-pass .banner,#s-play .banner{margin:2px 0 0;font-size:.74rem}
-  #s-pass .prompt,#s-play .prompt{margin:2px 0 0;font-size:.8rem}
-  /* the hand gets the rest of the vertical space, cards laid nearly
-     flat in a single row instead of a tight overlapping fan */
-  #s-pass .hand,#s-play .hand{
-    flex:1 1 auto;padding:6px 10px 6px;
-    --overlap:calc(var(--cw) * -0.12);
-  }
-  #s-pass #p-go{padding:8px 20px;font-size:.85rem}
-  #s-pass #p-auto{margin-top:2px}
-  /* corner content: home icon left, consolidated info panel right —
-     same cornerActions() markup, just restyled/repositioned here */
-  #s-pass .corner-lt,#s-play .corner-lt{align-self:flex-start}
-  #s-pass .corner-rt,#s-play .corner-rt{
-    flex-direction:row;align-self:flex-start;
-    background:rgba(4,20,14,.55);border:1px solid rgba(212,175,92,.22);
-    border-radius:12px;padding:5px 8px;gap:8px;align-items:center;
-  }
-  #s-pass .home-btn,#s-play .home-btn{
-    width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
-    background:rgba(0,0,0,.24);border:1px solid var(--line);color:var(--gold-hi);
-    font-size:1rem;cursor:pointer;
-  }
+  padding:calc(env(safe-area-inset-top) + 6px)
+          calc(env(safe-area-inset-right) + 8px)
+          calc(env(safe-area-inset-bottom) + 6px)
+          calc(env(safe-area-inset-left) + 8px);
+}
+html.landscape-mode #s-pass,html.landscape-mode #s-play{ --cw:clamp(34px,8vh,60px); }
+html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
+  display:flex;flex-direction:column;
+  height:100%;
+  padding:0;
+}
+html.landscape-mode #s-pass .table,html.landscape-mode #s-play .table{padding:4px 8px;gap:3px;flex:0 0 auto}
+html.landscape-mode #s-pass .table-wrap,html.landscape-mode #s-play .table-wrap{flex:0 0 auto}
+html.landscape-mode #s-pass .avatar,html.landscape-mode #s-play .avatar{width:32px;height:32px;font-size:.85rem}
+html.landscape-mode #s-pass .seat-name,html.landscape-mode #s-play .seat-name{font-size:.56rem;max-width:56px}
+html.landscape-mode #s-pass .seat-score,html.landscape-mode #s-play .seat-score{font-size:.66rem}
+html.landscape-mode #s-pass .seat-score small,html.landscape-mode #s-play .seat-score small{font-size:.56rem}
+html.landscape-mode #s-pass .mid,html.landscape-mode #s-play .mid{min-width:calc(var(--cw)*2.3);min-height:calc(var(--ch)*1.7);gap:2px}
+html.landscape-mode #s-pass .mystrip,html.landscape-mode #s-play .mystrip{margin:2px 0 0;padding:4px 12px;gap:6px}
+html.landscape-mode #s-pass .mystrip .who,html.landscape-mode #s-play .mystrip .who{font-size:.85rem}
+html.landscape-mode #s-pass .mystrip .tot,html.landscape-mode #s-play .mystrip .tot{font-size:1.15rem}
+html.landscape-mode #s-pass .banner,html.landscape-mode #s-play .banner{margin:2px 0 0;font-size:.74rem}
+html.landscape-mode #s-pass .prompt,html.landscape-mode #s-play .prompt{margin:2px 0 0;font-size:.8rem}
+/* the hand gets the rest of the vertical space, cards laid nearly
+   flat in a single row instead of a tight overlapping fan */
+html.landscape-mode #s-pass .hand,html.landscape-mode #s-play .hand{
+  flex:1 1 auto;padding:6px 10px 6px;
+  --overlap:calc(var(--cw) * -0.12);
+}
+html.landscape-mode #s-pass #p-go{padding:8px 20px;font-size:.85rem}
+html.landscape-mode #s-pass #p-auto{margin-top:2px}
+/* corner content: home icon left, consolidated info panel right —
+   same cornerActions() markup, just restyled/repositioned here */
+html.landscape-mode #s-pass .corner-lt,html.landscape-mode #s-play .corner-lt{align-self:flex-start}
+html.landscape-mode #s-pass .corner-rt,html.landscape-mode #s-play .corner-rt{
+  flex-direction:row;align-self:flex-start;
+  background:rgba(4,20,14,.55);border:1px solid rgba(212,175,92,.22);
+  border-radius:12px;padding:5px 8px;gap:8px;align-items:center;
+}
+html.landscape-mode #s-pass .home-btn,html.landscape-mode #s-play .home-btn{
+  width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(0,0,0,.24);border:1px solid var(--line);color:var(--gold-hi);
+  font-size:1rem;cursor:pointer;
+}
+.rotate-btn{color:var(--gold-hi)!important}
+
+/* ══ Manual force-rotate — used when landscape-mode is on but the
+   device is still physically portrait (real rotation didn't work).
+   Classic CSS trick: absolutely position <body>, swap its width/height
+   to the viewport's height/width, then rotate 90° around its own
+   top-left corner and translate back into view. Because `transform` on
+   an ancestor creates a new containing block for position:fixed
+   descendants, this correctly carries every fixed overlay (rules
+   modal, connection toast, vote box, moon-shot fx) along with it —
+   rotating just #app would leave those misaligned. ══ */
+html.force-rotate{overflow:hidden}
+html.force-rotate body{
+  position:absolute;top:0;left:0;
+  width:100vh;height:100vw;
+  transform-origin:top left;
+  transform:rotate(90deg) translateY(-100%);
 }
 </style>
 </head>
@@ -1614,6 +1640,7 @@ function identity(){
 
 /* ── helpers ── */
 const $=id=>document.getElementById(id);
+let currentScreenId='menu'; // kept in sync by show(), read by updateLandscapeMode()
 function show(id){
   // Add the new screen's 'active' class before removing everyone else's,
   // so there's never a synchronous window where every screen is
@@ -1624,14 +1651,14 @@ function show(id){
   const next=$('s-'+id);
   if(next) next.classList.add('active');
   document.querySelectorAll('.screen').forEach(s=>{ if(s!==next) s.classList.remove('active'); });
+  currentScreenId=id;
   applyOrientationLock(id);
+  updateLandscapeMode();
 }
 // Table screens (pass/play) can rotate to landscape; everything else stays
 // portrait-locked. Best-effort only — screen.orientation.lock() only
 // actually works in an installed/standalone Android Chrome PWA; it's
-// silently unavailable everywhere else (iOS Safari, plain browser tabs),
-// which is fine since the landscape CSS itself works regardless of
-// whether the OS-level lock succeeds.
+// silently unavailable everywhere else (iOS Safari, plain browser tabs).
 const LANDSCAPE_SCREENS=new Set(['pass','play']);
 function applyOrientationLock(id){
   const so=screen.orientation;
@@ -1644,6 +1671,39 @@ function applyOrientationLock(id){
     }
   }catch(e){}
 }
+
+// Real physical rotation turned out to be unreliable in practice
+// (installed-PWA WebAPKs bake the manifest's orientation in at install
+// time and don't hot-swap it; some phones' OS-level rotation lock blocks
+// it outright) — so landscape mode is driven by a manual toggle, with
+// real rotation only as a bonus when the platform actually cooperates.
+// `landscape-mode` (CSS driven by this) only ever applies on pass/play;
+// `force-rotate` additionally kicks in the CSS transform trick when
+// landscape-mode is active but the device is still physically portrait.
+function loadManualLandscape(){ try{return localStorage.getItem('ddp.forceLandscape')==='1';}catch(e){return false;} }
+function saveManualLandscape(v){ try{localStorage.setItem('ddp.forceLandscape',v?'1':'0');}catch(e){} }
+let manualLandscape=loadManualLandscape();
+function isLandscapeModeActive(){ return manualLandscape||matchMedia('(orientation:landscape)').matches; }
+function updateLandscapeMode(){
+  const active=LANDSCAPE_SCREENS.has(currentScreenId)&&isLandscapeModeActive();
+  const physical=matchMedia('(orientation:landscape)').matches;
+  document.documentElement.classList.toggle('landscape-mode',active);
+  document.documentElement.classList.toggle('force-rotate',active&&!physical);
+}
+function toggleManualLandscape(){
+  manualLandscape=!manualLandscape;
+  saveManualLandscape(manualLandscape);
+  updateLandscapeMode();
+  // corner content (home button vs consolidated panel) depends on
+  // landscape-mode too, so force a fresh render of whichever table
+  // screen is current rather than waiting for the next game event.
+  if(S){
+    if(S.phase==='pass') renderPass(S);
+    else if(S.phase==='passReveal') renderPassReveal(S);
+    else if(S.phase==='play') renderPlay(S);
+  }
+}
+matchMedia('(orientation:landscape)').addEventListener('change',updateLandscapeMode);
 function send(ev,extra){ socket.emit(ev,Object.assign({code:room,playerIndex:me},extra||{})); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function initial(n){ return (String(n).trim()[0]||'?').toUpperCase(); }
@@ -2474,22 +2534,25 @@ function cornerActions(leftHTML,rtExtraHTML){
   // + last-trick eye into one right-side panel, with just a home button
   // on the left — different arrangement of the exact same pieces, not
   // new functionality. Checked at render time rather than via a
-  // permanent mode flag so a mid-game rotation re-renders correctly
-  // (see the 'resize' listener that re-invokes the current phase's
-  // render function).
-  if(matchMedia('(orientation:landscape)').matches){
+  // permanent mode flag so a mid-game rotation (or manual toggle)
+  // re-renders correctly (see toggleManualLandscape() and the 'resize'
+  // listener that re-invoke the current phase's render function).
+  const rotateBtn=`<button class="tb-round rotate-btn" title="${manualLandscape?'Exit landscape view':'Force landscape view'}" onclick="toggleManualLandscape()">${manualLandscape?'⤢':'⟳'}</button>`;
+  if(isLandscapeModeActive()){
     return {
       lt: `<button class="home-btn" title="Leave" onclick="askLeave(this)">🏠</button>`,
       rt: `${leftHTML||''}
            <button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
-           ${rtExtraHTML||''}`,
+           ${rtExtraHTML||''}
+           ${rotateBtn}`,
     };
   }
   return {
     lt: leftHTML||'',
     rt: `<button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
          <button class="tb-round" title="Leave" onclick="askLeave(this)">🚪</button>
-         ${rtExtraHTML||''}`,
+         ${rtExtraHTML||''}
+         ${rotateBtn}`,
   };
 }
 function roundBadgeHTML(G){
@@ -2777,36 +2840,44 @@ function setPlayPick(el){
 
 // ── Landscape: drag a card to the table center to play it ──
 function isLandscapePlay(){
-  return S&&S.phase==='play'&&matchMedia('(orientation:landscape)').matches;
+  return S&&S.phase==='play'&&isLandscapeModeActive();
 }
-let dragEl=null, dragStartRect=null, dragOffsetX=0, dragOffsetY=0;
+let dragEl=null, dragStartX=0, dragStartY=0;
 function isOverDropZone(x,y,zoneEl){
   const r=zoneEl.getBoundingClientRect(), pad=30;
   return x>=r.left-pad&&x<=r.right+pad&&y>=r.top-pad&&y<=r.bottom+pad;
 }
+// Pointer events always report real screen coordinates, but the manual
+// force-rotate trick (see .force-rotate in <style>) rotates <body> itself
+// via a CSS transform — a translate() applied to a card nested inside
+// that rotated ancestor moves in the ROTATED local axes, not the screen
+// axes, so a naive screen-space delta would drag the card sideways
+// relative to the actual finger. This maps a real screen delta into the
+// correct pre-rotation local delta (inverse of rotate(90deg)) so the
+// card still tracks the finger correctly. Real device rotation (no
+// force-rotate class — the OS itself presents an unrotated landscape
+// viewport) needs no correction at all.
+function screenDeltaToLocal(dx,dy){
+  if(document.documentElement.classList.contains('force-rotate')) return {dx:dy,dy:-dx};
+  return {dx,dy};
+}
 function startCardDrag(e,el){
   dragEl=el;
-  dragStartRect=el.getBoundingClientRect();
-  dragOffsetX=e.clientX-dragStartRect.left;
-  dragOffsetY=e.clientY-dragStartRect.top;
+  dragStartX=e.clientX; dragStartY=e.clientY;
   el.classList.add('dragging');
-  Object.assign(el.style,{
-    position:'fixed', left:dragStartRect.left+'px', top:dragStartRect.top+'px',
-    width:dragStartRect.width+'px', height:dragStartRect.height+'px',
-    margin:'0', zIndex:'200',
-  });
   SFX.play('cardPickup');
 }
 function moveCardDrag(e){
   if(!dragEl)return;
-  dragEl.style.left=(e.clientX-dragOffsetX)+'px';
-  dragEl.style.top=(e.clientY-dragOffsetY)+'px';
+  const d=screenDeltaToLocal(e.clientX-dragStartX,e.clientY-dragStartY);
+  dragEl.style.transform=`translate(${d.dx}px,${d.dy}px) scale(1.06)`;
   const mid=document.querySelector('#g-table .mid');
   if(mid) mid.classList.toggle('drop-hover',isOverDropZone(e.clientX,e.clientY,mid));
 }
 function resetDragStyles(el){
   el.classList.remove('dragging');
-  ['position','left','top','width','height','margin','zIndex','transition'].forEach(p=>el.style[p]='');
+  el.style.transform='';
+  el.style.transition='';
 }
 function endCardDrag(e){
   if(!dragEl)return;
@@ -2819,9 +2890,8 @@ function endCardDrag(e){
     socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
     return; // the next gameState render replaces this element entirely
   }
-  el.style.transition='left .22s cubic-bezier(.2,.8,.3,1),top .22s cubic-bezier(.2,.8,.3,1)';
-  el.style.left=dragStartRect.left+'px';
-  el.style.top=dragStartRect.top+'px';
+  el.style.transition='transform .22s cubic-bezier(.2,.8,.3,1)';
+  el.style.transform='';
   el.addEventListener('transitionend',function done(){
     el.removeEventListener('transitionend',done);
     resetDragStyles(el);

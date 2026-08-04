@@ -166,6 +166,26 @@ push to the connected branch.
   either function is touched, or drags will fall through into the
   portrait release logic.
 
+## `public/sw.js` caches `manifest.json` cache-first — bump `CACHE` on ANY manifest change
+- `ASSETS` includes `/manifest.json`, and the fetch handler is cache-first
+  for everything except page navigations (`e.request.mode==='navigate'`,
+  which is always network-first so `index.html` itself updates
+  immediately). A `manifest.json`-only edit does **not** change `sw.js`'s
+  own bytes, so the browser never detects the service worker as updated,
+  never re-runs `install`, and keeps serving the **old** cached manifest
+  indefinitely — this bit us for real: the `orientation` unlock
+  (`portrait`→`any`) silently didn't reach an already-installed PWA
+  because of exactly this. Bump the `CACHE` version string in `sw.js`
+  itself whenever `manifest.json` (or any other `ASSETS` entry) changes,
+  or the update never propagates
+- Even with the cache fixed, Android bakes the manifest's `orientation`
+  into the installed app's WebAPK wrapper at **install time**. Chrome
+  does check for manifest updates periodically in the background, but
+  it's not immediate/forceable — a user who already has the app
+  installed will very likely need to uninstall and reinstall
+  (Add to Home Screen again) to actually pick up an orientation change,
+  not just reload/relaunch it
+
 ## Accounts & stats (needs DATABASE_URL — Railway Postgres plugin)
 - Username/password, bcrypt-hashed, session tokens
 - Casual and ranked stats are two entirely separate tables/pipelines —

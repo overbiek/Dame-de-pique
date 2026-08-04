@@ -1158,62 +1158,130 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
     </div>
 
     <div id="stats-content" style="display:none">
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value" id="st-played">0</div>
-          <div class="stat-label">Games played</div>
+      <div class="acct-tabs">
+        <button class="acct-tab" id="stats-tab-casual" onclick="switchStatsTab('casual')">Casual</button>
+        <button class="acct-tab" id="stats-tab-ranked" onclick="switchStatsTab('ranked')">Ranked</button>
+      </div>
+
+      <div id="stats-casual">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="st-played">0</div>
+            <div class="stat-label">Games played</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-finished">0</div>
+            <div class="stat-label">Games finished</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value neg" id="st-worst-trick">—</div>
+            <div class="stat-label">Worst single trick</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value pos" id="st-best-round">—</div>
+            <div class="stat-label">Best hand</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value neg" id="st-worst-round">—</div>
+            <div class="stat-label">Worst hand</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value pos" id="st-best-game">—</div>
+            <div class="stat-label">Best game total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value neg" id="st-worst-game">—</div>
+            <div class="stat-label">Worst game total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-moons-total">0</div>
+            <div class="stat-label">Moons shot, total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-moons-best">0</div>
+            <div class="stat-label">Most moons, one game</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-queens-taken">0</div>
+            <div class="stat-label">Queen of Spades taken</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-avg-points">—</div>
+            <div class="stat-label">Average score per game</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value pos" id="st-ended-positive">0</div>
+            <div class="stat-label">Games ended positive</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value neg" id="st-ended-negative">0</div>
+            <div class="stat-label">Games ended negative</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-win-streak">0</div>
+            <div class="stat-label">Longest winning streak</div>
+          </div>
         </div>
-        <div class="stat-card">
-          <div class="stat-value" id="st-finished">0</div>
-          <div class="stat-label">Games finished</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value neg" id="st-worst-trick">—</div>
-          <div class="stat-label">Worst single trick</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value pos" id="st-best-round">—</div>
-          <div class="stat-label">Best hand</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value neg" id="st-worst-round">—</div>
-          <div class="stat-label">Worst hand</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value pos" id="st-best-game">—</div>
-          <div class="stat-label">Best game total</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value neg" id="st-worst-game">—</div>
-          <div class="stat-label">Worst game total</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="st-moons-total">0</div>
-          <div class="stat-label">Moons shot, total</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="st-moons-best">0</div>
-          <div class="stat-label">Most moons, one game</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="st-queens-taken">0</div>
-          <div class="stat-label">Queen of Spades taken</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="st-avg-points">—</div>
-          <div class="stat-label">Average score per game</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value pos" id="st-ended-positive">0</div>
-          <div class="stat-label">Games ended positive</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value neg" id="st-ended-negative">0</div>
-          <div class="stat-label">Games ended negative</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-value" id="st-win-streak">0</div>
-          <div class="stat-label">Longest winning streak</div>
+      </div>
+
+      <div id="stats-ranked" style="display:none">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="rst-played">0</div>
+            <div class="stat-label">Games played</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="rst-avg-points">—</div>
+            <div class="stat-label">Average score per game</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value neg" id="rst-worst-trick">—</div>
+            <div class="stat-label">Worst single trick</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value pos" id="rst-best-round">—</div>
+            <div class="stat-label">Best hand</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value neg" id="rst-worst-round">—</div>
+            <div class="stat-label">Worst hand</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value pos" id="rst-best-game">—</div>
+            <div class="stat-label">Best game total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value neg" id="rst-worst-game">—</div>
+            <div class="stat-label">Worst game total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="rst-moons-total">0</div>
+            <div class="stat-label">Moons shot, total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="rst-moons-best">0</div>
+            <div class="stat-label">Most moons, one game</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="rst-queens-taken">0</div>
+            <div class="stat-label">Queen of Spades taken</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value pos" id="rst-ended-positive">0</div>
+            <div class="stat-label">Games ended positive</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value neg" id="rst-ended-negative">0</div>
+            <div class="stat-label">Games ended negative</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value pos" id="rst-mmr-highest">—</div>
+            <div class="stat-label">Highest MMR</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value neg" id="rst-mmr-lowest">—</div>
+            <div class="stat-label">Lowest MMR</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1649,6 +1717,12 @@ function fmtStat(n){
   if(n===null||n===undefined) return '—';
   return (n>0?'+':'')+n;
 }
+function switchStatsTab(mode){
+  $('stats-tab-casual').classList.toggle('active',mode==='casual');
+  $('stats-tab-ranked').classList.toggle('active',mode==='ranked');
+  $('stats-casual').style.display=mode==='casual'?'block':'none';
+  $('stats-ranked').style.display=mode==='ranked'?'block':'none';
+}
 function goStats(){
   show('stats');
   $('stats-noaccount').style.display='none';
@@ -1659,8 +1733,10 @@ function goStats(){
     $('stats-noaccount').style.display='block';
     return;
   }
+  switchStatsTab('casual');
   $('stats-loading').style.display='block';
   socket.emit('getStats',{token:accountToken});
+  socket.emit('getRankedStats',{token:accountToken});
 }
 socket.on('statsOk',d=>{
   const s=d.stats;
@@ -1688,6 +1764,25 @@ socket.on('statsError',d=>{
   $('stats-error').style.display='block';
   $('stats-error-msg').textContent=d.msg;
 });
+socket.on('rankedStatsOk',d=>{
+  if(!$('s-stats').classList.contains('active')) return;
+  const s=d.stats;
+  $('rst-played').textContent=s.gamesPlayed;
+  $('rst-worst-trick').textContent=fmtStat(s.worstTrick);
+  $('rst-best-round').textContent=fmtStat(s.bestRound);
+  $('rst-worst-round').textContent=fmtStat(s.worstRound);
+  $('rst-best-game').textContent=fmtStat(s.bestGame);
+  $('rst-worst-game').textContent=fmtStat(s.worstGame);
+  $('rst-moons-total').textContent=s.moonsTotal;
+  $('rst-moons-best').textContent=s.moonsBestGame;
+  $('rst-queens-taken').textContent=s.queenSpadesTaken;
+  $('rst-avg-points').textContent=fmtStat(s.avgPoints);
+  $('rst-ended-positive').textContent=s.endedPositive;
+  $('rst-ended-negative').textContent=s.endedNegative;
+  $('rst-mmr-highest').textContent=s.mmrHighest===null?'—':s.mmrHighest;
+  $('rst-mmr-lowest').textContent=s.mmrLowest===null?'—':s.mmrLowest;
+});
+socket.on('rankedStatsError',()=>{ /* non-blocking — casual tab already loaded fine, ranked cards just stay at their zero/dash defaults */ });
 
 socket.on('joined',d=>{
   room=d.code; me=d.playerIndex; host=d.isHost; token=d.token;

@@ -83,8 +83,47 @@ async function ensureSchema() {
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS ended_negative INTEGER NOT NULL DEFAULT 0;`);
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS win_streak_current INTEGER NOT NULL DEFAULT 0;`);
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS win_streak_best INTEGER NOT NULL DEFAULT 0;`);
+  // `stats.mmr`/`stats.placement_games_played` (added when ranked first
+  // shipped) are superseded by the dedicated `ranked_stats` table below —
+  // left in place as inert legacy columns rather than dropped, but nothing
+  // reads or writes them anymore.
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS mmr INTEGER NOT NULL DEFAULT 1000;`);
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS placement_games_played INTEGER NOT NULL DEFAULT 0;`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ranked_stats (
+      account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+      mmr INTEGER NOT NULL DEFAULT 1000,
+      placement_games_played INTEGER NOT NULL DEFAULT 0,
+      mmr_highest INTEGER NOT NULL DEFAULT 1000,
+      mmr_lowest INTEGER NOT NULL DEFAULT 1000,
+      games_played INTEGER NOT NULL DEFAULT 0,
+      games_finished INTEGER NOT NULL DEFAULT 0,
+      points_total INTEGER NOT NULL DEFAULT 0,
+      worst_trick INTEGER,
+      best_round INTEGER,
+      worst_round INTEGER,
+      best_game INTEGER,
+      worst_game INTEGER,
+      moons_total INTEGER NOT NULL DEFAULT 0,
+      moons_best_game INTEGER NOT NULL DEFAULT 0,
+      queen_spades_taken INTEGER NOT NULL DEFAULT 0,
+      ended_positive INTEGER NOT NULL DEFAULT 0,
+      ended_negative INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  await pool.query(`ALTER TABLE ranked_stats ADD COLUMN IF NOT EXISTS games_finished INTEGER NOT NULL DEFAULT 0;`);
+  // One-time carry-over of any MMR already earned back when ranked shared
+  // the casual `stats` table — safe to run on every boot, ON CONFLICT DO
+  // NOTHING makes it a no-op once an account has its own ranked_stats row.
+  await pool.query(`
+    INSERT INTO ranked_stats (account_id, mmr, placement_games_played, mmr_highest, mmr_lowest)
+    SELECT account_id, mmr, placement_games_played, mmr, mmr
+    FROM stats
+    WHERE mmr <> 1000 OR placement_games_played <> 0
+    ON CONFLICT (account_id) DO NOTHING;
+  `);
 }
 
 function toPublic(row) {
@@ -235,12 +274,13 @@ async function getStats(accountId) {
 }
 
 // ── Ranked ─────────────────────────────────────────────────────
-// mmr/placement_games_played live on the same one-row-per-account `stats`
-// table as everything else here, same lazy-upsert-on-first-write pattern.
+// Ranked gets its own table, entirely separate from casual `stats` — same
+// atomic-upsert, order-independent pattern, but nothing here ever touches
+// or is touched by a casual game, and vice versa.
 
 async function getOrCreateRankedProfile(accountId) {
   const { rows } = await pool.query(
-    `SELECT mmr, placement_games_played FROM stats WHERE account_id = $1`,
+    `SELECT mmr, placement_games_played FROM ranked_stats WHERE account_id = $1`,
     [accountId]
   );
   const s = rows[0];
@@ -252,11 +292,13 @@ async function getOrCreateRankedProfile(accountId) {
 
 async function applyRankedMmr(accountId, mmrDelta) {
   const { rows } = await pool.query(
-    `INSERT INTO stats (account_id, mmr, placement_games_played)
-     VALUES ($1, GREATEST(0, 1000 + $2), 1)
+    `INSERT INTO ranked_stats (account_id, mmr, placement_games_played, mmr_highest, mmr_lowest)
+     VALUES ($1, GREATEST(0, 1000 + $2), 1, GREATEST(0, 1000 + $2), GREATEST(0, 1000 + $2))
      ON CONFLICT (account_id) DO UPDATE SET
-       mmr = GREATEST(0, stats.mmr + $2),
-       placement_games_played = LEAST(5, stats.placement_games_played + 1),
+       mmr = GREATEST(0, ranked_stats.mmr + $2),
+       placement_games_played = LEAST(5, ranked_stats.placement_games_played + 1),
+       mmr_highest = GREATEST(ranked_stats.mmr_highest, GREATEST(0, ranked_stats.mmr + $2)),
+       mmr_lowest = LEAST(ranked_stats.mmr_lowest, GREATEST(0, ranked_stats.mmr + $2)),
        updated_at = now()
      RETURNING mmr, placement_games_played`,
     [accountId, mmrDelta]
@@ -268,7 +310,7 @@ async function applyRankedMmr(accountId, mmrDelta) {
 async function getLeaderboard(limit = 50) {
   const { rows } = await pool.query(
     `SELECT s.account_id, a.nickname, a.avatar, s.mmr, s.placement_games_played
-     FROM stats s JOIN accounts a ON a.id = s.account_id
+     FROM ranked_stats s JOIN accounts a ON a.id = s.account_id
      ORDER BY s.mmr DESC LIMIT $1`,
     [limit]
   );
@@ -286,7 +328,7 @@ async function getRankForAccount(accountId) {
     `SELECT rnk, mmr, placement_games_played FROM (
        SELECT account_id, mmr, placement_games_played,
               RANK() OVER (ORDER BY mmr DESC) AS rnk
-       FROM stats
+       FROM ranked_stats
      ) t WHERE account_id = $1`,
     [accountId]
   );
@@ -295,10 +337,95 @@ async function getRankForAccount(accountId) {
   return { position: s.rnk, mmr: s.mmr, placementGamesPlayed: s.placement_games_played };
 }
 
+async function recordRankedGameStarted(accountId) {
+  await pool.query(
+    `INSERT INTO ranked_stats (account_id, games_played) VALUES ($1, 1)
+     ON CONFLICT (account_id) DO UPDATE SET games_played = ranked_stats.games_played + 1, updated_at = now()`,
+    [accountId]
+  );
+}
+
+async function recordRankedTrick(accountId, trickScore) {
+  await pool.query(
+    `INSERT INTO ranked_stats (account_id, worst_trick) VALUES ($1, $2)
+     ON CONFLICT (account_id) DO UPDATE SET
+       worst_trick = LEAST(ranked_stats.worst_trick, $2),
+       updated_at = now()`,
+    [accountId, trickScore]
+  );
+}
+
+async function recordRankedRound(accountId, roundDelta) {
+  await pool.query(
+    `INSERT INTO ranked_stats (account_id, best_round, worst_round) VALUES ($1, $2, $2)
+     ON CONFLICT (account_id) DO UPDATE SET
+       best_round = GREATEST(ranked_stats.best_round, $2),
+       worst_round = LEAST(ranked_stats.worst_round, $2),
+       updated_at = now()`,
+    [accountId, roundDelta]
+  );
+}
+
+async function recordRankedQueenTaken(accountId) {
+  await pool.query(
+    `INSERT INTO ranked_stats (account_id, queen_spades_taken) VALUES ($1, 1)
+     ON CONFLICT (account_id) DO UPDATE SET
+       queen_spades_taken = ranked_stats.queen_spades_taken + 1,
+       updated_at = now()`,
+    [accountId]
+  );
+}
+
+async function recordRankedGameFinished(accountId, finalScore, moonsThisGame) {
+  const endedPositive = finalScore > 0 ? 1 : 0;
+  const endedNegative = finalScore < 0 ? 1 : 0;
+  await pool.query(
+    `INSERT INTO ranked_stats (
+       account_id, games_finished, best_game, worst_game, moons_total, moons_best_game,
+       points_total, ended_positive, ended_negative
+     )
+     VALUES ($1, 1, $2, $2, $3, $3, $2, $4, $5)
+     ON CONFLICT (account_id) DO UPDATE SET
+       games_finished = ranked_stats.games_finished + 1,
+       best_game = GREATEST(ranked_stats.best_game, $2),
+       worst_game = LEAST(ranked_stats.worst_game, $2),
+       moons_total = ranked_stats.moons_total + $3,
+       moons_best_game = GREATEST(ranked_stats.moons_best_game, $3),
+       points_total = ranked_stats.points_total + $2,
+       ended_positive = ranked_stats.ended_positive + $4,
+       ended_negative = ranked_stats.ended_negative + $5,
+       updated_at = now()`,
+    [accountId, finalScore, moonsThisGame, endedPositive, endedNegative]
+  );
+}
+
+async function getRankedStats(accountId) {
+  const { rows } = await pool.query(`SELECT * FROM ranked_stats WHERE account_id = $1`, [accountId]);
+  const s = rows[0];
+  return {
+    gamesPlayed: s ? s.games_played : 0,
+    worstTrick: s ? s.worst_trick : null,
+    bestRound: s ? s.best_round : null,
+    worstRound: s ? s.worst_round : null,
+    bestGame: s ? s.best_game : null,
+    worstGame: s ? s.worst_game : null,
+    moonsTotal: s ? s.moons_total : 0,
+    moonsBestGame: s ? s.moons_best_game : 0,
+    queenSpadesTaken: s ? s.queen_spades_taken : 0,
+    avgPoints: s && s.games_finished > 0 ? Math.round((s.points_total / s.games_finished) * 10) / 10 : null,
+    endedPositive: s ? s.ended_positive : 0,
+    endedNegative: s ? s.ended_negative : 0,
+    mmrHighest: s ? s.mmr_highest : null,
+    mmrLowest: s ? s.mmr_lowest : null,
+  };
+}
+
 module.exports = {
   pool, ensureSchema, toPublic,
   createAccount, findAccountByUsername, findAccountById,
   createSession, findAccountByToken, deleteSession, updateProfile,
   recordGameStarted, recordTrick, recordRound, recordGameFinished, recordQueenTaken, getStats,
   getOrCreateRankedProfile, applyRankedMmr, getLeaderboard, getRankForAccount,
+  recordRankedGameStarted, recordRankedTrick, recordRankedRound,
+  recordRankedQueenTaken, recordRankedGameFinished, getRankedStats,
 };

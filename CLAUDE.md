@@ -91,20 +91,33 @@ push to the connected branch.
 
 ## Accounts & stats (needs DATABASE_URL — Railway Postgres plugin)
 - Username/password, bcrypt-hashed, session tokens
-- Stats tracked live per account: games played/finished, best/worst
-  single trick, best/worst round, best/worst game, total moons shot,
-  most moons in one game
+- Casual and ranked stats are two entirely separate tables/pipelines —
+  `stats` (casual only) vs `ranked_stats` (ranked only). Every stat write
+  site in `server.js` (`resolveTrick`, `endRound`, `recordGameFinishedForAll`,
+  `formRankedMatch`) branches on `G.ranked` to call the casual or ranked
+  `db.js` function, never both. Casual: games played/finished, best/worst
+  single trick, best/worst round, best/worst game, total moons shot, most
+  moons in one game, win streak. Ranked: games played, average score,
+  worst single trick only (no "best trick" tracked for ranked), best/worst
+  round, best/worst game, moons, Q♠ takes, ended positive/negative, plus
+  `mmr_highest`/`mmr_lowest` (peak/trough MMR ever reached, updated
+  alongside `mmr` itself in `applyRankedMmr`) — no win streak, deliberately
+  narrower than casual, matches what was actually asked for
 - `trackStat()` retries 3x with backoff on failure — this fixed a real
   production data-loss bug (silent dropped writes to Railway's DB), keep
   it
 
 ## Ranked Multiplayer (needs DATABASE_URL, same as accounts/stats)
 - Hidden `mmr` (starts 1000) + `placement_games_played` (first 5 ranked
-  games), stored on the same `stats` row as everything else. Visible rank
-  is always derived from `mmr` via `rankForMmr`/`RANK_TABLE` in
-  `server.js` — never stored separately, never computed client-side (the
-  client only renders whatever `tier`/`division`/`label` the server sends,
-  e.g. in `rankedProfileOk`/`rankedResult`/`leaderboardOk`)
+  games) live in `ranked_stats`, not `stats` — `stats.mmr`/
+  `stats.placement_games_played` are legacy columns from before ranked had
+  its own table, left in place unused rather than dropped, and
+  one-time-backfilled into `ranked_stats` on schema init (`ensureSchema`)
+  so any MMR already earned under the old combined scheme isn't lost.
+  Visible rank is always derived from `mmr` via `rankForMmr`/`RANK_TABLE`
+  in `server.js` — never stored separately, never computed client-side
+  (the client only renders whatever `tier`/`division`/`label` the server
+  sends, e.g. in `rankedProfileOk`/`rankedResult`/`leaderboardOk`)
 - `computeMmrChanges` is intentionally isolated (pure, single function) so
   the formula can later become Elo-style
   (`K × (normalizedScore - expectedPerformance)`) without touching

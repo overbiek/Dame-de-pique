@@ -1014,7 +1014,7 @@ function formRankedMatch(group) {
     const sock = io.sockets.sockets.get(p.socketId);
     if (sock) sock.join(G.code);
     io.to(p.socketId).emit('rankedMatchFound', { code: G.code, playerIndex: i, token, isHost: i === 0 });
-    if (p.accountId) trackStat(() => db.recordGameStarted(p.accountId));
+    if (p.accountId) trackStat(() => db.recordRankedGameStarted(p.accountId));
   }
   startDraw(G, 1);
 }
@@ -1156,7 +1156,8 @@ function recordGameFinishedForAll(G) {
     if (!acctId) continue;
     const finalScore = G.players[i].score;
     const moons = (G.moonCounts && G.moonCounts[i]) || 0;
-    trackStat(() => db.recordGameFinished(acctId, finalScore, moons));
+    if (G.ranked) trackStat(() => db.recordRankedGameFinished(acctId, finalScore, moons));
+    else trackStat(() => db.recordGameFinished(acctId, finalScore, moons));
   }
 }
 
@@ -1406,9 +1407,13 @@ function resolveTrick(G) {
   G.players[winner].tricks.push(...G.currentTrick.map(t => t.card));
   if (G.players[winner].accountId) {
     const acctId = G.players[winner].accountId;
-    trackStat(() => db.recordTrick(acctId, trickScore));
-    if (G.currentTrick.some(t => t.card.suit === '♠' && t.card.rank === 'Q')) {
-      trackStat(() => db.recordQueenTaken(acctId));
+    const gotQueen = G.currentTrick.some(t => t.card.suit === '♠' && t.card.rank === 'Q');
+    if (G.ranked) {
+      trackStat(() => db.recordRankedTrick(acctId, trickScore));
+      if (gotQueen) trackStat(() => db.recordRankedQueenTaken(acctId));
+    } else {
+      trackStat(() => db.recordTrick(acctId, trickScore));
+      if (gotQueen) trackStat(() => db.recordQueenTaken(acctId));
     }
   }
   G.lastTrickMsg = `${G.players[winner].name} wins trick ${G.trickNum} · +10${penPts !== 0 ? ' ' + penPts : ''}`;
@@ -1458,7 +1463,9 @@ function endRound(G) {
     }
     for (let i = 0; i < 4; i++) {
       const acctId = G.players[i].accountId;
-      if (acctId) trackStat(() => db.recordRound(acctId, deltas[i]));
+      if (!acctId) continue;
+      if (G.ranked) trackStat(() => db.recordRankedRound(acctId, deltas[i]));
+      else trackStat(() => db.recordRound(acctId, deltas[i]));
     }
   }
 
@@ -1590,6 +1597,19 @@ io.on('connection', (socket) => {
     } catch (e) {
       console.error('getStats error:', e.message);
       socket.emit('statsError', { msg: 'Could not load your stats. Try again.' });
+    }
+  });
+
+  socket.on('getRankedStats', async ({ token }) => {
+    if (!DB_ENABLED || !token) return socket.emit('rankedStatsError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('rankedStatsError', { msg: 'Your session expired — log in again.' });
+      const stats = await db.getRankedStats(account.id);
+      socket.emit('rankedStatsOk', { stats });
+    } catch (e) {
+      console.error('getRankedStats error:', e.message);
+      socket.emit('rankedStatsError', { msg: 'Could not load your ranked stats. Try again.' });
     }
   });
 

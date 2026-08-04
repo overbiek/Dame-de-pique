@@ -190,6 +190,69 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   100%{transform:translate(-50%,-50%) translate(0,0) rotate(0deg) scale(1);opacity:1}
 }
 
+/* ══ Moon shot — moon rises, a rocket flies up and hits it ══ */
+.moonfx-layer{position:fixed;inset:0;pointer-events:none;z-index:150;overflow:hidden}
+.moonfx-moon{
+  position:fixed;top:calc(env(safe-area-inset-top) + 10px);right:14px;
+  font-size:4.2rem;line-height:1;
+  filter:drop-shadow(0 0 16px rgba(255,235,180,.55));
+  animation:moonfx-grow .55s cubic-bezier(.22,.85,.3,1.25) both;
+}
+@keyframes moonfx-grow{
+  0%{transform:scale(.1);opacity:0}
+  100%{transform:scale(1);opacity:1}
+}
+.moonfx-rocket{
+  position:fixed;font-size:2.1rem;
+  filter:drop-shadow(0 0 8px rgba(255,180,80,.7));
+  animation:moonfx-fly .9s cubic-bezier(.32,.55,.35,1) .15s both;
+}
+@keyframes moonfx-fly{
+  0%{bottom:4vh;left:6vw;opacity:0;transform:rotate(45deg) scale(.6)}
+  14%{opacity:1}
+  85%{opacity:1}
+  100%{bottom:80vh;left:78vw;opacity:0;transform:rotate(45deg) scale(1.1)}
+}
+.moonfx-flash{
+  position:fixed;top:calc(env(safe-area-inset-top) + 10px);right:14px;
+  width:130px;height:130px;margin-top:-24px;margin-right:-24px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,244,200,.95),rgba(255,200,100,0) 70%);
+  opacity:0;transform:translate(50%,-10%) scale(.4);
+}
+.moonfx-layer.impact .moonfx-flash{animation:moonfx-flash .55s ease-out forwards}
+@keyframes moonfx-flash{
+  0%{opacity:0;transform:translate(50%,-10%) scale(.4)}
+  30%{opacity:1;transform:translate(50%,-10%) scale(1.3)}
+  100%{opacity:0;transform:translate(50%,-10%) scale(1.7)}
+}
+.moonfx-confetti{
+  position:fixed;top:calc(env(safe-area-inset-top) + 44px);right:64px;
+  font-size:1.1rem;color:var(--gold-hi);
+  animation:moonfx-confetti-burst 1.1s ease-out forwards;
+}
+@keyframes moonfx-confetti-burst{
+  0%{transform:translate(0,0) rotate(0deg);opacity:1}
+  100%{transform:translate(var(--cx),var(--cy)) rotate(var(--rot));opacity:0}
+}
+.moonfx-banner{
+  position:fixed;left:50%;top:38%;max-width:84vw;
+  transform:translate(-50%,-50%) scale(.7);text-align:center;white-space:normal;
+  font-family:'Playfair Display',serif;font-weight:700;font-size:clamp(1.05rem,4.6vw,1.35rem);
+  color:var(--gold-hi);background:rgba(10,50,37,.88);
+  border:1px solid rgba(212,175,92,.4);border-radius:14px;padding:11px 20px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);opacity:0;
+  animation:moonfx-banner-in .45s ease-out 1s both, moonfx-banner-out .5s ease-in 2.3s both;
+}
+@keyframes moonfx-banner-in{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}
+  100%{opacity:1;transform:translate(-50%,-50%) scale(1)}
+}
+@keyframes moonfx-banner-out{
+  0%{opacity:1}
+  100%{opacity:0}
+}
+
 /* ══ Hand — held like a fan of cards ══ */
 .hand{
   display:flex;align-items:flex-end;justify-content:center;
@@ -1332,6 +1395,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   <div class="mystrip" id="p-me"></div>
   <div class="hand" id="p-hand"></div>
   <button class="btn btn-primary btn-block" id="p-go" onclick="confirmPass()" disabled>Pass 2 cards</button>
+  <p id="p-auto" class="autoline"></p>
 </section>
 
 <!-- ═══ PLAY ═══ -->
@@ -1351,8 +1415,8 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   <div class="center-wrap" style="padding-top:2vh;max-width:460px;text-align:left">
     <h2 id="r-title">Round complete</h2>
     <div id="r-body"></div>
-    <button class="btn btn-primary btn-block" id="r-next" style="display:none" onclick="send('nextRound')">Next round</button>
-    <p id="r-wait" class="prompt wait" style="display:none">Waiting for the host…</p>
+    <button class="btn btn-primary btn-block" id="r-next" style="display:none" onclick="send('confirmRound')">Continue</button>
+    <p id="r-wait" class="prompt wait" style="display:none"></p>
     <p id="r-auto" class="autoline"></p>
     <div class="exit-row">
       <button class="btn btn-ghost btn-sm" onclick="openRules()">Rules</button>
@@ -2049,7 +2113,7 @@ function paintCountdown(){
     const vl=voteDeadline?Math.max(0,Math.round((voteDeadline-Date.now())/1000)):0;
     vt.textContent=vl>0?`Expires in ${vl}s.`:'';
   }
-  const els=[$('r-auto'),$('d-auto')].filter(Boolean);
+  const els=[$('r-auto'),$('d-auto'),$('p-auto')].filter(Boolean);
   const left=autoDeadline?Math.max(0,Math.round((autoDeadline-Date.now())/1000)):0;
   els.forEach(el=>{
     if(!autoDeadline){ el.textContent=''; el.classList.remove('soon'); return; }
@@ -2321,6 +2385,47 @@ function maybeShowPassTransition(G){
   setTimeout(()=>layer.remove(),1300);
 }
 
+/* ══════════ MOON SHOT ══════════ */
+let moonFxShownForRound=-1;
+function maybeShowMoonFx(G){
+  if(G.moonShooter<0) return;
+  if(moonFxShownForRound===G.round) return;
+  moonFxShownForRound=G.round;
+
+  const mine=G.moonShooter===me;
+  const name=mine?'You':esc(G.players[G.moonShooter].name);
+  const verb=mine?'have':'has';
+
+  const layer=document.createElement('div');
+  layer.className='moonfx-layer';
+  layer.innerHTML=
+    `<div class="moonfx-moon">🌕</div>`+
+    `<div class="moonfx-rocket">🚀</div>`+
+    `<div class="moonfx-flash"></div>`+
+    `<div class="moonfx-banner">${name} ${verb} shot the moon!</div>`;
+  document.body.appendChild(layer);
+
+  setTimeout(()=>{
+    if(!layer.isConnected) return;
+    layer.classList.add('impact');
+    const suits=['♠','♥','♦','♣'];
+    for(let i=0;i<16;i++){
+      const p=document.createElement('div');
+      p.className='moonfx-confetti';
+      const ang=Math.random()*Math.PI*2;
+      const dist=60+Math.random()*95;
+      p.style.setProperty('--cx',Math.cos(ang)*dist+'px');
+      p.style.setProperty('--cy',Math.sin(ang)*dist+'px');
+      p.style.setProperty('--rot',Math.round(Math.random()*360)+'deg');
+      p.style.animationDelay=Math.round(Math.random()*90)+'ms';
+      p.textContent=suits[i%4];
+      layer.appendChild(p);
+    }
+  },1000);
+
+  setTimeout(()=>layer.remove(),2900);
+}
+
 /* ══════════ PLAY ══════════ */
 function lastTrickHTML(){
   const lt=S&&S.lastTrick;
@@ -2478,13 +2583,20 @@ function renderSummary(G){
   h+=sheetHTML(G);
   $('r-body').innerHTML=h;
   scrollSheet();
-  $('r-next').style.display=host?'block':'none';
-  $('r-next').textContent=G.isLastRound?'See final standings':`Start round ${G.round+1}`;
-  $('r-wait').style.display=host?'none':'block';
-  $('r-wait').textContent=G.isLastRound
-    ? 'Waiting for the host to reveal the standings…'
-    : 'Waiting for the host…';
+
+  const ready=G.roundReady||[];
+  const iAmReady=!!ready[me];
+  const readyCount=ready.filter(Boolean).length;
+  const remaining=Math.max(0,4-readyCount);
+  $('r-next').style.display=iAmReady?'none':'block';
+  $('r-next').textContent=G.isLastRound?'See final standings':'Continue';
+  $('r-wait').style.display=iAmReady?'block':'none';
+  $('r-wait').textContent=remaining>0
+    ? `Waiting on ${remaining} more player${remaining===1?'':'s'}…`
+    : 'Carrying on…';
   $('r-end').style.display=(host&&!G.isLastRound&&!G.endVote)?'inline-block':'none';
+
+  maybeShowMoonFx(G);
 }
 
 /* ══════════ FINAL ══════════ */

@@ -22,6 +22,16 @@ push to the connected branch.
 - 16 rounds; pass cycle Left→Right→Across→Keep (rounds 4/8/12/16 = Keep,
   no passing)
 - The opening card of trick 1 each round can't be a heart or Q♠
+- Pass selection has a 1-minute timer (`PASS_SELECT_MS`) — any player who
+  hasn't chosen by then gets 2 random cards auto-picked (`autoPassRemaining`
+  in `server.js`), so the round can't be held hostage by someone AFK
+- Advancing past round summary needs every real seat to confirm
+  (`G.roundReady`, `confirmRound` socket event) — not just the host — with
+  a 20s auto-advance (`ROUND_CONFIRM_MS`) if not everyone confirms.
+  AI/empty seats are pre-confirmed. `checkRoundReady` is also invoked from
+  `resumeAfterSeatChange` so a seat converting to AI (leave / ranked
+  takeover) can't leave the room stuck waiting on a confirmation that will
+  never come
 
 ## AI (in server.js)
 - `heuristicChoose` — fast rule-based policy; also used as the rollout
@@ -88,6 +98,12 @@ push to the connected branch.
   (e.g. "your turn") must reserve constant space (`visibility` toggle,
   not `display`/conditional markup) — a past bug had the strip resize
   and jump the whole screen on turn changes.
+- Moon-shot celebration (`maybeShowMoonFx`, round-summary screen only):
+  one-shot per round via `moonFxShownForRound`, same pattern as the
+  existing pass-transition fx (`passFxShownForRound`) — guards against
+  re-firing on every `gameState` broadcast while sitting on that screen
+  (e.g. when other players' round-confirmations come in). Purely
+  decorative/emoji-based (🌕/🚀), no new image assets.
 
 ## Accounts & stats (needs DATABASE_URL — Railway Postgres plugin)
 - Username/password, bcrypt-hashed, session tokens

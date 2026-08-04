@@ -69,6 +69,8 @@ const AUTO_ADVANCE_MS = 60 * 1000;      // host has a minute, then it moves on b
 const IDLE_CLOSE_MS   = 10 * 60 * 1000; // nothing happening at all
 const EMPTY_CLOSE_MS   = 2 * 60 * 1000; // nobody connected
 const END_VOTE_MS      = 60 * 1000;     // how long an "end early" request stays open
+const ROUND_CONFIRM_MS = 20 * 1000;     // everyone has 20s to confirm "next round" before it carries on
+const PASS_SELECT_MS   = 60 * 1000;     // a minute to pick a pass, then 2 random cards go instead
 const RANKED_MIN_RADIUS = 100;
 const RANKED_RADIUS_STEP = 100;
 const RANKED_RADIUS_GROW_MS = 8000; // how often a queued player's search radius widens
@@ -1092,7 +1094,7 @@ function scheduleRankedTakeover(G, idx) {
 // Re-arm whatever timer belongs to the phase we're sitting in.
 function rearmAuto(G) {
   if (G.phase === 'roundSummary') {
-    armAuto(G, () => advanceRound(G), AUTO_ADVANCE_MS);
+    armAuto(G, () => advanceRound(G), ROUND_CONFIRM_MS);
   } else if (G.phase === 'drawDone') {
     armAuto(G, () => { if (G.phase === 'drawDone') dealRound(G); }, AUTO_ADVANCE_MS);
   } else if (G.phase === 'draw') {
@@ -1100,7 +1102,19 @@ function rearmAuto(G) {
       if (G.phase !== 'draw') return;
       for (let i = 0; i < 4; i++) if (!G.drawRevealed[i]) revealDrawCard(G, i);
     }, AUTO_ADVANCE_MS);
+  } else if (G.phase === 'pass') {
+    armAuto(G, () => autoPassRemaining(G), PASS_SELECT_MS);
   }
+}
+
+// Everyone with a real seat (not AI, not empty) needs to actively confirm
+// before the round moves on — AI/empty seats are pre-confirmed since they
+// have no one to click anything.
+function checkRoundReady(G) {
+  if (G.phase !== 'roundSummary' || !G.roundReady) return false;
+  for (let i = 0; i < 4; i++) if (G.players[i].isAI) G.roundReady[i] = true;
+  if (G.roundReady.every(Boolean)) { advanceRound(G); return true; }
+  return false;
 }
 
 // ── Ending the game early (needs everyone's agreement) ──────────
@@ -1216,6 +1230,7 @@ function publicState(G) {
     roundBefore: G.roundBefore,
     lastTrickMsg: G.lastTrickMsg || '',
     moonShooter: G.moonShooter,
+    roundReady: G.roundReady || null,
     history: G.history,
     autoIn: G.autoAt ? Math.max(0, G.autoAt - Date.now()) : 0,
     endVote: G.endVote ? { by: G.endVote.by, needed: G.endVote.needed, agreed: G.endVote.agreed } : null,
@@ -1314,6 +1329,7 @@ function dealRound(G) {
   G.currentTrick = [];
   G.trickNum = 1;
   G.moonShooter = -1;
+  G.roundReady = null;
   G.lastTrickMsg = '';
   G.playLog = [];
   G.roundBefore = G.players.map(p => p.score);
@@ -1327,12 +1343,32 @@ function dealRound(G) {
       G.players[i].hasPassed = true;
     }
   }
+  rearmAuto(G);
   broadcastRoom(G);
   checkAllPassed(G);
 }
 
+// A minute to choose, then any straggler gets 2 random cards picked for
+// them so the round can't be held hostage by someone who wandered off.
+function autoPassRemaining(G) {
+  if (G.phase !== 'pass') return;
+  let changed = false;
+  for (let i = 0; i < 4; i++) {
+    if (!G.passSelected[i]) {
+      G.passSelected[i] = shuffle(G.players[i].hand).slice(0, 2);
+      G.players[i].hasPassed = true;
+      changed = true;
+    }
+  }
+  if (changed) broadcastRoom(G);
+  checkAllPassed(G);
+}
+
 function checkAllPassed(G) {
-  if (G.passSelected.every(s => s && s.length === 2)) setTimeout(() => executePass(G), 400);
+  if (G.passSelected.every(s => s && s.length === 2)) {
+    clearAuto(G);
+    setTimeout(() => executePass(G), 400);
+  }
 }
 
 function executePass(G) {
@@ -1471,8 +1507,11 @@ function endRound(G) {
 
   // Always show a summary for the final round too, then move on to standings.
   G.phase = 'roundSummary';
-  // If the host doesn't press the button, carry on without them.
-  armAuto(G, () => advanceRound(G), AUTO_ADVANCE_MS);
+  // Every real seat has to confirm before moving on — AI/empty seats start
+  // pre-confirmed since there's no one there to click anything.
+  G.roundReady = G.players.map(p => p.isAI || !p.token);
+  // If not everyone confirms, it carries on by itself anyway.
+  rearmAuto(G);
   broadcastRoom(G);
 }
 
@@ -1500,6 +1539,8 @@ function resumeAfterSeatChange(G) {
     checkAllPassed(G);
   } else if (G.phase === 'play') {
     scheduleAI(G);
+  } else if (G.phase === 'roundSummary') {
+    checkRoundReady(G);
   }
 }
 
@@ -1810,10 +1851,13 @@ io.on('connection', (socket) => {
     doPlayCard(G, playerIndex, real);
   });
 
-  socket.on('nextRound', ({ code }) => {
+  socket.on('confirmRound', ({ code, playerIndex }) => {
     const G = findRoom(code);
-    if (!G || G.phase !== 'roundSummary' || !isHostSocket(G, socket)) return;
-    advanceRound(G);
+    if (!G || G.phase !== 'roundSummary' || !G.roundReady) return;
+    if (G.players[playerIndex]?.socketId !== socket.id) return;
+    if (G.roundReady[playerIndex]) return;
+    G.roundReady[playerIndex] = true;
+    if (!checkRoundReady(G)) broadcastRoom(G);
   });
 
   // Host asks to stop early. Everyone human has to agree; computers always do.

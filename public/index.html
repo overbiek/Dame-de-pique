@@ -208,10 +208,10 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   animation:moonfx-fly .9s cubic-bezier(.32,.55,.35,1) .15s both;
 }
 @keyframes moonfx-fly{
-  0%{bottom:4vh;left:6vw;opacity:0;transform:rotate(45deg) scale(.6)}
+  0%{bottom:var(--sb,4vh);left:var(--sl,6vw);opacity:0;transform:rotate(45deg) scale(.6)}
   14%{opacity:1}
   85%{opacity:1}
-  100%{bottom:80vh;left:78vw;opacity:0;transform:rotate(45deg) scale(1.1)}
+  100%{bottom:88vh;left:84vw;opacity:0;transform:rotate(45deg) scale(1.1)}
 }
 .moonfx-flash{
   position:fixed;top:calc(env(safe-area-inset-top) + 10px);right:14px;
@@ -2386,21 +2386,25 @@ function maybeShowPassTransition(G){
 }
 
 /* ══════════ MOON SHOT ══════════ */
-let moonFxShownForRound=-1;
-function maybeShowMoonFx(G){
-  if(G.moonShooter<0) return;
-  if(moonFxShownForRound===G.round) return;
-  moonFxShownForRound=G.round;
+// Fired by the server the instant a moon is locked in — while everyone's
+// still looking at the play screen, before the round actually ends.
+socket.on('moonShot',d=>{ showMoonFx(d.shooter); });
 
-  const mine=G.moonShooter===me;
-  const name=mine?'You':esc(G.players[G.moonShooter].name);
+// Rough launch point per seat, matching the table's own layout (seatOf:
+// 0 me/bottom, 1 left, 2 top/opponent-across, 3 right) — the rocket departs
+// from roughly where that player is sitting and flies up to meet the moon.
+const MOONFX_LAUNCH={0:{b:'6vh',l:'50vw'},1:{b:'45vh',l:'4vw'},2:{b:'78vh',l:'50vw'},3:{b:'45vh',l:'92vw'}};
+function showMoonFx(shooter){
+  const mine=shooter===me;
+  const name=mine?'You':esc((S&&S.players[shooter]&&S.players[shooter].name)||'Someone');
   const verb=mine?'have':'has';
+  const launch=MOONFX_LAUNCH[seatOf(shooter)]||MOONFX_LAUNCH[2];
 
   const layer=document.createElement('div');
   layer.className='moonfx-layer';
   layer.innerHTML=
     `<div class="moonfx-moon">🌕</div>`+
-    `<div class="moonfx-rocket">🚀</div>`+
+    `<div class="moonfx-rocket" style="--sb:${launch.b};--sl:${launch.l}">🚀</div>`+
     `<div class="moonfx-flash"></div>`+
     `<div class="moonfx-banner">${name} ${verb} shot the moon!</div>`;
   document.body.appendChild(layer);
@@ -2595,8 +2599,6 @@ function renderSummary(G){
     ? `Waiting on ${remaining} more player${remaining===1?'':'s'}…`
     : 'Carrying on…';
   $('r-end').style.display=(host&&!G.isLastRound&&!G.endVote)?'inline-block':'none';
-
-  maybeShowMoonFx(G);
 }
 
 /* ══════════ FINAL ══════════ */

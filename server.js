@@ -71,6 +71,7 @@ const EMPTY_CLOSE_MS   = 2 * 60 * 1000; // nobody connected
 const END_VOTE_MS      = 60 * 1000;     // how long an "end early" request stays open
 const ROUND_CONFIRM_MS = 20 * 1000;     // everyone has 20s to confirm "next round" before it carries on
 const PASS_SELECT_MS   = 60 * 1000;     // a minute to pick a pass, then 2 random cards go instead
+const MOON_FX_MS       = 2900;          // keep the round on the play screen this long so the moon-shot fx can finish
 const RANKED_MIN_RADIUS = 100;
 const RANKED_RADIUS_STEP = 100;
 const RANKED_RADIUS_GROW_MS = 8000; // how often a queued player's search radius widens
@@ -1466,8 +1467,22 @@ function resolveTrick(G) {
   G.trickLeader = winner;
   broadcastRoom(G);
 
-  if (G.trickNum > 13) setTimeout(() => endRound(G), 1200);
-  else setTimeout(() => scheduleAI(G), 850);
+  // A moon shot is locked in the instant one player holds all 13 hearts +
+  // Q♠ among their won tricks — every remaining heart/Q has already been
+  // played and captured, so no later trick can change the outcome. No
+  // point playing out the rest of the round when the score is already
+  // fixed at +60/-20. Tell the room right away (while everyone's still
+  // looking at the play screen) so the celebration plays there, then give
+  // it time to finish before actually ending the round.
+  const moonShooter = checkMoon(G);
+  if (moonShooter >= 0) {
+    io.to(G.code).emit('moonShot', { shooter: moonShooter });
+    setTimeout(() => endRound(G), MOON_FX_MS);
+  } else if (G.trickNum > 13) {
+    setTimeout(() => endRound(G), 1200);
+  } else {
+    setTimeout(() => scheduleAI(G), 850);
+  }
 }
 
 function endRound(G) {

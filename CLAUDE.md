@@ -91,19 +91,47 @@ push to the connected branch.
   screen) both support hold-and-slide: press a card, drag across the fan
   without lifting, each card crossed gets toggled/becomes the live pick;
   release plays it (play screen) or leaves it selected (pass screen).
-  `SWIPE_SWITCH_GAP` (px) gates how far the pointer must travel before
-  switching to a neighboring card — tune this, not the fan overlap, if
-  swipe-selection ever feels twitchy or unresponsive again.
+  Hit-testing is by nearest-card-CENTER (`nearestTapCard`), not
+  `elementFromPoint` — cards overlap 55-65%, and whichever card is
+  stacked on top (highest z-index, rightmost) claims almost its entire
+  covered neighbor's hit area under point-based testing, which made
+  swipes skip cards outright (confirmed empirically: 4 of 13 cards were
+  completely unreachable near the top of the fan). Nearest-center gives
+  every card an equal-width slot regardless of stacking. Don't revert to
+  `elementFromPoint` here even for "simpler code" — it reintroduces the
+  skip bug.
+- Fan card size/overlap (`--cw`/`--overlap`) is tuned per breakpoint
+  against real measured available width, not guessed — see the width
+  media queries near the top of `<style>`. 400-580px-wide phones are the
+  tightest horizontal fit of all (single-digit px slack), which is why
+  `--cw` itself drops slightly there instead of just relaxing overlap
+  like the narrower tiers do. A separate `@media (max-height:760px)`
+  tier (plus a combined narrow+short tier for very old/small phones)
+  shrinks `--cw` and tightens section gaps further so the whole
+  play/pass screen fits one viewport without scrolling on short phones
+  — verified against real rendered heights at 320/340/360/375/390/
+  414/428px width × 568/667/736/740/844/926px height combos. Don't tweak
+  any of this without re-measuring — margins are single-digit px in
+  several places and it's easy to silently reintroduce overflow.
 - Any layout depending on `.mystrip`/badge/button text length changing
   (e.g. "your turn") must reserve constant space (`visibility` toggle,
   not `display`/conditional markup) — a past bug had the strip resize
   and jump the whole screen on turn changes.
-- Moon-shot celebration (`maybeShowMoonFx`, round-summary screen only):
-  one-shot per round via `moonFxShownForRound`, same pattern as the
-  existing pass-transition fx (`passFxShownForRound`) — guards against
-  re-firing on every `gameState` broadcast while sitting on that screen
-  (e.g. when other players' round-confirmations come in). Purely
-  decorative/emoji-based (🌕/🚀), no new image assets.
+- `show(id)` adds the new screen's `.active` class before removing the
+  previous screen's, specifically so there's never a synchronous window
+  where every `.screen` is `display:none` at once (which would flash the
+  near-black felt background underneath) — keep that order if this
+  function is ever touched.
+- Moon-shot celebration (`showMoonFx`, fires on the **play** screen, not
+  round-summary): triggered by a dedicated one-shot `moonShot` socket
+  event emitted the instant `checkMoon` succeeds in `resolveTrick`
+  (server-side — moon is locked in as soon as one player holds all 13
+  hearts + Q♠, which can happen before trick 13, so remaining tricks are
+  skipped entirely once detected). Since the event itself is genuinely
+  one-shot, the client needs no round/phase guard, unlike the
+  pass-transition fx pattern it otherwise resembles. Rocket launches
+  from the shooting player's actual seat position via `seatOf()`.
+  Purely decorative/emoji-based (🌕/🚀), no new image assets.
 
 ## Accounts & stats (needs DATABASE_URL — Railway Postgres plugin)
 - Username/password, bcrypt-hashed, session tokens

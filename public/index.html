@@ -856,18 +856,13 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 /* ══ Landscape table mode (pass/play screens only — everything else
    stays portrait) ══
    Driven by the `landscape-mode` class on <html>, kept in sync by JS
-   (updateLandscapeMode()) with EITHER real physical rotation
-   (matchMedia) OR the manual "force landscape" toggle — not a plain
-   @media query, because physical-rotation support turned out to be
-   unreliable across installed PWAs (WebAPK bakes the manifest's
-   orientation in at install time and doesn't hot-swap it, and some
-   phones' OS-level rotation-lock setting blocks it entirely regardless
-   of what the app requests). The manual toggle is the reliable path;
-   real rotation is just a bonus when the platform cooperates.
+   (updateLandscapeMode()) with real physical rotation. It's a class
+   rather than a plain @media query only because the mode is also gated
+   on which screen is showing — the summary/final/menu screens stay
+   portrait-styled even on a rotated device.
    Card size is driven by viewport HEIGHT here, not width — a rotated
-   (or force-rotated) phone is wide but short, and the normal --cw
-   (width-driven) would render cards far too large for the available
-   vertical room. */
+   phone is wide but short, and the normal --cw (width-driven) would
+   render cards far too large for the available vertical room. */
 html.landscape-mode #app{
   /* #app's normal padding only accounts for top/bottom safe-area insets
      — in landscape a phone's notch/rounded corners shift to the sides,
@@ -877,7 +872,9 @@ html.landscape-mode #app{
           calc(env(safe-area-inset-right) + 8px)
           calc(env(safe-area-inset-bottom) + 4px)
           calc(env(safe-area-inset-left) + 8px);
-  /* the whole landscape table must fit one screen — never scroll */
+  /* the whole landscape table must fit one screen — never scroll. The
+     portrait 760px cap would waste most of a landscape phone's width. */
+  max-width:none;
   height:100%;min-height:0;overflow:hidden;
 }
 /* --ch is normally derived from --cw at :root, and a custom property's
@@ -888,7 +885,7 @@ html.landscape-mode #app{
    the real constraint, and the width then follows from a deliberately
    broader-than-portrait aspect ratio (1.25 vs 1.42). */
 html.landscape-mode #s-pass,html.landscape-mode #s-play{
-  --ch:clamp(48px,11.4vh,86px);
+  --ch:clamp(48px,14vh,96px);
   --cw:calc(var(--ch) / 1.25);
 }
 html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
@@ -897,37 +894,40 @@ html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
   padding:0;
   overflow:hidden;
 }
+/* Landscape drops the surrounding seat blocks entirely — tableHTML()
+   renders each player's name/score as a caption directly under their
+   own trick slot instead — so the table is just the trick cross, laid
+   left of center, with both corner groups absolutely positioned. */
 html.landscape-mode #s-pass .table,html.landscape-mode #s-play .table{
-  padding:4px 8px;gap:3px 8px;flex:0 0 auto;
-  /* Columns 1-2 hug their content so the left seat, the trick cross and
-     the right seat form one tight cluster sitting left of center; column
-     3 absorbs all remaining width, with the right seat pinned to its
-     start (still beside the cross) and the info panel pushed to its far
-     end. */
-  grid-template-columns:auto auto 1fr;
-  align-content:start;
+  display:flex;align-items:center;justify-content:flex-start;
+  padding:6px 10px 6px 6%;
+  flex:0 0 auto;
 }
-html.landscape-mode #s-pass .seat-right,html.landscape-mode #s-play .seat-right{justify-self:start}
 html.landscape-mode #s-pass .table-wrap,html.landscape-mode #s-play .table-wrap{flex:0 0 auto}
-html.landscape-mode #s-pass .avatar,html.landscape-mode #s-play .avatar{width:30px;height:30px;font-size:.8rem}
-html.landscape-mode #s-pass .seat-name,html.landscape-mode #s-play .seat-name{font-size:.56rem;max-width:64px}
-html.landscape-mode #s-pass .seat-score,html.landscape-mode #s-play .seat-score{font-size:.62rem}
-html.landscape-mode #s-pass .seat-score small,html.landscape-mode #s-play .seat-score small{font-size:.54rem}
-/* opponents' face-down fans are pure decoration and cost vertical room
-   the landscape table doesn't have — the card-count is already on the
-   seat, so drop the fans entirely here */
-html.landscape-mode #s-pass .seat-cards,html.landscape-mode #s-play .seat-cards,
-html.landscape-mode #s-pass .count-pill,html.landscape-mode #s-play .count-pill{display:none}
-html.landscape-mode #s-pass .mid,html.landscape-mode #s-play .mid{
-  /* exact card-sized cells so a played card matches the cards in hand
-     and neighbouring slots sit side by side instead of overlapping */
-  min-width:0;min-height:0;gap:3px;
-  grid-template-columns:var(--cw) var(--cw) var(--cw);
-  grid-template-rows:var(--ch) var(--ch) var(--ch);
+html.landscape-mode #s-pass .corner-lt,html.landscape-mode #s-play .corner-lt{
+  position:absolute;left:8px;top:8px;
 }
-html.landscape-mode #s-pass .mystrip,html.landscape-mode #s-play .mystrip{margin:2px 0 0;padding:3px 12px;gap:6px}
-html.landscape-mode #s-pass .mystrip .who,html.landscape-mode #s-play .mystrip .who{font-size:.8rem}
-html.landscape-mode #s-pass .mystrip .tot,html.landscape-mode #s-play .mystrip .tot{font-size:1rem}
+/* vertically centered on the right edge rather than tucked into the top
+   corner, where the status bar / rounded screen corner clipped it */
+html.landscape-mode #s-pass .corner-rt,html.landscape-mode #s-play .corner-rt{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  flex-direction:row;align-items:center;gap:8px;
+  background:rgba(4,20,14,.55);border:1px solid rgba(212,175,92,.22);
+  border-radius:12px;padding:5px 8px;
+}
+/* your own name/score now lives under your trick slot like everyone
+   else's, so the strip above the hand is redundant here */
+html.landscape-mode #s-pass .mystrip,html.landscape-mode #s-play .mystrip{display:none}
+html.landscape-mode #s-pass .mid,html.landscape-mode #s-play .mid{
+  /* auto tracks: each cell is a card with its owner's caption beneath,
+     so cells size to the wider of the two and never overlap */
+  min-width:0;min-height:0;gap:4px 8px;
+  grid-template-columns:auto auto auto;
+  grid-template-rows:auto auto auto;
+}
+html.landscape-mode #s-pass .mid>div,html.landscape-mode #s-play .mid>div{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+}
 html.landscape-mode #s-pass .banner,html.landscape-mode #s-play .banner{margin:1px 0 0;font-size:.7rem}
 html.landscape-mode #s-pass .prompt,html.landscape-mode #s-play .prompt{margin:1px 0 0;font-size:.76rem}
 /* Landscape has width to spare and no height to waste, so the hand is a
@@ -942,37 +942,26 @@ html.landscape-mode #s-pass .hand .card-slot,html.landscape-mode #s-play .hand .
 }
 html.landscape-mode #s-pass #p-go{padding:8px 20px;font-size:.85rem}
 html.landscape-mode #s-pass #p-auto{margin-top:2px}
-/* corner content: home icon left, consolidated info panel right —
-   same cornerActions() markup, just restyled/repositioned here */
-html.landscape-mode #s-pass .corner-lt,html.landscape-mode #s-play .corner-lt{align-self:flex-start}
-html.landscape-mode #s-pass .corner-rt,html.landscape-mode #s-play .corner-rt{
-  flex-direction:row;align-self:flex-start;
-  background:rgba(4,20,14,.55);border:1px solid rgba(212,175,92,.22);
-  border-radius:12px;padding:5px 8px;gap:8px;align-items:center;
-}
 html.landscape-mode #s-pass .home-btn,html.landscape-mode #s-play .home-btn{
   width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
   background:rgba(0,0,0,.24);border:1px solid var(--line);color:var(--gold-hi);
   font-size:1rem;cursor:pointer;
 }
-.rotate-btn{color:var(--gold-hi)!important}
 
-/* ══ Manual force-rotate — used when landscape-mode is on but the
-   device is still physically portrait (real rotation didn't work).
-   Classic CSS trick: absolutely position <body>, swap its width/height
-   to the viewport's height/width, then rotate 90° around its own
-   top-left corner and translate back into view. Because `transform` on
-   an ancestor creates a new containing block for position:fixed
-   descendants, this correctly carries every fixed overlay (rules
-   modal, connection toast, vote box, moon-shot fx) along with it —
-   rotating just #app would leave those misaligned. ══ */
-html.force-rotate{overflow:hidden}
-html.force-rotate body{
-  position:absolute;top:0;left:0;
-  width:100vh;height:100vw;
-  transform-origin:top left;
-  transform:rotate(90deg) translateY(-100%);
-}
+/* ══ Landscape trick-slot captions — each player's name/score sits
+   directly under the slot they play into, replacing both the seat
+   blocks around the table and (for you) the strip above the hand ══ */
+.tcap{display:flex;align-items:baseline;gap:4px;max-width:96px;
+  font-size:.6rem;color:var(--muted);line-height:1.2;white-space:nowrap}
+.tcap .nm{overflow:hidden;text-overflow:ellipsis}
+.tcap .sc{font-family:'Playfair Display',serif;font-weight:700;color:var(--gold-hi)}
+.tcap.mine .nm{color:var(--cream)}
+.tcap.turn{color:var(--gold)}
+.tcap.turn .nm{color:var(--gold-hi)}
+.tcap.off{opacity:.45}
+.tcap .dl{background:#fdfaf2;color:#17181b;border-radius:50%;
+  width:12px;height:12px;display:inline-grid;place-items:center;
+  font-family:'Playfair Display',serif;font-weight:800;font-size:.5rem}
 </style>
 </head>
 <body>
@@ -1710,38 +1699,25 @@ function applyOrientationLock(id){
   }catch(e){}
 }
 
-// Real physical rotation turned out to be unreliable in practice
-// (installed-PWA WebAPKs bake the manifest's orientation in at install
-// time and don't hot-swap it; some phones' OS-level rotation lock blocks
-// it outright) — so landscape mode is driven by a manual toggle, with
-// real rotation only as a bonus when the platform actually cooperates.
-// `landscape-mode` (CSS driven by this) only ever applies on pass/play;
-// `force-rotate` additionally kicks in the CSS transform trick when
-// landscape-mode is active but the device is still physically portrait.
-function loadManualLandscape(){ try{return localStorage.getItem('ddp.forceLandscape')==='1';}catch(e){return false;} }
-function saveManualLandscape(v){ try{localStorage.setItem('ddp.forceLandscape',v?'1':'0');}catch(e){} }
-let manualLandscape=loadManualLandscape();
-function isLandscapeModeActive(){ return manualLandscape||matchMedia('(orientation:landscape)').matches; }
+// Landscape mode follows real physical rotation. An earlier version also
+// had a manual "force landscape" toggle plus a CSS trick that rotated
+// <body> 90° for devices that refused to rotate — both are gone now that
+// rotation works on the target hardware. `landscape-mode` (which all the
+// landscape CSS keys off) only ever applies on the pass/play screens.
+function isLandscapeModeActive(){ return matchMedia('(orientation:landscape)').matches; }
 function updateLandscapeMode(){
   const active=LANDSCAPE_SCREENS.has(currentScreenId)&&isLandscapeModeActive();
-  const physical=matchMedia('(orientation:landscape)').matches;
   document.documentElement.classList.toggle('landscape-mode',active);
-  document.documentElement.classList.toggle('force-rotate',active&&!physical);
 }
-function toggleManualLandscape(){
-  manualLandscape=!manualLandscape;
-  saveManualLandscape(manualLandscape);
+// The class toggle and the markup must flip together — tableHTML() emits
+// a different structure per orientation (seat blocks vs. per-slot
+// captions), so re-render straight away rather than waiting for the
+// debounced 'resize' handler and briefly showing portrait markup under
+// landscape CSS.
+matchMedia('(orientation:landscape)').addEventListener('change',()=>{
   updateLandscapeMode();
-  // corner content (home button vs consolidated panel) depends on
-  // landscape-mode too, so force a fresh render of whichever table
-  // screen is current rather than waiting for the next game event.
-  if(S){
-    if(S.phase==='pass') renderPass(S);
-    else if(S.phase==='passReveal') renderPassReveal(S);
-    else if(S.phase==='play') renderPlay(S);
-  }
-}
-matchMedia('(orientation:landscape)').addEventListener('change',updateLandscapeMode);
+  rerenderTableScreen();
+});
 function send(ev,extra){ socket.emit(ev,Object.assign({code:room,playerIndex:me},extra||{})); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function initial(n){ return (String(n).trim()[0]||'?').toUpperCase(); }
@@ -1885,7 +1861,36 @@ function tableHTML(G,opts){
     return t?cardHTML(t.card,''):'<div class="ghost"></div>';
   };
 
+  // Landscape has no room for seat blocks ringing the table, so each
+  // player's name/score becomes a one-line caption under the slot they
+  // play into — including your own, which is why the strip above the
+  // hand is hidden there too.
+  const cap=pos=>{
+    const i=byPos[pos], p=G.players[i];
+    const tw=typeof p.tricksWon==='number'?p.tricksWon:0;
+    const total=(G.roundBefore&&typeof G.roundBefore[i]==='number')?G.roundBefore[i]:p.score;
+    const cls=[i===active?'turn':'',i===me?'mine':'',
+               (!p.connected&&!p.isAI)?'off':''].join(' ');
+    return `<div class="tcap ${cls}">`
+      +`<span class="nm">${esc(p.name)}</span>`
+      +`<span class="sc">${tw}<small> · ${total}</small></span>`
+      +(i===G.dealer?'<span class="dl">D</span>':'')
+      +`</div>`;
+  };
+
   const actions=opts.actions||{};
+  if(isLandscapeModeActive()){
+    return `
+    <div class="corner corner-lt">${actions.lt||''}</div>
+    <div class="corner corner-rt">${actions.rt||''}</div>
+    <div class="mid">
+      <div class="slot-t">${played(2)}${cap(2)}</div>
+      <div class="slot-l">${played(1)}${cap(1)}</div>
+      <div class="slot-r">${played(3)}${cap(3)}</div>
+      <div class="slot-b">${played(0)}${cap(0)}</div>
+    </div>
+    `;
+  }
   return `
     <div class="corner corner-lt">${actions.lt||''}</div>
     <div class="seat-top">${seat(2)}</div>
@@ -2459,15 +2464,16 @@ socket.on('gameState',G=>{
 // whichever table screen is showing, or the corners stay stale until the
 // next unrelated game event. Debounced since 'resize' can fire repeatedly
 // during the rotation animation itself.
+function rerenderTableScreen(){
+  if(!S) return;
+  if(S.phase==='pass') renderPass(S);
+  else if(S.phase==='passReveal') renderPassReveal(S);
+  else if(S.phase==='play') renderPlay(S);
+}
 let orientationRerenderTimer=null;
 window.addEventListener('resize',()=>{
   clearTimeout(orientationRerenderTimer);
-  orientationRerenderTimer=setTimeout(()=>{
-    if(!S) return;
-    if(S.phase==='pass') renderPass(S);
-    else if(S.phase==='passReveal') renderPassReveal(S);
-    else if(S.phase==='play') renderPlay(S);
-  },150);
+  orientationRerenderTimer=setTimeout(rerenderTableScreen,150);
 });
 
 /* ══════════ LOBBY ══════════ */
@@ -2572,25 +2578,21 @@ function cornerActions(leftHTML,rtExtraHTML){
   // + last-trick eye into one right-side panel, with just a home button
   // on the left — different arrangement of the exact same pieces, not
   // new functionality. Checked at render time rather than via a
-  // permanent mode flag so a mid-game rotation (or manual toggle)
-  // re-renders correctly (see toggleManualLandscape() and the 'resize'
-  // listener that re-invoke the current phase's render function).
-  const rotateBtn=`<button class="tb-round rotate-btn" title="${manualLandscape?'Exit landscape view':'Force landscape view'}" onclick="toggleManualLandscape()">${manualLandscape?'⤢':'⟳'}</button>`;
+  // permanent mode flag so a mid-game rotation re-renders correctly (see
+  // the 'resize' listener that re-invokes the current phase's render).
   if(isLandscapeModeActive()){
     return {
       lt: `<button class="home-btn" title="Leave" onclick="askLeave(this)">🏠</button>`,
       rt: `${leftHTML||''}
            <button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
-           ${rtExtraHTML||''}
-           ${rotateBtn}`,
+           ${rtExtraHTML||''}`,
     };
   }
   return {
     lt: leftHTML||'',
     rt: `<button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
          <button class="tb-round" title="Leave" onclick="askLeave(this)">🚪</button>
-         ${rtExtraHTML||''}
-         ${rotateBtn}`,
+         ${rtExtraHTML||''}`,
   };
 }
 function roundBadgeHTML(G){
@@ -2885,20 +2887,6 @@ function isOverDropZone(x,y,zoneEl){
   const r=zoneEl.getBoundingClientRect(), pad=30;
   return x>=r.left-pad&&x<=r.right+pad&&y>=r.top-pad&&y<=r.bottom+pad;
 }
-// Pointer events always report real screen coordinates, but the manual
-// force-rotate trick (see .force-rotate in <style>) rotates <body> itself
-// via a CSS transform — a translate() applied to a card nested inside
-// that rotated ancestor moves in the ROTATED local axes, not the screen
-// axes, so a naive screen-space delta would drag the card sideways
-// relative to the actual finger. This maps a real screen delta into the
-// correct pre-rotation local delta (inverse of rotate(90deg)) so the
-// card still tracks the finger correctly. Real device rotation (no
-// force-rotate class — the OS itself presents an unrotated landscape
-// viewport) needs no correction at all.
-function screenDeltaToLocal(dx,dy){
-  if(document.documentElement.classList.contains('force-rotate')) return {dx:dy,dy:-dx};
-  return {dx,dy};
-}
 function startCardDrag(e,el){
   dragEl=el;
   dragStartX=e.clientX; dragStartY=e.clientY;
@@ -2907,8 +2895,7 @@ function startCardDrag(e,el){
 }
 function moveCardDrag(e){
   if(!dragEl)return;
-  const d=screenDeltaToLocal(e.clientX-dragStartX,e.clientY-dragStartY);
-  dragEl.style.transform=`translate(${d.dx}px,${d.dy}px) scale(1.06)`;
+  dragEl.style.transform=`translate(${e.clientX-dragStartX}px,${e.clientY-dragStartY}px) scale(1.06)`;
   const mid=document.querySelector('#g-table .mid');
   if(mid) mid.classList.toggle('drop-hover',isOverDropZone(e.clientX,e.clientY,mid));
 }

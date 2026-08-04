@@ -6,15 +6,11 @@ push to the connected branch.
 
 ## Current status / pick up here
 Everything below is shipped and deployed (pushed to `main`, which
-auto-deploys to Railway). The one **unconfirmed** item: landscape table
-mode (manual `⟳` toggle + force-rotate CSS trick + drag-to-play,
-documented under "Frontend UI during play/pass") was just pushed
-(`f235c33`) and hasn't been visually confirmed working on a real device
-yet — real physical rotation already proved unreliable once (see the
-service-worker/WebAPK notes below), so if the user reports the manual
-toggle *itself* still doesn't look right, suspect the `screenDeltaToLocal`
-rotation math or the `.card-slot` z-index stacking first, both flagged
-below as the trickiest parts of that change.
+auto-deploys to Railway). Landscape table mode has been through several
+rounds of on-device iteration on a OnePlus 13R and is being tuned
+against real screenshots — the vertical budget is the fragile part, so
+re-check that the whole pass/play screen still fits one viewport without
+scrolling after touching any landscape sizing.
 
 ## Files
 - `server.js` — game engine, socket handlers, AI, auth endpoints
@@ -147,60 +143,51 @@ below as the trickiest parts of that change.
 - Landscape mode exists only on the pass/play ("table") screens — menu,
   lobby, draw, round-summary, and final are portrait-only by design, not
   yet-todo.
-- **Real physical rotation turned out to be unreliable in practice** and
-  is NOT the primary mechanism: an installed PWA's Android WebAPK bakes
-  the manifest's `orientation` in at install time and doesn't hot-swap
-  it (a manifest-only edit needs `sw.js`'s `CACHE` version bumped too,
-  see below, or it silently never reaches the client at all), and some
-  phones' OS-level rotation-lock setting blocks physical rotation
-  outright regardless of what the app requests. `manifest.json`'s
-  `orientation` is `"any"` (was hard-locked `"portrait"`) and
-  `applyOrientationLock()` in `show()` does a best-effort
-  `screen.orientation.lock('portrait')`/`.unlock()` per screen — this
-  still exists as a bonus for platforms where it works, but isn't
-  load-bearing.
-- **The actual, reliable mechanism is a manual toggle** (`⟳` button in
-  `cornerActions()`, `toggleManualLandscape()`), persisted to
-  `localStorage` (`ddp.forceLandscape`). All landscape CSS is scoped
-  under `html.landscape-mode` (not a plain `@media` query), and
-  `updateLandscapeMode()` keeps that class in sync with `manualLandscape
-  || matchMedia('(orientation:landscape)').matches` — real rotation
-  still works as a bonus when the platform cooperates, but the button is
-  what actually ships the feature reliably. `--cw` is redefined
-  **height**-driven (`8vh`) under `html.landscape-mode` instead of the
-  normal width-driven clamp, since a rotated/force-rotated phone is wide
-  but short and the normal formula would render cards far too large.
-- When `landscape-mode` is active but the device is still physically
-  portrait (real rotation didn't happen), `html.force-rotate` additionally
-  applies the classic CSS trick of rotating `<body>` itself 90° (absolute
-  position, width/height swapped to `100vh`/`100vw`, `transform:rotate(90deg)
-  translateY(-100%)`) — rotating `<body>` specifically (not just `#app`)
-  matters because a `transform` on an ancestor becomes the containing
-  block for `position:fixed` descendants, so this is what correctly
-  carries the rules modal / connection toast / vote box / moon-shot fx
-  along with the rotation too.
-  **This has a real consequence for any drag/pointer math**: pointer
-  events and `getBoundingClientRect()` always report true screen
-  coordinates regardless of the rotation, but a `transform:translate()`
-  applied to a descendant of the rotated `<body>` moves along the
-  *rotated local axes*, not the screen axes. `screenDeltaToLocal()`
-  converts a real screen-space pointer delta into the correct
-  pre-rotation local delta (the inverse of `rotate(90deg)`) before it's
-  used as a drag transform — drop-zone hit-testing itself needs no such
-  correction since it only compares real screen coordinates directly.
-  If any new landscape-mode drag/gesture code is added, route its
-  movement through this same conversion or it'll track sideways under
-  force-rotate specifically (real device rotation has no CSS transform
-  in play and needs no correction).
-- `cornerActions()` (`index.html`) branches on `isLandscapeModeActive()`
-  at render time to merge the round/trick info + rules + last-trick-eye
-  into one right-side panel with a standalone home button on the left,
-  vs. portrait's split lt/rt layout — same underlying buttons/data, just
-  regrouped. Because rotating the phone (or toggling the manual button)
-  doesn't itself produce a new `gameState` broadcast, a debounced
-  `resize` listener plus `toggleManualLandscape()` itself both
-  re-invoke whichever of `renderPass`/`renderPassReveal`/`renderPlay` is
-  current so the corners don't go stale.
+- Landscape is driven purely by **real physical rotation** —
+  `isLandscapeModeActive()` is just
+  `matchMedia('(orientation:landscape)').matches`, and
+  `updateLandscapeMode()` puts `html.landscape-mode` on only when that's
+  true *and* the current screen is pass/play. It's a class rather than a
+  plain `@media` query solely because of that per-screen gating.
+  `manifest.json`'s `orientation` is `"any"` (was hard-locked
+  `"portrait"`) and `applyOrientationLock()` in `show()` does a
+  best-effort `screen.orientation.lock('portrait')`/`.unlock()` per
+  screen, so non-table screens stay portrait.
+- An earlier version added a manual `⟳` toggle (`toggleManualLandscape`,
+  `localStorage` key `ddp.forceLandscape`) plus an `html.force-rotate`
+  CSS trick that rotated `<body>` itself 90°, because rotation was
+  believed unreliable on installed PWAs. **Both are deleted** — rotation
+  works on the target device. `screenDeltaToLocal()` went with them,
+  since it existed only to invert that CSS rotation for drag math. Don't
+  reintroduce the `<body>` rotation without also restoring that pointer
+  conversion: a `translate()` on a descendant of a rotated ancestor
+  moves along the rotated local axes while pointer events report true
+  screen coordinates, so drags track sideways without it.
+- Landscape sizing is **height-first**: `--ch` is `clamp(48px,14vh,96px)`
+  and `--cw` is derived from it at a deliberately broader 1.25 aspect
+  ratio (portrait uses 1.42, width-driven). Both must be declared
+  explicitly — a custom property's `var()` references resolve where the
+  property is *declared*, so overriding only `--cw` here would silently
+  leave `--ch` at its portrait value. This bit us once already.
+- The landscape table is a different structure, not just restyled:
+  `tableHTML()` branches on `isLandscapeModeActive()` and drops the seat
+  blocks ringing the table entirely, rendering each player's name/score
+  as a `.tcap` caption directly under the trick slot they play into —
+  including your own, which is why `.mystrip` is hidden in landscape.
+  Opponents' face-down fans are dropped too. Both corner groups are
+  absolutely positioned against `.table` (home button top-left, info
+  panel centered on the right edge — the top-right corner got clipped by
+  the status bar / rounded screen corner).
+- The landscape hand is a flat row, not a fan: `.card-slot`'s inline
+  rotation/lift transform is overridden to `none` and `--overlap` flips
+  from a large negative value to a positive `8px` gap, so cards sit side
+  by side and don't overlap at all.
+- Because rotating the phone doesn't itself produce a new `gameState`
+  broadcast, both the `matchMedia` change listener and a debounced
+  `resize` listener call `rerenderTableScreen()`. The matchMedia one
+  re-renders *immediately* rather than waiting for the debounce, since
+  the markup (not just the styling) differs per orientation and the gap
+  would briefly show portrait markup under landscape CSS.
 - Landscape play uses a different card-play gesture entirely: drag the
   card to the table center (`isLandscapePlay()`/`startCardDrag()` etc.)
   instead of portrait's hold-and-slide-then-release

@@ -873,54 +873,72 @@ html.landscape-mode #app{
      — in landscape a phone's notch/rounded corners shift to the sides,
      so left/right need covering too, and there's much less vertical
      room to spend on padding to begin with. */
-  padding:calc(env(safe-area-inset-top) + 6px)
+  padding:calc(env(safe-area-inset-top) + 4px)
           calc(env(safe-area-inset-right) + 8px)
-          calc(env(safe-area-inset-bottom) + 6px)
+          calc(env(safe-area-inset-bottom) + 4px)
           calc(env(safe-area-inset-left) + 8px);
+  /* the whole landscape table must fit one screen — never scroll */
+  height:100%;min-height:0;overflow:hidden;
 }
-html.landscape-mode #s-pass,html.landscape-mode #s-play{ --cw:clamp(34px,8vh,60px); }
+/* --ch is normally derived from --cw at :root, and a custom property's
+   var() references resolve where the property is DECLARED, not where
+   it's used — so redefining only --cw here would leave --ch at its
+   stale portrait value. Both are declared explicitly, height-first:
+   landscape is short but very wide, so the height a card may occupy is
+   the real constraint, and the width then follows from a deliberately
+   broader-than-portrait aspect ratio (1.25 vs 1.42). */
+html.landscape-mode #s-pass,html.landscape-mode #s-play{
+  --ch:clamp(48px,11.4vh,86px);
+  --cw:calc(var(--ch) / 1.25);
+}
 html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
-  display:flex;flex-direction:column;
+  display:flex;flex-direction:column;justify-content:center;
   height:100%;
   padding:0;
+  overflow:hidden;
 }
 html.landscape-mode #s-pass .table,html.landscape-mode #s-play .table{
-  padding:4px 8px;gap:3px;flex:0 0 auto;
-  /* widen the middle column well past what the now-compact .mid cluster
-     needs, so justify-self:start on .mid (below) parks the trick pile
-     toward the left-center of the table instead of dead-center under
-     the right-side info panel */
-  grid-template-columns:minmax(58px,1fr) 3fr minmax(58px,1fr);
+  padding:4px 8px;gap:3px 8px;flex:0 0 auto;
+  /* Columns 1-2 hug their content so the left seat, the trick cross and
+     the right seat form one tight cluster sitting left of center; column
+     3 absorbs all remaining width, with the right seat pinned to its
+     start (still beside the cross) and the info panel pushed to its far
+     end. */
+  grid-template-columns:auto auto 1fr;
+  align-content:start;
 }
+html.landscape-mode #s-pass .seat-right,html.landscape-mode #s-play .seat-right{justify-self:start}
 html.landscape-mode #s-pass .table-wrap,html.landscape-mode #s-play .table-wrap{flex:0 0 auto}
-html.landscape-mode #s-pass .avatar,html.landscape-mode #s-play .avatar{width:32px;height:32px;font-size:.85rem}
-html.landscape-mode #s-pass .seat-name,html.landscape-mode #s-play .seat-name{font-size:.56rem;max-width:56px}
-html.landscape-mode #s-pass .seat-score,html.landscape-mode #s-play .seat-score{font-size:.66rem}
-html.landscape-mode #s-pass .seat-score small,html.landscape-mode #s-play .seat-score small{font-size:.56rem}
+html.landscape-mode #s-pass .avatar,html.landscape-mode #s-play .avatar{width:30px;height:30px;font-size:.8rem}
+html.landscape-mode #s-pass .seat-name,html.landscape-mode #s-play .seat-name{font-size:.56rem;max-width:64px}
+html.landscape-mode #s-pass .seat-score,html.landscape-mode #s-play .seat-score{font-size:.62rem}
+html.landscape-mode #s-pass .seat-score small,html.landscape-mode #s-play .seat-score small{font-size:.54rem}
+/* opponents' face-down fans are pure decoration and cost vertical room
+   the landscape table doesn't have — the card-count is already on the
+   seat, so drop the fans entirely here */
+html.landscape-mode #s-pass .seat-cards,html.landscape-mode #s-play .seat-cards,
+html.landscape-mode #s-pass .count-pill,html.landscape-mode #s-play .count-pill{display:none}
 html.landscape-mode #s-pass .mid,html.landscape-mode #s-play .mid{
-  /* Portrait spreads the 4 trick slots into a wide cross with big gaps —
-     fine when there's height to spare, but in landscape that cross eats
-     most of the short vertical space and leaves the table looking mostly
-     empty. Cluster the slots into a tight overlapping stack instead
-     (cells smaller than the cards themselves, so place-items:center
-     pulls neighbors over each other) and pull the whole cluster toward
-     the left side of its grid cell so it doesn't just sit dead-center
-     under a wide, mostly-empty right-side info panel. */
-  min-width:0;min-height:0;gap:0;
-  grid-template-columns:calc(var(--cw)*.6) calc(var(--cw)*.6) calc(var(--cw)*.6);
-  grid-template-rows:calc(var(--ch)*.6) calc(var(--ch)*.6) calc(var(--ch)*.6);
-  justify-self:start;
+  /* exact card-sized cells so a played card matches the cards in hand
+     and neighbouring slots sit side by side instead of overlapping */
+  min-width:0;min-height:0;gap:3px;
+  grid-template-columns:var(--cw) var(--cw) var(--cw);
+  grid-template-rows:var(--ch) var(--ch) var(--ch);
 }
-html.landscape-mode #s-pass .mystrip,html.landscape-mode #s-play .mystrip{margin:2px 0 0;padding:4px 12px;gap:6px}
-html.landscape-mode #s-pass .mystrip .who,html.landscape-mode #s-play .mystrip .who{font-size:.85rem}
-html.landscape-mode #s-pass .mystrip .tot,html.landscape-mode #s-play .mystrip .tot{font-size:1.15rem}
-html.landscape-mode #s-pass .banner,html.landscape-mode #s-play .banner{margin:2px 0 0;font-size:.74rem}
-html.landscape-mode #s-pass .prompt,html.landscape-mode #s-play .prompt{margin:2px 0 0;font-size:.8rem}
-/* the hand gets the rest of the vertical space, cards laid nearly
-   flat in a single row instead of a tight overlapping fan */
+html.landscape-mode #s-pass .mystrip,html.landscape-mode #s-play .mystrip{margin:2px 0 0;padding:3px 12px;gap:6px}
+html.landscape-mode #s-pass .mystrip .who,html.landscape-mode #s-play .mystrip .who{font-size:.8rem}
+html.landscape-mode #s-pass .mystrip .tot,html.landscape-mode #s-play .mystrip .tot{font-size:1rem}
+html.landscape-mode #s-pass .banner,html.landscape-mode #s-play .banner{margin:1px 0 0;font-size:.7rem}
+html.landscape-mode #s-pass .prompt,html.landscape-mode #s-play .prompt{margin:1px 0 0;font-size:.76rem}
+/* Landscape has width to spare and no height to waste, so the hand is a
+   plain flat row: no fan tilt, no lift, and a real positive gap between
+   cards instead of portrait's heavy negative overlap. */
 html.landscape-mode #s-pass .hand,html.landscape-mode #s-play .hand{
-  flex:1 1 auto;padding:6px 10px 6px;
-  --overlap:calc(var(--cw) * -0.12);
+  flex:0 0 auto;padding:4px 10px;align-items:center;
+  --overlap:8px;
+}
+html.landscape-mode #s-pass .hand .card-slot,html.landscape-mode #s-play .hand .card-slot{
+  transform:none !important;
 }
 html.landscape-mode #s-pass #p-go{padding:8px 20px;font-size:.85rem}
 html.landscape-mode #s-pass #p-auto{margin-top:2px}

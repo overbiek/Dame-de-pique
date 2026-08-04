@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <clipPath id="clip_bronze_2"><circle cx="32" cy="32" r="24"/></clipPath>
+    <linearGradient id="fill_bronze_2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e3a86b"/>
+      <stop offset="55%" stop-color="#b06a2e"/>
+      <stop offset="100%" stop-color="#6b3712"/>
+    </linearGradient>
+    <radialGradient id="sheen_bronze_2" cx="35%" cy="20%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="45%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="26.4" fill="none" stroke="#f0b877" stroke-width="1.5" opacity="0.5"/>
+  <g clip-path="url(#clip_bronze_2)">
+    <rect x="-4" y="-4" width="72" height="72" fill="#12141a" opacity="0.55"/>
+    <rect x="-4" y="23.8" width="72" height="36.2" fill="url(#fill_bronze_2)"/>
+    <line x1="16.0" y1="34.6" x2="48.0" y2="34.6" stroke="#ffd9a3" stroke-width="1.6" stroke-linecap="round" clip-path="url(#clip_bronze_2)" opacity="0.85"/><line x1="16.0" y1="45.3" x2="48.0" y2="45.3" stroke="#ffd9a3" stroke-width="1.6" stroke-linecap="round" clip-path="url(#clip_bronze_2)" opacity="0.85"/>
+    <rect x="-4" y="-4" width="72" height="72" fill="url(#sheen_bronze_2)"/>
+  </g>
+  <circle cx="32" cy="32" r="24" fill="none" stroke="#ffd9a3" stroke-width="1.4" opacity="0.9"/>
+</svg>

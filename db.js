@@ -83,6 +83,8 @@ async function ensureSchema() {
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS ended_negative INTEGER NOT NULL DEFAULT 0;`);
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS win_streak_current INTEGER NOT NULL DEFAULT 0;`);
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS win_streak_best INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS mmr INTEGER NOT NULL DEFAULT 1000;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS placement_games_played INTEGER NOT NULL DEFAULT 0;`);
 }
 
 function toPublic(row) {
@@ -232,9 +234,54 @@ async function getStats(accountId) {
   };
 }
 
+// ── Ranked ─────────────────────────────────────────────────────
+// mmr/placement_games_played live on the same one-row-per-account `stats`
+// table as everything else here, same lazy-upsert-on-first-write pattern.
+
+async function getOrCreateRankedProfile(accountId) {
+  const { rows } = await pool.query(
+    `SELECT mmr, placement_games_played FROM stats WHERE account_id = $1`,
+    [accountId]
+  );
+  const s = rows[0];
+  return {
+    mmr: s ? s.mmr : 1000,
+    placementGamesPlayed: s ? s.placement_games_played : 0,
+  };
+}
+
+async function applyRankedMmr(accountId, mmrDelta) {
+  const { rows } = await pool.query(
+    `INSERT INTO stats (account_id, mmr, placement_games_played)
+     VALUES ($1, GREATEST(0, 1000 + $2), 1)
+     ON CONFLICT (account_id) DO UPDATE SET
+       mmr = GREATEST(0, stats.mmr + $2),
+       placement_games_played = LEAST(5, stats.placement_games_played + 1),
+       updated_at = now()
+     RETURNING mmr, placement_games_played`,
+    [accountId, mmrDelta]
+  );
+  const s = rows[0];
+  return { mmr: s.mmr, placementGamesPlayed: s.placement_games_played };
+}
+
+async function getLeaderboard(limit = 50) {
+  const { rows } = await pool.query(
+    `SELECT a.nickname, a.avatar, s.mmr, s.placement_games_played
+     FROM stats s JOIN accounts a ON a.id = s.account_id
+     ORDER BY s.mmr DESC LIMIT $1`,
+    [limit]
+  );
+  return rows.map(r => ({
+    nickname: r.nickname, avatar: r.avatar, mmr: r.mmr,
+    placementGamesPlayed: r.placement_games_played,
+  }));
+}
+
 module.exports = {
   pool, ensureSchema, toPublic,
   createAccount, findAccountByUsername, findAccountById,
   createSession, findAccountByToken, deleteSession, updateProfile,
   recordGameStarted, recordTrick, recordRound, recordGameFinished, recordQueenTaken, getStats,
+  getOrCreateRankedProfile, applyRankedMmr, getLeaderboard,
 };

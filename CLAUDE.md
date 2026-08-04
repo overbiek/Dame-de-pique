@@ -98,9 +98,38 @@ push to the connected branch.
   production data-loss bug (silent dropped writes to Railway's DB), keep
   it
 
-## Known placeholders (UI exists, no backend yet)
-- Ranked Multiplayer tile
-- Rank leaderboard tile
+## Ranked Multiplayer (needs DATABASE_URL, same as accounts/stats)
+- Hidden `mmr` (starts 1000) + `placement_games_played` (first 5 ranked
+  games), stored on the same `stats` row as everything else. Visible rank
+  is always derived from `mmr` via `rankForMmr`/`RANK_TABLE` in
+  `server.js` — never stored separately, never computed client-side (the
+  client only renders whatever `tier`/`division`/`label` the server sends,
+  e.g. in `rankedProfileOk`/`rankedResult`/`leaderboardOk`)
+- `computeMmrChanges` is intentionally isolated (pure, single function) so
+  the formula can later become Elo-style
+  (`K × (normalizedScore - expectedPerformance)`) without touching
+  matchmaking, storage, or the client
+- Matchmaking is an in-memory `rankedQueue` array + a 2s `setInterval`
+  tick (`server.js`) — expanding-radius, sorted-by-mmr sliding window.
+  Lost on server restart/redeploy, same as in-progress casual rooms
+  already are; no persistence attempted
+- Ranked rooms reuse the normal `rooms`/`G` object with `G.ranked = true`
+  rather than a separate game-state system — this is why `setAI` and
+  code-based `joinRoom` are hard-rejected when `G.ranked`, and why
+  `leaveRoom` has a ranked-specific branch
+- Ranked never uses AI seats, but a disconnected (or explicitly left)
+  ranked player gets a 15s grace period (`RANKED_RECONNECT_MS`,
+  `scheduleRankedTakeover`/`clearRankedTakeover`) before their seat is
+  handed to the computer so the other three aren't stuck — `rejoin` flips
+  `isAI` back to `false` and cancels the timer if they come back. This is
+  different from casual play, where an explicit "leave" mid-game converts
+  the seat to AI immediately, permanently
+- Rank badge art lives in `public/badges/*.svg` (22 files: `bronze-1`
+  through `grandmaster-3`, plus `legend`), sourced from a Rocket-League-
+  style badge pack whose file names (`champion_*`, `grand_champion_*`,
+  `supersonic_legend`) don't match this game's tier names (`master`,
+  `grandmaster`, `legend`) — already renamed on disk, but keep that
+  mapping in mind if new badge assets are ever dropped in
 
 ## Not implemented
 - Password reset (no email service configured)

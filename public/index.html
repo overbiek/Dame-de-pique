@@ -533,6 +533,23 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   padding:3px 8px;border-radius:999px;flex:0 0 auto}
 .tag.you{background:rgba(63,191,136,.16);color:#8fe0be;border:1px solid rgba(63,191,136,.3)}
 .tag.bot{background:rgba(108,182,255,.14);color:#a8d4ff;border:1px solid rgba(108,182,255,.3)}
+.tag.bronze{background:rgba(184,115,51,.16);color:#e8b98a;border:1px solid rgba(184,115,51,.35)}
+.tag.silver{background:rgba(192,196,204,.14);color:#dfe3e8;border:1px solid rgba(192,196,204,.32)}
+.tag.gold{background:rgba(212,175,92,.16);color:var(--gold-hi);border:1px solid rgba(212,175,92,.35)}
+.tag.platinum{background:rgba(90,200,180,.14);color:#bdf0e6;border:1px solid rgba(90,200,180,.32)}
+.tag.diamond{background:rgba(108,182,255,.14);color:#c9e6ff;border:1px solid rgba(108,182,255,.32)}
+.tag.master{background:rgba(160,110,220,.16);color:#e3cfff;border:1px solid rgba(160,110,220,.35)}
+.tag.grandmaster{background:rgba(224,90,120,.16);color:#ffd0dd;border:1px solid rgba(224,90,120,.35)}
+.tag.legend{background:linear-gradient(135deg,rgba(212,175,92,.28),rgba(255,255,255,.14));color:var(--gold-hi);border:1px solid rgba(212,175,92,.5)}
+
+/* ══ Ranked leaderboard ══ */
+.rank-badge{vertical-align:middle;display:inline-block}
+.lb-table td .rank-badge{margin-right:5px;margin-bottom:-4px}
+.lb-table{width:100%;border-collapse:collapse;font-size:.85rem}
+.lb-table th{text-align:left;color:var(--faint);font-size:.68rem;text-transform:uppercase;
+  letter-spacing:.05em;padding:0 8px 6px;border-bottom:1px solid var(--line)}
+.lb-table td{padding:7px 8px;border-bottom:1px solid var(--line)}
+.lb-table tr.me td{background:rgba(212,175,92,.08)}
 .mini-btn{font:600 .72rem 'DM Sans',sans-serif;padding:7px 13px;border-radius:999px;cursor:pointer;
   border:1px solid rgba(108,182,255,.32);background:rgba(108,182,255,.10);color:#a8d4ff;flex:0 0 auto}
 .mini-btn.on{background:rgba(108,182,255,.26);border-color:rgba(108,182,255,.55)}
@@ -835,16 +852,16 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
         <div class="tile-arrow">›</div>
       </button>
 
-      <button class="tile" onclick="show('ranked')">
+      <button class="tile" onclick="goRanked()">
         <div class="tile-icon">⚔️</div>
         <div class="tile-body">
-          <div class="tile-title">Ranked Multiplayer <span class="pill-tag soon">Soon</span></div>
+          <div class="tile-title">Ranked Multiplayer</div>
           <div class="tile-sub">Humans only &middot; climb the ladder</div>
         </div>
         <div class="tile-arrow">›</div>
       </button>
 
-      <button class="tile" onclick="show('rank')">
+      <button class="tile" onclick="goRank()">
         <div class="tile-icon">🏆</div>
         <div class="tile-body">
           <div class="tile-title">Rank</div>
@@ -929,37 +946,73 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   </div>
 </section>
 
-<!-- ═══ RANKED MULTIPLAYER (placeholder) ═══ -->
+<!-- ═══ RANKED MULTIPLAYER ═══ -->
 <section id="s-ranked" class="screen">
   <div class="center-wrap" style="max-width:440px">
     <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
     <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Ranked Multiplayer</h2>
     <p class="tagline">Humans only &middot; no AI seats</p>
-    <div class="empty-state">
-      <div class="empty-icon">⚔️</div>
-      <h3>Coming soon</h3>
-      <p>Ranked will queue you with three other real players for a match that
-         counts &mdash; no bots, a proper rating, and a season leaderboard.
-         It's being built next.</p>
+
+    <div id="ranked-noaccount" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">⚔️</div>
+        <h3>Log in to play Ranked</h3>
+        <p>Ranked follows your account, not this device &mdash; log in or create one to start climbing the ladder.</p>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="goPersonal()" style="margin-top:8px">Go to My Account</button>
     </div>
-    <button class="btn btn-primary btn-block" disabled style="margin-top:8px">Find match</button>
+
+    <div id="ranked-home" style="display:none">
+      <div class="empty-state" id="ranked-home-status">
+        <div class="empty-icon">⚔️</div>
+        <h3 id="ranked-home-title">Loading&hellip;</h3>
+        <p id="ranked-home-sub"></p>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="startRankedQueue()">Find match</button>
+    </div>
+
+    <div id="ranked-queue" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">⏳</div>
+        <h3>Searching for a match&hellip;</h3>
+        <p id="ranked-queue-status">Waiting 0s &middot; range &plusmn;100 MMR</p>
+      </div>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="cancelRankedQueue()">Cancel</button>
+    </div>
+
     <div class="exit-row" style="margin-top:14px">
       <button class="btn btn-ghost btn-sm" onclick="goCasual()">Play casual instead</button>
     </div>
   </div>
 </section>
 
-<!-- ═══ RANK / LEADERBOARD (placeholder) ═══ -->
+<!-- ═══ RANK / LEADERBOARD ═══ -->
 <section id="s-rank" class="screen">
   <div class="center-wrap" style="max-width:440px">
     <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
     <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Rank</h2>
-    <p class="tagline">Season leaderboard</p>
-    <div class="empty-state">
-      <div class="empty-icon">🏆</div>
-      <h3>No ranked matches yet</h3>
-      <p>Once Ranked Multiplayer launches, everyone's rating and the full
-         leaderboard will show up right here &mdash; including where you stand.</p>
+    <p class="tagline">Leaderboard</p>
+
+    <div id="rank-loading">
+      <div class="empty-state">
+        <div class="empty-icon">⏳</div>
+        <h3>Loading leaderboard&hellip;</h3>
+      </div>
+    </div>
+
+    <div id="rank-empty" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">🏆</div>
+        <h3>No ranked matches yet</h3>
+        <p>Once someone finishes a placement run, ratings and the leaderboard will show up right here.</p>
+      </div>
+    </div>
+
+    <div id="rank-content" style="display:none">
+      <table class="lb-table">
+        <thead><tr><th>#</th><th>Player</th><th>Rank</th><th>MMR</th></tr></thead>
+        <tbody id="rank-rows"></tbody>
+      </table>
     </div>
   </div>
 </section>
@@ -1177,6 +1230,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   <div class="center-wrap" style="padding-top:2vh;max-width:480px;text-align:left">
     <h2>Final standings</h2>
     <div id="f-body"></div>
+    <div id="f-ranked" style="display:none"></div>
     <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="newGame()">New game</button>
   </div>
 </section>
@@ -1570,6 +1624,127 @@ socket.on('joined',d=>{
   room=d.code; me=d.playerIndex; host=d.isHost; token=d.token;
   saveSession();
   $('l-code').textContent=room;
+});
+
+/* ══════════ RANKED ══════════ */
+let rankedQueued=false;
+let lastRankedResult=null;
+function badgeSrc(rank){
+  if(!rank) return '';
+  const file=rank.division?`${rank.tier.toLowerCase()}-${rank.division}`:rank.tier.toLowerCase();
+  return `/badges/${file}.svg`;
+}
+function badgeImg(rank,size){
+  if(!rank) return '';
+  return `<img class="rank-badge" src="${badgeSrc(rank)}" alt="${esc(rank.label)}" width="${size||28}" height="${size||28}"/>`;
+}
+
+function goRanked(){
+  show('ranked');
+  $('ranked-noaccount').style.display='none';
+  $('ranked-home').style.display='none';
+  $('ranked-queue').style.display='none';
+  if(!account){ $('ranked-noaccount').style.display='block'; return; }
+  if(rankedQueued){ $('ranked-queue').style.display='block'; return; }
+  $('ranked-home').style.display='block';
+  $('ranked-home-title').textContent='Loading…';
+  $('ranked-home-sub').textContent='';
+  socket.emit('getRankedProfile',{token:accountToken});
+}
+function startRankedQueue(){
+  if(!account) return;
+  rankedQueued=true;
+  $('ranked-home').style.display='none';
+  $('ranked-queue').style.display='block';
+  $('ranked-queue-status').textContent='Waiting 0s · range ±100 MMR';
+  socket.emit('joinRankedQueue',{accountToken});
+}
+function cancelRankedQueue(){
+  rankedQueued=false;
+  socket.emit('leaveRankedQueue');
+  goRanked();
+}
+socket.on('rankedQueueUpdate',d=>{
+  if(!rankedQueued) return;
+  const secs=Math.round(d.elapsedMs/1000);
+  $('ranked-queue-status').textContent=`Waiting ${secs}s · range ±${d.radius} MMR · ${d.queueSize} in queue`;
+});
+socket.on('rankedProfileOk',d=>{
+  if(!$('s-ranked').classList.contains('active')) return;
+  const icon=$('ranked-home-status').querySelector('.empty-icon');
+  if(d.isPlacement){
+    icon.textContent='⚔️';
+    $('ranked-home-title').textContent=`Placement Match ${d.placementGamesPlayed+1}/5`;
+    $('ranked-home-sub').textContent='Matchmaking already uses your real rating — your rank just stays hidden until placements finish.';
+  }else{
+    icon.innerHTML=badgeImg(d.rank,56);
+    $('ranked-home-title').textContent=d.rank.label;
+    $('ranked-home-sub').textContent=`${d.mmr} MMR`;
+  }
+});
+socket.on('rankedProfileError',d=>{
+  if(!$('s-ranked').classList.contains('active')) return;
+  $('ranked-home-title').textContent="Couldn't load your rank";
+  $('ranked-home-sub').textContent=d.msg;
+});
+socket.on('rankedMatchFound',d=>{
+  rankedQueued=false;
+  room=d.code; me=d.playerIndex; host=d.isHost; token=d.token;
+  saveSession();
+});
+socket.on('rankedResult',d=>{
+  lastRankedResult=d;
+  renderRankedResult();
+});
+function renderRankedResult(){
+  const el=$('f-ranked');
+  if(!lastRankedResult){ el.style.display='none'; return; }
+  const d=lastRankedResult;
+  const sign=d.mmrChange>0?'+':'';
+  let h=`<div class="empty-state" style="padding-top:14px">`;
+  if(d.isPlacement){
+    h+=`<div class="empty-icon">⚔️</div>
+        <h3>Placement Match ${d.placementGamesPlayed}/5</h3>
+        <p>MMR ${sign}${d.mmrChange} &middot; now ${d.mmr}</p>`;
+  }else{
+    h+=`<div class="empty-icon">${badgeImg(d.rank,56)}</div>
+        <h3><span class="tag ${d.rank.tier.toLowerCase()}">${esc(d.rank.label)}</span></h3>
+        <p>MMR ${sign}${d.mmrChange} &middot; now ${d.mmr}</p>`;
+  }
+  h+='</div>';
+  el.innerHTML=h;
+  el.style.display='block';
+  lastRankedResult=null;
+}
+
+function goRank(){
+  show('rank');
+  $('rank-loading').style.display='block';
+  $('rank-empty').style.display='none';
+  $('rank-content').style.display='none';
+  socket.emit('getLeaderboard');
+}
+socket.on('leaderboardOk',d=>{
+  if(!$('s-rank').classList.contains('active')) return;
+  $('rank-loading').style.display='none';
+  if(!d.rows.length){ $('rank-empty').style.display='block'; return; }
+  $('rank-content').style.display='block';
+  $('rank-rows').innerHTML=d.rows.map((r,i)=>{
+    const rankLabel=r.isPlacement?`Placement ${r.placementGamesPlayed}/5`:r.rank.label;
+    const badge=r.isPlacement?'':badgeImg(r.rank,20);
+    const mine=account&&r.nickname===account.nickname;
+    return `<tr class="${mine?'me':''}">
+      <td>${i+1}</td>
+      <td>${r.avatar||''} ${esc(r.nickname)}</td>
+      <td>${badge}${esc(rankLabel)}</td>
+      <td>${r.mmr}</td>
+    </tr>`;
+  }).join('');
+});
+socket.on('leaderboardError',d=>{
+  if(!$('s-rank').classList.contains('active')) return;
+  $('rank-loading').style.display='none';
+  $('rank-empty').style.display='block';
 });
 socket.on('errorMsg',d=>{
   const target=$('s-lobby').classList.contains('active')?'err-lobby':'err-landing';

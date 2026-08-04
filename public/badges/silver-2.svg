@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <clipPath id="clip_silver_2"><polygon points="32.00,6.00 38.17,23.51 56.73,23.97 41.99,35.24 47.28,53.03 32.00,42.50 16.72,53.03 22.01,35.24 7.27,23.97 25.83,23.51"/></clipPath>
+    <linearGradient id="fill_silver_2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f4f7f9"/>
+      <stop offset="55%" stop-color="#c3ccd3"/>
+      <stop offset="100%" stop-color="#7c848c"/>
+    </linearGradient>
+    <radialGradient id="sheen_silver_2" cx="35%" cy="20%" r="65%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="45%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <polygon points="32.00,3.66 38.73,22.74 58.95,23.24 42.88,35.54 48.66,54.93 32.00,43.45 15.34,54.93 21.12,35.54 5.05,23.24 25.27,22.74" fill="none" stroke="#dfe6ea" stroke-width="1.5" opacity="0.5"/>
+  <g clip-path="url(#clip_silver_2)">
+    <rect x="-4" y="-4" width="72" height="72" fill="#12141a" opacity="0.55"/>
+    <rect x="-4" y="21.5" width="72" height="35.5" fill="url(#fill_silver_2)"/>
+    <line x1="16.0" y1="32.0" x2="48.0" y2="32.0" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" clip-path="url(#clip_silver_2)" opacity="0.85"/><line x1="16.0" y1="42.5" x2="48.0" y2="42.5" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" clip-path="url(#clip_silver_2)" opacity="0.85"/>
+    <rect x="-4" y="-4" width="72" height="72" fill="url(#sheen_silver_2)"/>
+  </g>
+  <polygon points="32.00,6.00 38.17,23.51 56.73,23.97 41.99,35.24 47.28,53.03 32.00,42.50 16.72,53.03 22.01,35.24 7.27,23.97 25.83,23.51" fill="none" stroke="#ffffff" stroke-width="1.4" opacity="0.9"/>
+</svg>

@@ -69,8 +69,13 @@ const AUTO_ADVANCE_MS = 60 * 1000;      // host has a minute, then it moves on b
 const IDLE_CLOSE_MS   = 10 * 60 * 1000; // nothing happening at all
 const EMPTY_CLOSE_MS   = 2 * 60 * 1000; // nobody connected
 const END_VOTE_MS      = 60 * 1000;     // how long an "end early" request stays open
+const RANKED_MIN_RADIUS = 100;
+const RANKED_RADIUS_STEP = 100;
+const RANKED_RADIUS_GROW_MS = 8000; // how often a queued player's search radius widens
+const RANKED_RECONNECT_MS = 15 * 1000; // grace period before a disconnected ranked seat is handed to AI
 
 const rooms = {};
+const rankedQueue = []; // { socketId, accountId, name, avatar, mmr, placementGamesPlayed, queuedAt }
 
 // ── Helpers ─────────────────────────────────────────────────────
 function makeCode() {
@@ -891,6 +896,59 @@ function aiChoose(G, pi) {
   }
 }
 
+// ── Ranked: MMR & rank ladder (pure — isolated so the MMR formula can be
+// swapped for an Elo-style K × (normalizedScore - expectedPerformance)
+// later without touching matchmaking or any caller) ─────────────
+function computeMmrChanges(scores) {
+  const positives = scores.filter(s => s > 0);
+  const avgPositive = positives.length
+    ? positives.reduce((a, b) => a + b, 0) / positives.length
+    : 1; // nobody scored positive — fall back so normalizedScore just equals the raw score
+  return scores.map(score => {
+    const normalized = score / avgPositive;
+    const raw = 25 * normalized;
+    return Math.round(Math.max(-40, Math.min(40, raw)));
+  });
+}
+
+const RANK_TABLE = [
+  { mmr: 0,    tier: 'Bronze',      div: 1 },
+  { mmr: 167,  tier: 'Bronze',      div: 2 },
+  { mmr: 334,  tier: 'Bronze',      div: 3 },
+  { mmr: 500,  tier: 'Silver',      div: 1 },
+  { mmr: 667,  tier: 'Silver',      div: 2 },
+  { mmr: 834,  tier: 'Silver',      div: 3 },
+  { mmr: 1000, tier: 'Gold',        div: 1 },
+  { mmr: 1167, tier: 'Gold',        div: 2 },
+  { mmr: 1334, tier: 'Gold',        div: 3 },
+  { mmr: 1500, tier: 'Platinum',    div: 1 },
+  { mmr: 1667, tier: 'Platinum',    div: 2 },
+  { mmr: 1834, tier: 'Platinum',    div: 3 },
+  { mmr: 2000, tier: 'Diamond',     div: 1 },
+  { mmr: 2167, tier: 'Diamond',     div: 2 },
+  { mmr: 2334, tier: 'Diamond',     div: 3 },
+  { mmr: 2500, tier: 'Master',      div: 1 },
+  { mmr: 2667, tier: 'Master',      div: 2 },
+  { mmr: 2834, tier: 'Master',      div: 3 },
+  { mmr: 3000, tier: 'Grandmaster', div: 1 },
+  { mmr: 3167, tier: 'Grandmaster', div: 2 },
+  { mmr: 3334, tier: 'Grandmaster', div: 3 },
+  { mmr: 3500, tier: 'Legend',      div: null },
+];
+const DIV_ROMAN = { 1: 'I', 2: 'II', 3: 'III' };
+function rankForMmr(mmr) {
+  let best = RANK_TABLE[0];
+  for (const row of RANK_TABLE) {
+    if (mmr >= row.mmr) best = row; else break;
+  }
+  return {
+    tier: best.tier,
+    division: best.div,
+    label: best.div ? `${best.tier} ${DIV_ROMAN[best.div]}` : best.tier,
+    mmr,
+  };
+}
+
 // ── Room lifecycle ──────────────────────────────────────────────
 function sanitizeAvatar(a) {
   const s = String(a || '').trim().slice(0, 8);
@@ -902,6 +960,8 @@ function createRoom(hostName, hostAvatar, hostAccountId) {
   rooms[code] = {
     code,
     phase: 'lobby',
+    ranked: false,
+    rankedTimers: [null, null, null, null], // per-seat disconnect→AI-takeover timeout handles (ranked only)
     players: Array.from({ length: 4 }, (_, i) => ({
       name: i === 0 ? hostName : 'Empty seat',
       avatar: i === 0 ? sanitizeAvatar(hostAvatar) : null,
@@ -939,6 +999,56 @@ function createRoom(hostName, hostAvatar, hostAccountId) {
   return rooms[code];
 }
 
+// ── Ranked matchmaking ────────────────────────────────────────────
+function formRankedMatch(group) {
+  const G = createRoom(group[0].name, group[0].avatar, group[0].accountId);
+  G.ranked = true;
+  for (let i = 0; i < 4; i++) {
+    const p = group[i];
+    const token = makeToken();
+    Object.assign(G.players[i], {
+      name: p.name, avatar: sanitizeAvatar(p.avatar), accountId: p.accountId,
+      socketId: p.socketId, token, connected: true, isAI: false,
+    });
+    if (i === 0) { G.hostSocket = p.socketId; G.hostToken = token; }
+    const sock = io.sockets.sockets.get(p.socketId);
+    if (sock) sock.join(G.code);
+    io.to(p.socketId).emit('rankedMatchFound', { code: G.code, playerIndex: i, token, isHost: i === 0 });
+    if (p.accountId) trackStat(() => db.recordGameStarted(p.accountId));
+  }
+  startDraw(G, 1);
+}
+
+function radiusFor(entry, now) {
+  return RANKED_MIN_RADIUS + RANKED_RADIUS_STEP * Math.floor((now - entry.queuedAt) / RANKED_RADIUS_GROW_MS);
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const entry of rankedQueue) {
+    io.to(entry.socketId).emit('rankedQueueUpdate', {
+      elapsedMs: now - entry.queuedAt,
+      radius: radiusFor(entry, now),
+      queueSize: rankedQueue.length,
+    });
+  }
+  if (rankedQueue.length < 4) return;
+  const sorted = [...rankedQueue].sort((a, b) => a.mmr - b.mmr);
+  for (let i = 0; i <= sorted.length - 4; i++) {
+    const group = sorted.slice(i, i + 4);
+    const spread = group[group.length - 1].mmr - group[0].mmr;
+    const tightestRadius = Math.min(...group.map(p => radiusFor(p, now)));
+    if (spread <= tightestRadius) {
+      for (const p of group) {
+        const idx = rankedQueue.findIndex(q => q.socketId === p.socketId);
+        if (idx !== -1) rankedQueue.splice(idx, 1);
+      }
+      formRankedMatch(group);
+      break; // queue mutated — re-scan cleanly next tick
+    }
+  }
+}, 2000);
+
 // ── Auto-advance & room closing ─────────────────────────────────
 function clearAuto(G) {
   if (G.autoTimer) clearTimeout(G.autoTimer);
@@ -953,8 +1063,30 @@ function armAuto(G, fn, ms) {
 function closeRoom(G, reason) {
   clearAuto(G);
   clearVote(G);
+  for (let i = 0; i < 4; i++) clearRankedTakeover(G, i);
   io.to(G.code).emit('roomClosed', { reason });
   delete rooms[G.code];
+}
+
+// Ranked has no AI seats by choice — but a disconnected human still gets a
+// short grace period to come back before the game hands their seat to the
+// computer so the other three aren't stuck waiting indefinitely.
+function clearRankedTakeover(G, idx) {
+  if (G.rankedTimers && G.rankedTimers[idx]) {
+    clearTimeout(G.rankedTimers[idx]);
+    G.rankedTimers[idx] = null;
+  }
+}
+function scheduleRankedTakeover(G, idx) {
+  clearRankedTakeover(G, idx);
+  G.rankedTimers[idx] = setTimeout(() => {
+    G.rankedTimers[idx] = null;
+    const p = G.players[idx];
+    if (!rooms[G.code] || p.connected || p.isAI) return;
+    p.isAI = true;
+    resumeAfterSeatChange(G);
+    broadcastRoom(G);
+  }, RANKED_RECONNECT_MS);
 }
 
 // Re-arm whatever timer belongs to the phase we're sitting in.
@@ -996,7 +1128,29 @@ function cancelVote(G, msg) {
 // Called from both ways a game can actually conclude: the natural
 // 16-round finish and an early-end vote. Either way it's a real, complete
 // game as far as stats are concerned.
+function applyRankedResult(G) {
+  if (!G.ranked) return;
+  const scores = G.players.map(p => p.score);
+  const deltas = computeMmrChanges(scores);
+  for (let i = 0; i < 4; i++) {
+    const acctId = G.players[i].accountId;
+    if (!acctId) continue;
+    const socketId = G.players[i].socketId;
+    trackStat(async () => {
+      const { mmr, placementGamesPlayed } = await db.applyRankedMmr(acctId, deltas[i]);
+      const isPlacement = placementGamesPlayed < 5;
+      if (socketId) {
+        io.to(socketId).emit('rankedResult', {
+          mmrChange: deltas[i], mmr, placementGamesPlayed, isPlacement,
+          rank: isPlacement ? null : rankForMmr(mmr),
+        });
+      }
+    });
+  }
+}
+
 function recordGameFinishedForAll(G) {
+  applyRankedResult(G);
   for (let i = 0; i < 4; i++) {
     const acctId = G.players[i].accountId;
     if (!acctId) continue;
@@ -1039,6 +1193,7 @@ function publicState(G) {
   return {
     code: G.code,
     phase: G.phase,
+    ranked: !!G.ranked,
     players: G.players.map((p, i) => ({
       name: p.name, avatar: p.avatar || null, isAI: p.isAI, score: p.score,
       roundScore: p.score - (G.roundBefore[i] || 0),
@@ -1438,6 +1593,60 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('getRankedProfile', async ({ token }) => {
+    if (!DB_ENABLED || !token) return socket.emit('rankedProfileError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('rankedProfileError', { msg: 'Your session expired — log in again.' });
+      const { mmr, placementGamesPlayed } = await db.getOrCreateRankedProfile(account.id);
+      const isPlacement = placementGamesPlayed < 5;
+      socket.emit('rankedProfileOk', {
+        mmr, placementGamesPlayed, isPlacement,
+        rank: isPlacement ? null : rankForMmr(mmr),
+      });
+    } catch (e) {
+      console.error('getRankedProfile error:', e.message);
+      socket.emit('rankedProfileError', { msg: 'Could not load your rank. Try again.' });
+    }
+  });
+
+  socket.on('getLeaderboard', async () => {
+    if (!DB_ENABLED) return socket.emit('leaderboardError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    try {
+      const rows = (await db.getLeaderboard(50)).map(r => {
+        const isPlacement = r.placementGamesPlayed < 5;
+        return {
+          nickname: r.nickname, avatar: r.avatar, mmr: r.mmr,
+          isPlacement, placementGamesPlayed: r.placementGamesPlayed,
+          rank: isPlacement ? null : rankForMmr(r.mmr),
+        };
+      });
+      socket.emit('leaderboardOk', { rows });
+    } catch (e) {
+      console.error('getLeaderboard error:', e.message);
+      socket.emit('leaderboardError', { msg: 'Could not load the leaderboard. Try again.' });
+    }
+  });
+
+  socket.on('joinRankedQueue', async ({ accountToken }) => {
+    if (!DB_ENABLED) return socket.emit('errorMsg', { msg: 'Ranked isn\'t available on this server yet.' });
+    const acct = await lookupAccountByToken(accountToken);
+    if (!acct) return socket.emit('errorMsg', { msg: 'Log in to play ranked.' });
+    if (rankedQueue.some(q => q.socketId === socket.id)) return;
+    const { mmr, placementGamesPlayed } = await db.getOrCreateRankedProfile(acct.id);
+    rankedQueue.push({
+      socketId: socket.id, accountId: acct.id,
+      name: acct.nickname, avatar: acct.avatar,
+      mmr, placementGamesPlayed, queuedAt: Date.now(),
+    });
+    socket.emit('rankedQueueUpdate', { elapsedMs: 0, radius: RANKED_MIN_RADIUS, queueSize: rankedQueue.length });
+  });
+
+  socket.on('leaveRankedQueue', () => {
+    const idx = rankedQueue.findIndex(q => q.socketId === socket.id);
+    if (idx !== -1) rankedQueue.splice(idx, 1);
+  });
+
   socket.on('createRoom', async ({ name, avatar, accountToken }) => {
     const clean = String(name || '').trim().slice(0, 16) || 'Player';
     const acct = await lookupAccountByToken(accountToken);
@@ -1456,6 +1665,7 @@ io.on('connection', (socket) => {
   socket.on('joinRoom', async ({ code, name, avatar, accountToken }) => {
     const G = findRoom(code);
     if (!G) return socket.emit('errorMsg', { msg: 'Room not found. Check the code.' });
+    if (G.ranked) return socket.emit('errorMsg', { msg: 'Ranked seats are matched automatically.' });
     if (G.phase !== 'lobby') return socket.emit('errorMsg', { msg: 'That game has already started.' });
 
     let slot = -1;
@@ -1487,6 +1697,7 @@ io.on('connection', (socket) => {
     if (idx === -1) return socket.emit('rejoinFailed');
     G.players[idx].socketId = socket.id;
     G.players[idx].connected = true;
+    if (G.ranked) { clearRankedTakeover(G, idx); G.players[idx].isAI = false; }
     const host = G.hostToken === token;
     if (host) G.hostSocket = socket.id;
     socket.join(G.code);
@@ -1496,7 +1707,7 @@ io.on('connection', (socket) => {
 
   socket.on('setAI', ({ code, slotIndex, isAI }) => {
     const G = findRoom(code);
-    if (!G || G.phase !== 'lobby' || !isHostSocket(G, socket)) return;
+    if (!G || G.ranked || G.phase !== 'lobby' || !isHostSocket(G, socket)) return;
     if (slotIndex < 1 || slotIndex > 3) return;
     const p = G.players[slotIndex];
     if (p.connected && !p.isAI) return; // a human is sitting there
@@ -1620,6 +1831,13 @@ io.on('connection', (socket) => {
         name: 'Empty seat', avatar: null, accountId: null, isAI: false, socketId: null, token: null,
         connected: false, score: 0, hand: [], tricks: [], hasPassed: false,
       });
+    } else if (G.ranked) {
+      // Ranked seats are never handed straight to AI — treat an explicit
+      // leave like a disconnect: reserved, human-rejoinable by token, with
+      // the same 15s grace period before the computer takes over.
+      G.players[idx].socketId = null;
+      G.players[idx].connected = false;
+      scheduleRankedTakeover(G, idx);
     } else {
       // Mid-game: hand the seat to the computer so the others can finish
       Object.assign(G.players[idx], { isAI: true, avatar: null, accountId: null, connected: true, socketId: null, token: null });
@@ -1649,12 +1867,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    const qIdx = rankedQueue.findIndex(q => q.socketId === socket.id);
+    if (qIdx !== -1) rankedQueue.splice(qIdx, 1);
     for (const code in rooms) {
       const G = rooms[code];
-      for (const p of G.players) {
+      for (let i = 0; i < 4; i++) {
+        const p = G.players[i];
         if (p.socketId === socket.id) {
           p.socketId = null;
           p.connected = false;
+          if (G.ranked && G.phase !== 'lobby' && G.phase !== 'final') scheduleRankedTakeover(G, i);
           broadcastRoom(G);
         }
       }

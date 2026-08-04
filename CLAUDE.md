@@ -52,6 +52,43 @@ push to the connected branch.
   check must come before the spade-hunting ("chase mode") check, or
   chase mode fires first and the ace rule never triggers
 
+## Frontend UI during play/pass (public/index.html)
+- No top header bar on the play/pass screens — `tableHTML()` renders two
+  round icon buttons stacked in the table's otherwise-empty top-left/
+  top-right grid corners (`.corner-lt`/`.corner-rt`, `grid-area: lt`/`rt`
+  in `.table`'s `grid-template-areas`), positioned beside the top
+  opponent. Left corner: round-count badge (`roundBadgeHTML`) + on the
+  pass screen only, a pass-direction letter badge (L/R/O/K via
+  `passBadgeHTML`/`PASS_LETTER`); play screen shows a "Trick x/13" line
+  instead. Right corner: Rules + Leave, plus (play screen only) the
+  last-trick peek button. Built via `cornerActions(leftHTML, rtExtraHTML)`.
+- Last-trick peek: server tracks `G.lastTrick = {round, trickNum, winner,
+  cards}` set in `resolveTrick`, sent in `publicState`. Client button
+  (`#g-lt-btn`) is disabled unless `G.lastTrick.round === G.round`;
+  press-and-hold shows `#g-lasttrick` overlay (`lastTrickHTML`), release
+  hides it — no toggle, must stay held.
+- Dealer indicator: not text, a physical poker-style "D" button
+  (`.dealer-badge`, white bg/black ring) absolutely positioned on the
+  bottom-right of whichever seat's avatar is currently dealing (incl. own
+  `mystrip` avatar). Every avatar always renders one; only the current
+  dealer's gets the `.on` class, so switching dealers is a cross-fade,
+  not text changing.
+- Opponent seat score shows tricks won this round (`p.tricksWon`, sent
+  live) plus total score frozen at `G.roundBefore[i]` — deliberately NOT
+  live `p.score`, so it only changes between hands, not after every
+  trick.
+- Card selection (pass screen, 2-card picker) and card play (play
+  screen) both support hold-and-slide: press a card, drag across the fan
+  without lifting, each card crossed gets toggled/becomes the live pick;
+  release plays it (play screen) or leaves it selected (pass screen).
+  `SWIPE_SWITCH_GAP` (px) gates how far the pointer must travel before
+  switching to a neighboring card — tune this, not the fan overlap, if
+  swipe-selection ever feels twitchy or unresponsive again.
+- Any layout depending on `.mystrip`/badge/button text length changing
+  (e.g. "your turn") must reserve constant space (`visibility` toggle,
+  not `display`/conditional markup) — a past bug had the strip resize
+  and jump the whole screen on turn changes.
+
 ## Accounts & stats (needs DATABASE_URL — Railway Postgres plugin)
 - Username/password, bcrypt-hashed, session tokens
 - Stats tracked live per account: games played/finished, best/worst

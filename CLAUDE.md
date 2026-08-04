@@ -4,6 +4,18 @@ Custom online multiplayer Hearts variant. Node.js/Express/Socket.io backend
 + single-file HTML/CSS/JS frontend. Deployed on Railway, auto-deploys on
 push to the connected branch.
 
+## Current status / pick up here
+Everything below is shipped and deployed (pushed to `main`, which
+auto-deploys to Railway). The one **unconfirmed** item: landscape table
+mode (manual `⟳` toggle + force-rotate CSS trick + drag-to-play,
+documented under "Frontend UI during play/pass") was just pushed
+(`f235c33`) and hasn't been visually confirmed working on a real device
+yet — real physical rotation already proved unreliable once (see the
+service-worker/WebAPK notes below), so if the user reports the manual
+toggle *itself* still doesn't look right, suspect the `screenDeltaToLocal`
+rotation math or the `.card-slot` z-index stacking first, both flagged
+below as the trickiest parts of that change.
+
 ## Files
 - `server.js` — game engine, socket handlers, AI, auth endpoints
 - `db.js` — Postgres layer (accounts, sessions, stats). Only active if

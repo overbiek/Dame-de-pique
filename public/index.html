@@ -1674,11 +1674,14 @@ function myStrip(G,elId,isMyTurn){
   const cls=rs>0?'up':rs<0?'down':'flat';
   el.classList.toggle('turn',!!isMyTurn);
   const avatarContent=p.avatar?esc(p.avatar):esc(initial(p.name));
-  const reserveTurnSlot=elId==='g-me';
+  // Always render the (visibility:hidden-by-default) turn badge, on every
+  // screen that uses .mystrip — not just the play screen — so the strip
+  // reserves identical space everywhere and doesn't change size between
+  // the pass and play screens.
   el.innerHTML=
     `<span class="avatar sm">${avatarContent}<span class="dealer-badge${me===G.dealer?' on':''}">D</span></span>`
     +`<span class="who">${esc(p.name)}</span>`
-    +(reserveTurnSlot?`<span class="badge badge-turn${isMyTurn?' show':''}">your turn</span>`:'')
+    +`<span class="badge badge-turn${isMyTurn?' show':''}">your turn</span>`
     +`<span class="tot ${cls}">${rs>0?'+':''}${rs}`
     +`<small>this round &middot; ${p.score} total</small></span>`;
 }

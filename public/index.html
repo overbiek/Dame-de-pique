@@ -393,6 +393,14 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .row{display:flex;gap:8px}
 .row .grow{flex:1;min-width:0}
 .backlink{display:inline-block;margin-bottom:18px}
+.screen-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.screen-header .backlink{margin-bottom:0}
+.info-circle-btn{
+  flex-shrink:0;width:30px;height:30px;border-radius:50%;
+  border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--gold-hi);
+  font-family:'Playfair Display',serif;font-weight:700;font-size:.9rem;line-height:1;cursor:pointer;
+}
+.info-circle-btn:active{background:rgba(0,0,0,.4)}
 
 /* ══ Main menu ══ */
 .menu-wrap{max-width:420px;margin:0 auto;padding-top:5.5vh;text-align:center}
@@ -550,6 +558,17 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   letter-spacing:.05em;padding:0 8px 6px;border-bottom:1px solid var(--line)}
 .lb-table td{padding:7px 8px;border-bottom:1px solid var(--line)}
 .lb-table tr.me td{background:rgba(212,175,92,.08)}
+.lb-note{font-size:.74rem;color:var(--faint);text-align:center;margin-top:10px}
+#rank-you-bar{
+  display:none;position:fixed;left:0;right:0;bottom:0;z-index:60;
+  align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;
+  padding:10px 16px calc(env(safe-area-inset-bottom) + 10px);
+  background:linear-gradient(0deg,#0a3225,rgba(10,50,37,.96) 70%,rgba(10,50,37,.85));
+  border-top:1px solid rgba(212,175,92,.34);
+  font-size:.82rem;color:var(--cream);
+}
+#rank-you-bar .you-pos{font-family:'Playfair Display',serif;font-weight:700;color:var(--gold-hi)}
+#rank-you-bar .you-mmr{color:var(--faint)}
 .mini-btn{font:600 .72rem 'DM Sans',sans-serif;padding:7px 13px;border-radius:999px;cursor:pointer;
   border:1px solid rgba(108,182,255,.32);background:rgba(108,182,255,.10);color:#a8d4ff;flex:0 0 auto}
 .mini-btn.on{background:rgba(108,182,255,.26);border-color:rgba(108,182,255,.55)}
@@ -667,12 +686,12 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .vote-actions{display:flex;gap:8px;margin-top:12px}
 .vote-actions .btn{flex:1}
 /* ══ Rulebook ══ */
-#rules{
+#rules,#ranked-rules{
   display:none;position:fixed;inset:0;z-index:200;
   background:rgba(3,16,11,.78);backdrop-filter:blur(3px);
   padding:calc(env(safe-area-inset-top) + 14px) 12px calc(env(safe-area-inset-bottom) + 14px);
 }
-#rules.on{display:flex;align-items:flex-start;justify-content:center}
+#rules.on,#ranked-rules.on{display:flex;align-items:flex-start;justify-content:center}
 .rulecard{
   width:100%;max-width:540px;max-height:100%;display:flex;flex-direction:column;
   background:linear-gradient(170deg,#0d4130,#0a3225 60%,#08281d);
@@ -817,6 +836,50 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
       <div class="rnote">A quirk worth knowing: every round adds up to exactly <b>zero</b>
          across the four players. The 130 points from thirteen tricks cancel the 130 points
          of penalties precisely. If a round doesn't total zero, something has gone wrong.</div>
+
+    </div>
+  </div>
+</div>
+
+<div id="ranked-rules" onclick="if(event.target===this)closeRankedRules()">
+  <div class="rulecard">
+    <div class="rulehead">
+      <h2>How Ranked works</h2>
+      <button class="rulex" onclick="closeRankedRules()" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="rulebody">
+
+      <h3>Hidden rating</h3>
+      <p>Every ranked account has a hidden <b>MMR</b> rating. Matchmaking always uses this
+         real number to build the fairest lobby it can &mdash; your visible rank is just a
+         label calculated from it, and never the other way around.</p>
+
+      <h3>Placement matches</h3>
+      <p>Your first <b>5 ranked games</b> are placement matches. They're matched and scored
+         exactly like every other ranked game &mdash; MMR moves normally &mdash; but your rank
+         stays hidden until the 5th one finishes, at which point it's revealed for the first
+         time.</p>
+
+      <h3>How a match changes your MMR</h3>
+      <p>After each match, everyone's final score is compared. <b>Winning big rewards
+         bigger</b> &mdash; a strong positive score gains you far more MMR than a narrow one.
+         The flip side matters just as much: a heavy negative score costs you far more than a
+         small one.</p>
+      <div class="rnote">So the winning mindset is simple: swing for a big positive round when
+         you can, and <b>cut your losses</b> the moment a round turns against you rather than
+         letting it snowball. Every round is worth playing seriously.</div>
+
+      <h3>No AI, but a fair grace period</h3>
+      <p>Ranked seats are <b>humans only</b> &mdash; no computer ever fills a seat from the
+         start. If someone disconnects mid-match they get <b>15 seconds</b> to reconnect
+         before the AI steps in temporarily; the moment they're back, they take their seat
+         right back over, at any point in the match.</p>
+
+      <h3>The ladder</h3>
+      <p>Climb through Bronze, Silver, Gold, Platinum, Diamond, Master and Grandmaster &mdash;
+         each with three divisions &mdash; before reaching the very top: <b>Legend</b>, home
+         to the game's Supersonic Legends. Every division has its own badge, shown next to
+         your name on the leaderboard and after every ranked match.</p>
 
     </div>
   </div>
@@ -982,6 +1045,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 
     <div class="exit-row" style="margin-top:14px">
       <button class="btn btn-ghost btn-sm" onclick="goCasual()">Play casual instead</button>
+      <button class="btn btn-ghost btn-sm" onclick="openRankedRules()">How ranked works</button>
     </div>
   </div>
 </section>
@@ -989,7 +1053,10 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 <!-- ═══ RANK / LEADERBOARD ═══ -->
 <section id="s-rank" class="screen">
   <div class="center-wrap" style="max-width:440px">
-    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    <div class="screen-header">
+      <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+      <button class="info-circle-btn" onclick="openRankedRules()" aria-label="How ranked works">?</button>
+    </div>
     <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Rank</h2>
     <p class="tagline">Leaderboard</p>
 
@@ -1013,8 +1080,10 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
         <thead><tr><th>#</th><th>Player</th><th>Rank</th><th>MMR</th></tr></thead>
         <tbody id="rank-rows"></tbody>
       </table>
+      <p class="lb-note">Top 100 shown. Not in the list? Your own standing is pinned below.</p>
     </div>
   </div>
+  <div id="rank-you-bar"></div>
 </section>
 
 <!-- ═══ PERSONAL (avatar & name) ═══ -->
@@ -1722,24 +1791,37 @@ function goRank(){
   $('rank-loading').style.display='block';
   $('rank-empty').style.display='none';
   $('rank-content').style.display='none';
-  socket.emit('getLeaderboard');
+  $('rank-you-bar').style.display='none';
+  socket.emit('getLeaderboard',{token:accountToken});
 }
+function leaderboardRowLabel(r){ return r.isPlacement?`Placement ${r.placementGamesPlayed}/5`:r.rank.label; }
 socket.on('leaderboardOk',d=>{
   if(!$('s-rank').classList.contains('active')) return;
   $('rank-loading').style.display='none';
   if(!d.rows.length){ $('rank-empty').style.display='block'; return; }
   $('rank-content').style.display='block';
   $('rank-rows').innerHTML=d.rows.map((r,i)=>{
-    const rankLabel=r.isPlacement?`Placement ${r.placementGamesPlayed}/5`:r.rank.label;
     const badge=r.isPlacement?'':badgeImg(r.rank,20);
-    const mine=account&&r.nickname===account.nickname;
+    const mine=account&&r.accountId===account.id;
     return `<tr class="${mine?'me':''}">
       <td>${i+1}</td>
       <td>${r.avatar||''} ${esc(r.nickname)}</td>
-      <td>${badge}${esc(rankLabel)}</td>
+      <td>${badge}${esc(leaderboardRowLabel(r))}</td>
       <td>${r.mmr}</td>
     </tr>`;
   }).join('');
+  if(d.you){
+    const y=d.you;
+    const badge=y.isPlacement?'':badgeImg(y.rank,22);
+    $('rank-you-bar').innerHTML=`
+      <span class="you-pos">#${y.position}</span>
+      <span class="you-name">${y.avatar||''} ${esc(y.nickname)}</span>
+      ${badge}<span class="you-rank">${esc(leaderboardRowLabel(y))}</span>
+      <span class="you-mmr">${y.mmr} MMR</span>`;
+    $('rank-you-bar').style.display='flex';
+  }else{
+    $('rank-you-bar').style.display='none';
+  }
 });
 socket.on('leaderboardError',d=>{
   if(!$('s-rank').classList.contains('active')) return;
@@ -2329,9 +2411,12 @@ function renderFinal(G){
 
 /* ══════════ RULEBOOK ══════════ */
 function openRules(){ $('rules').classList.add('on'); $('rules').scrollTop=0;
-  const b=document.querySelector('.rulebody'); if(b) b.scrollTop=0; }
+  const b=document.querySelector('#rules .rulebody'); if(b) b.scrollTop=0; }
 function closeRules(){ $('rules').classList.remove('on'); }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeRules(); });
+function openRankedRules(){ $('ranked-rules').classList.add('on'); $('ranked-rules').scrollTop=0;
+  const b=document.querySelector('#ranked-rules .rulebody'); if(b) b.scrollTop=0; }
+function closeRankedRules(){ $('ranked-rules').classList.remove('on'); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeRules(); closeRankedRules(); } });
 
 /* ══════════ PWA ══════════ */
 let deferredPrompt=null;

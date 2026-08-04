@@ -1610,18 +1610,38 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('getLeaderboard', async () => {
+  socket.on('getLeaderboard', async ({ token } = {}) => {
     if (!DB_ENABLED) return socket.emit('leaderboardError', { msg: 'Accounts aren\'t set up on this server yet.' });
     try {
-      const rows = (await db.getLeaderboard(50)).map(r => {
+      const LEADERBOARD_LIMIT = 100;
+      const raw = await db.getLeaderboard(LEADERBOARD_LIMIT);
+      const rows = raw.map(r => {
         const isPlacement = r.placementGamesPlayed < 5;
         return {
-          nickname: r.nickname, avatar: r.avatar, mmr: r.mmr,
+          accountId: r.accountId, nickname: r.nickname, avatar: r.avatar, mmr: r.mmr,
           isPlacement, placementGamesPlayed: r.placementGamesPlayed,
           rank: isPlacement ? null : rankForMmr(r.mmr),
         };
       });
-      socket.emit('leaderboardOk', { rows });
+
+      // If the requester is logged in and isn't visible in the top slice
+      // above, look up their overall position so the client can pin a
+      // "you" row at the bottom instead of leaving them wondering.
+      let you = null;
+      const acct = await lookupAccountByToken(token);
+      if (acct && !rows.some(r => r.accountId === acct.id)) {
+        const pos = await db.getRankForAccount(acct.id);
+        if (pos) {
+          const isPlacement = pos.placementGamesPlayed < 5;
+          you = {
+            position: pos.position, nickname: acct.nickname, avatar: acct.avatar, mmr: pos.mmr,
+            isPlacement, placementGamesPlayed: pos.placementGamesPlayed,
+            rank: isPlacement ? null : rankForMmr(pos.mmr),
+          };
+        }
+      }
+
+      socket.emit('leaderboardOk', { rows, you });
     } catch (e) {
       console.error('getLeaderboard error:', e.message);
       socket.emit('leaderboardError', { msg: 'Could not load the leaderboard. Try again.' });

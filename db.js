@@ -267,15 +267,32 @@ async function applyRankedMmr(accountId, mmrDelta) {
 
 async function getLeaderboard(limit = 50) {
   const { rows } = await pool.query(
-    `SELECT a.nickname, a.avatar, s.mmr, s.placement_games_played
+    `SELECT s.account_id, a.nickname, a.avatar, s.mmr, s.placement_games_played
      FROM stats s JOIN accounts a ON a.id = s.account_id
      ORDER BY s.mmr DESC LIMIT $1`,
     [limit]
   );
   return rows.map(r => ({
-    nickname: r.nickname, avatar: r.avatar, mmr: r.mmr,
+    accountId: r.account_id, nickname: r.nickname, avatar: r.avatar, mmr: r.mmr,
     placementGamesPlayed: r.placement_games_played,
   }));
+}
+
+// A player's overall position on the full ladder, even when they're well
+// outside the top-N slice `getLeaderboard` returns — used to pin a "you"
+// row at the bottom when someone isn't visible in the top list.
+async function getRankForAccount(accountId) {
+  const { rows } = await pool.query(
+    `SELECT rnk, mmr, placement_games_played FROM (
+       SELECT account_id, mmr, placement_games_played,
+              RANK() OVER (ORDER BY mmr DESC) AS rnk
+       FROM stats
+     ) t WHERE account_id = $1`,
+    [accountId]
+  );
+  const s = rows[0];
+  if (!s) return null;
+  return { position: s.rnk, mmr: s.mmr, placementGamesPlayed: s.placement_games_played };
 }
 
 module.exports = {
@@ -283,5 +300,5 @@ module.exports = {
   createAccount, findAccountByUsername, findAccountById,
   createSession, findAccountByToken, deleteSession, updateProfile,
   recordGameStarted, recordTrick, recordRound, recordGameFinished, recordQueenTaken, getStats,
-  getOrCreateRankedProfile, applyRankedMmr, getLeaderboard,
+  getOrCreateRankedProfile, applyRankedMmr, getLeaderboard, getRankForAccount,
 };

@@ -269,6 +269,49 @@ scrolling after touching any landscape sizing.
   context — same reason the pre-existing `.tap:active`/`.sel` z-index
   boosts already use the same `:has()` pattern on the parent slot.
 
+## Table themes (Bordeaux / Émeraude / Clair)
+- Three swappable palettes, picked in **My Account** (`#s-personal`),
+  persisted to `localStorage` as `ddp.tableTheme` (same convention as
+  `ddp.sfxMuted`). Bordeaux is the default and lives on `:root` directly
+  — there is deliberately no `[data-theme="bordeaux"]` selector, so
+  "attribute absent" and "bordeaux" are the same state, not two.
+- **Two-layer token system, and this is the important part.** The
+  `--ddp-*` block at the top of `<style>` is the *only* place a felt /
+  card / ink / suit colour is written literally. Immediately below it a
+  second `:root` block re-defines the pre-existing names the rest of the
+  stylesheet already used (`--felt-0/1/2`, `--gold*`, `--cream`,
+  `--muted`, `--faint`, `--line`, `--card-face`, `--card-edge`, `--red`,
+  `--ink`) as `var(--ddp-…)`. That derived layer is what made the whole
+  UI theme-aware without touching hundreds of rules. **Add new colours
+  as `--ddp-*` tokens; don't hardcode hex in rules.**
+- That second `:root` block must stay *after* the `[data-theme]` blocks
+  in source order, and must not itself declare any `--ddp-*` — both
+  selectors match `<html>` at equal specificity, so source order decides.
+- `--ddp-*-rgb` companions exist because much of the UI is translucent
+  washes (`rgba(...,.32)` borders, glows, scrims) and those can't take a
+  hex token — they take `rgba(var(--ddp-x-rgb),alpha)`.
+  `--ddp-scrim-rgb`/`--ddp-gloss-rgb` are the "push back"/"lift forward"
+  colours; Clair flips the scrim to its warm ink so shading on a light
+  felt reads as a soft shadow instead of grey sludge.
+- **Clair is the theme that breaks things.** Anything picked as pale
+  text on a dark wash becomes pale-on-pale there. The status accents
+  (`--ddp-pos/neg/ai/mine`) are themed for exactly this reason, and a
+  `[data-theme="clair"]` correction block at the very END of the
+  stylesheet re-grounds the rank tags, `.note.bad` and `.btn.danger` on
+  the ink. That block is last **on purpose** — it ties on specificity
+  with what it overrides (`[data-theme="clair"] .tag` vs `.tag.you` are
+  both 0,2,0), so moving it up with the other theme definitions would
+  silently stop it working. Test any new pale-on-dark accent against
+  Clair.
+- An inline `<script>` in `<head>` sets `data-theme` before first paint;
+  without it, anyone on Émeraude or Clair sees a flash of Bordeaux felt
+  because the main script is at the end of `<body>` (same reasoning as
+  the `show()` anti-flash ordering). `initTableTheme()` still runs later
+  in the boot IIFE to mark the active swatch and sync the `theme-color`
+  meta, which needs the menu markup to exist.
+- Card backs (blue) and `--ok`/`--warn` are intentionally left
+  un-themed: they're identity/semantic colours, not felt or card-face.
+
 ## `public/sw.js` caches `manifest.json` cache-first — bump `CACHE` on ANY manifest change
 - `ASSETS` includes `/manifest.json`, and the fetch handler is cache-first
   for everything except page navigations (`e.request.mode==='navigate'`,

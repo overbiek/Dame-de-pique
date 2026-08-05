@@ -880,45 +880,43 @@ html.landscape-mode #app{
 /* --ch is normally derived from --cw at :root, and a custom property's
    var() references resolve where the property is DECLARED, not where
    it's used — so redefining only --cw here would leave --ch at its
-   stale portrait value. Both are declared explicitly, at a deliberately
-   broader-than-portrait aspect ratio (1.25 vs 1.42).
-   Both dimensions are genuinely tight and they bind on DIFFERENT axes,
-   so width and height are each solved from their own hard limit rather
-   than one being derived from the other by a fixed ratio. That squeezes
-   out every available pixel; tying them to a ratio wastes whichever
-   axis isn't the binding one.
+   stale portrait value. Both are declared explicitly.
 
-   WIDTH — thirteen cards and their gaps must fit one row. Subtract #app
-   padding (16), .hand padding (20), a 24px breathing margin so the row
-   isn't edge-to-edge, and 15 gaps (12 between cards plus 3 extra
-   between the four suit groups), then divide by 13.
+   WIDTH is the binding constraint and drives everything: thirteen cards
+   and their gaps must fit one row. Subtract #app padding (16), .hand
+   padding (20), a 24px breathing margin so the row isn't edge-to-edge,
+   and 15 gaps (12 between cards plus 3 extra between the four suit
+   groups), then divide by 13.
 
-   HEIGHT — the column is exactly four card-heights tall: the three rows
-   of the trick cross plus your hand. The 96px is every fixed piece of
-   furniture between them (#app padding 8, .hand padding 8, table
-   padding 12, mid row gaps 8, the three name captions ~45) plus a few
-   px of slack. The pass screen subtracts ~48 more for its confirm
+   HEIGHT wants to be 1.4·--cw — the real proportion of a physical
+   playing card — and only falls below that if the viewport genuinely
+   can't take it. The column stacks THREE card-heights and one card
+   WIDTH: the trick cross's top and bottom rows, your hand, and the
+   middle row, which is only a card-width tall because the left and
+   right players' cards are rotated 90° to face them (see .card-turn).
+   The 64px is the fixed furniture between them (#app padding 8, .hand
+   padding 8, table padding 12, mid row gaps 6, the two remaining name
+   captions ~30). The pass screen subtracts ~48 more for its confirm
    button and auto-pass countdown. **If you change any of those, change
    the constant**, or the trick cross silently overflows the table and
    gets clipped (the screens are overflow:hidden, so it won't scroll —
    it'll just quietly cut off).
 
-   --ch is then also capped at 1.45·--cw so a very tall, narrow viewport
-   can't stretch the cards into implausible slivers.
-
-   Cards cannot be made bigger than this without either overlapping in
-   the hand or scrolling the screen — that's the answer if bigger cards
-   get asked for again. */
+   Cards cannot be made wider than the width limit without overlapping
+   in the hand — that's the answer if bigger cards get asked for
+   again. */
 html.landscape-mode #s-pass,html.landscape-mode #s-play{
   --gap:4px;
   --overlap:var(--gap);
   --cw:max(38px,calc((100vw - 60px - 15 * var(--gap)) / 13));
-  --ch:max(48px,min(calc((100vh - 96px) / 4),calc(var(--cw) * 1.45)));
+  --ch:max(48px,min(calc(var(--cw) * 1.4),
+                    calc((100vh - 64px - var(--cw)) / 3)));
 }
 /* the pass screen also carries a confirm button and an auto-pass
    countdown below the hand — ~48px more furniture to subtract */
 html.landscape-mode #s-pass{
-  --ch:max(46px,min(calc((100vh - 144px) / 4),calc(var(--cw) * 1.45)));
+  --ch:max(46px,min(calc(var(--cw) * 1.4),
+                    calc((100vh - 112px - var(--cw)) / 3)));
 }
 html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
   display:flex;flex-direction:column;justify-content:center;
@@ -932,7 +930,9 @@ html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
    left of center, with both corner groups absolutely positioned. */
 html.landscape-mode #s-pass .table,html.landscape-mode #s-play .table{
   display:flex;align-items:center;justify-content:flex-start;
-  padding:6px 10px 6px 6%;
+  /* the cross got wider once the side cards turned sideways, so it
+     starts closer to the left edge — it still has to clear .rt-stack */
+  padding:6px 10px 6px 2%;
   flex:1 1 auto;min-height:0;
 }
 html.landscape-mode #s-pass .table-wrap,html.landscape-mode #s-play .table-wrap{
@@ -984,15 +984,37 @@ html.landscape-mode #s-pass .prompt,html.landscape-mode #s-play .prompt{display:
    else's, so the strip above the hand is redundant here */
 html.landscape-mode #s-pass .mystrip,html.landscape-mode #s-play .mystrip{display:none}
 html.landscape-mode #s-pass .mid,html.landscape-mode #s-play .mid{
-  /* auto tracks: each cell is a card with its owner's caption beneath,
-     so cells size to the wider of the two and never overlap */
-  min-width:0;min-height:0;gap:4px 8px;
+  /* auto tracks sized by their contents, tight gaps — the four slots
+     read as one cluster rather than a sprawling cross */
+  min-width:0;min-height:0;gap:3px 4px;
   grid-template-columns:auto auto auto;
   grid-template-rows:auto auto auto;
 }
+/* top and bottom slots: card with its owner's caption beneath */
 html.landscape-mode #s-pass .mid>div,html.landscape-mode #s-play .mid>div{
   display:flex;flex-direction:column;align-items:center;gap:3px;
 }
+/* Left and right slots turn their card a quarter-turn so it faces the
+   player who played it — which also makes that whole middle row only a
+   card-WIDTH tall instead of a card-height, the saving that pays for
+   the cards being a realistic 1.4 proportion. Their names sit beside
+   the card, on the outer side, rather than beneath: a caption under
+   these would put the height straight back. */
+html.landscape-mode .mid .slot-l,html.landscape-mode .mid .slot-r{
+  flex-direction:row;align-items:center;gap:5px;
+}
+/* a rotated element still occupies its UNrotated box, so the wrapper
+   carries the swapped dimensions and the card is centred and turned
+   inside it */
+html.landscape-mode .card-turn{
+  position:relative;flex:0 0 auto;
+  width:var(--ch);height:var(--cw);
+}
+html.landscape-mode .card-turn>*{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%) rotate(-90deg);
+}
+html.landscape-mode .card-turn.cw>*{transform:translate(-50%,-50%) rotate(90deg)}
 /* Landscape lays the hand out as a plain flat row: no fan tilt, no lift,
    and a real positive gap between cards instead of portrait's heavy
    negative overlap. The gap is deliberately small (--gap) because it's
@@ -1015,9 +1037,9 @@ html.landscape-mode #s-pass .home-btn,html.landscape-mode #s-play .home-btn{
 /* ══ Landscape trick-slot captions — each player's name/score sits
    directly under the slot they play into, replacing both the seat
    blocks around the table and (for you) the strip above the hand ══ */
-.tcap{display:flex;align-items:baseline;gap:4px;max-width:96px;
+.tcap{display:flex;align-items:baseline;gap:4px;max-width:72px;
   font-size:.6rem;color:var(--muted);line-height:1.2;white-space:nowrap}
-.tcap .nm{overflow:hidden;text-overflow:ellipsis}
+.tcap .nm{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .tcap .sc{font-family:'Playfair Display',serif;font-weight:700;color:var(--gold-hi)}
 .tcap.mine .nm{color:var(--cream)}
 .tcap.turn{color:var(--gold)}
@@ -1957,8 +1979,8 @@ function tableHTML(G,opts){
     </div>
     <div class="mid">
       <div class="slot-t">${played(2)}${cap(2)}</div>
-      <div class="slot-l">${played(1)}${cap(1)}</div>
-      <div class="slot-r">${played(3)}${cap(3)}</div>
+      <div class="slot-l">${cap(1)}<div class="card-turn ccw">${played(1)}</div></div>
+      <div class="slot-r"><div class="card-turn cw">${played(3)}</div>${cap(3)}</div>
       <div class="slot-b">${played(0)}${cap(0)}</div>
     </div>
     `;

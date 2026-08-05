@@ -163,33 +163,44 @@ scrolling after touching any landscape sizing.
   conversion: a `translate()` on a descendant of a rotated ancestor
   moves along the rotated local axes while pointer events report true
   screen coordinates, so drags track sideways without it.
-- **Landscape card size is solved, not guessed, and width and height are
-  solved independently** — they bind on different axes, so deriving one
-  from the other by a fixed aspect ratio wastes whichever axis isn't
-  binding. The resulting cards are ~1.28 in area vs. the first version
-  that fit on one screen.
+- **Landscape card size is solved, not guessed.** Width is the binding
+  constraint and drives everything:
   - `--cw` = `(100vw - 60px - 15·--gap)/13` — thirteen cards plus 15
     gaps (12 between cards, 3 extra between the four suit groups) must
     fit one row; the 60 is `#app` + `.hand` padding plus a 24px
-    breathing margin so the row isn't edge-to-edge.
-  - `--ch` = `min((100vh - 96px)/4, 1.45·--cw)` — the column is exactly
-    four card-heights tall (three trick-cross rows + your hand). The 96
-    is every fixed piece of furniture between them (`#app` padding 8,
-    `.hand` padding 8, table padding 12, mid row gaps 8, the three name
-    captions ~45) plus slack. The pass screen uses 144 — it also has a
-    confirm button and auto-pass countdown. The 1.45 cap just stops a
-    very tall viewport stretching cards into slivers.
+    breathing margin so the row isn't edge-to-edge. **13 cards across
+    ~900px is a hard wall** — each card can be ~60px wide and no more.
+    That's the answer if bigger cards get asked for again; the only way
+    past it is letting hand cards overlap, which was deliberately
+    removed.
+  - `--ch` = `min(1.4·--cw, (100vh - 64px - --cw)/3)` — 1.4 is the real
+    proportion of a physical playing card and is what normally applies;
+    the second term is a safety valve for short viewports. The column
+    stacks three card-*heights* and one card-*width* (trick cross top
+    and bottom rows, your hand, and the middle row — only a card-width
+    tall thanks to the rotated side cards, below). The 64 is the fixed
+    furniture between them (`#app` padding 8, `.hand` padding 8, table
+    padding 12, mid row gaps 6, the two name captions ~30). The pass
+    screen uses 112 — it also has a confirm button and auto-pass
+    countdown.
   **If you change any of that furniture, change the constant.** The
   screens are `overflow:hidden`, so getting it wrong doesn't scroll —
   the trick cross silently overflows the table and is clipped.
-  Cards genuinely can't be made bigger than this without either
-  overlapping in the hand or clipping — that's the answer if someone
-  asks for them bigger again. 13 cards across ~900px is the hard wall;
-  "1.5×" is not reachable.
   Both custom properties must be declared explicitly, because a custom
   property's `var()` references resolve where the property is *declared*
   — overriding only `--cw` would silently leave `--ch` at its portrait
   value. This bit us once already.
+- **The left and right players' played cards are rotated 90° to face
+  them** (`.card-turn`, `ccw`/`cw`). This isn't only decorative: it
+  makes the trick cross's middle row a card-*width* tall instead of a
+  card-height, and that saving is exactly what buys the cards their
+  realistic 1.4 proportion. A rotated element still occupies its
+  *unrotated* box, so `.card-turn` is a wrapper carrying the swapped
+  `width:var(--ch);height:var(--cw)` with the card absolutely centred
+  and turned inside it — rotating the card in place would not reclaim
+  any height. Those two players' names sit *beside* their card on the
+  outer side rather than beneath it, for the same reason; only the top
+  and bottom slots caption underneath.
 - The landscape table is a different structure, not just restyled:
   `tableHTML()` branches on `isLandscapeModeActive()` and drops the seat
   blocks ringing the table entirely, rendering each player's name/score

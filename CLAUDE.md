@@ -160,9 +160,39 @@ scrolling after touching any landscape sizing.
   pass-transition fx pattern it otherwise resembles. Rocket launches
   from the shooting player's actual seat position via `seatOf()`.
   Purely decorative/emoji-based (🌕/🚀), no new image assets.
-- Landscape mode exists on the main menu and the pass/play ("table")
-  screens — lobby, draw, round-summary and final are portrait-only by
-  design, not yet-todo. `LANDSCAPE_SCREENS` is the whole gate.
+- Landscape mode exists on the main menu, the four `.center-wrap`
+  content screens (casual / ranked / rank / statistics) and the
+  pass/play ("table") screens. My Account, lobby, draw, round-summary
+  and final are still portrait-only. `LANDSCAPE_SCREENS` is the whole
+  gate.
+- **The four content screens share ONE landscape layout**, and the rules
+  are scoped to `html.landscape-mode .screen.active > .center-wrap`
+  rather than an id list. That works because `landscape-mode` is only
+  ever on when the *active* screen is in `LANDSCAPE_SCREENS`, so the
+  selector can only match those screens — and anything added to the set
+  later (My Account is the obvious candidate) inherits the layout for
+  free. The menu uses `.menu-wrap` and the table screens have no
+  `.center-wrap`, so neither is caught.
+  The shape: everything defaults into column 2 as a single scrollable
+  body panel (`grid-row:1/-1`), and the chrome — `.backlink`,
+  `.screen-header`, `h2`, `.tagline`, `.exit-row`, `.note` — is pulled
+  back into a narrow left rail. All the body panels can share one grid
+  area because they're mutually exclusive: exactly one is ever not
+  `display:none`, and a `display:none` element isn't a grid item at all.
+  If you ever make two visible at once they'll stack on top of each
+  other.
+- `max-width:none` on those wraps needs `!important` — `s-ranked`,
+  `s-rank` and `s-stats` each carry an inline `style="max-width:440px"`.
+  Same class of trap as the menu's `.exit-row` inline `margin-top`;
+  check for inline styles before assuming a landscape override will win.
+- `#rank-you-bar` is `position:fixed` to the viewport bottom, so
+  `#rank-content` reserves `padding-bottom` for it — otherwise the last
+  leaderboard rows sit underneath it.
+- Body panels are top-aligned in their column, deliberately **not**
+  vertically centred. `justify-content:center` / `margin:auto` inside a
+  scrollable container makes overflowing content unreachable at the
+  start — the same class of bug as the clipped install instructions and
+  the off-screen leftmost cards. Don't "improve" the centring.
 - **Landscape main menu** is a pure CSS reflow of the portrait markup —
   no DOM change. `.menu-wrap` becomes a two-column grid: an identity
   rail (crest / title / tagline, with the How-to-play, Sound and Install

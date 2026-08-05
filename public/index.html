@@ -1228,6 +1228,92 @@ html.landscape-mode #s-menu .tile{padding:11px 13px;border-radius:14px;gap:11px}
 html.landscape-mode #s-menu .tile-icon{width:38px;height:38px;font-size:1.15rem;border-radius:11px}
 html.landscape-mode #s-menu .tile-sub{font-size:.72rem}
 
+/* ══ Landscape content screens — casual, ranked, rank, statistics ══
+   All four share one shape in portrait: a .center-wrap holding a header
+   cluster (back link, title, tagline), one of several mutually-exclusive
+   body panels, and sometimes a footer row. So they get one shared
+   landscape layout: the header/footer chrome becomes a narrow left rail,
+   the body panel takes the whole right column and scrolls on its own.
+
+   Scoped to `.screen.active` rather than an id list deliberately.
+   html.landscape-mode is only ever on when the ACTIVE screen is in
+   LANDSCAPE_SCREENS, so this matches exactly those screens' .center-wrap
+   and nothing else — and any screen added to that set later inherits the
+   layout for free. The menu uses .menu-wrap and the table screens have
+   no .center-wrap, so neither is caught by this. */
+html.landscape-mode .screen.active:has(>.center-wrap){height:100%;overflow:hidden}
+html.landscape-mode .screen.active>.center-wrap{
+  /* !important because s-ranked, s-rank and s-stats each carry an inline
+     style="max-width:440px" that no normal rule can beat. Same situation
+     as the menu's .exit-row; the markup is left alone. */
+  max-width:none !important;
+  width:100%;height:100%;margin:0;
+  /* height:100% and no safe-area padding: html.landscape-mode #app has
+     already applied both. Re-adding either double-counts the notch. */
+  padding:8px 4px;
+  display:grid;
+  grid-template-columns:minmax(178px,238px) 1fr;
+  /* row 3 (the tagline) is the flexible one, so any footer row sinks to
+     the bottom of the rail — same trick as the landscape menu */
+  grid-template-rows:auto auto 1fr auto auto;
+  column-gap:20px;
+  text-align:left;
+}
+/* Everything defaults into the right column as the scrollable body...  */
+html.landscape-mode .screen.active>.center-wrap>*{
+  grid-column:2;grid-row:1 / -1;
+  min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding-left:20px;border-left:1px solid rgba(var(--ddp-brass-rgb),.28);
+}
+/* ...and the header/footer chrome is pulled back into the rail. Only one
+   body panel is ever visible at a time (the rest are display:none, so
+   they aren't grid items), which is why they can all share row 1/-1. */
+html.landscape-mode .screen.active>.center-wrap>.backlink,
+html.landscape-mode .screen.active>.center-wrap>.screen-header,
+html.landscape-mode .screen.active>.center-wrap>h2,
+html.landscape-mode .screen.active>.center-wrap>.tagline,
+html.landscape-mode .screen.active>.center-wrap>.exit-row,
+html.landscape-mode .screen.active>.center-wrap>.note{
+  grid-column:1;grid-row:auto;
+  overflow:visible;padding-left:0;border-left:0;
+}
+/* rail spacing — portrait's generous margins don't fit a short viewport */
+html.landscape-mode .screen.active>.center-wrap>.backlink,
+html.landscape-mode .screen.active>.center-wrap>.screen-header{
+  margin-bottom:8px;justify-self:start;
+}
+html.landscape-mode .screen.active>.center-wrap>.screen-header{
+  justify-self:stretch;width:100%;
+}
+html.landscape-mode .screen.active>.center-wrap>h2{
+  font-size:clamp(1.25rem,4vh,1.7rem) !important;margin-bottom:4px;
+}
+html.landscape-mode .screen.active>.center-wrap>.tagline{margin:0;font-size:.78rem}
+html.landscape-mode .screen.active>.center-wrap>.exit-row{
+  flex-direction:column;align-items:stretch;gap:6px;
+  margin-top:0 !important;
+}
+html.landscape-mode .screen.active>.center-wrap>.exit-row .btn{text-align:left}
+
+/* body-panel tuning: portrait assumes a tall narrow column, landscape a
+   short wide one */
+html.landscape-mode .screen.active .empty-state{padding:6px 6px 4px}
+html.landscape-mode .screen.active .empty-icon{font-size:1.7rem;margin-bottom:6px}
+html.landscape-mode .screen.active .empty-state p{max-width:none}
+html.landscape-mode .screen.active .profile-chip{margin-bottom:10px}
+html.landscape-mode .screen.active .or{margin:12px 0}
+html.landscape-mode .screen.active .acct-tabs{margin-bottom:8px}
+/* the extra width buys a third column of stat cards instead of a longer
+   scroll */
+html.landscape-mode .screen.active .stats-grid{
+  grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 10px;
+}
+html.landscape-mode .screen.active .stat-card{padding:9px 8px}
+html.landscape-mode .screen.active .stat-value{font-size:1.15rem}
+/* #rank-you-bar is position:fixed to the viewport bottom, so the
+   leaderboard has to reserve room or its last rows sit under it */
+html.landscape-mode #s-rank #rank-content{padding-bottom:52px}
+
 /* ══ Landscape trick-slot captions — each player's name/score sits
    directly under the slot they play into, replacing both the seat
    blocks around the table and (for you) the strip above the hand ══ */
@@ -2065,7 +2151,7 @@ function show(id){
 // portrait-locked. Best-effort only — screen.orientation.lock() only
 // actually works in an installed/standalone Android Chrome PWA; it's
 // silently unavailable everywhere else (iOS Safari, plain browser tabs).
-const LANDSCAPE_SCREENS=new Set(['menu','pass','play']);
+const LANDSCAPE_SCREENS=new Set(['menu','landing','ranked','rank','stats','pass','play']);
 function applyOrientationLock(id){
   const so=screen.orientation;
   if(!so||!so.lock) return;

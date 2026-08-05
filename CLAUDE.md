@@ -160,11 +160,10 @@ scrolling after touching any landscape sizing.
   pass-transition fx pattern it otherwise resembles. Rocket launches
   from the shooting player's actual seat position via `seatOf()`.
   Purely decorative/emoji-based (🌕/🚀), no new image assets.
-- Landscape mode exists on the main menu, the four `.center-wrap`
-  content screens (casual / ranked / rank / statistics) and the
-  pass/play ("table") screens. My Account, lobby, draw, round-summary
-  and final are still portrait-only. `LANDSCAPE_SCREENS` is the whole
-  gate.
+- Landscape mode exists on the main menu, the five `.center-wrap`
+  content screens (casual / ranked / rank / statistics / My Account) and
+  the pass/play ("table") screens. Lobby, draw, round-summary and final
+  are still portrait-only. `LANDSCAPE_SCREENS` is the whole gate.
 - **The four content screens share ONE landscape layout**, and the rules
   are scoped to `html.landscape-mode .screen.active > .center-wrap`
   rather than an id list. That works because `landscape-mode` is only
@@ -181,6 +180,17 @@ scrolling after touching any landscape sizing.
   `display:none`, and a `display:none` element isn't a grid item at all.
   If you ever make two visible at once they'll stack on top of each
   other.
+- **My Account is the exception and has its own block.** Its body parts
+  (account chip, avatar picker, name field, Save, theme row) are all on
+  screen *together*, so it opts out of the shared `grid-row:1/-1`
+  stacking and flows its body down column 2 instead. Its three rail
+  items carry **explicit** `grid-row: 1/2/3` — that isn't cosmetic:
+  grid's placement cursor only ever moves forward, so with auto rows
+  everywhere the body would start at row 4 and leave a stair-step of
+  dead space beside the rail. It also drops the column divider, because
+  a many-item body draws one border stub per item with margin gaps
+  between them, which reads as a broken dashed line rather than a rule.
+  This screen is the one most likely to want hand-tuning later.
 - `max-width:none` on those wraps needs `!important` — `s-ranked`,
   `s-rank` and `s-stats` each carry an inline `style="max-width:440px"`.
   Same class of trap as the menu's `.exit-row` inline `margin-top`;

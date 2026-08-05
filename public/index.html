@@ -1314,6 +1314,41 @@ html.landscape-mode .screen.active .stat-value{font-size:1.15rem}
    leaderboard has to reserve room or its last rows sit under it */
 html.landscape-mode #s-rank #rank-content{padding-bottom:52px}
 
+/* ── My Account is the exception to the rule above ──
+   The other four screens' body panels are mutually exclusive, which is
+   what lets them all share grid-row:1/-1. My Account's are not: the
+   account chip, avatar picker, name field, Save and the theme row are
+   all on screen together, so sharing one area would stack them on top
+   of each other. It therefore opts out of that stacking and instead
+   flows its body down column 2, row by row.
+
+   The three rail items get EXPLICIT rows so auto-placement starts the
+   column-2 items at row 1 rather than continuing past the rail — with
+   auto rows for everything the placement cursor only moves forward and
+   the body would begin at row 4, leaving a stair-step of dead space. */
+html.landscape-mode #s-personal>.center-wrap{
+  grid-template-rows:auto;   /* no 1fr row — no footer to sink here */
+  align-content:start;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+html.landscape-mode #s-personal>.center-wrap>*{
+  grid-row:auto;
+  overflow:visible;
+  /* one continuous divider isn't possible when the body is many
+     separate items with margins between them — each would draw its own
+     stub and it reads as a broken dashed line. The column indent alone
+     carries the separation here. */
+  border-left:0;
+}
+html.landscape-mode #s-personal>.center-wrap>.backlink{grid-row:1}
+html.landscape-mode #s-personal>.center-wrap>h2{grid-row:2}
+html.landscape-mode #s-personal>.center-wrap>.tagline{grid-row:3}
+/* the shared rule parks .note in the rail; here they're form feedback
+   and belong beside the field they describe */
+html.landscape-mode #s-personal>.center-wrap>.note{grid-column:2;padding-left:20px}
+html.landscape-mode #s-personal .settings-row{margin-top:12px}
+html.landscape-mode #s-personal .avatar-grid{max-height:96px}
+
 /* ══ Landscape trick-slot captions — each player's name/score sits
    directly under the slot they play into, replacing both the seat
    blocks around the table and (for you) the strip above the hand ══ */
@@ -2151,7 +2186,7 @@ function show(id){
 // portrait-locked. Best-effort only — screen.orientation.lock() only
 // actually works in an installed/standalone Android Chrome PWA; it's
 // silently unavailable everywhere else (iOS Safari, plain browser tabs).
-const LANDSCAPE_SCREENS=new Set(['menu','landing','ranked','rank','stats','pass','play']);
+const LANDSCAPE_SCREENS=new Set(['menu','landing','ranked','rank','stats','personal','pass','play']);
 function applyOrientationLock(id){
   const so=screen.orientation;
   if(!so||!so.lock) return;

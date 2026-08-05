@@ -108,6 +108,26 @@ scrolling after touching any landscape sizing.
   every card an equal-width slot regardless of stacking. Don't revert to
   `elementFromPoint` here even for "simpler code" — it reintroduces the
   skip bug.
+  `nearestTapCard` is used on the **initial press as well as** the
+  swipe, on both orientations. It used to be swipe-only, with
+  `pointerdown` demanding a direct hit via `event.target.closest`, which
+  left dead zones everywhere: the gaps between landscape cards, the
+  hand's own padding, the strip either side of the outermost cards, and
+  — worst — any *illegal* card, which swallowed the press entirely even
+  with a legal card right beside it. Because only `.card.tap` is
+  considered, illegal cards are now transparently skipped instead.
+  A useful side effect: nearest-centre stays usable even if the row
+  overflows its container, since a card is reachable as long as any part
+  of its centre-slot is on screen. That's a safety net for the `38px`
+  floor in `--cw`, which is the one case the width formula can't
+  guarantee.
+- The landscape drag-to-play `pointermove` is bound to **`window`**, not
+  `#g-hand`. The gesture's whole purpose is to pull a card up to the
+  table centre, which leaves the hand's box almost immediately — bound
+  to `#g-hand` the card froze the moment the finger crossed the row's
+  edge. It presented as a rendering glitch rather than a broken drag,
+  because the drop test reads `pointerup`, which was already on
+  `window`.
 - Fan card size/overlap (`--cw`/`--overlap`) is tuned per breakpoint
   against real measured available width, not guessed — see the width
   media queries near the top of `<style>`. 400-580px-wide phones are the
@@ -165,14 +185,27 @@ scrolling after touching any landscape sizing.
   screen coordinates, so drags track sideways without it.
 - **Landscape card size is solved, not guessed.** Width is the binding
   constraint and drives everything:
-  - `--cw` = `(100vw - 60px - 15·--gap)/13` — thirteen cards plus 15
-    gaps (12 between cards, 3 extra between the four suit groups) must
-    fit one row; the 60 is `#app` + `.hand` padding plus a 24px
-    breathing margin so the row isn't edge-to-edge. **13 cards across
-    ~900px is a hard wall** — each card can be ~60px wide and no more.
-    That's the answer if bigger cards get asked for again; the only way
-    past it is letting hand cards overlap, which was deliberately
-    removed.
+  - `--cw` = `(100vw − safe-area-inset-left − safe-area-inset-right −
+    60px − 15·--gap)/13` — thirteen cards plus 15 gaps (12 between
+    cards, 3 extra between the four suit groups) must fit one row; the
+    60 is `#app` + `.hand` padding plus a 24px breathing margin so the
+    row isn't edge-to-edge. **13 cards across ~900px is a hard wall** —
+    each card can be ~60px wide and no more. That's the answer if bigger
+    cards get asked for again; the only way past it is letting hand
+    cards overlap, which was deliberately removed.
+    **The `env(safe-area-inset-*)` terms are load-bearing, not
+    decoration.** `#app`'s landscape padding is `env(...) + 8px`, and in
+    landscape the camera cutout moves to a *side* (~45px on a OnePlus
+    13R). Omitting them sized the row against ~45px of room that doesn't
+    exist; `.hand` is `justify-content:center` with `overflow:visible`,
+    so half the excess spilled off the left edge under the cutout,
+    untappable. That was a real reported bug ("can't select the leftmost
+    cards, worst with 13 in hand"). The vertical formula has the same
+    terms for the same reason (bottom gesture bar).
+    The arithmetic now closes exactly: row width works out to
+    `100vw − insets − 60` against an available `100vw − insets − 36`,
+    i.e. 24px of slack, 12px per side. If you change `#app` or `.hand`
+    padding, that identity is what you're keeping true.
   - `--ch` = `min(1.4·--cw, (100vh - 76px - --cw)/3)` — 1.4 is the real
     proportion of a physical playing card and is what normally applies;
     the second term is a safety valve for short viewports. The column

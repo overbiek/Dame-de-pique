@@ -1019,9 +1019,21 @@ html.landscape-mode #app{
 html.landscape-mode #s-pass,html.landscape-mode #s-play{
   --gap:4px;
   --overlap:var(--gap);
-  --cw:max(38px,calc((100vw - 60px - 15 * var(--gap)) / 13));
+  /* The safe-area insets MUST be in both formulas. #app's landscape
+     padding is env(safe-area-inset-*) + 8px, and in landscape a phone's
+     camera cutout moves to a SIDE — on a OnePlus 13R that's ~45px of
+     inset-left. Sizing 13 cards against bare 100vw therefore overflowed
+     the row by roughly that much; .hand is justify-content:center with
+     overflow:visible, so half the excess spilled off the left edge
+     under the cutout where it could not be tapped at all. That was the
+     "can't select the leftmost cards, worst at 13 cards" bug. */
+  --cw:max(38px,calc((100vw
+        - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px)
+        - 60px - 15 * var(--gap)) / 13));
   --ch:max(48px,min(calc(var(--cw) * 1.4),
-                    calc((100vh - 76px - var(--cw)) / 3)));
+                    calc((100vh
+                      - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)
+                      - 76px - var(--cw)) / 3)));
 }
 html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
   display:flex;flex-direction:column;justify-content:center;
@@ -3022,12 +3034,22 @@ function togglePassCard(el){
   }
   updatePassButton();
 }
-// Cards overlap heavily in the fan, and whichever card is stacked on top
-// (highest z-index) claims almost its entire overlapped neighbor's hit
-// area — so naive point-based hit-testing (elementFromPoint) makes swipes
-// skip straight over whichever card is mostly covered. Instead, find the
-// card whose CENTER is nearest the pointer: every card gets a fair,
-// evenly-sized "slot" regardless of stacking, so nothing is skippable.
+// Find the playable card whose CENTER is nearest the pointer's x. Used
+// for BOTH the initial press and the swipe, on both orientations — the
+// press used to demand a direct hit on a card element, which left a
+// surprising number of dead zones:
+//   - portrait: cards overlap 55-65%, and whichever is stacked on top
+//     claims almost all of its neighbour's area, so point-based testing
+//     (elementFromPoint / event.target) skipped cards outright
+//   - landscape: cards don't overlap, but the gaps between them, the
+//     hand's own padding, and the strip either side of the outermost
+//     cards were all unpressable
+//   - either: pressing an ILLEGAL card did nothing at all, even with a
+//     legal one right beside it
+// Nearest-centre gives every card an equal-width slot with no gaps, so
+// every x inside the hand resolves to some legal card and nothing is
+// unreachable. Only .card.tap is considered, so illegal cards are
+// transparently skipped rather than swallowing the press.
 function nearestTapCard(container,x){
   let best=null,bestDist=Infinity;
   for(const el of container.querySelectorAll('.card.tap')){
@@ -3041,7 +3063,8 @@ function nearestTapCard(container,x){
 // swipe across neighboring cards to select them too, like a paint-select.
 let passDragging=false, passDragTouched=null;
 $('p-hand').addEventListener('pointerdown',e=>{
-  const el=e.target.closest('.card.tap'); if(!el||!S||S.phase!=='pass')return;
+  if(!S||S.phase!=='pass')return;
+  const el=nearestTapCard($('p-hand'),e.clientX); if(!el)return;
   passDragging=true;
   passDragTouched=new Set([el.dataset.r+el.dataset.s]);
   togglePassCard(el);
@@ -3293,18 +3316,27 @@ function cancelCardDrag(){
 }
 
 $('g-hand').addEventListener('pointerdown',e=>{
-  const el=e.target.closest('.card.tap'); if(!el||!S||S.phase!=='play')return;
+  if(!S||S.phase!=='play')return;
+  const el=nearestTapCard($('g-hand'),e.clientX); if(!el)return;
   if(isLandscapePlay()){ startCardDrag(e,el); return; }
   playPicking=true;
   setPlayPick(el);
   SFX.play('cardPickup');
 });
 $('g-hand').addEventListener('pointermove',e=>{
-  if(dragEl){ moveCardDrag(e); return; }
+  if(dragEl)return;   // handled on window — see below
   if(!playPicking)return;
   const el=nearestTapCard($('g-hand'),e.clientX);
   if(el) setPlayPick(el);
 });
+// The landscape drag has to be tracked on WINDOW, not on #g-hand. The
+// whole point of the gesture is to pull the card out of the hand and up
+// to the table centre, which leaves #g-hand's box almost immediately —
+// listening there meant the card froze as soon as the finger crossed the
+// row's edge and only caught up on release. The drop test itself always
+// worked, because pointerup is already a window listener, so this looked
+// like a rendering glitch rather than a broken drag.
+window.addEventListener('pointermove',e=>{ if(dragEl) moveCardDrag(e); });
 function releasePlayPick(e){
   if(dragEl){ endCardDrag(e); return; }
   if(!playPicking)return;

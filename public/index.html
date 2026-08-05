@@ -1066,7 +1066,12 @@ html.landscape-mode #s-pass .corner-lt,html.landscape-mode #s-play .corner-lt{
 html.landscape-mode .rt-stack{
   position:absolute;right:8px;top:8px;
   display:flex;flex-direction:column;align-items:stretch;gap:6px;
-  min-width:206px;max-width:42vw;
+  /* a fixed width, not min/max: the pass and play panels hold different
+     content (a pass-direction letter vs a "Trick n/13" line) and would
+     otherwise size differently, so the box visibly changed shape between
+     the two screens. align-items:stretch then makes .corner-rt, the
+     status note and the pass button all match it. */
+  width:min(42vw,240px);
 }
 html.landscape-mode #s-pass .corner-rt,html.landscape-mode #s-play .corner-rt{
   position:static;
@@ -1348,6 +1353,66 @@ html.landscape-mode #s-personal>.center-wrap>.tagline{grid-row:3}
 html.landscape-mode #s-personal>.center-wrap>.note{grid-column:2;padding-left:20px}
 html.landscape-mode #s-personal .settings-row{margin-top:12px}
 html.landscape-mode #s-personal .avatar-grid{max-height:96px}
+
+/* ── Game-flow screens: lobby, seat draw / dealer cut, round summary,
+   final standings ──
+   These opt OUT of the rail layout above. Their content is naturally
+   wide and sequential — a row of drawn cards, a table of per-round
+   scores, four lobby seats, a podium — not a header plus one body
+   panel, so a narrow rail would fight the content rather than help it.
+   They get a single wide column with compact vertical spacing, scrolling
+   when the score tables run long.
+   Because the shared rule above already pushed their children into grid
+   column 2 with an indent and a divider, those have to be reset here —
+   the grid properties go inert under display:block, but the padding and
+   border would otherwise survive. */
+html.landscape-mode #s-lobby>.center-wrap,
+html.landscape-mode #s-draw>.center-wrap,
+html.landscape-mode #s-summary>.center-wrap,
+html.landscape-mode #s-final>.center-wrap{
+  display:block;
+  max-width:740px !important;
+  margin:0 auto;
+  padding:6px 12px !important;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+html.landscape-mode #s-lobby>.center-wrap>*,
+html.landscape-mode #s-draw>.center-wrap>*,
+html.landscape-mode #s-summary>.center-wrap>*,
+html.landscape-mode #s-final>.center-wrap>*{
+  padding-left:0;border-left:0;overflow:visible;
+}
+html.landscape-mode #s-lobby>.center-wrap>.tagline,
+html.landscape-mode #s-draw>.center-wrap>.tagline,
+html.landscape-mode #s-summary>.center-wrap>.tagline,
+html.landscape-mode #s-final>.center-wrap>.tagline{margin:4px 0 10px}
+html.landscape-mode #s-lobby .exit-row,
+html.landscape-mode #s-draw .exit-row,
+html.landscape-mode #s-summary .exit-row,
+html.landscape-mode #s-final .exit-row{flex-direction:row;margin-top:10px !important}
+
+/* lobby: the four seats sit two-up instead of one long list */
+html.landscape-mode #s-lobby .codebox{padding:9px;margin:8px 0}
+html.landscape-mode #s-lobby .code{font-size:clamp(1.5rem,5vh,2.1rem)}
+html.landscape-mode #s-lobby #l-slots{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+}
+html.landscape-mode #s-lobby .slot{margin-bottom:0}
+html.landscape-mode #s-lobby #l-status{margin:8px 0 !important}
+
+/* seat draw / dealer cut: the card row is already horizontal, it just
+   needs to be sized off the short axis so all four fit */
+html.landscape-mode #s-draw .drawrow{margin:10px 0;gap:8px}
+html.landscape-mode #s-draw .drawcard{width:clamp(52px,13vh,74px)}
+html.landscape-mode #s-draw #d-note{margin:8px 0}
+
+/* summary / final: the score sheet is the tall part, so it keeps its own
+   scroll and everything around it tightens up */
+html.landscape-mode #s-summary .sheet-wrap,
+html.landscape-mode #s-final .sheet-wrap{max-height:40vh;margin:.4rem 0}
+html.landscape-mode #s-final .podium{grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
+html.landscape-mode #s-final .pod{padding:9px 6px}
+html.landscape-mode #s-final .pod .n{font-size:1.35rem}
 
 /* ══ Landscape trick-slot captions — each player's name/score sits
    directly under the slot they play into, replacing both the seat
@@ -2186,7 +2251,8 @@ function show(id){
 // portrait-locked. Best-effort only — screen.orientation.lock() only
 // actually works in an installed/standalone Android Chrome PWA; it's
 // silently unavailable everywhere else (iOS Safari, plain browser tabs).
-const LANDSCAPE_SCREENS=new Set(['menu','landing','ranked','rank','stats','personal','pass','play']);
+const LANDSCAPE_SCREENS=new Set(['menu','landing','ranked','rank','stats','personal',
+                                 'lobby','draw','summary','final','pass','play']);
 function applyOrientationLock(id){
   const so=screen.orientation;
   if(!so||!so.lock) return;
@@ -3177,11 +3243,24 @@ function passBadgeHTML(dir){
 function passInfoHTML(G,dir){
   return roundBadgeHTML(G)+passBadgeHTML(dir);
 }
+// Shared by the pass and play screens so the top-right panel holds the
+// same controls — and therefore the same shape — on both. Enabled only
+// when the stored last trick belongs to the round on screen. Note that
+// during passing it is always DISABLED by that rule: a new round's
+// passing happens before any trick has been played in it, so the stored
+// trick is the previous round's. bindLastTrickButton() no-ops on a
+// disabled button, which is what keeps this safe on the pass screen —
+// that screen has no .lasttrick-ov overlay to show anything in.
+function lastTrickBtnHTML(G,id){
+  const canWatch=!!(G.lastTrick&&G.lastTrick.round===G.round
+                    &&G.lastTrick.cards&&G.lastTrick.cards.length);
+  return `<button class="tb-round trick" id="${id}" title="Hold to see last trick"${canWatch?'':' disabled'}>👁</button>`;
+}
 function renderPassReveal(G){
   show('pass');
   const dir=['left','right','across','keep'][(G.round-1)%4];
   parkPassChrome();   // must precede the innerHTML rebuild — see the function
-  $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir))});
+  $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir),lastTrickBtnHTML(G,"p-lt-btn"))});
   myStrip(G,'p-me',false);
   $('p-prompt').className='prompt';
   $('p-prompt').textContent='Cards received!';
@@ -3195,7 +3274,7 @@ function renderPass(G){
   show('pass');
   const dir=['left','right','across','keep'][(G.round-1)%4];
   parkPassChrome();   // must precede the innerHTML rebuild — see the function
-  $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir))});
+  $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir),lastTrickBtnHTML(G,"p-lt-btn"))});
   myStrip(G,'p-me',false);
 
   const mine=G.players[me];
@@ -3436,8 +3515,7 @@ function renderPlay(G){
     bannerText=`You received ${justReceived.map(c=>c.rank+c.suit).join(', ')}`;
   }
 
-  const canWatch=!!(G.lastTrick&&G.lastTrick.round===G.round&&G.lastTrick.cards&&G.lastTrick.cards.length);
-  const trickBtn=`<button class="tb-round trick" id="g-lt-btn" title="Hold to see last trick"${canWatch?'':' disabled'}>👁</button>`;
+  const trickBtn=lastTrickBtnHTML(G,'g-lt-btn');
   const playInfo=roundBadgeHTML(G)+`<div class="tb-line">Trick <b>${Math.min(G.trickNum,13)}</b>/13</div>`;
   $('g-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(playInfo,trickBtn)});
   bindLastTrickButton($('g-lt-btn'));

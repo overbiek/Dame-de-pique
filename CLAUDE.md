@@ -160,10 +160,23 @@ scrolling after touching any landscape sizing.
   pass-transition fx pattern it otherwise resembles. Rocket launches
   from the shooting player's actual seat position via `seatOf()`.
   Purely decorative/emoji-based (🌕/🚀), no new image assets.
-- Landscape mode exists on the main menu, the five `.center-wrap`
-  content screens (casual / ranked / rank / statistics / My Account) and
-  the pass/play ("table") screens. Lobby, draw, round-summary and final
-  are still portrait-only. `LANDSCAPE_SCREENS` is the whole gate.
+- **Every screen now has a landscape layout** — `LANDSCAPE_SCREENS`
+  holds all of them and is the whole gate. There are three distinct
+  layout families, and picking the wrong one for a new screen is the
+  easy mistake:
+  1. **Table screens** (pass/play) — bespoke, see the `--cw`/`--ch`
+     furniture above.
+  2. **Rail screens** (casual, ranked, rank, statistics, My Account) —
+     narrow left rail of header chrome, body in column 2.
+  3. **Game-flow screens** (lobby, seat draw / dealer cut, round
+     summary, final) — a single wide centred column, *opted out* of the
+     rail layout. Their content is wide and sequential (a row of drawn
+     cards, a per-round score table, four lobby seats, a podium), so a
+     narrow rail fights it. Because the shared rail rule has already
+     pushed their children into column 2 with an indent and a divider,
+     that block has to **reset `padding-left` and `border-left`** — the
+     grid properties go inert under `display:block` but those two would
+     survive and show up as a stray rule down the middle.
 - **The four content screens share ONE landscape layout**, and the rules
   are scoped to `html.landscape-mode .screen.active > .center-wrap`
   rather than an id list. That works because `landscape-mode` is only
@@ -198,6 +211,20 @@ scrolling after touching any landscape sizing.
 - `#rank-you-bar` is `position:fixed` to the viewport bottom, so
   `#rank-content` reserves `padding-bottom` for it — otherwise the last
   leaderboard rows sit underneath it.
+- `.rt-stack` has a **fixed** `width:min(42vw,240px)`, not min/max. The
+  pass and play panels hold different content (a pass-direction letter
+  vs a "Trick n/13" line), so sized to content the box visibly changed
+  shape between the two screens. `align-items:stretch` then makes
+  `.corner-rt`, the status note and the pass button all match it.
+- `lastTrickBtnHTML(G, id)` is shared by both table screens so the panel
+  holds the same controls on each. On the **pass** screen it always
+  renders disabled, and that's correct rather than a bug: a round's
+  passing happens before any trick has been played in it, so the stored
+  `G.lastTrick` belongs to the *previous* round and fails the
+  `lastTrick.round === G.round` guard. That's also what keeps it safe —
+  `bindLastTrickButton()` no-ops on a disabled button, and the pass
+  screen has no `.lasttrick-ov` overlay to display anything in. If it
+  ever needs to actually work there, both of those have to change.
 - Body panels are top-aligned in their column, deliberately **not**
   vertically centred. `justify-content:center` / `margin:auto` inside a
   scrollable container makes overflowing content unreachable at the

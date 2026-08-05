@@ -160,10 +160,31 @@ scrolling after touching any landscape sizing.
   pass-transition fx pattern it otherwise resembles. Rocket launches
   from the shooting player's actual seat position via `seatOf()`.
   Purely decorative/emoji-based (🌕/🚀), no new image assets.
-- **Every screen now has a landscape layout** — `LANDSCAPE_SCREENS`
-  holds all of them and is the whole gate. There are three distinct
-  layout families, and picking the wrong one for a new screen is the
-  easy mistake:
+- **The game is landscape-only.** `manifest.json` is
+  `"orientation":"landscape"` and `applyOrientationLock()` requests a
+  landscape lock on every screen. Both are best-effort — the lock works
+  reliably only in an installed standalone Android Chrome PWA, and
+  Android bakes the manifest orientation into the WebAPK at *install*
+  time, so an already-installed copy must be reinstalled before it takes
+  effect.
+- **The portrait CSS is deliberately still there** and is not dead code.
+  It's the base layer the `html.landscape-mode` rules override, and it's
+  the fallback that renders when the orientation lock silently fails (a
+  plain browser tab, iOS, an OS-level rotation lock). That's also why
+  `isLandscapeModeActive()` still gates on `matchMedia` rather than
+  being forced to `true`: painting a wide, short layout into a tall,
+  narrow viewport would clip it into uselessness. A verbatim copy of the
+  last portrait-usable build is kept at
+  `backup/index-portrait-reference.html` (see that folder's README);
+  it's outside `public/` so it is neither served nor cached.
+- `applyOrientationLock()` and `updateLandscapeMode()` are both called
+  once at startup as well as from `show()` — `show()` never runs for the
+  first screen, since `#s-menu` ships `active` and `currentScreenId`
+  already defaults to `'menu'`.
+- **Every screen has a landscape layout** — `LANDSCAPE_SCREENS` holds
+  all of them and is the whole gate. There are three distinct layout
+  families, and picking the wrong one for a new screen is the easy
+  mistake:
   1. **Table screens** (pass/play) — bespoke, see the `--cw`/`--ch`
      furniture above.
   2. **Rail screens** (casual, ranked, rank, statistics, My Account) —

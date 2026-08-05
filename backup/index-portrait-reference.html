@@ -2247,44 +2247,39 @@ function show(id){
   applyOrientationLock(id);
   updateLandscapeMode();
 }
-// The game is landscape-only: every screen has a landscape layout, so
-// every screen asks to be locked there. Kept as a set (rather than
-// dropping the concept) because it's still what gates the CSS class and
-// documents that the coverage is complete — if a screen is ever added
-// without a landscape layout, leaving it out of here is the escape
-// hatch.
+// Table screens (pass/play) can rotate to landscape; everything else stays
+// portrait-locked. Best-effort only — screen.orientation.lock() only
+// actually works in an installed/standalone Android Chrome PWA; it's
+// silently unavailable everywhere else (iOS Safari, plain browser tabs).
 const LANDSCAPE_SCREENS=new Set(['menu','landing','ranked','rank','stats','personal',
                                  'lobby','draw','summary','final','pass','play']);
-// Best-effort only. screen.orientation.lock() reliably works only in an
-// installed/standalone Android Chrome PWA; it's silently unavailable in
-// plain browser tabs and on iOS, and an OS-level rotation lock overrides
-// it regardless. manifest.json's "orientation":"landscape" is the other
-// half — and on Android that's baked into the installed WebAPK at
-// INSTALL time, so an already-installed copy needs reinstalling before
-// it takes effect (see the sw.js/manifest notes in CLAUDE.md).
 function applyOrientationLock(id){
   const so=screen.orientation;
   if(!so||!so.lock) return;
-  try{ so.lock('landscape').catch(()=>{}); }catch(e){}
+  try{
+    if(LANDSCAPE_SCREENS.has(id)){
+      if(so.unlock) so.unlock();
+    }else{
+      so.lock('portrait').catch(()=>{});
+    }
+  }catch(e){}
 }
 
-// Whether the LANDSCAPE CSS applies. Still gated on the viewport really
-// being landscape, not forced on: when the lock above silently fails the
-// device can still be physically portrait, and painting a wide, short
-// layout into a tall, narrow viewport would clip it into uselessness.
-// The portrait styles are retained precisely as that fallback — see
-// backup/README.md.
+// Landscape mode follows real physical rotation. An earlier version also
+// had a manual "force landscape" toggle plus a CSS trick that rotated
+// <body> 90° for devices that refused to rotate — both are gone now that
+// rotation works on the target hardware. `landscape-mode` (which all the
+// landscape CSS keys off) applies on the menu and the pass/play screens.
 function isLandscapeModeActive(){ return matchMedia('(orientation:landscape)').matches; }
 function updateLandscapeMode(){
   const active=LANDSCAPE_SCREENS.has(currentScreenId)&&isLandscapeModeActive();
   document.documentElement.classList.toggle('landscape-mode',active);
 }
 // #s-menu ships with class="active" and currentScreenId already defaults
-// to 'menu', so show() never runs for the first screen — and show() is
-// the only caller of both of these. Without them a fresh load would
-// neither request the landscape lock nor apply the landscape class until
-// the user happened to navigate. Both are idempotent.
-applyOrientationLock(currentScreenId);
+// to 'menu', so show() never runs for the first screen — without this a
+// phone already held in landscape at first paint would get the portrait
+// menu until the user rotated away and back. Idempotent: it only reads
+// the current screen + orientation and toggles a class.
 updateLandscapeMode();
 // The class toggle and the markup must flip together — tableHTML() emits
 // a different structure per orientation (seat blocks vs. per-slot

@@ -163,34 +163,56 @@ scrolling after touching any landscape sizing.
   conversion: a `translate()` on a descendant of a rotated ancestor
   moves along the rotated local axes while pointer events report true
   screen coordinates, so drags track sideways without it.
-- Landscape sizing is **height-first**: `--ch` is `clamp(48px,15.5vh,104px)`
-  on the play screen (`13.5vh` on the pass screen, which carries a
-  confirm button + auto-pass countdown the play screen doesn't) and
-  `--cw` is derived from it at a deliberately broader 1.25 aspect ratio
-  (portrait uses 1.42, width-driven). Both must be declared explicitly —
-  a custom property's `var()` references resolve where the property is
-  *declared*, so overriding only `--cw` here would silently leave `--ch`
-  at its portrait value. This bit us once already.
+- **Landscape card size is solved, not guessed.** `--cw` is
+  `max(38px, min(<height limit>, <width limit>))` with `--ch` derived at
+  a broader-than-portrait 1.25 ratio (portrait uses 1.42, width-driven):
+  - height limit `(100vh - 128px)/5` — the layout is four card-heights
+    tall (three trick-cross rows + your hand) and `4·ch == 5·cw`, so the
+    divisor is 5. The 128px is the sum of every fixed piece of furniture
+    (`#app` padding, `.hand` padding, table padding-top, mid row gaps,
+    the three name captions, the 44px reserved bottom-note strip). The
+    pass screen uses 176px instead — it also has a confirm button and an
+    auto-pass countdown. **If you change any of those, change the
+    constant to match**, or the screen silently starts scrolling.
+  - width limit `(100vw - 36px - 15·--gap)/13` — thirteen cards plus 15
+    gaps (12 between cards, 3 extra between the four suit groups) must
+    fit one row.
+  Which limit binds depends on the device; on a OnePlus 13R they're
+  close. Cards genuinely can't be made bigger than this without either
+  overlapping the hand or scrolling — that's the answer if someone asks
+  for them bigger again.
+  Both custom properties must be declared explicitly, because a custom
+  property's `var()` references resolve where the property is *declared*
+  — overriding only `--cw` would silently leave `--ch` at its portrait
+  value. This bit us once already.
 - The landscape table is a different structure, not just restyled:
   `tableHTML()` branches on `isLandscapeModeActive()` and drops the seat
   blocks ringing the table entirely, rendering each player's name/score
   as a `.tcap` caption directly under the trick slot they play into —
   including your own, which is why `.mystrip` is hidden in landscape.
-  Opponents' face-down fans are dropped too. Both corner groups are
-  absolutely positioned against `.table` (home button top-left, info
-  panel centered on the right edge — the top-right corner got clipped by
-  the status bar / rounded screen corner).
-- The `.banner` line under the table ("X wins the trick", "You received
-  …") is `display:none` in landscape — it cost a whole row of height.
-  That text becomes `cornerActions()`'s third argument instead, rendered
-  as a `.tb-note` row inside the right-side panel. It goes in as HTML, so
-  `renderPlay` computes the string *before* building the table and passes
-  it through `esc()`; it also has to be computed up front because
-  `cornerActions` runs as part of the same `tableHTML()` call.
+  Opponents' face-down fans are dropped too. Everything else in the
+  landscape table is absolutely positioned against `.table`, which
+  stretches to fill the screen: home button top-left, the round/trick +
+  rules + last-trick panel top-right, and the status-text block
+  bottom-center.
+- **Both the `.banner` and `.prompt` lines below the table are
+  `display:none` in landscape** — two rows of height the cards now use
+  instead. All of that text (whose turn, what to pass, what you
+  received, who won the trick) collects in one `.tbl-note` block pinned
+  to the bottom-center of the table. `tableHTML()` renders it empty and
+  `syncLandscapeNote(tableId, promptId, bannerId)` copies the (still
+  written, just hidden) elements into it at the END of each render.
+  That direction matters: every render branch sets its prompt *after*
+  building the table, so threading the text through `tableHTML` would
+  mean restructuring all of them. It no-ops in portrait, where
+  `.tbl-note` isn't rendered. `.table`'s 44px `padding-bottom` is what
+  keeps the vertically-centred trick cross clear of this block.
 - The landscape hand is a flat row, not a fan: `.card-slot`'s inline
   rotation/lift transform is overridden to `none` and `--overlap` flips
-  from a large negative value to a positive `8px` gap, so cards sit side
-  by side and don't overlap at all.
+  from a large negative value to a small positive `--gap`, so cards sit
+  side by side and don't overlap at all. `--gap` is deliberately tiny —
+  it's width the cards themselves could use, and the `--cw` formula
+  subtracts exactly these gaps.
 - Because rotating the phone doesn't itself produce a new `gameState`
   broadcast, both the `matchMedia` change listener and a debounced
   `resize` listener call `rerenderTableScreen()`. The matchMedia one

@@ -880,18 +880,38 @@ html.landscape-mode #app{
 /* --ch is normally derived from --cw at :root, and a custom property's
    var() references resolve where the property is DECLARED, not where
    it's used — so redefining only --cw here would leave --ch at its
-   stale portrait value. Both are declared explicitly, height-first:
-   landscape is short but very wide, so the height a card may occupy is
-   the real constraint, and the width then follows from a deliberately
-   broader-than-portrait aspect ratio (1.25 vs 1.42). */
+   stale portrait value. Both are declared explicitly, at a deliberately
+   broader-than-portrait aspect ratio (1.25 vs 1.42).
+   Both dimensions are now genuinely tight, so rather than guess a vh
+   value --cw is solved from the two hard limits directly and takes
+   whichever is smaller:
+
+   HEIGHT — the column is four card-heights tall (three rows of the trick
+   cross, plus your hand) once you subtract the fixed furniture, and
+   4·ch == 5·cw at this aspect ratio, hence /5. The 128px is #app padding
+   (8) + .hand padding (8) + table padding-top (6) + mid row gaps (8) +
+   the three name captions (~51) + the reserved bottom-note strip (44),
+   rounded up slightly for slack. Keep it in step with those values.
+
+   WIDTH — thirteen cards and their gaps must fit one row: subtract #app
+   and .hand padding (36) and 15 gaps (12 between cards plus 3 extra
+   between the four suit groups), then divide by 13.
+
+   Cards cannot get bigger than the smaller of these without either
+   overlapping horizontally or scrolling vertically. */
 html.landscape-mode #s-pass,html.landscape-mode #s-play{
-  --ch:clamp(48px,15.5vh,104px);
-  --cw:calc(var(--ch) / 1.25);
+  --gap:3px;
+  --overlap:var(--gap);
+  --cw:max(38px,min(calc((100vh - 128px) / 5),
+                    calc((100vw - 36px - 15 * var(--gap)) / 13)));
+  --ch:calc(var(--cw) * 1.25);
 }
-/* the pass screen carries a confirm button and an auto-pass countdown
-   the play screen doesn't, so it gets slightly shorter cards to keep the
-   same one-viewport guarantee */
-html.landscape-mode #s-pass{ --ch:clamp(46px,13.5vh,96px); }
+/* the pass screen also carries a confirm button and an auto-pass
+   countdown below the hand — ~48px more furniture to subtract */
+html.landscape-mode #s-pass{
+  --cw:max(38px,min(calc((100vh - 176px) / 5),
+                    calc((100vw - 36px - 15 * var(--gap)) / 13)));
+}
 html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
   display:flex;flex-direction:column;justify-content:center;
   height:100%;
@@ -904,32 +924,50 @@ html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
    left of center, with both corner groups absolutely positioned. */
 html.landscape-mode #s-pass .table,html.landscape-mode #s-play .table{
   display:flex;align-items:center;justify-content:flex-start;
-  padding:6px 10px 6px 6%;
-  flex:0 0 auto;
+  /* the 44px bottom reserve keeps the vertically-centred trick cross
+     clear of the absolutely-positioned .tbl-note strip — it's the same
+     44 that's accounted for in the --cw height formula above */
+  padding:6px 10px 44px 6%;
+  flex:1 1 auto;min-height:0;
 }
-html.landscape-mode #s-pass .table-wrap,html.landscape-mode #s-play .table-wrap{flex:0 0 auto}
+html.landscape-mode #s-pass .table-wrap,html.landscape-mode #s-play .table-wrap{
+  flex:1 1 auto;min-height:0;display:flex;
+}
+html.landscape-mode #s-play .table-wrap>.table{flex:1 1 auto}
 html.landscape-mode #s-pass .corner-lt,html.landscape-mode #s-play .corner-lt{
   position:absolute;left:8px;top:8px;
 }
-/* vertically centered on the right edge rather than tucked into the top
-   corner, where the status bar / rounded screen corner clipped it */
 html.landscape-mode #s-pass .corner-rt,html.landscape-mode #s-play .corner-rt{
-  position:absolute;right:10px;top:50%;transform:translateY(-50%);
-  flex-direction:column;align-items:stretch;gap:5px;
+  position:absolute;right:8px;top:8px;
+  flex-direction:row;align-items:center;gap:10px;
   background:rgba(4,20,14,.55);border:1px solid rgba(212,175,92,.22);
-  border-radius:12px;padding:5px 8px;max-width:32vw;
+  border-radius:14px;padding:7px 11px;
 }
-html.landscape-mode .corner-rt .tb-row{
-  display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;
+html.landscape-mode .corner-rt .tb-round,html.landscape-mode .corner-rt .tb-badge{
+  width:40px;height:40px;
 }
-/* "X wins the trick" — sits under the round/rules/last-trick row rather
-   than on its own line below the table, which landscape has no room for */
-html.landscape-mode .corner-rt .tb-note{
-  font-size:.62rem;line-height:1.25;color:var(--gold-hi);text-align:center;
-  border-top:1px solid rgba(212,175,92,.18);padding-top:4px;
+html.landscape-mode .corner-rt .tb-round{font-size:1.05rem}
+html.landscape-mode .corner-rt .tb-badge{font-size:.66rem}
+html.landscape-mode .corner-rt .tb-badge.pass{font-size:1rem}
+html.landscape-mode .corner-rt .tb-line{font-size:.72rem}
+/* Every bit of status text — whose turn it is, what to pass, what you
+   were dealt, who won the trick — collects in one block sitting at the
+   bottom-center of the table, instead of the .prompt/.banner lines that
+   sat below it and cost two rows of height the cards can now use.
+   Filled by syncLandscapeNote(), which mirrors those (still-rendered
+   but hidden) elements so every render branch keeps working unchanged. */
+html.landscape-mode .tbl-note{
+  position:absolute;left:50%;bottom:6px;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  min-width:34vw;max-width:52vw;padding:5px 14px;
+  background:rgba(4,20,14,.5);border:1px solid rgba(212,175,92,.22);
+  border-radius:12px;text-align:center;
 }
-/* …which is why the standalone banner line is dropped here entirely */
-html.landscape-mode #s-pass .banner,html.landscape-mode #s-play .banner{display:none}
+html.landscape-mode .tbl-note .nt-main{font-size:.82rem;color:var(--gold-hi);line-height:1.2}
+html.landscape-mode .tbl-note .nt-main.wait{color:var(--muted)}
+html.landscape-mode .tbl-note .nt-sub{font-size:.66rem;color:var(--cream);line-height:1.2;opacity:.85}
+html.landscape-mode #s-pass .banner,html.landscape-mode #s-play .banner,
+html.landscape-mode #s-pass .prompt,html.landscape-mode #s-play .prompt{display:none}
 /* your own name/score now lives under your trick slot like everyone
    else's, so the strip above the hand is redundant here */
 html.landscape-mode #s-pass .mystrip,html.landscape-mode #s-play .mystrip{display:none}
@@ -943,13 +981,13 @@ html.landscape-mode #s-pass .mid,html.landscape-mode #s-play .mid{
 html.landscape-mode #s-pass .mid>div,html.landscape-mode #s-play .mid>div{
   display:flex;flex-direction:column;align-items:center;gap:3px;
 }
-html.landscape-mode #s-pass .prompt,html.landscape-mode #s-play .prompt{margin:1px 0 0;font-size:.76rem}
-/* Landscape has width to spare and no height to waste, so the hand is a
-   plain flat row: no fan tilt, no lift, and a real positive gap between
-   cards instead of portrait's heavy negative overlap. */
+/* Landscape lays the hand out as a plain flat row: no fan tilt, no lift,
+   and a real positive gap between cards instead of portrait's heavy
+   negative overlap. The gap is deliberately small (--gap) because it's
+   width the cards themselves could otherwise use — see the --cw formula
+   above, which subtracts exactly these gaps. */
 html.landscape-mode #s-pass .hand,html.landscape-mode #s-play .hand{
   flex:0 0 auto;padding:4px 10px;align-items:center;
-  --overlap:8px;
 }
 html.landscape-mode #s-pass .hand .card-slot,html.landscape-mode #s-play .hand .card-slot{
   transform:none !important;
@@ -1894,6 +1932,9 @@ function tableHTML(G,opts){
 
   const actions=opts.actions||{};
   if(isLandscapeModeActive()){
+    // .tbl-note is left empty here and filled by syncLandscapeNote()
+    // after the caller has set the (hidden) .prompt/.banner elements it
+    // mirrors — see that function for why it works this way round.
     return `
     <div class="corner corner-lt">${actions.lt||''}</div>
     <div class="corner corner-rt">${actions.rt||''}</div>
@@ -1903,6 +1944,7 @@ function tableHTML(G,opts){
       <div class="slot-r">${played(3)}${cap(3)}</div>
       <div class="slot-b">${played(0)}${cap(0)}</div>
     </div>
+    <div class="tbl-note"><div class="nt-main"></div><div class="nt-sub"></div></div>
     `;
   }
   return `
@@ -2587,25 +2629,19 @@ function renderDraw(G){
 }
 
 /* ══════════ PASS ══════════ */
-function cornerActions(leftHTML,rtExtraHTML,noteHTML){
+function cornerActions(leftHTML,rtExtraHTML){
   // Landscape (table screens only) consolidates round/trick info + rules
-  // + last-trick eye into one right-side panel, with just a home button
+  // + last-trick eye into one top-right panel, with just a home button
   // on the left — different arrangement of the exact same pieces, not
   // new functionality. Checked at render time rather than via a
   // permanent mode flag so a mid-game rotation re-renders correctly (see
   // the 'resize' listener that re-invokes the current phase's render).
-  // noteHTML (the "X wins the trick" message) is appended as a second
-  // row of the same panel — landscape hides the standalone .banner line
-  // under the table, so this is where that text has to go. Pre-escaped
-  // by the caller since it goes in as HTML.
   if(isLandscapeModeActive()){
     return {
       lt: `<button class="home-btn" title="Leave" onclick="askLeave(this)">🏠</button>`,
-      rt: `<div class="tb-row">${leftHTML||''}
-             <button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
-             ${rtExtraHTML||''}
-           </div>
-           ${noteHTML?`<div class="tb-note">${noteHTML}</div>`:''}`,
+      rt: `${leftHTML||''}
+           <button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
+           ${rtExtraHTML||''}`,
     };
   }
   return {
@@ -2614,6 +2650,25 @@ function cornerActions(leftHTML,rtExtraHTML,noteHTML){
          <button class="tb-round" title="Leave" onclick="askLeave(this)">🚪</button>
          ${rtExtraHTML||''}`,
   };
+}
+// Landscape folds every status line into one block at the bottom of the
+// table (.tbl-note) instead of the .prompt/.banner rows below it. Rather
+// than thread that text through tableHTML — which would mean every
+// render branch computing its message BEFORE building the table instead
+// of after, as they all do today — the elements keep being written
+// exactly as before (just hidden by CSS in landscape) and this mirrors
+// them into the block afterwards. No-ops in portrait, where .tbl-note
+// isn't rendered at all.
+function syncLandscapeNote(tableId,promptId,bannerId){
+  const box=document.querySelector('#'+tableId+' .tbl-note');
+  if(!box) return;
+  const pr=$(promptId), bn=bannerId?$(bannerId):null;
+  const main=box.querySelector('.nt-main'), sub=box.querySelector('.nt-sub');
+  main.textContent=pr?pr.textContent:'';
+  main.className='nt-main'+(pr&&pr.classList.contains('wait')?' wait':'');
+  const subText=bn?bn.textContent:'';
+  sub.textContent=subText;
+  sub.style.display=subText?'':'none';
 }
 function roundBadgeHTML(G){
   return `<div class="tb-badge" title="Round ${G.round} of ${G.totalRounds}">${G.round}/${G.totalRounds}</div>`;
@@ -2634,6 +2689,7 @@ function renderPassReveal(G){
   $('p-prompt').textContent='Cards received!';
   $('p-hand').innerHTML=handHTML(G.myHand,null,null,G.myReceived);
   $('p-go').style.visibility='hidden';
+  syncLandscapeNote('p-table','p-prompt');
   maybeShowPassTransition(G);
 }
 function renderPass(G){
@@ -2656,6 +2712,7 @@ function renderPass(G){
     $('p-go').style.visibility='visible';
     updatePassButton();
   }
+  syncLandscapeNote('p-table','p-prompt');
 }
 function updatePassButton(){
   const b=$('p-go');
@@ -2861,10 +2918,6 @@ function renderPlay(G){
   }
   lastCurrentTrickLen=ctLen;
 
-  // Computed before the table renders because in landscape this text
-  // lives INSIDE the right-side info panel (built by cornerActions), not
-  // in the standalone .banner line below the table — that line costs
-  // vertical room landscape can't spare.
   const justReceived=(G.trickNum===1 && G.myReceived && G.myReceived.length)?G.myReceived:null;
   let bannerText=G.lastTrickMsg||'';
   if(justReceived && !G.lastTrickMsg){
@@ -2874,7 +2927,7 @@ function renderPlay(G){
   const canWatch=!!(G.lastTrick&&G.lastTrick.round===G.round&&G.lastTrick.cards&&G.lastTrick.cards.length);
   const trickBtn=`<button class="tb-round trick" id="g-lt-btn" title="Hold to see last trick"${canWatch?'':' disabled'}>👁</button>`;
   const playInfo=roundBadgeHTML(G)+`<div class="tb-line">Trick <b>${Math.min(G.trickNum,13)}</b>/13</div>`;
-  $('g-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(playInfo,trickBtn,esc(bannerText))});
+  $('g-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(playInfo,trickBtn)});
   bindLastTrickButton($('g-lt-btn'));
   $('g-banner').textContent=bannerText;
 
@@ -2889,6 +2942,7 @@ function renderPlay(G){
 
   myStrip(G,'g-me',myTurn);
   $('g-hand').innerHTML=handHTML(G.myHand,myTurn?'play':null,legal,justReceived);
+  syncLandscapeNote('g-table','g-prompt','g-banner');
 }
 // Press a card to preview it, then — without lifting your finger/mouse —
 // slide across the fan to change your pick; release to play whichever

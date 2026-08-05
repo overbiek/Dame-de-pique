@@ -160,9 +160,39 @@ scrolling after touching any landscape sizing.
   pass-transition fx pattern it otherwise resembles. Rocket launches
   from the shooting player's actual seat position via `seatOf()`.
   Purely decorative/emoji-based (🌕/🚀), no new image assets.
-- Landscape mode exists only on the pass/play ("table") screens — menu,
-  lobby, draw, round-summary, and final are portrait-only by design, not
-  yet-todo.
+- Landscape mode exists on the main menu and the pass/play ("table")
+  screens — lobby, draw, round-summary and final are portrait-only by
+  design, not yet-todo. `LANDSCAPE_SCREENS` is the whole gate.
+- **Landscape main menu** is a pure CSS reflow of the portrait markup —
+  no DOM change. `.menu-wrap` becomes a two-column grid: an identity
+  rail (crest / title / tagline, with the How-to-play, Sound and Install
+  utilities at its foot) and the five tiles in column 2, Casual Play
+  spanning as a hero above a 2×2. Three things there are load-bearing:
+  - The tagline's grid row is the `1fr` one. That's what pushes the
+    utility group to the bottom of the rail — an `auto` margin can't,
+    because on a grid item auto margins only absorb space inside that
+    item's own area and don't move siblings.
+  - `.exit-row`'s `margin-top` needs `!important`: the menu markup
+    carries an inline `style="margin-top:22px"`, which no normal
+    stylesheet rule can beat, and this layout is deliberately CSS-only.
+  - `.menu-wrap` uses `height:100%` and plain padding, **not** `100dvh`
+    plus `env(safe-area-inset-*)`. `html.landscape-mode #app` already
+    applies both; re-adding them double-counts the notch and overflows
+    by exactly that amount.
+  `#install` gets a margin override but deliberately **not** `display` —
+  it's `display:none` by default and revealed by `showInstall()` only
+  when the app isn't already installed, so forcing it visible would
+  advertise "Install as an app" inside the installed PWA.
+- `#s-menu` starts with `class="active"` and `currentScreenId` already
+  defaults to `'menu'`, so `show()` never runs for the first screen —
+  hence the one-time `updateLandscapeMode()` call right after that
+  function is defined. Without it, a phone already held in landscape at
+  first paint gets the portrait menu until it's rotated away and back.
+- `rerenderTableScreen()` guards on `currentScreenId` being `pass`/`play`,
+  not just on `S` existing. Every `render*` it calls invokes `show()`, so
+  without that guard a rotation while a game exists but the player is
+  sitting on the (now landscape-capable) menu would navigate them into
+  the game unasked.
 - Landscape is driven purely by **real physical rotation** —
   `isLandscapeModeActive()` is just
   `matchMedia('(orientation:landscape)').matches`, and

@@ -1155,6 +1155,79 @@ html.landscape-mode #s-pass .home-btn,html.landscape-mode #s-play .home-btn{
   font-size:1.4rem;cursor:pointer;
 }
 
+/* ══ Landscape main menu ══
+   Pure reflow of the existing menu — no markup change. The five tiles
+   are already direct children of .menu-tiles, which is a direct child of
+   .menu-wrap, so grid placement alone gives the two-panel layout: an
+   identity rail (crest / title / tagline, utilities at the foot) in
+   column 1 and the action grid in column 2. All colours come from the
+   shared theme tokens so the three palettes keep working. */
+/* Sized so it doesn't need to scroll, but overflow-y:auto rather than
+   hidden as a safety valve: #install-how expands into several lines of
+   install instructions on tap, and #app is overflow:hidden in landscape,
+   so clipping here would put content permanently out of reach. */
+html.landscape-mode #s-menu{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
+html.landscape-mode #s-menu .menu-wrap{
+  max-width:none;
+  /* height:100% and NOT 100dvh, with no safe-area padding of its own:
+     html.landscape-mode #app already applies both the insets and its own
+     height:100%. Re-adding either here double-counts the notch and makes
+     the wrap taller than the box that contains it, which is exactly the
+     overflow this layout is supposed to avoid. */
+  height:100%;
+  padding:10px 4px;
+  display:grid;
+  grid-template-columns:minmax(190px,258px) 1fr;
+  /* the tagline's row is the flexible one, so the utility group is
+     pushed to the foot of the rail. An `auto` margin can't do this: on a
+     grid item it only absorbs space inside that item's own area, it
+     doesn't move siblings. Trailing rows are harmless when #err-menu or
+     #install are display:none (they aren't grid items at all then). */
+  grid-template-rows:auto auto 1fr auto auto auto;
+  column-gap:22px;
+  text-align:left;
+}
+html.landscape-mode #s-menu .menu-crest,
+html.landscape-mode #s-menu .menu-wrap>h1,
+html.landscape-mode #s-menu .tagline,
+html.landscape-mode #s-menu .exit-row,
+html.landscape-mode #s-menu #err-menu,
+html.landscape-mode #s-menu #install{grid-column:1}
+
+html.landscape-mode #s-menu .menu-crest{margin-bottom:4px;font-size:.85rem}
+html.landscape-mode #s-menu .menu-wrap>h1{
+  font-size:clamp(1.4rem,4.2vh,2rem);margin-bottom:5px;
+}
+html.landscape-mode #s-menu .tagline{margin:0;font-size:.8rem}
+
+/* utilities stack quietly at the foot of the rail. The margin-top needs
+   !important because .exit-row carries an inline style="margin-top:22px"
+   in the menu markup, which no stylesheet rule can otherwise beat — and
+   the brief for this layout was explicitly CSS-only, so the attribute
+   stays put. */
+html.landscape-mode #s-menu .exit-row{
+  flex-direction:column;align-items:stretch;gap:7px;
+  margin-top:0 !important;margin-bottom:6px;
+}
+html.landscape-mode #s-menu .exit-row .btn{text-align:left}
+/* margin only — deliberately NOT display. #install is display:none by
+   default and revealed by showInstall() only when the app isn't already
+   installed; forcing display here would advertise "Install as an app"
+   inside the installed PWA. */
+html.landscape-mode #s-menu #install{margin-top:0}
+
+/* action grid: the primary tile spans as a hero, the rest form a 2x2 */
+html.landscape-mode #s-menu .menu-tiles{
+  grid-column:2;grid-row:1 / -1;align-self:center;
+  display:grid;grid-template-columns:1fr 1fr;gap:9px;
+  margin-top:0;padding-left:22px;
+  border-left:1px solid rgba(var(--ddp-brass-rgb),.28);
+}
+html.landscape-mode #s-menu .tile.primary{grid-column:1 / -1}
+html.landscape-mode #s-menu .tile{padding:11px 13px;border-radius:14px;gap:11px}
+html.landscape-mode #s-menu .tile-icon{width:38px;height:38px;font-size:1.15rem;border-radius:11px}
+html.landscape-mode #s-menu .tile-sub{font-size:.72rem}
+
 /* ══ Landscape trick-slot captions — each player's name/score sits
    directly under the slot they play into, replacing both the seat
    blocks around the table and (for you) the strip above the hand ══ */
@@ -1992,7 +2065,7 @@ function show(id){
 // portrait-locked. Best-effort only — screen.orientation.lock() only
 // actually works in an installed/standalone Android Chrome PWA; it's
 // silently unavailable everywhere else (iOS Safari, plain browser tabs).
-const LANDSCAPE_SCREENS=new Set(['pass','play']);
+const LANDSCAPE_SCREENS=new Set(['menu','pass','play']);
 function applyOrientationLock(id){
   const so=screen.orientation;
   if(!so||!so.lock) return;
@@ -2009,12 +2082,18 @@ function applyOrientationLock(id){
 // had a manual "force landscape" toggle plus a CSS trick that rotated
 // <body> 90° for devices that refused to rotate — both are gone now that
 // rotation works on the target hardware. `landscape-mode` (which all the
-// landscape CSS keys off) only ever applies on the pass/play screens.
+// landscape CSS keys off) applies on the menu and the pass/play screens.
 function isLandscapeModeActive(){ return matchMedia('(orientation:landscape)').matches; }
 function updateLandscapeMode(){
   const active=LANDSCAPE_SCREENS.has(currentScreenId)&&isLandscapeModeActive();
   document.documentElement.classList.toggle('landscape-mode',active);
 }
+// #s-menu ships with class="active" and currentScreenId already defaults
+// to 'menu', so show() never runs for the first screen — without this a
+// phone already held in landscape at first paint would get the portrait
+// menu until the user rotated away and back. Idempotent: it only reads
+// the current screen + orientation and toggles a class.
+updateLandscapeMode();
 // The class toggle and the markup must flip together — tableHTML() emits
 // a different structure per orientation (seat blocks vs. per-slot
 // captions), so re-render straight away rather than waiting for the
@@ -2780,6 +2859,12 @@ socket.on('gameState',G=>{
 // during the rotation animation itself.
 function rerenderTableScreen(){
   if(!S) return;
+  // Only re-render when a table screen is actually showing. Every
+  // render* below calls show(), so without this a rotation while a game
+  // exists but the player is on another landscape-capable screen (the
+  // menu, since it joined LANDSCAPE_SCREENS) would navigate them into
+  // the game against their will.
+  if(currentScreenId!=='pass'&&currentScreenId!=='play') return;
   if(S.phase==='pass') renderPass(S);
   else if(S.phase==='passReveal') renderPassReveal(S);
   else if(S.phase==='play') renderPlay(S);

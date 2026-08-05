@@ -311,6 +311,32 @@ scrolling after touching any landscape sizing.
   meta, which needs the menu markup to exist.
 - Card backs (blue) and `--ok`/`--warn` are intentionally left
   un-themed: they're identity/semantic colours, not felt or card-face.
+- `--ddp-heart` is **identical in all three themes** and that's correct,
+  not an oversight. It only ever renders on a card face (suit glyphs,
+  the penalty-card tint), and the card faces are near-identical across
+  themes, so there's nothing for it to adapt to. It's deliberately
+  desaturated (`#8C2233`) so it doesn't compete with the brass.
+
+## Numeric readouts use tabular figures — this is functional
+- Scores, MMR, timers, trick counters and the round badge render in
+  `--font-num` (IBM Plex Mono) with `font-variant-numeric:tabular-nums`.
+  The point isn't the look: tabular figures force every digit to the
+  same advance width, so a score ticking `9`→`10` or a countdown
+  `10`→`9` can't change an element's width and shove the layout
+  sideways. It's the type-level counterpart to the existing "reserve
+  constant space" rule under Frontend UI — that one stops text *length*
+  moving things, this stops digit *shape* doing it. Don't drop it back
+  to a proportional face.
+- The rule block sits late in the stylesheet **on purpose**: most of
+  those elements already declare `'Playfair Display'` at equal
+  specificity, so source order is what decides. Moving it up silently
+  reverts the whole thing.
+- Suit glyphs, card ranks, the dealer `D` and the pass-direction letter
+  badge stay on Playfair — they're card artwork and letters, not
+  readouts. `.tb-badge.pass` keeps its own font/size at higher
+  specificity for exactly this reason.
+- `.tb-badge`'s font-size drops to `.5rem` because Plex Mono is wider
+  than DM Sans and the badge has to fit `16/16` inside a 32px token.
 
 ## `public/sw.js` caches `manifest.json` cache-first — bump `CACHE` on ANY manifest change
 - `ASSETS` includes `/manifest.json`, and the fetch handler is cache-first

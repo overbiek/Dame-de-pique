@@ -30,7 +30,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
 
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -50,7 +50,14 @@
    --ddp-scrim-rgb / --ddp-gloss-rgb are the "push back" and "lift
    forward" colours. On the dark themes that's black and white; Clair
    flips the scrim to its warm ink so shading on a light felt reads as a
-   soft shadow rather than grey sludge. */
+   soft shadow rather than grey sludge.
+
+   --ddp-heart is deliberately IDENTICAL in all three themes. It only
+   ever renders on a card face (suit glyphs, the penalty-card tint) and
+   the card faces are near-identical across themes, so there's nothing
+   for it to adapt to — and it's picked desaturated on purpose so it
+   doesn't compete with the brass. Don't "theme" it without first
+   checking it's actually landing on the felt somewhere. */
 :root{
   /* Bordeaux — near-black and wine, the original look */
   --ddp-bg:#120A0D;
@@ -61,7 +68,7 @@
   --ddp-muted:#C9B8A8;
   --ddp-brass:#B8922E;     --ddp-brass-hi:#E0BE63;  --ddp-brass-lo:#8A6C1F;
   --ddp-brass-rgb:184,146,46;
-  --ddp-heart:#C0495B;     --ddp-heart-rgb:192,73,91;
+  --ddp-heart:#8C2233;     --ddp-heart-rgb:140,34,51;
   --ddp-spade:#3D4A42;     --ddp-spade-rgb:61,74,66;
   --ddp-pos:#7FE0B4;      --ddp-neg:#F0968C;
   --ddp-ai:#A8D4FF;        --ddp-ai-rgb:110,180,255;
@@ -78,7 +85,7 @@
   --ddp-muted:#B9C9BC;
   --ddp-brass:#C9A227;     --ddp-brass-hi:#EFCE73;  --ddp-brass-lo:#977712;
   --ddp-brass-rgb:201,162,39;
-  --ddp-heart:#D06070;     --ddp-heart-rgb:208,96,112;
+  --ddp-heart:#8C2233;     --ddp-heart-rgb:140,34,51;
   --ddp-spade:#17231C;     --ddp-spade-rgb:23,35,28;
   --ddp-pos:#7FE0B4;      --ddp-neg:#F0968C;
   --ddp-ai:#A8D4FF;        --ddp-ai-rgb:110,180,255;
@@ -95,7 +102,7 @@
   --ddp-muted:#6B5F52;
   --ddp-brass:#A9863C;     --ddp-brass-hi:#C7A45C;  --ddp-brass-lo:#7C6027;
   --ddp-brass-rgb:169,134,60;
-  --ddp-heart:#A8283B;     --ddp-heart-rgb:168,40,59;
+  --ddp-heart:#8C2233;     --ddp-heart-rgb:140,34,51;
   --ddp-spade:#2B2B2E;     --ddp-spade-rgb:43,43,46;
   --ddp-pos:#1E7A52;      --ddp-neg:#A83A2E;
   --ddp-ai:#2A6494;        --ddp-ai-rgb:42,100,148;
@@ -115,6 +122,7 @@
   --card-face:var(--ddp-card); --card-edge:var(--ddp-card-edge);
   --red:var(--ddp-heart); --ink:var(--ddp-spade);
   --ok:#3fbf88; --warn:#e0a04a;
+  --font-num:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
   --r:14px;
 
   /* Card size/overlap in the fan is tuned per breakpoint against real
@@ -1149,6 +1157,35 @@ html.landscape-mode #s-pass .home-btn,html.landscape-mode #s-play .home-btn{
 .tcap .dl{background:var(--ddp-card);color:var(--ddp-spade);border-radius:50%;
   width:12px;height:12px;display:inline-grid;place-items:center;
   font-family:'Playfair Display',serif;font-weight:800;font-size:.5rem}
+
+/* ══ Numeric readouts — scoreboard type ══
+   Scores, MMR, timers and trick counters move to IBM Plex Mono with
+   TABULAR figures. This is functional, not decorative: tabular-nums
+   forces every digit to the same advance width, so a score ticking
+   9 → 10 or a countdown 10 → 9 can't change an element's width and
+   shove the layout sideways. It's the type-level counterpart to the
+   existing "reserve constant space" rule (see the .badge-turn
+   visibility trick) — that one stops text LENGTH changing the layout,
+   this one stops digit SHAPE doing it.
+
+   Deliberately placed after the rules it overrides: most of these
+   elements already set 'Playfair Display' at the same specificity, so
+   source order is what decides. Suit glyphs and card ranks are left on
+   Playfair on purpose — they're card artwork, not readouts. */
+.num,
+.seat-score,.mystrip .tot,.tcap .sc,
+.tb-badge,.tb-line,.autoline,
+.stat-value,.pod .n,.scores .tot,.sheet td,
+#rank-you-bar .you-pos,#rank-you-bar .you-mmr,
+.rtable td:last-child{
+  font-family:var(--font-num);
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1;
+  letter-spacing:0;
+}
+/* Plex Mono runs wider than DM Sans at the same size, and this one has
+   to hold "16/16" inside a 32px token */
+.tb-badge{font-size:.5rem}
 
 /* ══ Theme swatches (main menu) ══ */
 .settings-row{

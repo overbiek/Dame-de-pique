@@ -882,35 +882,43 @@ html.landscape-mode #app{
    it's used — so redefining only --cw here would leave --ch at its
    stale portrait value. Both are declared explicitly, at a deliberately
    broader-than-portrait aspect ratio (1.25 vs 1.42).
-   Both dimensions are now genuinely tight, so rather than guess a vh
-   value --cw is solved from the two hard limits directly and takes
-   whichever is smaller:
+   Both dimensions are genuinely tight and they bind on DIFFERENT axes,
+   so width and height are each solved from their own hard limit rather
+   than one being derived from the other by a fixed ratio. That squeezes
+   out every available pixel; tying them to a ratio wastes whichever
+   axis isn't the binding one.
 
-   HEIGHT — the column is four card-heights tall (three rows of the trick
-   cross, plus your hand) once you subtract the fixed furniture, and
-   4·ch == 5·cw at this aspect ratio, hence /5. The 128px is #app padding
-   (8) + .hand padding (8) + table padding-top (6) + mid row gaps (8) +
-   the three name captions (~51) + the reserved bottom-note strip (44),
-   rounded up slightly for slack. Keep it in step with those values.
-
-   WIDTH — thirteen cards and their gaps must fit one row: subtract #app
-   and .hand padding (36) and 15 gaps (12 between cards plus 3 extra
+   WIDTH — thirteen cards and their gaps must fit one row. Subtract #app
+   padding (16), .hand padding (20), a 24px breathing margin so the row
+   isn't edge-to-edge, and 15 gaps (12 between cards plus 3 extra
    between the four suit groups), then divide by 13.
 
-   Cards cannot get bigger than the smaller of these without either
-   overlapping horizontally or scrolling vertically. */
+   HEIGHT — the column is exactly four card-heights tall: the three rows
+   of the trick cross plus your hand. The 96px is every fixed piece of
+   furniture between them (#app padding 8, .hand padding 8, table
+   padding 12, mid row gaps 8, the three name captions ~45) plus a few
+   px of slack. The pass screen subtracts ~48 more for its confirm
+   button and auto-pass countdown. **If you change any of those, change
+   the constant**, or the trick cross silently overflows the table and
+   gets clipped (the screens are overflow:hidden, so it won't scroll —
+   it'll just quietly cut off).
+
+   --ch is then also capped at 1.45·--cw so a very tall, narrow viewport
+   can't stretch the cards into implausible slivers.
+
+   Cards cannot be made bigger than this without either overlapping in
+   the hand or scrolling the screen — that's the answer if bigger cards
+   get asked for again. */
 html.landscape-mode #s-pass,html.landscape-mode #s-play{
-  --gap:3px;
+  --gap:4px;
   --overlap:var(--gap);
-  --cw:max(38px,min(calc((100vh - 128px) / 5),
-                    calc((100vw - 36px - 15 * var(--gap)) / 13)));
-  --ch:calc(var(--cw) * 1.25);
+  --cw:max(38px,calc((100vw - 60px - 15 * var(--gap)) / 13));
+  --ch:max(48px,min(calc((100vh - 96px) / 4),calc(var(--cw) * 1.45)));
 }
 /* the pass screen also carries a confirm button and an auto-pass
    countdown below the hand — ~48px more furniture to subtract */
 html.landscape-mode #s-pass{
-  --cw:max(38px,min(calc((100vh - 176px) / 5),
-                    calc((100vw - 36px - 15 * var(--gap)) / 13)));
+  --ch:max(46px,min(calc((100vh - 144px) / 4),calc(var(--cw) * 1.45)));
 }
 html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
   display:flex;flex-direction:column;justify-content:center;
@@ -924,10 +932,7 @@ html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
    left of center, with both corner groups absolutely positioned. */
 html.landscape-mode #s-pass .table,html.landscape-mode #s-play .table{
   display:flex;align-items:center;justify-content:flex-start;
-  /* the 44px bottom reserve keeps the vertically-centred trick cross
-     clear of the absolutely-positioned .tbl-note strip — it's the same
-     44 that's accounted for in the --cw height formula above */
-  padding:6px 10px 44px 6%;
+  padding:6px 10px 6px 6%;
   flex:1 1 auto;min-height:0;
 }
 html.landscape-mode #s-pass .table-wrap,html.landscape-mode #s-play .table-wrap{
@@ -937,8 +942,16 @@ html.landscape-mode #s-play .table-wrap>.table{flex:1 1 auto}
 html.landscape-mode #s-pass .corner-lt,html.landscape-mode #s-play .corner-lt{
   position:absolute;left:8px;top:8px;
 }
-html.landscape-mode #s-pass .corner-rt,html.landscape-mode #s-play .corner-rt{
+/* the info panel and the status-text block stack together in the top
+   right, as one absolutely-positioned column — keeping them in a shared
+   wrapper means the note doesn't need to know the panel's height */
+html.landscape-mode .rt-stack{
   position:absolute;right:8px;top:8px;
+  display:flex;flex-direction:column;align-items:flex-end;gap:6px;
+  max-width:42vw;
+}
+html.landscape-mode #s-pass .corner-rt,html.landscape-mode #s-play .corner-rt{
+  position:static;
   flex-direction:row;align-items:center;gap:10px;
   background:rgba(4,20,14,.55);border:1px solid rgba(212,175,92,.22);
   border-radius:14px;padding:7px 11px;
@@ -951,15 +964,14 @@ html.landscape-mode .corner-rt .tb-badge{font-size:.66rem}
 html.landscape-mode .corner-rt .tb-badge.pass{font-size:1rem}
 html.landscape-mode .corner-rt .tb-line{font-size:.72rem}
 /* Every bit of status text — whose turn it is, what to pass, what you
-   were dealt, who won the trick — collects in one block sitting at the
-   bottom-center of the table, instead of the .prompt/.banner lines that
-   sat below it and cost two rows of height the cards can now use.
+   were dealt, who won the trick — collects in one block directly under
+   the info panel, instead of the .prompt/.banner lines that sat below
+   the table and cost two rows of height the cards now use.
    Filled by syncLandscapeNote(), which mirrors those (still-rendered
    but hidden) elements so every render branch keeps working unchanged. */
 html.landscape-mode .tbl-note{
-  position:absolute;left:50%;bottom:6px;transform:translateX(-50%);
   display:flex;flex-direction:column;align-items:center;gap:2px;
-  min-width:34vw;max-width:52vw;padding:5px 14px;
+  width:100%;padding:5px 12px;
   background:rgba(4,20,14,.5);border:1px solid rgba(212,175,92,.22);
   border-radius:12px;text-align:center;
 }
@@ -1934,17 +1946,21 @@ function tableHTML(G,opts){
   if(isLandscapeModeActive()){
     // .tbl-note is left empty here and filled by syncLandscapeNote()
     // after the caller has set the (hidden) .prompt/.banner elements it
-    // mirrors — see that function for why it works this way round.
+    // mirrors — see that function for why it works this way round. It
+    // shares .rt-stack with the info panel so it can sit directly under
+    // it without hard-coding that panel's height.
     return `
     <div class="corner corner-lt">${actions.lt||''}</div>
-    <div class="corner corner-rt">${actions.rt||''}</div>
+    <div class="rt-stack">
+      <div class="corner corner-rt">${actions.rt||''}</div>
+      <div class="tbl-note"><div class="nt-main"></div><div class="nt-sub"></div></div>
+    </div>
     <div class="mid">
       <div class="slot-t">${played(2)}${cap(2)}</div>
       <div class="slot-l">${played(1)}${cap(1)}</div>
       <div class="slot-r">${played(3)}${cap(3)}</div>
       <div class="slot-b">${played(0)}${cap(0)}</div>
     </div>
-    <div class="tbl-note"><div class="nt-main"></div><div class="nt-sub"></div></div>
     `;
   }
   return `
@@ -2664,11 +2680,15 @@ function syncLandscapeNote(tableId,promptId,bannerId){
   if(!box) return;
   const pr=$(promptId), bn=bannerId?$(bannerId):null;
   const main=box.querySelector('.nt-main'), sub=box.querySelector('.nt-sub');
-  main.textContent=pr?pr.textContent:'';
+  const mainText=pr?pr.textContent:'';
+  main.textContent=mainText;
   main.className='nt-main'+(pr&&pr.classList.contains('wait')?' wait':'');
   const subText=bn?bn.textContent:'';
   sub.textContent=subText;
   sub.style.display=subText?'':'none';
+  // nothing to say — drop the whole box rather than leave an empty
+  // bordered panel hanging under the info panel
+  box.style.display=(mainText||subText)?'':'none';
 }
 function roundBadgeHTML(G){
   return `<div class="tb-badge" title="Round ${G.round} of ${G.totalRounds}">${G.round}/${G.totalRounds}</div>`;

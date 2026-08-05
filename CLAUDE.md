@@ -163,24 +163,29 @@ scrolling after touching any landscape sizing.
   conversion: a `translate()` on a descendant of a rotated ancestor
   moves along the rotated local axes while pointer events report true
   screen coordinates, so drags track sideways without it.
-- **Landscape card size is solved, not guessed.** `--cw` is
-  `max(38px, min(<height limit>, <width limit>))` with `--ch` derived at
-  a broader-than-portrait 1.25 ratio (portrait uses 1.42, width-driven):
-  - height limit `(100vh - 128px)/5` — the layout is four card-heights
-    tall (three trick-cross rows + your hand) and `4·ch == 5·cw`, so the
-    divisor is 5. The 128px is the sum of every fixed piece of furniture
-    (`#app` padding, `.hand` padding, table padding-top, mid row gaps,
-    the three name captions, the 44px reserved bottom-note strip). The
-    pass screen uses 176px instead — it also has a confirm button and an
-    auto-pass countdown. **If you change any of those, change the
-    constant to match**, or the screen silently starts scrolling.
-  - width limit `(100vw - 36px - 15·--gap)/13` — thirteen cards plus 15
+- **Landscape card size is solved, not guessed, and width and height are
+  solved independently** — they bind on different axes, so deriving one
+  from the other by a fixed aspect ratio wastes whichever axis isn't
+  binding. The resulting cards are ~1.28 in area vs. the first version
+  that fit on one screen.
+  - `--cw` = `(100vw - 60px - 15·--gap)/13` — thirteen cards plus 15
     gaps (12 between cards, 3 extra between the four suit groups) must
-    fit one row.
-  Which limit binds depends on the device; on a OnePlus 13R they're
-  close. Cards genuinely can't be made bigger than this without either
-  overlapping the hand or scrolling — that's the answer if someone asks
-  for them bigger again.
+    fit one row; the 60 is `#app` + `.hand` padding plus a 24px
+    breathing margin so the row isn't edge-to-edge.
+  - `--ch` = `min((100vh - 96px)/4, 1.45·--cw)` — the column is exactly
+    four card-heights tall (three trick-cross rows + your hand). The 96
+    is every fixed piece of furniture between them (`#app` padding 8,
+    `.hand` padding 8, table padding 12, mid row gaps 8, the three name
+    captions ~45) plus slack. The pass screen uses 144 — it also has a
+    confirm button and auto-pass countdown. The 1.45 cap just stops a
+    very tall viewport stretching cards into slivers.
+  **If you change any of that furniture, change the constant.** The
+  screens are `overflow:hidden`, so getting it wrong doesn't scroll —
+  the trick cross silently overflows the table and is clipped.
+  Cards genuinely can't be made bigger than this without either
+  overlapping in the hand or clipping — that's the answer if someone
+  asks for them bigger again. 13 cards across ~900px is the hard wall;
+  "1.5×" is not reachable.
   Both custom properties must be declared explicitly, because a custom
   property's `var()` references resolve where the property is *declared*
   — overriding only `--cw` would silently leave `--ch` at its portrait
@@ -192,21 +197,23 @@ scrolling after touching any landscape sizing.
   including your own, which is why `.mystrip` is hidden in landscape.
   Opponents' face-down fans are dropped too. Everything else in the
   landscape table is absolutely positioned against `.table`, which
-  stretches to fill the screen: home button top-left, the round/trick +
-  rules + last-trick panel top-right, and the status-text block
-  bottom-center.
+  stretches to fill the screen: home button top-left, and `.rt-stack`
+  top-right holding the round/trick + rules + last-trick panel with the
+  status-text block directly beneath it.
 - **Both the `.banner` and `.prompt` lines below the table are
   `display:none` in landscape** — two rows of height the cards now use
   instead. All of that text (whose turn, what to pass, what you
-  received, who won the trick) collects in one `.tbl-note` block pinned
-  to the bottom-center of the table. `tableHTML()` renders it empty and
+  received, who won the trick) collects in one `.tbl-note` block inside
+  `.rt-stack`; sharing that wrapper with the info panel is what lets it
+  sit under the panel without hard-coding the panel's height.
+  `tableHTML()` renders it empty and
   `syncLandscapeNote(tableId, promptId, bannerId)` copies the (still
   written, just hidden) elements into it at the END of each render.
   That direction matters: every render branch sets its prompt *after*
   building the table, so threading the text through `tableHTML` would
   mean restructuring all of them. It no-ops in portrait, where
-  `.tbl-note` isn't rendered. `.table`'s 44px `padding-bottom` is what
-  keeps the vertically-centred trick cross clear of this block.
+  `.tbl-note` isn't rendered, and hides itself when there's no text at
+  all rather than leaving an empty bordered box.
 - The landscape hand is a flat row, not a fan: `.card-slot`'s inline
   rotation/lift transform is overridden to `none` and `--overlap` flips
   from a large negative value to a small positive `--gap`, so cards sit

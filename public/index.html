@@ -885,9 +885,13 @@ html.landscape-mode #app{
    the real constraint, and the width then follows from a deliberately
    broader-than-portrait aspect ratio (1.25 vs 1.42). */
 html.landscape-mode #s-pass,html.landscape-mode #s-play{
-  --ch:clamp(48px,14vh,96px);
+  --ch:clamp(48px,15.5vh,104px);
   --cw:calc(var(--ch) / 1.25);
 }
+/* the pass screen carries a confirm button and an auto-pass countdown
+   the play screen doesn't, so it gets slightly shorter cards to keep the
+   same one-viewport guarantee */
+html.landscape-mode #s-pass{ --ch:clamp(46px,13.5vh,96px); }
 html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
   display:flex;flex-direction:column;justify-content:center;
   height:100%;
@@ -911,10 +915,21 @@ html.landscape-mode #s-pass .corner-lt,html.landscape-mode #s-play .corner-lt{
    corner, where the status bar / rounded screen corner clipped it */
 html.landscape-mode #s-pass .corner-rt,html.landscape-mode #s-play .corner-rt{
   position:absolute;right:10px;top:50%;transform:translateY(-50%);
-  flex-direction:row;align-items:center;gap:8px;
+  flex-direction:column;align-items:stretch;gap:5px;
   background:rgba(4,20,14,.55);border:1px solid rgba(212,175,92,.22);
-  border-radius:12px;padding:5px 8px;
+  border-radius:12px;padding:5px 8px;max-width:32vw;
 }
+html.landscape-mode .corner-rt .tb-row{
+  display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;
+}
+/* "X wins the trick" — sits under the round/rules/last-trick row rather
+   than on its own line below the table, which landscape has no room for */
+html.landscape-mode .corner-rt .tb-note{
+  font-size:.62rem;line-height:1.25;color:var(--gold-hi);text-align:center;
+  border-top:1px solid rgba(212,175,92,.18);padding-top:4px;
+}
+/* …which is why the standalone banner line is dropped here entirely */
+html.landscape-mode #s-pass .banner,html.landscape-mode #s-play .banner{display:none}
 /* your own name/score now lives under your trick slot like everyone
    else's, so the strip above the hand is redundant here */
 html.landscape-mode #s-pass .mystrip,html.landscape-mode #s-play .mystrip{display:none}
@@ -928,7 +943,6 @@ html.landscape-mode #s-pass .mid,html.landscape-mode #s-play .mid{
 html.landscape-mode #s-pass .mid>div,html.landscape-mode #s-play .mid>div{
   display:flex;flex-direction:column;align-items:center;gap:3px;
 }
-html.landscape-mode #s-pass .banner,html.landscape-mode #s-play .banner{margin:1px 0 0;font-size:.7rem}
 html.landscape-mode #s-pass .prompt,html.landscape-mode #s-play .prompt{margin:1px 0 0;font-size:.76rem}
 /* Landscape has width to spare and no height to waste, so the hand is a
    plain flat row: no fan tilt, no lift, and a real positive gap between
@@ -943,9 +957,9 @@ html.landscape-mode #s-pass .hand .card-slot,html.landscape-mode #s-play .hand .
 html.landscape-mode #s-pass #p-go{padding:8px 20px;font-size:.85rem}
 html.landscape-mode #s-pass #p-auto{margin-top:2px}
 html.landscape-mode #s-pass .home-btn,html.landscape-mode #s-play .home-btn{
-  width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+  width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
   background:rgba(0,0,0,.24);border:1px solid var(--line);color:var(--gold-hi);
-  font-size:1rem;cursor:pointer;
+  font-size:1.4rem;cursor:pointer;
 }
 
 /* ══ Landscape trick-slot captions — each player's name/score sits
@@ -2573,19 +2587,25 @@ function renderDraw(G){
 }
 
 /* ══════════ PASS ══════════ */
-function cornerActions(leftHTML,rtExtraHTML){
+function cornerActions(leftHTML,rtExtraHTML,noteHTML){
   // Landscape (table screens only) consolidates round/trick info + rules
   // + last-trick eye into one right-side panel, with just a home button
   // on the left — different arrangement of the exact same pieces, not
   // new functionality. Checked at render time rather than via a
   // permanent mode flag so a mid-game rotation re-renders correctly (see
   // the 'resize' listener that re-invokes the current phase's render).
+  // noteHTML (the "X wins the trick" message) is appended as a second
+  // row of the same panel — landscape hides the standalone .banner line
+  // under the table, so this is where that text has to go. Pre-escaped
+  // by the caller since it goes in as HTML.
   if(isLandscapeModeActive()){
     return {
       lt: `<button class="home-btn" title="Leave" onclick="askLeave(this)">🏠</button>`,
-      rt: `${leftHTML||''}
-           <button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
-           ${rtExtraHTML||''}`,
+      rt: `<div class="tb-row">${leftHTML||''}
+             <button class="tb-round info" title="Rules" onclick="openRules()">📖</button>
+             ${rtExtraHTML||''}
+           </div>
+           ${noteHTML?`<div class="tb-note">${noteHTML}</div>`:''}`,
     };
   }
   return {
@@ -2841,12 +2861,22 @@ function renderPlay(G){
   }
   lastCurrentTrickLen=ctLen;
 
+  // Computed before the table renders because in landscape this text
+  // lives INSIDE the right-side info panel (built by cornerActions), not
+  // in the standalone .banner line below the table — that line costs
+  // vertical room landscape can't spare.
+  const justReceived=(G.trickNum===1 && G.myReceived && G.myReceived.length)?G.myReceived:null;
+  let bannerText=G.lastTrickMsg||'';
+  if(justReceived && !G.lastTrickMsg){
+    bannerText=`You received ${justReceived.map(c=>c.rank+c.suit).join(', ')}`;
+  }
+
   const canWatch=!!(G.lastTrick&&G.lastTrick.round===G.round&&G.lastTrick.cards&&G.lastTrick.cards.length);
   const trickBtn=`<button class="tb-round trick" id="g-lt-btn" title="Hold to see last trick"${canWatch?'':' disabled'}>👁</button>`;
   const playInfo=roundBadgeHTML(G)+`<div class="tb-line">Trick <b>${Math.min(G.trickNum,13)}</b>/13</div>`;
-  $('g-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(playInfo,trickBtn)});
+  $('g-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(playInfo,trickBtn,esc(bannerText))});
   bindLastTrickButton($('g-lt-btn'));
-  $('g-banner').textContent=G.lastTrickMsg||'';
+  $('g-banner').textContent=bannerText;
 
   const cur=(G.trickLeader+G.currentTrick.length)%4;
   const myTurn=cur===me&&G.currentTrick.length<4;
@@ -2858,12 +2888,7 @@ function renderPlay(G){
         pr.textContent=G.currentTrick.length===4?'…':`Waiting for ${G.players[cur].name}`; }
 
   myStrip(G,'g-me',myTurn);
-  const justReceived=(G.trickNum===1 && G.myReceived && G.myReceived.length)?G.myReceived:null;
   $('g-hand').innerHTML=handHTML(G.myHand,myTurn?'play':null,legal,justReceived);
-  if(justReceived && !G.lastTrickMsg){
-    const list=justReceived.map(c=>c.rank+c.suit).join(', ');
-    $('g-banner').textContent=`You received ${list}`;
-  }
 }
 // Press a card to preview it, then — without lifting your finger/mouse —
 // slide across the fan to change your pick; release to play whichever

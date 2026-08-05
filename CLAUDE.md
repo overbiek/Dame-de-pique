@@ -163,12 +163,14 @@ scrolling after touching any landscape sizing.
   conversion: a `translate()` on a descendant of a rotated ancestor
   moves along the rotated local axes while pointer events report true
   screen coordinates, so drags track sideways without it.
-- Landscape sizing is **height-first**: `--ch` is `clamp(48px,14vh,96px)`
-  and `--cw` is derived from it at a deliberately broader 1.25 aspect
-  ratio (portrait uses 1.42, width-driven). Both must be declared
-  explicitly — a custom property's `var()` references resolve where the
-  property is *declared*, so overriding only `--cw` here would silently
-  leave `--ch` at its portrait value. This bit us once already.
+- Landscape sizing is **height-first**: `--ch` is `clamp(48px,15.5vh,104px)`
+  on the play screen (`13.5vh` on the pass screen, which carries a
+  confirm button + auto-pass countdown the play screen doesn't) and
+  `--cw` is derived from it at a deliberately broader 1.25 aspect ratio
+  (portrait uses 1.42, width-driven). Both must be declared explicitly —
+  a custom property's `var()` references resolve where the property is
+  *declared*, so overriding only `--cw` here would silently leave `--ch`
+  at its portrait value. This bit us once already.
 - The landscape table is a different structure, not just restyled:
   `tableHTML()` branches on `isLandscapeModeActive()` and drops the seat
   blocks ringing the table entirely, rendering each player's name/score
@@ -178,6 +180,13 @@ scrolling after touching any landscape sizing.
   absolutely positioned against `.table` (home button top-left, info
   panel centered on the right edge — the top-right corner got clipped by
   the status bar / rounded screen corner).
+- The `.banner` line under the table ("X wins the trick", "You received
+  …") is `display:none` in landscape — it cost a whole row of height.
+  That text becomes `cornerActions()`'s third argument instead, rendered
+  as a `.tb-note` row inside the right-side panel. It goes in as HTML, so
+  `renderPlay` computes the string *before* building the table and passes
+  it through `esc()`; it also has to be computed up front because
+  `cornerActions` runs as part of the same `tableHTML()` call.
 - The landscape hand is a flat row, not a fan: `.card-slot`'s inline
   rotation/lift transform is overridden to `none` and `--overlap` flips
   from a large negative value to a positive `8px` gap, so cards sit side

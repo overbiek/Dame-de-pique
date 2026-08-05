@@ -173,16 +173,17 @@ scrolling after touching any landscape sizing.
     That's the answer if bigger cards get asked for again; the only way
     past it is letting hand cards overlap, which was deliberately
     removed.
-  - `--ch` = `min(1.4·--cw, (100vh - 64px - --cw)/3)` — 1.4 is the real
+  - `--ch` = `min(1.4·--cw, (100vh - 76px - --cw)/3)` — 1.4 is the real
     proportion of a physical playing card and is what normally applies;
     the second term is a safety valve for short viewports. The column
     stacks three card-*heights* and one card-*width* (trick cross top
     and bottom rows, your hand, and the middle row — only a card-width
-    tall thanks to the rotated side cards, below). The 64 is the fixed
+    tall thanks to the rotated side cards, below). The 76 is the fixed
     furniture between them (`#app` padding 8, `.hand` padding 8, table
-    padding 12, mid row gaps 6, the two name captions ~30). The pass
-    screen uses 112 — it also has a confirm button and auto-pass
-    countdown.
+    padding 12, three name-caption rows ~45; the mid's row gap is 0 by
+    design). Both table screens use the same figure — the pass screen's
+    confirm button and countdown are in the right-hand stack, not below
+    the hand.
   **If you change any of that furniture, change the constant.** The
   screens are `overflow:hidden`, so getting it wrong doesn't scroll —
   the trick cross silently overflows the table and is clipped.
@@ -198,9 +199,22 @@ scrolling after touching any landscape sizing.
   *unrotated* box, so `.card-turn` is a wrapper carrying the swapped
   `width:var(--ch);height:var(--cw)` with the card absolutely centred
   and turned inside it — rotating the card in place would not reclaim
-  any height. Those two players' names sit *beside* their card on the
-  outer side rather than beneath it, for the same reason; only the top
-  and bottom slots caption underneath.
+  any height. All four slots caption underneath their card, and the
+  mid's row-gap is `0` so the top and bottom cards close right up to the
+  side players' row without crossing into it.
+- **The pass screen's confirm button and auto-pass countdown
+  (`#p-go`/`#p-auto`) are physically MOVED into `.rt-stack` in
+  landscape**, under the status note, by `relocatePassChrome()`. Moving
+  the nodes rather than duplicating them keeps `updatePassButton()` and
+  the countdown timer working untouched. The catch: their landscape home
+  is inside `#p-table`, whose `innerHTML` is rebuilt every render — so
+  `parkPassChrome()` **must** run *before* that rebuild (it does, at the
+  top of both `renderPass` and `renderPassReveal`) or the two elements
+  are destroyed with it and never return. Parking is also what restores
+  the portrait layout, since they're the last two children of `#s-pass`
+  in that order. Portrait's `visibility:hidden` on `#p-go` reserves
+  space to stop layout jump; in the stack that just leaves a gap, so
+  `relocatePassChrome` collapses it with `display:none` there.
 - The landscape table is a different structure, not just restyled:
   `tableHTML()` branches on `isLandscapeModeActive()` and drops the seat
   blocks ringing the table entirely, rendering each player's name/score

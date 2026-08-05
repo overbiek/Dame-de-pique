@@ -894,13 +894,14 @@ html.landscape-mode #app{
    WIDTH: the trick cross's top and bottom rows, your hand, and the
    middle row, which is only a card-width tall because the left and
    right players' cards are rotated 90° to face them (see .card-turn).
-   The 64px is the fixed furniture between them (#app padding 8, .hand
-   padding 8, table padding 12, mid row gaps 6, the two remaining name
-   captions ~30). The pass screen subtracts ~48 more for its confirm
-   button and auto-pass countdown. **If you change any of those, change
-   the constant**, or the trick cross silently overflows the table and
-   gets clipped (the screens are overflow:hidden, so it won't scroll —
-   it'll just quietly cut off).
+   The 76px is the fixed furniture between them (#app padding 8, .hand
+   padding 8, table padding 12, three name-caption rows ~45; the mid's
+   row gap is 0 by design). Both table screens use the same figure —
+   the pass screen's confirm button and countdown live in the right-hand
+   stack, not below the hand. **If you change any of that, change the
+   constant**, or the trick cross silently overflows the table and gets
+   clipped (the screens are overflow:hidden, so it won't scroll — it'll
+   just quietly cut off).
 
    Cards cannot be made wider than the width limit without overlapping
    in the hand — that's the answer if bigger cards get asked for
@@ -910,13 +911,7 @@ html.landscape-mode #s-pass,html.landscape-mode #s-play{
   --overlap:var(--gap);
   --cw:max(38px,calc((100vw - 60px - 15 * var(--gap)) / 13));
   --ch:max(48px,min(calc(var(--cw) * 1.4),
-                    calc((100vh - 64px - var(--cw)) / 3)));
-}
-/* the pass screen also carries a confirm button and an auto-pass
-   countdown below the hand — ~48px more furniture to subtract */
-html.landscape-mode #s-pass{
-  --ch:max(46px,min(calc(var(--cw) * 1.4),
-                    calc((100vh - 112px - var(--cw)) / 3)));
+                    calc((100vh - 76px - var(--cw)) / 3)));
 }
 html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
   display:flex;flex-direction:column;justify-content:center;
@@ -926,13 +921,14 @@ html.landscape-mode #s-pass.active,html.landscape-mode #s-play.active{
 }
 /* Landscape drops the surrounding seat blocks entirely — tableHTML()
    renders each player's name/score as a caption directly under their
-   own trick slot instead — so the table is just the trick cross, laid
-   left of center, with both corner groups absolutely positioned. */
+   own trick slot instead — so the table is just the trick cross, with
+   the home button and .rt-stack absolutely positioned over it. */
 html.landscape-mode #s-pass .table,html.landscape-mode #s-play .table{
-  display:flex;align-items:center;justify-content:flex-start;
-  /* the cross got wider once the side cards turned sideways, so it
-     starts closer to the left edge — it still has to clear .rt-stack */
-  padding:6px 10px 6px 2%;
+  display:flex;align-items:center;justify-content:center;
+  /* the right padding roughly reserves the .rt-stack's footprint, so
+     the trick cross centres itself in what's LEFT of the table — near
+     the middle of the screen, but never under the stack */
+  padding:6px min(42vw,250px) 6px 2%;
   flex:1 1 auto;min-height:0;
 }
 html.landscape-mode #s-pass .table-wrap,html.landscape-mode #s-play .table-wrap{
@@ -947,12 +943,12 @@ html.landscape-mode #s-pass .corner-lt,html.landscape-mode #s-play .corner-lt{
    wrapper means the note doesn't need to know the panel's height */
 html.landscape-mode .rt-stack{
   position:absolute;right:8px;top:8px;
-  display:flex;flex-direction:column;align-items:flex-end;gap:6px;
-  max-width:42vw;
+  display:flex;flex-direction:column;align-items:stretch;gap:6px;
+  min-width:206px;max-width:42vw;
 }
 html.landscape-mode #s-pass .corner-rt,html.landscape-mode #s-play .corner-rt{
   position:static;
-  flex-direction:row;align-items:center;gap:10px;
+  flex-direction:row;align-items:center;justify-content:center;gap:10px;
   background:rgba(4,20,14,.55);border:1px solid rgba(212,175,92,.22);
   border-radius:14px;padding:7px 11px;
 }
@@ -984,28 +980,25 @@ html.landscape-mode #s-pass .prompt,html.landscape-mode #s-play .prompt{display:
    else's, so the strip above the hand is redundant here */
 html.landscape-mode #s-pass .mystrip,html.landscape-mode #s-play .mystrip{display:none}
 html.landscape-mode #s-pass .mid,html.landscape-mode #s-play .mid{
-  /* auto tracks sized by their contents, tight gaps — the four slots
-     read as one cluster rather than a sprawling cross */
-  min-width:0;min-height:0;gap:3px 4px;
+  /* auto tracks sized by their contents. Row gap is 0 deliberately: it
+     pulls the top player's card down and yours up as close to the side
+     players' row as they can go without crossing into it, which keeps
+     the whole cluster compact. */
+  min-width:0;min-height:0;gap:0 4px;
   grid-template-columns:auto auto auto;
   grid-template-rows:auto auto auto;
 }
-/* top and bottom slots: card with its owner's caption beneath */
+/* every slot is a card with its owner's caption directly beneath */
 html.landscape-mode #s-pass .mid>div,html.landscape-mode #s-play .mid>div{
   display:flex;flex-direction:column;align-items:center;gap:3px;
 }
-/* Left and right slots turn their card a quarter-turn so it faces the
-   player who played it — which also makes that whole middle row only a
-   card-WIDTH tall instead of a card-height, the saving that pays for
-   the cards being a realistic 1.4 proportion. Their names sit beside
-   the card, on the outer side, rather than beneath: a caption under
-   these would put the height straight back. */
-html.landscape-mode .mid .slot-l,html.landscape-mode .mid .slot-r{
-  flex-direction:row;align-items:center;gap:5px;
-}
-/* a rotated element still occupies its UNrotated box, so the wrapper
+/* The left and right players' cards are turned a quarter-turn to face
+   the player who played them, which also makes that whole middle row
+   only a card-WIDTH tall instead of a card-height — the saving that
+   pays for the cards being a realistic 1.4 proportion.
+   A rotated element still occupies its UNrotated box, so the wrapper
    carries the swapped dimensions and the card is centred and turned
-   inside it */
+   inside it; rotating the card in place would reclaim nothing. */
 html.landscape-mode .card-turn{
   position:relative;flex:0 0 auto;
   width:var(--ch);height:var(--cw);
@@ -1026,8 +1019,14 @@ html.landscape-mode #s-pass .hand,html.landscape-mode #s-play .hand{
 html.landscape-mode #s-pass .hand .card-slot,html.landscape-mode #s-play .hand .card-slot{
   transform:none !important;
 }
-html.landscape-mode #s-pass #p-go{padding:8px 20px;font-size:.85rem}
-html.landscape-mode #s-pass #p-auto{margin-top:2px}
+/* moved into .rt-stack by relocatePassChrome() — sized to the stack so
+   the confirm button and countdown read as part of that column */
+html.landscape-mode #s-pass .rt-stack #p-go{
+  width:100%;margin:0;padding:9px 14px;font-size:.85rem;
+}
+html.landscape-mode #s-pass .rt-stack #p-auto{
+  margin:0;width:100%;text-align:center;font-size:.66rem;
+}
 html.landscape-mode #s-pass .home-btn,html.landscape-mode #s-play .home-btn{
   width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
   background:rgba(0,0,0,.24);border:1px solid var(--line);color:var(--gold-hi);
@@ -1979,7 +1978,7 @@ function tableHTML(G,opts){
     </div>
     <div class="mid">
       <div class="slot-t">${played(2)}${cap(2)}</div>
-      <div class="slot-l">${cap(1)}<div class="card-turn ccw">${played(1)}</div></div>
+      <div class="slot-l"><div class="card-turn ccw">${played(1)}</div>${cap(1)}</div>
       <div class="slot-r"><div class="card-turn cw">${played(3)}</div>${cap(3)}</div>
       <div class="slot-b">${played(0)}${cap(0)}</div>
     </div>
@@ -2712,6 +2711,35 @@ function syncLandscapeNote(tableId,promptId,bannerId){
   // bordered panel hanging under the info panel
   box.style.display=(mainText||subText)?'':'none';
 }
+// The pass screen's confirm button and auto-pass countdown sit under the
+// hand in portrait; in landscape they belong at the bottom of the
+// right-hand stack, under the status note. The nodes are MOVED, not
+// duplicated, so updatePassButton() and the countdown timer keep
+// addressing the same elements without knowing anything about this.
+//
+// The landscape home is inside #p-table, whose innerHTML is rebuilt on
+// every render — so parkPassChrome() MUST run before that rebuild or the
+// two elements are destroyed with it and never come back. They're the
+// last two children of #s-pass in that order, so parking is a plain
+// appendChild pair, which also restores the portrait layout exactly.
+function parkPassChrome(){
+  const go=$('p-go'), auto=$('p-auto'), screen=$('s-pass');
+  if(!go||!auto||!screen) return;
+  screen.appendChild(go);
+  screen.appendChild(auto);
+  go.style.display='';
+}
+function relocatePassChrome(){
+  const stack=document.querySelector('#p-table .rt-stack');
+  const go=$('p-go'), auto=$('p-auto');
+  if(!stack||!go||!auto) return;   // portrait — leave them where they are
+  stack.appendChild(go);
+  stack.appendChild(auto);
+  // Portrait uses visibility:hidden to reserve the button's space so the
+  // layout can't jump; in the stack there's nothing to reserve and a
+  // blank gap under the note just looks broken, so collapse it there.
+  go.style.display=go.style.visibility==='hidden'?'none':'';
+}
 function roundBadgeHTML(G){
   return `<div class="tb-badge" title="Round ${G.round} of ${G.totalRounds}">${G.round}/${G.totalRounds}</div>`;
 }
@@ -2725,6 +2753,7 @@ function passInfoHTML(G,dir){
 function renderPassReveal(G){
   show('pass');
   const dir=['left','right','across','keep'][(G.round-1)%4];
+  parkPassChrome();   // must precede the innerHTML rebuild — see the function
   $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir))});
   myStrip(G,'p-me',false);
   $('p-prompt').className='prompt';
@@ -2732,11 +2761,13 @@ function renderPassReveal(G){
   $('p-hand').innerHTML=handHTML(G.myHand,null,null,G.myReceived);
   $('p-go').style.visibility='hidden';
   syncLandscapeNote('p-table','p-prompt');
+  relocatePassChrome();
   maybeShowPassTransition(G);
 }
 function renderPass(G){
   show('pass');
   const dir=['left','right','across','keep'][(G.round-1)%4];
+  parkPassChrome();   // must precede the innerHTML rebuild — see the function
   $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir))});
   myStrip(G,'p-me',false);
 
@@ -2755,6 +2786,7 @@ function renderPass(G){
     updatePassButton();
   }
   syncLandscapeNote('p-table','p-prompt');
+  relocatePassChrome();
 }
 function updatePassButton(){
   const b=$('p-go');

@@ -659,10 +659,7 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .empty-state h3{font-family:'Playfair Display',serif;color:var(--gold-hi);font-size:1.05rem;margin-bottom:7px}
 .empty-state p{max-width:320px;margin:0 auto;font-size:.87rem}
 
-/* ══ Personal / avatar picker ══ */
-/* Compact status chip + avatar, side by side: chip grows to fill the
-   row, avatar sits fixed-size at the top right. */
-.acct-header{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+/* ══ Personal / My Account hub ══ */
 .acct-chip{
   flex:1;min-width:0;display:flex;align-items:center;gap:8px;
   font:inherit;text-align:left;color:inherit;appearance:none;cursor:pointer;
@@ -715,15 +712,16 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   transition:transform .12s;
 }
 .avatar-preview:active{transform:scale(.94)}
-/* Hidden until the avatar above is tapped */
+/* Hidden until the avatar above is tapped — grid rather than the old
+   horizontal scroll strip, since it now sits inside a fixed-width
+   column instead of a full-bleed row. */
 .avatar-grid{
-  display:none;gap:8px;overflow-x:auto;margin:12px 0 20px;padding:2px 2px 6px;
-  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  display:none;grid-template-columns:repeat(6,1fr);gap:8px;
+  overflow:visible;margin:0 0 16px;padding:0;
 }
-.avatar-grid.open{display:flex}
-.avatar-grid::-webkit-scrollbar{display:none}
+.avatar-grid.open{display:grid}
 .avatar-opt{
-  flex:0 0 auto;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+  width:auto;aspect-ratio:1;border-radius:12px;display:grid;place-items:center;
   font-size:1.15rem;background:rgba(var(--ddp-scrim-rgb),.22);border:1.5px solid var(--line);
   cursor:pointer;transition:border-color .16s,box-shadow .16s,transform .12s,background .16s;
   touch-action:manipulation;
@@ -733,6 +731,63 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   border-color:var(--gold);background:rgba(var(--ddp-brass-rgb),.12);
   box-shadow:0 0 0 2px rgba(var(--ddp-brass-rgb),.3),0 0 14px rgba(var(--ddp-brass-rgb),.35);
 }
+
+/* ── hero player card ── */
+.profile-hero{
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:18px 16px 18px;border-radius:20px;margin:6px 0 18px;
+  background:linear-gradient(160deg,rgba(var(--ddp-brass-rgb),.10),rgba(var(--ddp-gloss-rgb),.02));
+  border:1px solid rgba(var(--ddp-brass-rgb),.28);
+}
+.profile-hero .avatar-preview{width:74px;height:74px;font-size:2.05rem}
+.hero-name-input{
+  margin-top:11px;width:100%;max-width:220px;text-align:center;
+  font-family:'Playfair Display',serif;font-weight:600;font-size:1.4rem;color:var(--cream);
+  background:transparent;border:none;border-bottom:1.5px solid transparent;border-radius:0;
+  padding:2px 4px;outline:none;
+}
+.hero-name-input:focus{border-bottom-color:rgba(var(--ddp-brass-rgb),.5)}
+.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-weight:400}
+.profile-hero .acct-chip{flex:0 0 auto;width:auto;margin-top:9px;padding:6px 13px;border-radius:999px}
+
+/* ── rank medallion ── */
+.rank-med{display:flex;flex-direction:column;align-items:center;gap:5px;margin-top:14px}
+.rank-emblem{width:46px;height:52px;display:grid;place-items:center}
+.rank-emblem img.rank-badge{width:46px;height:52px;filter:drop-shadow(0 2px 6px rgba(var(--ddp-scrim-rgb),.5))}
+.rank-lbl{font-family:'Playfair Display',serif;font-size:.85rem;font-weight:600;color:var(--gold-hi)}
+.rank-mmr{font-family:var(--font-num);font-size:.72rem;color:var(--faint);letter-spacing:.04em}
+.rank-med.unranked .rank-emblem{opacity:.4}
+
+/* ── top tab bar (Profile / Achievements / Friends) — distinct from
+   .acct-tabs/.acct-tab, which is the login/signup form's own pair ── */
+.acct-tabbar{display:flex;gap:4px;margin:0 0 14px;background:rgba(var(--ddp-scrim-rgb),.24);padding:4px;border-radius:12px}
+.acct-toptab{
+  flex:1;padding:9px 6px;border:none;background:transparent;color:var(--faint);
+  font:600 .8rem 'DM Sans',sans-serif;border-radius:9px;cursor:pointer;transition:background .16s,color .16s;
+}
+.acct-toptab.active{background:rgba(var(--ddp-brass-rgb),.18);color:var(--gold-hi)}
+.acct-panel{display:none}
+.acct-panel.active{display:block}
+
+.sec-label{
+  font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-lo);
+  margin:0 2px 9px;display:flex;align-items:center;gap:8px;text-align:left;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:rgba(var(--ddp-brass-rgb),.16)}
+
+.pick-hint{font-size:.72rem;color:var(--faint);font-style:italic;text-align:center;margin:2px 0 10px}
+
+/* theme preview cards — keeps the .theme-swatch-btn hook applyTableTheme()
+   toggles .active on, restyled from a bare swatch dot into a card */
+.theme-swatch-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+.theme-card{
+  width:auto;height:auto;border-radius:14px;padding:0;overflow:hidden;border:2px solid transparent;
+  background:rgba(var(--ddp-scrim-rgb),.20);box-shadow:none;display:flex;flex-direction:column;
+}
+.theme-card.active{border-color:var(--gold)}
+.tc-swatch{position:relative;height:44px;display:block}
+.tc-chip{position:absolute;top:8px;left:8px;width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(var(--ddp-gloss-rgb),.25)}
+.tc-name{font-size:.72rem;font-weight:600;color:var(--muted);padding:7px 6px;text-align:center}
 
 /* ══ Lobby ══ */
 .codebox{
@@ -1319,40 +1374,30 @@ html.landscape-mode .screen.active .stat-value{font-size:1.15rem}
    leaderboard has to reserve room or its last rows sit under it */
 html.landscape-mode #s-rank #rank-content{padding-bottom:52px}
 
-/* ── My Account is the exception to the rule above ──
-   The other four screens' body panels are mutually exclusive, which is
-   what lets them all share grid-row:1/-1. My Account's are not: the
-   account chip, avatar picker, name field, Save and the theme row are
-   all on screen together, so sharing one area would stack them on top
-   of each other. It therefore opts out of that stacking and instead
-   flows its body down column 2, row by row.
-
-   The three rail items get EXPLICIT rows so auto-placement starts the
-   column-2 items at row 1 rather than continuing past the rail — with
-   auto rows for everything the placement cursor only moves forward and
-   the body would begin at row 4, leaving a stair-step of dead space. */
-html.landscape-mode #s-personal>.center-wrap{
-  grid-template-rows:auto;   /* no 1fr row — no footer to sink here */
-  align-content:start;
-  overflow-y:auto;-webkit-overflow-scrolling:touch;
+/* ── My Account is still the exception, but for a different reason now
+   that it's a hero + tabs hub rather than a flat form ──
+   .backlink still lands in the outer rail via the generic chrome
+   selector above, same as every other screen. .acct-layout is the only
+   OTHER direct child of .center-wrap, so the generic "everything else"
+   rule already parks it in column 2, full height, scrollable, with the
+   standard divider — that part needs no override at all.
+   What it doesn't have is My Account's OWN internal split: a hero rail
+   (avatar, name, login pill, rank medallion) beside the tab bar and
+   active panel. That's added here as a grid nested inside that already-
+   scrollable column-2 box, which is also why position:sticky on
+   .profile-hero works — it sticks against .acct-layout's own scroll,
+   not the page's. */
+html.landscape-mode #s-personal>.center-wrap>.acct-layout{
+  display:grid;
+  grid-template-columns:minmax(160px,200px) 1fr;
+  column-gap:22px;align-items:start;
 }
-html.landscape-mode #s-personal>.center-wrap>*{
-  grid-row:auto;
-  overflow:visible;
-  /* one continuous divider isn't possible when the body is many
-     separate items with margins between them — each would draw its own
-     stub and it reads as a broken dashed line. The column indent alone
-     carries the separation here. */
-  border-left:0;
+html.landscape-mode #s-personal .profile-hero{margin:0;position:sticky;top:0}
+html.landscape-mode #s-personal .acct-main{
+  padding-left:22px;border-left:1px solid rgba(var(--ddp-brass-rgb),.24);
 }
-html.landscape-mode #s-personal>.center-wrap>.backlink{grid-row:1}
-html.landscape-mode #s-personal>.center-wrap>h2{grid-row:2}
-html.landscape-mode #s-personal>.center-wrap>.tagline{grid-row:3}
-/* the shared rule parks .note in the rail; here they're form feedback
-   and belong beside the field they describe */
-html.landscape-mode #s-personal>.center-wrap>.note{grid-column:2;padding-left:20px}
-html.landscape-mode #s-personal .settings-row{margin-top:12px}
-html.landscape-mode #s-personal .avatar-grid{max-height:96px}
+/* keep the theme cards from stretching too tall on short viewports */
+html.landscape-mode #s-personal .tc-swatch{height:40px}
 
 /* ── Game-flow screens: lobby, seat draw / dealer cut, round summary,
    final standings ──
@@ -1458,13 +1503,9 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
    to hold "16/16" inside a 32px token */
 .tb-badge{font-size:.5rem}
 
-/* ══ Theme swatches (main menu) ══ */
-.settings-row{
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  margin-top:18px;padding:10px 14px;border-radius:var(--r);
-  background:rgba(var(--ddp-scrim-rgb),.18);border:1px solid var(--line);
-  font-size:.86rem;color:var(--muted);
-}
+/* ══ Theme swatches — base dot styling; the My Account hub overrides
+   this into a card via .theme-card, see the "Personal / My Account hub"
+   block above ══ */
 .theme-swatch-row{display:flex;gap:8px}
 .theme-swatch-btn{
   width:28px;height:28px;border-radius:50%;padding:0;
@@ -1829,53 +1870,97 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
 
 <!-- ═══ PERSONAL (avatar & name) ═══ -->
 <section id="s-personal" class="screen">
-  <div class="center-wrap" style="max-width:420px">
+  <div class="center-wrap acct-wrap" style="max-width:440px">
     <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
-    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">My Account</h2>
-    <p class="tagline">Your nickname &amp; avatar &middot; used in every game mode</p>
 
-    <div class="acct-header">
-      <button class="acct-chip" id="acct-chip" onclick="handleAcctChip()">
-        <span class="acct-chip-icon" id="acct-chip-icon">👤</span>
-        <span class="acct-chip-text" id="acct-chip-text">Guest</span>
-        <span class="acct-chip-action" id="acct-chip-action">Log in</span>
-      </button>
-      <div class="avatar-preview" id="pv-avatar" onclick="toggleAvatarPicker()">👤</div>
-    </div>
+    <div class="acct-layout">
+      <!-- HERO player card -->
+      <div class="profile-hero">
+        <div class="avatar-preview" id="pv-avatar" onclick="toggleAvatarPicker()">👤</div>
+        <input type="text" id="pv-name" class="hero-name-input" placeholder="Your name"
+               maxlength="16" autocomplete="nickname" oninput="updateAvatarPreview()"/>
+        <button class="acct-chip" id="acct-chip" onclick="handleAcctChip()">
+          <span class="acct-chip-icon" id="acct-chip-icon">👤</span>
+          <span class="acct-chip-text" id="acct-chip-text">Guest</span>
+          <span class="acct-chip-action" id="acct-chip-action">Log in</span>
+        </button>
 
-    <div class="avatar-grid" id="avatar-grid"></div>
-
-    <div class="acct-form" id="acct-form" style="display:none">
-      <div class="acct-tabs">
-        <button class="acct-tab" id="tab-login" onclick="switchAuthTab('login')">Log in</button>
-        <button class="acct-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create account</button>
+        <!-- rank medallion: emblem + label + MMR below -->
+        <div class="rank-med" id="acct-rank">
+          <div class="rank-emblem" id="acct-rank-emblem"></div>
+          <div class="rank-lbl" id="acct-rank-label">Unranked</div>
+          <div class="rank-mmr" id="acct-rank-mmr"></div>
+        </div>
       </div>
-      <input type="text" id="auth-username" placeholder="Username" maxlength="20" autocomplete="username"/>
-      <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password"/>
-      <button class="btn btn-primary btn-block" id="auth-submit" onclick="submitAuth()">Log in</button>
-      <button class="btn btn-ghost btn-sm btn-block" onclick="closeAuthForm()">Cancel</button>
-      <div id="err-auth" class="note bad" style="display:none"></div>
-    </div>
 
-    <input type="text" id="pv-name" placeholder="Your name" maxlength="16"
-           autocomplete="nickname" oninput="updateAvatarPreview()"/>
+      <div class="acct-main">
+        <!-- TAB BAR -->
+        <div class="acct-tabbar">
+          <button class="acct-toptab active" data-tab="profile" onclick="switchAccountTab('profile')">Profile</button>
+          <button class="acct-toptab" data-tab="achievements" onclick="switchAccountTab('achievements')">Achievements</button>
+          <button class="acct-toptab" data-tab="friends" onclick="switchAccountTab('friends')">Friends</button>
+        </div>
 
-    <button class="btn btn-primary btn-block" onclick="savePersonal()">Save</button>
-    <div id="err-personal" class="note bad" style="display:none"></div>
-    <p id="pv-saved" class="note gold" style="display:none;margin-top:10px;text-align:center">Saved.</p>
+        <!-- PROFILE PANEL -->
+        <div class="acct-panel active" id="acct-panel-profile">
+          <!-- login/signup form drops in here when the status pill is tapped -->
+          <div class="acct-form" id="acct-form" style="display:none">
+            <div class="acct-tabs">
+              <button class="acct-tab" id="tab-login" onclick="switchAuthTab('login')">Log in</button>
+              <button class="acct-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create account</button>
+            </div>
+            <input type="text" id="auth-username" placeholder="Username" maxlength="20" autocomplete="username"/>
+            <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password"/>
+            <button class="btn btn-primary btn-block" id="auth-submit" onclick="submitAuth()">Log in</button>
+            <button class="btn btn-ghost btn-sm btn-block" onclick="closeAuthForm()">Cancel</button>
+            <div id="err-auth" class="note bad" style="display:none"></div>
+          </div>
 
-    <div class="settings-row">
-      <span>Table theme</span>
-      <div class="theme-swatch-row">
-        <button class="theme-swatch-btn" data-theme="bordeaux"
-          style="background:#2B0D18" onclick="applyTableTheme('bordeaux')"
-          aria-label="Bordeaux theme"></button>
-        <button class="theme-swatch-btn" data-theme="emeraude"
-          style="background:#1F4732" onclick="applyTableTheme('emeraude')"
-          aria-label="Émeraude theme"></button>
-        <button class="theme-swatch-btn" data-theme="clair"
-          style="background:#E4D9C5" onclick="applyTableTheme('clair')"
-          aria-label="Clair theme"></button>
+          <!-- avatar picker: hidden until #pv-avatar tapped (.open) -->
+          <p class="pick-hint" id="avatar-hint">Tap your avatar to change it</p>
+          <div class="avatar-grid" id="avatar-grid"></div>
+
+          <div class="sec-label">Table theme</div>
+          <div class="theme-swatch-row">
+            <button class="theme-swatch-btn theme-card" data-theme="bordeaux"
+              onclick="applyTableTheme('bordeaux')" aria-label="Bordeaux theme">
+              <span class="tc-swatch" style="background:linear-gradient(160deg,#2B0D18,#120A0D)"><span class="tc-chip" style="background:#B8922E"></span></span>
+              <span class="tc-name">Bordeaux</span>
+            </button>
+            <button class="theme-swatch-btn theme-card" data-theme="emeraude"
+              onclick="applyTableTheme('emeraude')" aria-label="Émeraude theme">
+              <span class="tc-swatch" style="background:linear-gradient(160deg,#1F4732,#0D1512)"><span class="tc-chip" style="background:#C9A227"></span></span>
+              <span class="tc-name">Émeraude</span>
+            </button>
+            <button class="theme-swatch-btn theme-card" data-theme="clair"
+              onclick="applyTableTheme('clair')" aria-label="Clair theme">
+              <span class="tc-swatch" style="background:linear-gradient(160deg,#E4D9C5,#CDBFA6)"><span class="tc-chip" style="background:#A9863C"></span></span>
+              <span class="tc-name">Clair</span>
+            </button>
+          </div>
+
+          <button class="btn btn-primary btn-block" onclick="savePersonal()">Save</button>
+          <div id="err-personal" class="note bad" style="display:none"></div>
+          <p id="pv-saved" class="note gold" style="display:none;margin-top:10px;text-align:center">Saved.</p>
+        </div>
+
+        <!-- ACHIEVEMENTS PANEL (placeholder) -->
+        <div class="acct-panel" id="acct-panel-achievements">
+          <div class="empty-state">
+            <div class="empty-icon">🏅</div>
+            <h3>Achievements coming soon</h3>
+            <p>Milestones, moon-shots and win streaks will show up here.</p>
+          </div>
+        </div>
+
+        <!-- FRIENDS PANEL (placeholder) -->
+        <div class="acct-panel" id="acct-panel-friends">
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <h3>Friends coming soon</h3>
+            <p>Add friends, see who's online, and invite them straight to a table.</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -2556,7 +2641,50 @@ function goPersonal(){
   renderAvatarGrid();
   updateAvatarPreview();
   renderAccountUI();
+  switchAccountTab('profile');
+  if(account){ renderAccountRank(null); socket.emit('getRankedProfile',{token:accountToken}); }
+  else renderAccountRank();
 }
+function switchAccountTab(tab){
+  document.querySelectorAll('#s-personal .acct-toptab').forEach(b=>
+    b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('#s-personal .acct-panel').forEach(p=>
+    p.classList.toggle('active',p.id==='acct-panel-'+tab));
+}
+// Reuses badgeSrc/badgeImg (defined with the Ranked screen) and the same
+// rankedProfileOk/rankedProfileError events that screen already listens
+// for — socket.io allows multiple listeners per event, so this doesn't
+// disturb that handler. null d = "request in flight" (goPersonal's own
+// call, before the server has answered); undefined d = guest, no request
+// was even made.
+function renderAccountRank(d){
+  const med=$('acct-rank'),emb=$('acct-rank-emblem'),
+        lbl=$('acct-rank-label'),mmr=$('acct-rank-mmr');
+  if(!med)return;
+  if(!account){
+    med.classList.add('unranked'); emb.innerHTML='';
+    lbl.textContent='Not ranked'; mmr.textContent='Log in to play ranked';
+    return;
+  }
+  if(!d){
+    med.classList.add('unranked'); emb.innerHTML='';
+    lbl.textContent='Loading…'; mmr.textContent='';
+    return;
+  }
+  if(d.isPlacement){
+    med.classList.add('unranked'); emb.innerHTML='';
+    lbl.textContent='Placement';
+    mmr.textContent=`${d.placementGamesPlayed}/5 games`;
+  }else{
+    med.classList.remove('unranked');
+    emb.innerHTML=badgeImg(d.rank,46);
+    lbl.textContent=d.rank.label;
+    mmr.textContent=`${d.mmr} MMR`;
+  }
+}
+socket.on('rankedProfileOk',d=>{
+  if($('s-personal').classList.contains('active')) renderAccountRank(d);
+});
 function savePersonal(){
   const n=$('pv-name').value.trim().slice(0,16);
   if(!n){ toast('err-personal','Pick a nickname first.'); $('pv-name').focus(); return; }

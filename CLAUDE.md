@@ -203,9 +203,10 @@ scrolling after touching any landscape sizing.
   rather than an id list. That works because `landscape-mode` is only
   ever on when the *active* screen is in `LANDSCAPE_SCREENS`, so the
   selector can only match those screens — and anything added to the set
-  later (My Account is the obvious candidate) inherits the layout for
-  free. The menu uses `.menu-wrap` and the table screens have no
-  `.center-wrap`, so neither is caught.
+  later inherits the layout for free (My Account does exactly this, see
+  below, though it also layers its own nested split on top). The menu
+  uses `.menu-wrap` and the table screens have no `.center-wrap`, so
+  neither is caught.
   The shape: everything defaults into column 2 as a single scrollable
   body panel (`grid-row:1/-1`), and the chrome — `.backlink`,
   `.screen-header`, `h2`, `.tagline`, `.exit-row`, `.note` — is pulled
@@ -214,17 +215,48 @@ scrolling after touching any landscape sizing.
   `display:none`, and a `display:none` element isn't a grid item at all.
   If you ever make two visible at once they'll stack on top of each
   other.
-- **My Account is the exception and has its own block.** Its body parts
-  (account chip, avatar picker, name field, Save, theme row) are all on
-  screen *together*, so it opts out of the shared `grid-row:1/-1`
-  stacking and flows its body down column 2 instead. Its three rail
-  items carry **explicit** `grid-row: 1/2/3` — that isn't cosmetic:
-  grid's placement cursor only ever moves forward, so with auto rows
-  everywhere the body would start at row 4 and leave a stair-step of
-  dead space beside the rail. It also drops the column divider, because
-  a many-item body draws one border stub per item with margin gaps
-  between them, which reads as a broken dashed line rather than a rule.
-  This screen is the one most likely to want hand-tuning later.
+- **My Account (`#s-personal`) is a hero + tabbed hub, not a flat form**
+  — a player card (avatar, editable name, login pill, rank medallion)
+  beside a Profile/Achievements/Friends tab bar. Its portrait markup
+  wraps everything except `.backlink` in one `.acct-layout` div, and
+  that single wrapper is the whole reason the shared landscape rule
+  above needs no exception for it any more (an earlier version, with a
+  flatter portrait markup, did): `.backlink` still lands in the rail via
+  the generic chrome selector, and `.acct-layout` — the only *other*
+  direct child of `.center-wrap` — already gets column 2, full height,
+  scrollable, from the generic "everything else" rule. `#s-personal`'s
+  own landscape block only adds what's specific to it: making
+  `.acct-layout` itself a nested grid (hero rail | tab bar + panel), and
+  `position:sticky` on `.profile-hero` so it stays put while the panel
+  scrolls under it. The sticky works because it resolves against
+  `.acct-layout`'s own scroll (set by the generic rule), not the page's.
+- **The Profile/Achievements/Friends tabs are `.acct-toptab`/
+  `.acct-panel`, deliberately distinct from `.acct-tabs`/`.acct-tab`**,
+  which is the *login/signup* pair inside the Profile panel's
+  `#acct-form`. Same naming pattern, different job, both live on
+  `#s-personal` at once — don't merge them. `switchAccountTab()` toggles
+  both class sets in lockstep; `goPersonal()` calls it to reset to
+  Profile every time the screen opens, so a stale Achievements/Friends
+  tab never lingers behind a return visit.
+- **The rank medallion is populated by `renderAccountRank()` off the
+  same `rankedProfileOk`/`rankedProfileError` events the Ranked screen
+  already listens for** — socket.io supports multiple listeners per
+  event, so this doesn't disturb that handler. `goPersonal()` requests
+  it (`getRankedProfile`) only when logged in, and drives the medallion
+  through three states even before the server answers: guest → "Not
+  ranked", logged-in-pending → "Loading…" (the `renderAccountRank(null)`
+  call), then the real rank or "Placement n/5" once the response lands.
+  The `$('s-personal').classList.contains('active')` guard in the
+  listener matters: without it, a response arriving after the player has
+  already navigated away would still overwrite the medallion, which
+  would then show stale data the next time they open the screen — same
+  screen-liveness pattern the Ranked screen's own listener already uses.
+- **`.theme-swatch-btn` now has two lives.** The bare circular-dot
+  styling (28px circle) is still the base rule and would still work
+  standalone; `.theme-card` (`applyTableTheme()` toggles `.active` on
+  whichever element carries `.theme-swatch-btn`, regardless of what else
+  it's wearing) restyles it into a labelled preview card for the account
+  hub without touching the JS or the id/data-attribute contract at all.
 - `max-width:none` on those wraps needs `!important` — `s-ranked`,
   `s-rank` and `s-stats` each carry an inline `style="max-width:440px"`.
   Same class of trap as the menu's `.exit-row` inline `margin-top`;

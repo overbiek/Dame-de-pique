@@ -1514,6 +1514,105 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
 }
 .theme-swatch-btn.active{border-color:var(--ddp-brass)}
 
+/* ══ Tutorial ══ */
+.tutorial-scrim{
+  position:fixed;inset:0;z-index:500;display:none;
+  align-items:center;justify-content:center;padding:20px;
+  background:rgba(var(--ddp-scrim-rgb),.72);
+  -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+}
+.tutorial-scrim.show{display:flex}
+.tutorial-welcome-card{
+  background:var(--card-face);color:var(--ink);
+  border:1px solid var(--card-edge);border-radius:16px;
+  padding:28px 24px;max-width:360px;width:100%;
+  font-family:'Playfair Display',serif;
+  text-align:center;box-shadow:0 20px 50px rgba(var(--ddp-scrim-rgb),.5);
+}
+.tutorial-welcome-card h2{color:var(--gold-lo);margin-bottom:4px;font-size:1.4rem}
+.tutorial-welcome-card .tagline{color:var(--faint);font-style:italic;margin:0 0 14px}
+.tutorial-welcome-card p{font-family:'DM Sans',sans-serif;font-size:.9rem;line-height:1.5;
+  margin:0 0 10px;color:var(--ink)}
+/* .pos/.neg already exist as generic delta colours (see the numeric-
+   readout tokens) — reused here rather than inventing a third "positive"
+   colour name for the same concept */
+.tutorial-welcome-card .pos{color:var(--ddp-pos);font-weight:700}
+.tutorial-welcome-actions{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.tutorial-welcome-card .btn{width:100%}
+
+/* the highlight ring — box-shadow rather than outline so it doesn't
+   fight each element's own border-radius, and z-index so it sits above
+   the dim scrim (which is the SAME rgba wash the welcome overlay uses,
+   applied per-target via box-shadow-spread rather than as one full-
+   screen scrim element — this is what lets it work regardless of the
+   target's position without any positioning math).
+   CAVEAT this relies on: the 9999px spread is clipped at the nearest
+   overflow:hidden ancestor, not the true viewport — every tutorial
+   target lives inside #app, which is overflow:hidden in landscape. That
+   only looks correct here because #app is ALSO sized to fill the entire
+   viewport (height:100%, no letterboxing) — the clip boundary and the
+   screen edge coincide, so the dim wash still reads as full-screen. If
+   #app or a screen ever gets a smaller/padded/centred landscape
+   treatment, this stops covering the edges and needs a real fixed-
+   position scrim element instead (the welcome/Part-B overlays already
+   use one — .tutorial-scrim — this could switch to the same pattern). */
+.tutorial-target{
+  position:relative;z-index:501;
+  border-radius:10px;
+  box-shadow:0 0 0 4px rgba(var(--ddp-brass-rgb),.8),0 0 0 9999px rgba(var(--ddp-scrim-rgb),.68);
+  transition:box-shadow .2s ease;
+}
+
+#tutorial-callout{
+  display:none;position:fixed;left:50%;bottom:0;transform:translateX(-50%);
+  z-index:510;width:min(560px,100%);
+  background:var(--ddp-felt-lo);border-top:1px solid rgba(var(--ddp-brass-rgb),.35);
+  border-radius:16px 16px 0 0;
+  padding:14px 18px calc(env(safe-area-inset-bottom) + 14px);
+  box-shadow:0 -10px 30px rgba(var(--ddp-scrim-rgb),.4);
+}
+#tutorial-callout.show{display:block}
+#tutorial-callout .tut-text{
+  font-size:.86rem;line-height:1.5;color:var(--cream);margin-bottom:10px;
+}
+#tutorial-callout .tut-text b{color:var(--gold-hi)}
+#tutorial-callout .tut-next{width:100%}
+.tut-skip{
+  display:block;margin:0 0 8px;background:none;border:none;padding:0;
+  font-size:.72rem;color:var(--faint);text-decoration:underline;cursor:pointer;
+}
+
+.tutorial-partb-card{
+  background:var(--card-face);color:var(--ink);
+  border:1px solid var(--card-edge);border-radius:16px;
+  padding:26px 22px 22px;max-width:380px;width:100%;position:relative;
+  box-shadow:0 20px 50px rgba(var(--ddp-scrim-rgb),.5);
+}
+.tutorial-partb-count{font-size:.68rem;color:var(--faint);letter-spacing:.08em;
+  text-transform:uppercase;margin-bottom:6px;font-family:var(--font-num)}
+.tutorial-partb-card h2{font-family:'Playfair Display',serif;color:var(--gold-lo);
+  font-size:1.25rem;margin-bottom:10px}
+.tutorial-partb-card p{font-family:'DM Sans',sans-serif;font-size:.9rem;line-height:1.55}
+.tutorial-partb-actions{display:flex;gap:10px;margin-top:20px}
+.tutorial-partb-actions .btn{flex:1}
+.tutorial-partb-close{
+  position:absolute;top:14px;right:16px;background:none;border:none;padding:4px;
+  color:var(--faint);font-size:1.1rem;line-height:1;cursor:pointer;
+}
+
+/* Landscape: the welcome/Part-B cards go side-by-side wide instead of
+   tall-narrow (there's little vertical room to spare), and the callout
+   bar narrows so it never covers the trick area it's usually pointing
+   just above. */
+html.landscape-mode .tutorial-welcome-card,
+html.landscape-mode .tutorial-partb-card{max-width:min(86vw,480px);padding:18px 22px}
+html.landscape-mode .tutorial-welcome-actions{flex-direction:row}
+html.landscape-mode .tutorial-welcome-actions .btn{flex:1}
+html.landscape-mode #tutorial-callout{
+  width:min(46vw,340px);left:auto;right:8px;bottom:8px;transform:none;
+  border-radius:14px;padding:12px 14px;
+}
+
 /* ══ Clair-only corrections ══
    A handful of accents were picked as pale text on a dark wash. On the
    light theme that's pale-on-pale, so they're re-grounded on the ink
@@ -1677,6 +1776,52 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
   </div>
 </div>
 
+<!-- ═══ TUTORIAL — welcome overlay ═══
+     Sits outside the screen-swap system (like #rules/#votebox above),
+     so it can sit ON TOP of #s-menu without depending on which .screen
+     is "active" — its own .show class controls visibility. -->
+<div id="tutorial-welcome" class="tutorial-scrim">
+  <div class="tutorial-welcome-card">
+    <h2>Welcome to Dame de Pique</h2>
+    <p class="tagline">A game where counting cards is key to success.</p>
+    <p>The goal is to get as many <span class="pos">+</span> points as
+       possible — by maximizing good hands and minimizing losses, by
+       keeping track of your cards.</p>
+    <p>Are you already familiar with trick-taking card games, or would you
+       like a quick tutorial?</p>
+    <div class="tutorial-welcome-actions">
+      <button class="btn btn-primary" onclick="startTutorial()">Yes, I want to learn!</button>
+      <button class="btn btn-ghost" onclick="dismissWelcome()">No thanks, I know what I'm doing</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TUTORIAL — spotlight ring target + fixed bottom callout ═══
+     The ring itself is applied to whatever real element .tutorial-target
+     lands on (see tutorialSpotlight() in the script) — this markup is
+     just the callout bar, always in the same place regardless of what's
+     being pointed at. See the big comment block above the JS for why
+     it's a fixed bar rather than an anchored tooltip. -->
+<div id="tutorial-callout">
+  <button class="tut-skip" onclick="tutorialSkip()">Skip tutorial</button>
+  <div class="tut-text"></div>
+  <button class="btn btn-primary tut-next" onclick="">Next</button>
+</div>
+
+<!-- ═══ TUTORIAL — Part B concept cards ═══ -->
+<div id="tutorial-partb" class="tutorial-scrim">
+  <div class="tutorial-partb-card">
+    <button class="tutorial-partb-close" onclick="tutorialPartBNext()" aria-label="Close">✕</button>
+    <div class="tutorial-partb-count" id="tutorial-partb-count"></div>
+    <h2 id="tutorial-partb-title"></h2>
+    <p id="tutorial-partb-body"></p>
+    <div class="tutorial-partb-actions">
+      <button class="btn btn-ghost" id="tutorial-partb-prev" onclick="tutorialPartBPrev()">‹ Back</button>
+      <button class="btn btn-primary" id="tutorial-partb-next" onclick="tutorialPartBNext()">Next</button>
+    </div>
+  </div>
+</div>
+
 <div id="app">
 
 <!-- ═══ MAIN MENU ═══ -->
@@ -1736,6 +1881,10 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
     <div class="exit-row" style="margin-top:22px">
       <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
       <button class="btn btn-ghost btn-sm" id="sfx-toggle" onclick="toggleSfxMuted()">🔊 Sound</button>
+      <!-- Reuses .info-circle-btn — the exact same round "?" already used
+           for "How ranked works" on the Ranked/Rank screens, so this
+           reads as an established control tier rather than a new one. -->
+      <button class="info-circle-btn" onclick="replayTutorial()" title="Replay tutorial" aria-label="Replay tutorial">?</button>
     </div>
     <div id="err-menu" class="note bad" style="display:none"></div>
     <div id="install">
@@ -2379,6 +2528,11 @@ updateLandscapeMode();
 matchMedia('(orientation:landscape)').addEventListener('change',()=>{
   updateLandscapeMode();
   rerenderTableScreen();
+  // rerenderTableScreen() rebuilds #g-table/#p-table's innerHTML, which
+  // destroys whatever element the tutorial's spotlight ring was attached
+  // to (it's inside that rebuilt markup) — reapply it against the fresh
+  // DOM. No-ops when no tutorial step is showing.
+  if(tutorialActive) tutorialReapplySpotlight();
 });
 function send(ev,extra){ socket.emit(ev,Object.assign({code:room,playerIndex:me},extra||{})); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -3021,7 +3175,15 @@ function armConfirm(btn,label,action){
     btn.dataset.armed='0'; btn.textContent=btn.dataset.orig; btn.classList.remove('danger');
   },4000);
 }
-function askLeave(btn){ armConfirm(btn,'Tap again to leave',()=>socket.emit('leaveRoom',{code:room})); }
+// The table screens' home button (top-left corner, cornerActions()) is
+// hardcoded to call this — reused as-is rather than special-cased,
+// which is why tutorial mode has to detour HERE instead. "Skip tutorial"
+// is deliberately one tap with no confirmation (nothing real is being
+// abandoned), unlike leaving an actual room.
+function askLeave(btn){
+  if(tutorialActive){ exitTutorial(); return; }
+  armConfirm(btn,'Tap again to leave',()=>socket.emit('leaveRoom',{code:room}));
+}
 function askEnd(btn){ armConfirm(btn,'Tap again to ask',()=>socket.emit('endGame',{code:room})); }
 function voteEnd(agree){ socket.emit('endVote',{code:room,agree:!!agree}); }
 
@@ -3502,6 +3664,13 @@ window.addEventListener('pointercancel',endPassDrag);
 function confirmPass(){
   if(picked.length!==2)return;
   SFX.play('confirm');
+  // The tutorial drives this exact button/function against a fake local
+  // state (see "TUTORIAL" below) rather than a real room — this is the
+  // ONE place that state transition needs to detour around the network
+  // call. Everything else about card selection (togglePassCard, the
+  // hold-and-slide drag) is pure DOM/array manipulation and needed no
+  // changes at all to work against fake state.
+  if(tutorialActive){ tutorialCommitPass(); return; }
   socket.emit('selectPass',{code:room,playerIndex:me,cards:picked});
   picked=[];
 }
@@ -3714,6 +3883,10 @@ function endCardDrag(e){
   if(mid) mid.classList.remove('drop-hover');
   if(dropped){
     SFX.play('cardPlace');
+    // See confirmPass() for why tutorial mode detours the network call
+    // specifically — everything upstream of this point (the drag itself,
+    // the drop-zone hit test) is unmodified real code.
+    if(tutorialActive){ tutorialCommitPlay(el.dataset.r,el.dataset.s); return; }
     socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
     return; // the next gameState render replaces this element entirely
   }
@@ -3762,6 +3935,7 @@ function releasePlayPick(e){
   setPlayPick(null);
   if(el){
     SFX.play('cardPlace');
+    if(tutorialActive){ tutorialCommitPlay(el.dataset.r,el.dataset.s); return; }
     socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
   }
 }
@@ -3821,6 +3995,7 @@ function scrollSheet(){
 
 function confirmRoundClick(){
   SFX.play('confirm');
+  if(tutorialActive){ tutorialAfterRoundSummary(); return; }
   send('confirmRound');
 }
 function renderSummary(G){
@@ -3925,6 +4100,515 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 }
 
+/* ══════════════════════════════ TUTORIAL ══════════════════════════════
+   Design: see the brief this was implemented from. Summary of the one
+   deliberate deviation from it — Part A runs entirely client-side
+   against a fake, scripted game-state object (`tutG`) instead of a real
+   server-backed "tutorial room." That fake object is fed to the SAME
+   render functions real play uses (renderPass/renderPassReveal/
+   renderPlay/renderSummary, and everything they call — tableHTML,
+   handHTML, myStrip, cornerActions, sheetHTML...), completely
+   unmodified. The only touches to real interaction code are the six
+   `if(tutorialActive)` branches guarding the exact points a real action
+   would hit the network (confirmPass, endCardDrag, releasePlayPick,
+   askLeave, confirmRoundClick) plus one line re-applying the spotlight
+   after an orientation-triggered re-render — everything else (drag,
+   hold-and-slide, nearestTapCard, the legal/dim card mechanism,
+   landscape layout) is exercised as-is. This means Part A gets full
+   landscape support for free, and there is zero risk to the real
+   multiplayer game engine since server.js is untouched.
+   ═══════════════════════════════════════════════════════════════════ */
+
+let tutorialActive=false;
+let tutSavedS=null,tutSavedMe=-1,tutSavedRoom='',tutSavedCurrentScreen='menu';
+let tutG=null;                 // the fake game-state object driving Part A
+let tutAwaiting=null;          // what tutorialCommitPass/Play should do next
+let tutPickWatcher=null;       // the one polling interval (see tutA_hand)
+
+function tc(rank,suit){ return {rank,suit}; }
+function lc(rank,suit){ return rank+'|'+suit; }
+
+/* ── the fixed learner hand + scripted deck for Part A ──
+   Every card referenced anywhere below — the learner's 13 starting
+   cards, the 2 passed away, the 2 received, and every scripted AI play
+   across all four tricks — is a distinct (rank,suit) pair; verified by
+   hand, not generated, since correctness here can't be checked by
+   running anything. AI hands are never enumerated beyond that: real
+   play never shows an opponent's actual cards either (only cardCount),
+   so nothing needs a full 13-card hand behind it, only the specific
+   cards it's scripted to play. */
+const TUT_HAND=[
+  tc('A','♣'),tc('9','♣'),tc('6','♣'),tc('2','♣'),
+  tc('J','♦'),tc('9','♦'),tc('7','♦'),tc('4','♦'),
+  tc('Q','♠'),
+  tc('K','♥'),tc('10','♥'),tc('6','♥'),tc('3','♥'),
+];
+const TUT_PASS_AWAY=[tc('K','♥'),tc('10','♥')];   // the "obviously bad to keep" pair
+const TUT_RECEIVED=[tc('5','♣'),tc('8','♦')];
+const TUT_NAMES={1:'Computer 2',2:'Computer 3',3:'Computer 4'};
+
+function tutHandRemove(card){
+  const i=tutG.myHand.findIndex(c=>c.rank===card.rank&&c.suit===card.suit);
+  if(i>=0) tutG.myHand.splice(i,1);
+}
+function tutHandHas(rank,suit){
+  return tutG.myHand.some(c=>c.rank===rank&&c.suit===suit);
+}
+
+function tutBuildG(){
+  const me0=identity();
+  return {
+    phase:'pass',
+    round:1,totalRounds:16,
+    dealer:0,
+    myIndex:0,
+    roundBefore:[0,0,0,0],
+    trickLeader:0,trickNum:1,currentTrick:[],
+    legalCards:[],
+    myHand:TUT_HAND.slice(),
+    myReceived:null,myPassed:null,passToIndex:null,passFromIndex:null,
+    lastTrick:null,lastTrickMsg:'',
+    passLetters:['L'],history:[],moonShooter:-1,roundReady:[],isLastRound:false,endVote:null,
+    players:[
+      {name:me0.name||'You',avatar:me0.avatar||'',score:0,tricksWon:0,cardCount:13,isAI:false,connected:true,hasPassed:false},
+      {name:TUT_NAMES[1],avatar:'',score:0,tricksWon:0,cardCount:13,isAI:true,connected:true,hasPassed:true},
+      {name:TUT_NAMES[2],avatar:'',score:0,tricksWon:0,cardCount:13,isAI:true,connected:true,hasPassed:true},
+      {name:TUT_NAMES[3],avatar:'',score:0,tricksWon:0,cardCount:13,isAI:true,connected:true,hasPassed:true},
+    ],
+  };
+}
+
+/* ── spotlight + callout ──
+   Deliberately NOT an anchored tooltip positioned next to the target
+   (the brief's own draft imagined reusing "whatever anchor logic
+   .rt-stack already has" — there isn't any generic anchor logic in this
+   codebase to reuse, that line was aspirational). Instead: a highlight
+   ring on the target via the box-shadow-cutout trick (works regardless
+   of the target's size/position, needs no measurement) plus a callout
+   FIXED to the bottom of the screen, always in the same place. This is
+   the same pattern most mobile app tutorials actually use, and it's
+   robust in landscape's cramped geometry specifically — an anchored
+   tooltip risks landing off-screen or on top of the very thing it's
+   pointing at; a fixed bottom bar can't. */
+function tutorialClearSpotlight(){
+  document.querySelectorAll('.tutorial-target').forEach(el=>el.classList.remove('tutorial-target'));
+}
+let tutLastSpotlightSel=null;
+function tutorialSpotlight(sel){
+  tutLastSpotlightSel=sel;
+  tutorialClearSpotlight();
+  if(!sel)return;
+  document.querySelectorAll(sel).forEach(el=>el.classList.add('tutorial-target'));
+}
+function tutorialReapplySpotlight(){ tutorialSpotlight(tutLastSpotlightSel); }
+function tutorialCallout(html,opts){
+  opts=opts||{};
+  const box=$('tutorial-callout');
+  box.querySelector('.tut-text').innerHTML=html;
+  const nextBtn=box.querySelector('.tut-next');
+  if(opts.next){
+    nextBtn.style.display='';
+    nextBtn.textContent=opts.nextLabel||'Next';
+    nextBtn.onclick=opts.next;
+  }else{
+    nextBtn.style.display='none';
+  }
+  box.classList.add('show');
+}
+function tutorialHideCallout(){ $('tutorial-callout').classList.remove('show'); tutorialClearSpotlight(); }
+
+/* ── entry / exit ── */
+function replayTutorial(){ startTutorial(); }
+function maybeShowWelcome(){
+  let seen=null;
+  try{ seen=localStorage.getItem('ddp.tutorialSeen'); }catch(e){}
+  if(!seen) $('tutorial-welcome').classList.add('show');
+}
+function dismissWelcome(){
+  try{ localStorage.setItem('ddp.tutorialSeen','1'); }catch(e){}
+  $('tutorial-welcome').classList.remove('show');
+}
+function startTutorial(){
+  try{ localStorage.setItem('ddp.tutorialSeen','1'); }catch(e){}
+  $('tutorial-welcome').classList.remove('show');
+  // Snapshot whatever real state exists before stepping on the globals
+  // every render function reads (S, me, room, currentScreenId). In
+  // practice this only ever launches from an idle menu (first run, or
+  // the "?" button, both menu-only), so there's nothing real to
+  // preserve — this is a safety net, not a load-bearing path.
+  tutSavedS=S; tutSavedMe=me; tutSavedRoom=room; tutSavedCurrentScreen=currentScreenId;
+  tutorialActive=true;
+  me=0; room=''; picked=[];
+  tutG=tutBuildG();
+  S=tutG;
+  tutA_table();
+}
+function exitTutorial(){
+  tutorialActive=false;
+  clearInterval(tutPickWatcher); tutPickWatcher=null;
+  tutorialHideCallout();
+  S=tutSavedS; me=tutSavedMe; room=tutSavedRoom; tutG=null; picked=[];
+  // renderPass/renderPlay were called directly against tutG, real
+  // socket.on('gameState') plumbing entirely bypassed — but the two
+  // "have I already observed this?" diff-trackers those functions read
+  // are ordinary shared globals, not part of any per-game state object,
+  // and the tutorial just drove them through a full round. Left alone,
+  // the player's actual first real game would see passFxShownForRound
+  // already matching round 1 (skipping that pass animation) and
+  // lastCurrentTrickLen already at a stale nonzero value (skipping the
+  // 'cardPlace' sound on the first real opponent card). Reset to the
+  // same null/-1 "not yet observed" sentinels a fresh page load starts
+  // with — the mechanism already exists to support exactly this.
+  passFxShownForRound=-1;
+  lastCurrentTrickLen=null;
+  show(tutSavedCurrentScreen==='pass'||tutSavedCurrentScreen==='play'?'menu':tutSavedCurrentScreen);
+  updateMenuProfileUI();
+}
+function tutorialSkip(){ exitTutorial(); }
+
+/* ── Part A steps ──
+   Written as one explicit linear chain (tutA_*) rather than a generic
+   data-driven step engine on purpose: the trick-by-trick logic (who
+   plays what, who wins, why) is different at every step and genuinely
+   bespoke, so a generic engine would just be indirection around the
+   same one-off content — see the "don't build a framework for a
+   sequence that runs once" reasoning already established for the
+   deck/script data itself. */
+
+function tutA_table(){
+  renderPass(tutG);
+  tutorialSpotlight('.rt-stack .tb-badge:not(.pass)');
+  tutorialCallout(
+    `<b>Round 1 of 16.</b> That badge shows the round — and next to it, `+
+    `<span class="ddp-pos">👁</span> lets you hold to peek at the last trick once one exists. `+
+    `The <b>D</b> marker on an avatar shows who's dealing.`,
+    {next:tutA_hand}
+  );
+}
+
+function tutA_hand(){
+  tutorialSpotlight('#p-hand');
+  tutorialCallout(
+    `This is your hand — 13 cards. <b>Press and slide</b> across the fan to pick cards up; `+
+    `sliding across more than one selects each as you cross it. `+
+    `<b>Try picking up any card now.</b>`
+  );
+  // The only place this file polls rather than reacting to a guarded
+  // commit function — "pick up any card" doesn't go through
+  // confirmPass, just the ordinary (untouched) togglePassCard, so
+  // there's no natural hook to advance FROM. Scoped to one step, cleared
+  // the moment it fires.
+  clearInterval(tutPickWatcher);
+  tutPickWatcher=setInterval(()=>{
+    if(picked.length>=1){
+      clearInterval(tutPickWatcher); tutPickWatcher=null;
+      tutA_passExplain();
+    }
+  },200);
+}
+
+function tutA_passExplain(){
+  tutorialSpotlight('.rt-stack .tb-badge.pass');
+  tutorialCallout(
+    `Good. That letter badge is the <b>pass direction</b> — this round it's `+
+    `<b>L</b>, so whatever 2 cards you pick go to the player on your left. `+
+    `Passing is how you get rid of dangerous cards before play starts. `+
+    `<b>Pick one more, then confirm.</b>`
+  );
+  tutAwaiting='passConfirm';
+}
+// Called by confirmPass() when tutorialActive — see the guard there.
+function tutorialCommitPass(){
+  if(tutAwaiting!=='passConfirm')return;
+  tutAwaiting=null;
+  const passed=picked.slice();
+  passed.forEach(tutHandRemove);
+  picked=[];
+  tutG.myPassed=passed;
+  tutG.players[0].hasPassed=true;
+  const names=passed.map(c=>c.rank+c.suit).join(' and ');
+  renderPass(tutG);
+  tutorialSpotlight(null);
+  tutorialCallout(
+    `You passed the <b>${esc(names)}</b> — hearts are pure liability once play starts, `+
+    `so unloading your worst ones early is almost always right.`,
+    {next:tutA_passReveal}
+  );
+}
+
+function tutA_passReveal(){
+  tutG.myReceived=TUT_RECEIVED.slice();
+  tutG.myHand.push(...TUT_RECEIVED);
+  tutG.passToIndex=1; tutG.passFromIndex=3;   // cosmetic — drives the fly-in animation
+  renderPassReveal(tutG);
+  tutorialSpotlight('#p-hand');
+  tutorialCallout(
+    `Everyone passes at once, so you get 2 back from a different player — `+
+    `here, the <b>${esc(TUT_RECEIVED.map(c=>c.rank+c.suit).join(' and '))}</b>. Onto the first trick.`,
+    {next:tutA_trick1}
+  );
+}
+
+function tutA_trick1(){
+  tutG.phase='play';
+  tutG.currentTrick=[];
+  tutG.trickLeader=0; tutG.trickNum=1;
+  tutG.legalCards=[lc('A','♣')];
+  renderPlay(tutG);
+  tutorialSpotlight('#g-hand');
+  tutorialCallout(
+    `Trick 1 always opens the round, and the opening card can never be a heart `+
+    `or the <b>Q♠</b> — both are dimmed out for exactly that reason. `+
+    `<b>Play your A♣</b> to lead.`
+  );
+  tutAwaiting={type:'play',rank:'A',suit:'♣',after:tutA_trick1Resolve};
+}
+// Called by endCardDrag()/releasePlayPick() when tutorialActive.
+function tutorialCommitPlay(rank,suit){
+  if(!tutAwaiting)return;
+  // 'play' = exactly one forced card (trick 1's open, trick 3's Q♠, trick
+  // 4's open) — the offered card IS the lesson, so it has to be that one.
+  // 'playAny' = trick 2's follow-suit step, where several cards are
+  // legal and the RULE (must match the led suit), not the specific card,
+  // is what's being taught — genuine free choice among them.
+  if(tutAwaiting.type==='play'){
+    if(tutAwaiting.rank!==rank||tutAwaiting.suit!==suit)return; // only the forced card is .tap anyway
+  }else if(tutAwaiting.type==='playAny'){
+    if(suit!==tutAwaiting.suit)return; // only cards of that suit are .tap anyway
+  }else return;
+  const after=tutAwaiting.after;
+  tutAwaiting=null;
+  tutHandRemove({rank,suit});
+  tutG.players[0].cardCount=tutG.myHand.length;
+  tutG.currentTrick.push({player:0,card:{rank,suit}});
+  tutG.legalCards=[];
+  renderPlay(tutG);
+  tutorialSpotlight('.mid');
+  setTimeout(after,650);
+}
+// Plays the given scripted cards into the current trick one at a time,
+// pacing each with a re-render (which is also what makes the existing
+// opponent-card 'cardPlace' SFX fire — renderPlay() already diffs
+// currentTrick.length against the last render to decide that, unchanged
+// and unaware this is a tutorial) — then calls `done`.
+function tutorialAutoPlay(plays,done){
+  if(!plays.length){ done(); return; }
+  const [seat,card,...rest]=plays;
+  setTimeout(()=>{
+    tutG.currentTrick.push({player:seat,card});
+    tutG.players[seat].cardCount--;
+    renderPlay(tutG);
+    tutorialAutoPlay(rest,done);
+  },550);
+}
+function tutorialResolveTrick(winnerSeat,delta,cb){
+  const p=tutG.players[winnerSeat];
+  p.score+=delta; p.tricksWon++;
+  tutG.lastTrick={round:tutG.round,winner:winnerSeat,cards:tutG.currentTrick.slice()};
+  tutG.lastTrickMsg=`${p.name} wins trick ${tutG.trickNum} · +10${delta!==10?' '+(delta-10):''}`;
+  cb();
+}
+
+function tutA_trick1Resolve(){
+  tutorialAutoPlay([[1,tc('Q','♣')],[2,tc('J','♣')],[3,tc('10','♣')]],()=>{
+    tutorialResolveTrick(0,10,()=>{
+      tutorialSpotlight('.mid');
+      tutorialCallout(
+        `Your Ace was the highest club played, so you take the trick: `+
+        `<b>+10 points.</b> Winning any trick is always worth +10 — the only `+
+        `question is whether it's carrying a penalty too, which yours wasn't.`,
+        {next:tutA_trick2Lead}
+      );
+    });
+  });
+}
+
+function tutA_trick2Lead(){
+  tutG.currentTrick=[];
+  tutG.trickLeader=2; tutG.trickNum=2;
+  tutG.legalCards=[];
+  renderPlay(tutG);
+  tutorialSpotlight('.mid');
+  tutorialCallout(
+    `Let's jump to a trick led by an opponent. Computer 3 opens with the 10♦.`,
+    {next:tutA_trick2East}
+  );
+}
+function tutA_trick2East(){
+  tutG.currentTrick=[{player:2,card:tc('10','♦')}];
+  tutG.players[2].cardCount--;
+  renderPlay(tutG);
+  tutorialSpotlight('.mid');
+  tutorialCallout(
+    `Computer 4 follows with the 6♦ — same suit as the lead. That's the rule `+
+    `you're about to use yourself.`,
+    {next:tutA_trick2YourTurn}
+  );
+}
+function tutA_trick2YourTurn(){
+  tutG.legalCards=tutG.myHand.filter(c=>c.suit==='♦').map(c=>lc(c.rank,c.suit));
+  renderPlay(tutG);
+  tutorialSpotlight('#g-hand');
+  tutorialCallout(
+    `Diamonds were led, and you hold some — so you <b>must follow suit</b>. `+
+    `Any diamond of yours is legal; the rest are dimmed. <b>Play one.</b>`
+  );
+  tutAwaiting={type:'playAny',suit:'♦',after:tutA_trick2Resolve};
+}
+function tutA_trick2Resolve(){
+  tutorialAutoPlay([[1,tc('A','♦')]],()=>{
+    tutorialResolveTrick(1,10,()=>{
+      tutorialSpotlight('.tbl-note');
+      tutorialCallout(
+        `The Ace was highest, so this one goes to Computer 2 — you won't win every `+
+        `trick, and that's normal. What matters is you <i>could only</i> play a diamond. `+
+        `Now for the moment that matters most.`,
+        {next:tutA_trick3}
+      );
+    });
+  });
+}
+
+function tutA_trick3(){
+  tutG.currentTrick=[];
+  tutG.trickLeader=1; tutG.trickNum=3;
+  tutG.legalCards=[];
+  renderPlay(tutG);
+  tutorialSpotlight('.mid');
+  tutorialCallout(`Computer 2 leads a low spade.`,{next:tutA_trick3b});
+}
+function tutA_trick3b(){
+  tutG.currentTrick=[{player:1,card:tc('2','♠')}];
+  tutG.players[1].cardCount--;
+  renderPlay(tutG);
+  tutorialSpotlight('.mid');
+  tutorialCallout(`Computer 3 follows with a spade too.`,{next:tutA_trick3c});
+}
+function tutA_trick3c(){
+  tutG.currentTrick.push({player:2,card:tc('6','♠')});
+  tutG.players[2].cardCount--;
+  renderPlay(tutG);
+  tutorialSpotlight('.mid');
+  tutorialCallout(`Computer 4 follows too.`,{next:tutA_trick3d});
+}
+function tutA_trick3d(){
+  tutG.currentTrick.push({player:3,card:tc('9','♠')});
+  tutG.players[3].cardCount--;
+  tutG.legalCards=[lc('Q','♠')];
+  renderPlay(tutG);
+  tutorialSpotlight('#g-hand');
+  tutorialCallout(
+    `Spades were led, and your only spade left is the <b>Q♠</b> — so it's the `+
+    `only card you can legally play. <b>Play it.</b>`
+  );
+  tutAwaiting={type:'play',rank:'Q',suit:'♠',after:tutA_trick3Resolve};
+}
+function tutA_trick3Resolve(){
+  tutorialResolveTrick(0,-16,()=>{
+    tutorialSpotlight('.mid');
+    tutorialCallout(
+      `Your Q♠ was the highest spade, so you take the trick — and the Queen `+
+      `herself. <b>+10 for the trick, −26 for the Queen of Spades: −16 net.</b> `+
+      `This is the single biggest hit in the game, and now you've felt it.`,
+      {next:tutA_trick4}
+    );
+  });
+}
+
+function tutA_trick4(){
+  tutG.currentTrick=[];
+  tutG.trickLeader=0; tutG.trickNum=4;
+  tutG.legalCards=[lc('9','♣')];
+  renderPlay(tutG);
+  tutorialSpotlight('#g-hand');
+  tutorialCallout(
+    `You won last trick, so you lead this one. For contrast, here's a much `+
+    `smaller penalty. <b>Play your 9♣.</b>`
+  );
+  tutAwaiting={type:'play',rank:'9',suit:'♣',after:tutA_trick4Resolve};
+}
+function tutA_trick4Resolve(){
+  tutorialAutoPlay([[1,tc('4','♣')],[2,tc('4','♥')],[3,tc('7','♣')]],()=>{
+    tutorialResolveTrick(0,6,()=>{
+      tutorialSpotlight('.mid');
+      tutorialCallout(
+        `Computer 3 had no clubs left and had to discard something — a heart, `+
+        `in this case. Your 9♣ was still the highest club, so you take the trick `+
+        `<i>and</i> that heart: <b>+10 for the trick, −4 for the 4♥: +6 net.</b> `+
+        `Compare that to the Queen — hearts sting, but nothing like she does.`,
+        {next:tutA_roundSummary}
+      );
+    });
+  });
+}
+
+function tutA_roundSummary(){
+  // A real round is 13 tricks; this stops at 4 on purpose — every teaching
+  // beat above is delivered, and playing out the rest would only add
+  // time without adding a lesson. Framed honestly rather than pretending
+  // otherwise.
+  tutG.history=[{round:1,deltas:[tutG.players[0].score,tutG.players[1].score,tutG.players[2].score,tutG.players[3].score],moon:-1}];
+  renderSummary(tutG);
+  tutorialSpotlight('#r-next');
+  tutorialCallout(
+    `We skipped ahead — a real round plays all 13 tricks before this screen `+
+    `appears. Every seat has to confirm here before the game moves on, so one `+
+    `AFK player can't hold the table hostage: after <b>20 seconds</b> it `+
+    `advances on its own. <b>Tap Continue to finish up.</b>`
+  );
+  tutAwaiting='roundSummary';
+}
+function tutorialAfterRoundSummary(){
+  if(tutAwaiting!=='roundSummary')return;
+  tutAwaiting=null;
+  tutorialHideCallout();
+  startTutorialPartB();
+}
+
+/* ── Part B: static concept cards ──
+   Not real play, and deliberately not built on tutG/renderPlay at all —
+   these are reference facts (scoring math, the pass cycle) that can't
+   be "discovered" by playing one trick, so Balatro's approach fits
+   better here than Hearthstone's: short, concrete, dismissible, with
+   real numbers, no forced interaction. */
+const TUT_PARTB=[
+  {t:'Scoring, in full',
+   b:'+10 for every trick you win. Hearts subtract their face value — '+
+     '2♥ is −2, all the way to A♥ at −14. The Q♠ is −26 on her own.'},
+  {t:'Shooting the moon',
+   b:'If one player takes <i>every</i> heart and the Q♠ in a round, the '+
+     'whole round\'s scoring flips: <b>+60</b> for them, <b>−20</b> for '+
+     'everyone else.'},
+  {t:'The pass cycle',
+   b:'Left → Right → Across → Keep, repeating over the 16 rounds — rounds '+
+     '4, 8, 12 and 16 are Keep, no passing. That letter badge on the table '+
+     'always tells you which one you\'re in.'},
+  {t:'Casual vs. Ranked',
+   b:'Casual is friends & AI, no pressure. Ranked is humans only and moves '+
+     'a hidden MMR rating — the Rank screen has the full leaderboard and '+
+     'how it\'s calculated.'},
+];
+let tutPartBIdx=0;
+function startTutorialPartB(){
+  tutPartBIdx=0;
+  renderTutorialPartBCard();
+  $('tutorial-partb').classList.add('show');
+}
+function renderTutorialPartBCard(){
+  const c=TUT_PARTB[tutPartBIdx];
+  $('tutorial-partb-title').textContent=c.t;
+  $('tutorial-partb-body').innerHTML=c.b;
+  $('tutorial-partb-count').textContent=`${tutPartBIdx+1} / ${TUT_PARTB.length}`;
+  $('tutorial-partb-prev').style.visibility=tutPartBIdx===0?'hidden':'visible';
+  $('tutorial-partb-next').textContent=tutPartBIdx===TUT_PARTB.length-1?'Done':'Next';
+}
+function tutorialPartBPrev(){ if(tutPartBIdx>0){ tutPartBIdx--; renderTutorialPartBCard(); } }
+function tutorialPartBNext(){
+  if(tutPartBIdx<TUT_PARTB.length-1){ tutPartBIdx++; renderTutorialPartBCard(); return; }
+  $('tutorial-partb').classList.remove('show');
+  exitTutorial();
+}
+
 /* prefill menu with remembered profile, and jump in from invite links */
 (function(){
   updateMenuProfileUI();
@@ -3937,6 +4621,7 @@ if('serviceWorker' in navigator){
   if(c){ $('f-code').value=c.toUpperCase(); goCasual(); }
   const s=loadSession();
   if(s&&s.room){ room=s.room; token=s.token; }
+  maybeShowWelcome();
 })();
 
 /* stop pinch-zoom double taps from firing plays twice */

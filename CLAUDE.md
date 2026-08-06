@@ -11,6 +11,14 @@ rounds of on-device iteration on a OnePlus 13R and is being tuned
 against real screenshots — the vertical budget is the fragile part, so
 re-check that the whole pass/play screen still fits one viewport without
 scrolling after touching any landscape sizing.
+The tutorial (see its own section below) is implemented but has **never
+been run** — it was built without any way to execute JS in this
+environment, verified by exhaustive static tracing (every function
+reference cross-checked against a definition, every `tutAwaiting`
+contract checked against `tutorialCommitPlay`'s handling of it, every
+`$('tutorial-*')` id checked against the markup, brace/paren balance
+checked on the whole file) rather than by running it. Treat the first
+real on-device run as the actual first test, not a formality.
 
 ## Files
 - `server.js` — game engine, socket handlers, AI, auth endpoints
@@ -595,6 +603,125 @@ scrolling after touching any landscape sizing.
   `supersonic_legend`) don't match this game's tier names (`master`,
   `grandmaster`, `legend`) — already renamed on disk, but keep that
   mapping in mind if new badge assets are ever dropped in
+
+## Tutorial (`public/index.html`, first-run overlay + "?" replay button on the menu)
+- **Architecture: Part A is entirely client-side, not a server-backed
+  room.** The design this was implemented from originally called for a
+  real "tutorial room" in `server.js` with scripted AI overrides and a
+  `tutorialHint` socket event. That was deliberately not built —
+  server.js changes couldn't be run or tested at all in the environment
+  that built this, and shipping an untested change to the shared game
+  engine every real game also runs through, on production, was judged
+  too risky. **`server.js` is completely untouched by the tutorial.**
+- Instead, Part A drives a fake, fully scripted game-state object
+  (`tutG`, built by `tutBuildG()`) through the exact same render
+  functions real play uses — `renderPass`/`renderPassReveal`/
+  `renderPlay`/`renderSummary`, and everything they call (`tableHTML`,
+  `handHTML`, `myStrip`, `cornerActions`, `sheetHTML`, the legal/dim card
+  mechanism, the hold-and-slide and landscape drag gestures, `nearestTapCard`)
+  — completely unmodified. This is what gives Part A full landscape
+  support for free, without a single landscape-specific line written for
+  the tutorial itself.
+- **The only touches to real interaction code are six
+  `if(tutorialActive)` guards**, each added at the exact point a real
+  action would hit the network, redirecting to a tutorial-local handler
+  instead of `socket.emit(...)`: `confirmPass()`, `endCardDrag()`,
+  `releasePlayPick()`, `askLeave()` (home button → `exitTutorial()`
+  instead of trying to leave a room that doesn't exist), and
+  `confirmRoundClick()`. Plus one more line, in the
+  `matchMedia('(orientation:landscape)')` change listener, re-applying
+  the tutorial's spotlight ring after an orientation-triggered
+  re-render (which rebuilds the table's innerHTML and destroys whatever
+  the ring was attached to). Every one of these is a no-op when
+  `tutorialActive` is false, i.e. always, outside a tutorial run.
+- **`me`, `room`, and `S` are all temporarily repointed** at tutorial
+  start (`me=0`, `room=''`, `S=tutG`) and restored in `exitTutorial()`.
+  This is what lets the unmodified render functions and interaction
+  handlers work against fake state without knowing it's fake — they all
+  already read `me`/`S` as ambient globals. In practice this only ever
+  launches from an idle menu (first run, or the "?" button — both
+  menu-only), so there's nothing real to preserve; the save/restore is a
+  safety net, not a load-bearing path.
+- **Two ordinary shared globals had to be reset in `exitTutorial()`**:
+  `passFxShownForRound` and `lastCurrentTrickLen`. Both are "have I
+  already observed this?" diff-trackers that `renderPassReveal`/
+  `renderPlay` read to decide whether to play the pass-flying-cards
+  animation / a `cardPlace` sound — real per-render diffing, not part of
+  any per-game state object. Running a full scripted round through them
+  left both at stale non-fresh values; without resetting them, the
+  player's actual first real game would have silently skipped that
+  animation on round 1 and the `cardPlace` sound on the first opponent
+  card. Reset to the same sentinels (`-1`/`null`) a fresh page load
+  starts with.
+- **The spotlight ring is a box-shadow-cutout on the target itself**
+  (`.tutorial-target`, `0 0 0 9999px` spread), not a separate scrim
+  element with the target's z-index boosted above it — deliberately, so
+  it needs no positioning math regardless of what's being pointed at.
+  This only looks like a full-screen dim wash because every ancestor
+  between a tutorial target and `<body>` (`#app`, `.screen.active`) is
+  itself sized to fill the entire viewport in landscape — the box-shadow
+  spread is actually clipped at the nearest `overflow:hidden` ancestor,
+  which happens to coincide with the screen edge here. If any of those
+  containers ever gets a smaller/padded/centred landscape treatment,
+  this stops covering the edges and needs converting to a real
+  `position:fixed` scrim (the welcome/Part-B overlays already use one —
+  `.tutorial-scrim` — this could switch to the same pattern).
+- **The fixed 4-trick script and why those specific tricks**: every card
+  referenced anywhere in the script — the learner's 13 starting cards
+  (`TUT_HAND`), the 2 passed away, the 2 received, and every scripted AI
+  play across all four tricks — is a distinct (rank, suit) pair, verified
+  by hand (not generated) since correctness here couldn't be checked by
+  running anything. AI hands are never enumerated beyond the specific
+  cards they're scripted to play — real play never shows an opponent's
+  actual hand either (only `cardCount`), so nothing needed a full
+  13-card hand behind it. The four tricks are chosen so each one lands a
+  single teaching beat: trick 1 (learner leads, forced ace, wins clean —
+  "opening restriction" + "+10 for winning" together, since the design
+  brief's own step ordering put those two beats back to back); trick 2
+  (an opponent leads, learner is offered every legal card of the led
+  suit rather than one forced card, since the RULE — not a specific
+  outcome — is what's being taught; scripted so the learner never wins
+  it regardless of which legal card they pick, since West's ace exceeds
+  every card the learner could legally hold); trick 3 (the Q♠ moment —
+  the learner holds exactly one spade all game, guaranteeing it's their
+  only legal card whenever spades are led, which is what makes the
+  "ouch" moment inevitable rather than avoidable by a lucky/unlucky
+  choice); trick 4 (mild heart penalty, contrasting +6 net against
+  trick 3's −16, per the source design's own explicit request for that
+  contrast).
+- `tutAwaiting` is the hand-off contract between a step function and the
+  guarded real handlers: `{type:'play',rank,suit,after}` demands the one
+  exact forced card (tricks 1, 3, 4's openers); `{type:'playAny',suit,after}`
+  accepts any card of that suit (trick 2's follow-suit step, where
+  genuine choice among legal cards is the point). `tutorialCommitPlay()`
+  is the single place both are resolved — if you add a new kind of
+  forced action, it goes there, not into a new guard.
+- **Part B (`startTutorialPartB`) is intentionally NOT built on `tutG`
+  at all** — it's static reference content (scoring table, the moon,
+  the pass cycle, casual vs. ranked), rendered as its own small
+  card-deck overlay with no game state involved, matching the source
+  design's own reasoning: scoring math can't be "discovered" through one
+  scripted trick, so it's taught as short concrete facts instead,
+  Balatro-style, not folded into Part A's forced-play mechanic.
+  Reachable only by replaying the whole tutorial (the "?" button runs
+  Part A → Part B in sequence, matching "replay jumps straight into Part
+  A") — there's no standalone "skip to just the reference cards" entry
+  point; the existing Rules modal (`openRules()`) already serves as the
+  always-available full-reference fallback.
+- **The step-9 round-summary screen does not run a live 20-second
+  countdown.** `syncCountdown()`/`renderVote()`/`handleSfxForState()` are
+  only ever called from the real `socket.on('gameState', ...)` handler,
+  which the tutorial never goes through (it calls `renderSummary(tutG)`
+  directly) — the auto-advance behaviour is explained in that step's
+  callout text, not demonstrated live. Deliberate, not an oversight: a
+  real countdown would need its own scripted resolution (what happens
+  when it hits zero, in a round that was already truncated to 4 of 13
+  tricks) for no real teaching benefit.
+- **This never played out the remaining 9 of 13 tricks in the round**,
+  and says so on screen ("We skipped ahead…") rather than pretending the
+  round-summary numbers are what a real round produces. Every teaching
+  beat the design called for is delivered in the 4 scripted tricks;
+  playing out the rest would only add time.
 
 ## Not implemented
 - Password reset (no email service configured)

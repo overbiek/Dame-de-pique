@@ -1619,7 +1619,17 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
                0 0 0 6px rgba(var(--ddp-brass-rgb),.25),
                0 0 8px 0 rgba(var(--ddp-brass-rgb),.20)}
 }
-.tut-glow{animation:tut-pulse-btn 1.05s ease-in-out infinite;border-radius:var(--r)}
+/* z-index 502 is load-bearing, not decoration: the active spotlight
+   (.tutorial-target, on #p-hand during this step) dims the whole screen
+   with a 9999px box-shadow scrim painted at z-index 501. Without being
+   lifted above it the button pulsed *underneath* that wash and just
+   looked greyed out. Both elements sit inside #app, which is
+   position:relative;z-index:1 and therefore the shared stacking context
+   these two values are compared in — so this genuinely wins. */
+.tut-glow{
+  position:relative;z-index:502;
+  animation:tut-pulse-btn 1.05s ease-in-out infinite;border-radius:var(--r);
+}
 
 .tutorial-partb-card{
   background:var(--card-face);color:var(--ink);
@@ -1631,7 +1641,19 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
   text-transform:uppercase;margin-bottom:6px;font-family:var(--font-num)}
 .tutorial-partb-card h2{font-family:'Playfair Display',serif;color:var(--gold-lo);
   font-size:1.25rem;margin-bottom:10px}
-.tutorial-partb-card p{font-family:'DM Sans',sans-serif;font-size:.9rem;line-height:1.55}
+/* Body copy is deepened well past --ink for readability. --ink is
+   --ddp-spade — the card-suit "black" — which on Bordeaux is #3D4A42, a
+   desaturated grey-green that reads as plain grey in a paragraph even
+   though it's fine on a card face. Mixed toward true black rather than
+   hardcoded so each theme keeps its own tint. Same color-mix +
+   @supports fallback pattern as .card.pen. */
+.tutorial-partb-card p{
+  font-family:'DM Sans',sans-serif;font-size:.9rem;line-height:1.55;
+  color:color-mix(in srgb,var(--ink) 55%,#000);
+}
+@supports not (color:color-mix(in srgb,red,blue)){
+  .tutorial-partb-card p{color:var(--ink)}
+}
 .tutorial-partb-actions{display:flex;gap:10px;margin-top:20px}
 .tutorial-partb-actions .btn{flex:1}
 .tutorial-partb-close{
@@ -4704,10 +4726,15 @@ const TUT_PARTB=[
    b:'Left → Right → Across → Keep, repeating over the 16 rounds — rounds '+
      '4, 8, 12 and 16 are Keep, no passing. That letter badge on the table '+
      'always tells you which one you\'re in.'},
+  {t:'There are many ways that lead to Rome…',
+   b:'Passing on cards can help you a big deal — passing the hearts or the '+
+     'queen is a good tactic, though there are many different ways. Find and '+
+     'discover your own.'},
   {t:'Casual vs. Ranked',
-   b:'Casual is friends & AI, no pressure. Ranked is humans only and moves '+
-     'a hidden MMR rating — the Rank screen has the full leaderboard and '+
-     'how it\'s calculated.'},
+   b:'Start out in Casual to play against AI or friends, and work out your '+
+     'playing style and how to keep track of the cards. Once you feel ready, '+
+     'try Ranked Multiplayer and rise through the ranks to become the '+
+     'ultimate Legend!'},
 ];
 let tutPartBIdx=0;
 function startTutorialPartB(){

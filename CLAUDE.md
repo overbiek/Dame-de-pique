@@ -723,6 +723,14 @@ real on-device run as the actual first test, not a formality.
   this stops covering the edges and needs converting to a real
   `position:fixed` scrim (the welcome/Part-B overlays already use one —
   `.tutorial-scrim` — this could switch to the same pattern).
+  **Corollary: the spotlight dims EVERYTHING except its one target.** Any
+  other element that must stay bright at the same time needs
+  `position` + a `z-index` above 501 or it just looks greyed out —
+  `.tut-glow` on the pass button carries `z-index:502` for exactly this
+  reason, and it works because both it and the spotlit `#p-hand` sit
+  inside `#app`, which is `position:relative;z-index:1` and so is the
+  shared stacking context those two values are compared in. It pulsed
+  correctly but *underneath* the wash before that was added.
 - **The fixed 4-trick script and why those specific tricks**: every card
   referenced anywhere in the script — the learner's 13 starting cards
   (`TUT_HAND`), the 2 passed away, the 2 received, and every scripted AI

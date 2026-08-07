@@ -1562,6 +1562,15 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
   box-shadow:0 0 0 4px rgba(var(--ddp-brass-rgb),.8),0 0 0 9999px rgba(var(--ddp-scrim-rgb),.68);
   transition:box-shadow .2s ease;
 }
+/* Secondary highlight — ring only, no scrim, lifted above the scrim the
+   primary target casts (see tutorialSpotlight's liftSel). Deliberately
+   sets no border-radius: box-shadow already follows whatever radius the
+   element itself has, which keeps the ring circular on the round
+   .tb-badge / .tb-round controls this is mostly used for. */
+.tutorial-lift{
+  position:relative;z-index:502;
+  box-shadow:0 0 0 3px rgba(var(--ddp-brass-rgb),.95),0 0 12px rgba(var(--ddp-brass-rgb),.55);
+}
 
 /* Top-left, not bottom-center: this is the table screens' one dead
    corner (the fan lives at the bottom, the trick cross and the info
@@ -4281,16 +4290,24 @@ function tutBuildG(){
    tooltip risks landing off-screen or on top of the very thing it's
    pointing at; a fixed bottom bar can't. */
 function tutorialClearSpotlight(){
-  document.querySelectorAll('.tutorial-target').forEach(el=>el.classList.remove('tutorial-target'));
+  document.querySelectorAll('.tutorial-target,.tutorial-lift')
+    .forEach(el=>el.classList.remove('tutorial-target','tutorial-lift'));
 }
-let tutLastSpotlightSel=null;
-function tutorialSpotlight(sel){
-  tutLastSpotlightSel=sel;
+let tutLastSpotlightSel=null,tutLastLiftSel=null;
+// `sel` is the one element that gets the dimming scrim (only one thing
+// can sensibly cast it — two overlapping 9999px scrims compound into a
+// much darker wash, and each would dim the other since they'd share a
+// z-index). `liftSel` is for anything else that should be RINGED and
+// stay bright: those get z-index 502, above the scrim, so they read as
+// highlighted rather than dimmed. Use it to call out specific controls
+// inside a spotlit panel.
+function tutorialSpotlight(sel,liftSel){
+  tutLastSpotlightSel=sel; tutLastLiftSel=liftSel||null;
   tutorialClearSpotlight();
-  if(!sel)return;
-  document.querySelectorAll(sel).forEach(el=>el.classList.add('tutorial-target'));
+  if(sel) document.querySelectorAll(sel).forEach(el=>el.classList.add('tutorial-target'));
+  if(liftSel) document.querySelectorAll(liftSel).forEach(el=>el.classList.add('tutorial-lift'));
 }
-function tutorialReapplySpotlight(){ tutorialSpotlight(tutLastSpotlightSel); }
+function tutorialReapplySpotlight(){ tutorialSpotlight(tutLastSpotlightSel,tutLastLiftSel); }
 function tutorialCallout(html,opts){
   opts=opts||{};
   const box=$('tutorial-callout');
@@ -4355,7 +4372,7 @@ function startTutorial(){
   me=0; room=''; picked=[];
   tutG=tutBuildG();
   S=tutG;
-  tutA_table();
+  tutA_welcome();
 }
 function exitTutorial(){
   tutorialActive=false;
@@ -4394,12 +4411,31 @@ function tutorialSkip(){ exitTutorial(); }
    sequence that runs once" reasoning already established for the
    deck/script data itself. */
 
+// Renders the table behind the very first callout so there's a real
+// board to look at rather than an empty screen. No spotlight: nothing is
+// being pointed at yet, and a scrim here would just dim the table the
+// player is meant to be taking in.
+function tutA_welcome(){
+  renderPass(tutG);
+  tutorialSpotlight(null);
+  tutorialCallout(
+    `<b>Welcome to Dame de Pique</b> — the game where counting cards will `+
+    `help you up the ranks. Let's dive into the basics.`,
+    {next:tutA_table}
+  );
+}
+
 function tutA_table(){
   renderPass(tutG);
-  tutorialSpotlight('.rt-stack .tb-badge:not(.pass)');
+  // Scrim on the whole info panel, plus explicit rings on the two
+  // controls the text actually names (round badge and the last-trick
+  // eye) — see tutorialSpotlight's liftSel for why the extras can't
+  // simply be additional scrim targets.
+  tutorialSpotlight('.rt-stack .corner-rt',
+                    '.rt-stack .tb-badge:not(.pass), #p-lt-btn');
   tutorialCallout(
     `<b>Round 1 of 16.</b> That badge shows the round — and next to it, `+
-    `<span class="ddp-pos">👁</span> lets you hold to peek at the last trick once one exists. `+
+    `<b>👁</b> lets you hold to peek at the last trick once one exists. `+
     `The <b>D</b> marker on an avatar shows who's dealing.`,
     {next:tutA_handPass}
   );
@@ -4616,21 +4652,32 @@ function tutA_trick3(){
   tutG.legalCards=[];
   renderPlay(tutG);
   tutorialSpotlight('.mid');
-  tutorialCallout(`Computer 2 leads a low spade.`,{next:tutA_trick3b});
+  // Each of these steps describes the card that is NOW on the table, not
+  // the one coming next. They previously ran a step ahead of themselves —
+  // the text naming Computer 3 while Computer 2's card had just landed,
+  // and so on — because the first step announced a lead that only
+  // appeared on the following tap. Seat→name mapping is TUT_NAMES: seat 1
+  // is "Computer 2", seat 2 is "Computer 3", seat 3 is "Computer 4".
+  tutorialCallout(
+    `Here comes the trick that matters most — Computer 2 leads this one.`,
+    {next:tutA_trick3b,side:'right'}
+  );
 }
 function tutA_trick3b(){
   tutG.currentTrick=[{player:1,card:tc('2','♠')}];
   tutG.players[1].cardCount--;
   renderPlay(tutG);
   tutorialSpotlight('.mid');
-  tutorialCallout(`Computer 3 follows with a spade too.`,{next:tutA_trick3c});
+  tutorialCallout(`Computer 2 leads the <b>2♠</b> — a low spade.`,
+    {next:tutA_trick3c,side:'right'});
 }
 function tutA_trick3c(){
   tutG.currentTrick.push({player:2,card:tc('6','♠')});
   tutG.players[2].cardCount--;
   renderPlay(tutG);
   tutorialSpotlight('.mid');
-  tutorialCallout(`Computer 4 follows too.`,{next:tutA_trick3d});
+  tutorialCallout(`Computer 3 follows with the <b>6♠</b>.`,
+    {next:tutA_trick3d,side:'right'});
 }
 function tutA_trick3d(){
   tutG.currentTrick.push({player:3,card:tc('9','♠')});
@@ -4639,8 +4686,9 @@ function tutA_trick3d(){
   renderPlay(tutG);
   tutorialSpotlight('#g-hand');
   tutorialCallout(
-    `Spades were led, and your only spade left is the <b>Q♠</b> — so it's the `+
-    `only card you can legally play. <b>Drag it to the table.</b>`,
+    `Computer 4 follows with the <b>9♠</b>. Spades were led, and your only `+
+    `spade left is the <b>Q♠</b> — so it's the only card you can legally `+
+    `play. <b>Drag it to the table.</b>`,
     {side:'right'}
   );
   tutAwaiting={type:'play',rank:'Q',suit:'♠',after:tutA_trick3Resolve};
@@ -4693,11 +4741,19 @@ function tutA_roundSummary(){
   tutG.history=[{round:1,deltas:[tutG.players[0].score,tutG.players[1].score,tutG.players[2].score,tutG.players[3].score],moon:-1}];
   renderSummary(tutG);
   tutorialSpotlight('#r-next');
+  // "Got it" only dismisses the callout AND its spotlight — it does not
+  // advance. The spotlight's scrim dims the scoresheet, which is the one
+  // thing worth reading on this screen, so the player needs a way to
+  // clear the overlay and actually look at it before committing. It
+  // deliberately leaves tutAwaiting on 'roundSummary', so the real
+  // Continue button still drives the step forward whenever they're ready.
   tutorialCallout(
     `We skipped ahead — a real round plays all 13 tricks before this screen `+
     `appears. Every seat has to confirm here before the game moves on, so one `+
     `AFK player can't hold the table hostage: after <b>20 seconds</b> it `+
-    `advances on its own. <b>Tap Continue to finish up.</b>`
+    `advances on its own. <b>Got it</b> to read your scores, then `+
+    `<b>Continue</b> to finish up.`,
+    {next:tutorialHideCallout,nextLabel:'Got it'}
   );
   tutAwaiting='roundSummary';
 }

@@ -731,6 +731,21 @@ real on-device run as the actual first test, not a formality.
   inside `#app`, which is `position:relative;z-index:1` and so is the
   shared stacking context those two values are compared in. It pulsed
   correctly but *underneath* the wash before that was added.
+  For the general case `tutorialSpotlight(sel, liftSel)` takes an
+  optional second selector: those elements get a brass ring **and**
+  `z-index:502` via `.tutorial-lift`, but cast no scrim of their own.
+  Only one element can sensibly carry the scrim — two overlapping
+  9999px shadows compound into a much darker wash, and since they'd
+  share a z-index each would dim the other. So "highlight the round
+  badge *and* the eye" is one scrim on the panel plus two lifted rings,
+  not two scrims.
+- Callout placement is per-step: `tutorialCallout(html, {side:'right'})`
+  moves it to the top *right*, with its `top` measured off the live
+  `.rt-stack` rather than hard-coded, since that panel's height varies
+  with how much status text is showing. Every step that asks the player
+  to drag a card uses it — the default top-left corner sits over the
+  `.mid` drop target — as do the trick-3 narration steps, so the table
+  stays readable while the scripted cards land.
 - **The fixed 4-trick script and why those specific tricks**: every card
   referenced anywhere in the script — the learner's 13 starting cards
   (`TUT_HAND`), the 2 passed away, the 2 received, and every scripted AI

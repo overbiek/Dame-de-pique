@@ -618,12 +618,69 @@ real on-device run as the actual first test, not a formality.
   functions real play uses — `renderPass`/`renderPassReveal`/
   `renderPlay`/`renderSummary`, and everything they call (`tableHTML`,
   `handHTML`, `myStrip`, `cornerActions`, `sheetHTML`, the legal/dim card
-  mechanism, the hold-and-slide and landscape drag gestures, `nearestTapCard`)
-  — completely unmodified. This is what gives Part A full landscape
-  support for free, without a single landscape-specific line written for
-  the tutorial itself.
-- **The only touches to real interaction code are six
-  `if(tutorialActive)` guards**, each added at the exact point a real
+  mechanism, the hold-and-slide and landscape drag gestures, `nearestTapCard`).
+  This is what gives Part A full landscape support for free, without a
+  single landscape-specific line written for the tutorial itself.
+- **Pass-mode selection can now be forced to a specific pair, not just
+  "any 2."** `handHTML`'s `mode==='pass'` branch reuses the SAME `legal`
+  parameter play-mode already had (previously always `null`/unused in
+  pass mode): a card outside the legal set is `.dim` instead of `.tap`,
+  exactly like an illegal play. `renderPass`/`handHTML` thread an
+  optional `G.passLegal` array through for this — unset (`undefined`/
+  `null`) on every real call site, so real play's "pick any 2" is
+  unchanged; the tutorial is the only caller that ever sets it
+  (`tutA_handPass`, forcing exactly the two passed-away hearts). Small,
+  backward-compatible, real-code-touching extensions like this are
+  preferred over duplicating `handHTML` for the tutorial's own use.
+- `updatePassButton()` gets one tutorial-only cosmetic line: `.tut-glow`
+  toggles onto `#p-go` the instant `picked.length===2`, since it's
+  called after every `togglePassCard()` regardless of whether a
+  tutorial is running. No-op (the class never gets added) outside one.
+- **The specific forced cards get their own highlight**,
+  `tutorialHighlightCards()` → `.tut-forced`, distinct from
+  `tutorialSpotlight()`'s ring (which points at one whole element — a
+  badge, a hand, the table — not specific cards inside one). Applied
+  once, right after the render that creates the card elements:
+  `togglePassCard()` mutates the existing DOM nodes' `.sel` class
+  in place rather than re-rendering the hand on every tap, so the
+  highlight survives clicks without needing re-application.
+- **`isOverDropZone()` takes an optional `pad`** (defaults to the
+  original `30`, unchanged for real play); `endCardDrag()` passes `400`
+  when `tutorialActive`. A missed landscape drag-drop is silent — the
+  card just snaps back with no error — which looks exactly like the
+  tutorial being stuck. A forced single-card lead should never be
+  droppable-but-missed, so the tutorial's drop tolerance is generous on
+  purpose; real gameplay's precision is untouched.
+- **`tutorialCommitPlay()` fades the callout out (`tutorialFadeCallout()`)
+  the instant a forced card is committed**, before the ~2s of scripted
+  AI responses play out — leaving stale instructions ("play your A♣")
+  visible while cards were visibly landing on the table read as another
+  plausible cause of "stuck," on top of the drop-zone one.
+  `tutorialFadeCallout()` only removes the callout's `.show` class; it
+  deliberately does NOT also clear the spotlight ring the way
+  `tutorialHideCallout()` does, since the ring should stay on `.mid`
+  while the trick plays out.
+- **The pass→trick-1 transition was two stops, now it's one.** What
+  were three separate steps (hand intro → pass-direction explainer →
+  a "cards received" reveal screen with its own Next tap before trick 1
+  even starts) are now two: one merged hand+pass step
+  (`tutA_handPass`), and one merged reveal+lead step (`tutA_trick1`,
+  which skips rendering `renderPassReveal` entirely and goes straight to
+  the play screen with the Ace already forced, mentioning what was
+  received in the same callout that ends on the actual drag
+  instruction). Fewer stops, and it's what lets a callout's text end on
+  a literal action instruction instead of a "Next" button that doesn't
+  lead anywhere actionable yet.
+- **The callout box is fixed top-left** (`#tutorial-callout`), not
+  bottom-center — the table screens' one dead corner (hand at the
+  bottom, trick cross and info stack on the right), so it never sits
+  over the cards or buttons it's telling the player to use. In
+  landscape it sits BELOW the home button rather than under it (`top:
+  60px`, clearing the button's 44px + margins) rather than overlapping
+  it — check that offset again if the home button's size/position ever
+  changes.
+- **The only touches to real interaction code are the guards above plus
+  six `if(tutorialActive)` branches**, each added at the exact point a real
   action would hit the network, redirecting to a tutorial-local handler
   instead of `socket.emit(...)`: `confirmPass()`, `endCardDrag()`,
   `releasePlayPick()`, `askLeave()` (home button → `exitTutorial()`

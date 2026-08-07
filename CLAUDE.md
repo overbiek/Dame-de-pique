@@ -753,6 +753,42 @@ real on-device run as the actual first test, not a formality.
   genuine choice among legal cards is the point). `tutorialCommitPlay()`
   is the single place both are resolved — if you add a new kind of
   forced action, it goes there, not into a new guard.
+- **THE INVARIANT THAT BREAKS THE TUTORIAL SILENTLY.** Setting
+  `tutG.legalCards` does NOT by itself make a card playable. `renderPlay`
+  computes whose turn it is as
+  `(trickLeader + currentTrick.length) % 4`, and only renders your hand
+  in `'play'` mode — the mode that puts `.tap` on cards — when that
+  equals your seat (0). `nearestTapCard` only ever finds `.tap` cards, so
+  if the arithmetic doesn't land on 0, **nothing is tappable, no guard
+  fires, and the tutorial dead-ends with no error**. So every step that
+  sets `tutAwaiting` to a play must first have pushed a card for each
+  seat between the leader and you. It is not enough for the callout text
+  to *say* an opponent played — the card has to actually be in
+  `currentTrick`. This shipped broken at trick 2 for exactly that reason
+  (text claimed Computer 4 had followed; only Computer 3's card was ever
+  pushed). Current leaders/positions: trick 1 leader 0 (you first),
+  trick 2 leader 2 (seats 2,3 then you), trick 3 leader 1 (seats 1,2,3
+  then you), trick 4 leader 0 (you first).
+- `tutorialAutoPlay(plays, done)` takes an array of **`[seat, card]`
+  pairs**, so its first element destructures as `const [[seat,card],...rest]`.
+  Writing `const [seat,card,...rest]` instead made `seat` the whole pair
+  array, so `tutG.players[seat]` was `undefined` and `.cardCount--` threw
+  *inside the setTimeout* — which meant `renderPlay` never ran, the
+  recursion never continued, `done()` never fired, and the tutorial froze
+  the instant the first scripted opponent card was due, with a corrupt
+  `{player:<array>}` entry left in `currentTrick`. This was the real
+  cause of the reported "computer doesn't continue" stall; two earlier
+  guesses at it (drop-zone tolerance, a stale callout) were wrong and
+  fixed nothing. All three resolvers share this one helper, so all three
+  tricks were broken by it.
+- Debugging note for anything like this in future: because the scripted
+  steps run inside `setTimeout` callbacks, **an exception in one is
+  invisible in the UI** — no error surface, the tutorial simply stops
+  mid-sequence and looks "stuck". Check the browser console first; a
+  silent stall is much more likely to be a thrown error in the next
+  scheduled step than a missed gesture. The home button (top-left) still
+  exits via `askLeave` → `exitTutorial()` in that state, so the player is
+  never actually trapped.
 - **Part B (`startTutorialPartB`) is intentionally NOT built on `tutG`
   at all** — it's static reference content (scoring table, the moon,
   the pass cycle, casual vs. ranked), rendered as its own small

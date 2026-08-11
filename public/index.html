@@ -652,6 +652,60 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .pill-tag{font-size:.56rem;font-weight:800;letter-spacing:.05em;padding:2px 7px;
   border-radius:999px;text-transform:uppercase;white-space:nowrap}
 .pill-tag.soon{background:rgba(var(--ddp-gloss-rgb),.07);color:var(--faint);border:1px solid var(--line)}
+/* "already played today" marker on the Daily Challenge tile. Hidden by
+   default and revealed by adding .on, so the tile's title never changes
+   width between states. */
+.tile-dot{
+  width:8px;height:8px;border-radius:50%;flex:0 0 auto;display:none;
+  background:var(--ok);box-shadow:0 0 6px rgba(var(--ddp-brass-rgb),.5);
+}
+.tile-dot.on{display:block}
+
+/* ══ Segmented picker (match length on Casual Play) ══
+   Deliberately a plain flex row of buttons rather than a <select>: it has
+   to stay legible and thumb-sized inside the narrow landscape rail, and
+   .btn-style focus/active states already carry the theme tokens. */
+.seg{display:flex;gap:6px;width:100%}
+.seg-btn{
+  flex:1;min-width:0;font:inherit;color:var(--faint);appearance:none;cursor:pointer;
+  padding:9px 4px;border-radius:12px;text-align:center;line-height:1.2;
+  background:rgba(var(--ddp-gloss-rgb),.04);border:1px solid var(--line);
+  transition:border-color .18s,background .18s,color .18s;
+  touch-action:manipulation;
+}
+.seg-btn:hover{border-color:rgba(var(--ddp-brass-rgb),.35)}
+.seg-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.seg-btn.active{
+  color:var(--cream);background:rgba(var(--ddp-brass-rgb),.16);
+  border-color:rgba(var(--ddp-brass-rgb),.45);
+}
+.seg-btn b{display:block;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:1.05rem;font-weight:700;color:inherit}
+.seg-btn i{display:block;font-style:normal;font-size:.63rem;opacity:.8;margin-top:1px}
+.seg-label{font-size:.72rem;color:var(--faint);margin-bottom:6px;text-align:left}
+
+/* ══ Daily Challenge ══ */
+.daily-hero{
+  text-align:center;padding:16px 10px 12px;border-radius:18px;
+  background:linear-gradient(160deg,rgba(var(--ddp-brass-rgb),.12),rgba(var(--ddp-gloss-rgb),.02));
+  border:1px solid rgba(var(--ddp-brass-rgb),.24);
+}
+.daily-date{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.daily-score{
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:2.4rem;font-weight:700;line-height:1.1;color:var(--gold-hi);margin:4px 0 2px;
+}
+.daily-sub{font-size:.82rem;color:var(--muted)}
+.daily-streaks{display:flex;gap:9px;margin-top:12px}
+.daily-streaks .stat-card{flex:1}
+.daily-rows{width:100%;border-collapse:collapse;font-size:.85rem}
+.daily-rows th,.daily-rows td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
+.daily-rows td.pos-col,.daily-rows td.score-col{
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;
+}
+.daily-rows td.pos-col{width:2.4em;color:var(--faint)}
+.daily-rows td.score-col{text-align:right;font-weight:700;color:var(--cream)}
+.daily-rows tr.me td{background:rgba(var(--ddp-brass-rgb),.12);color:var(--gold-hi)}
 
 /* ══ Empty / placeholder states (ranked, rank) ══ */
 .empty-state{text-align:center;padding:30px 6px 6px}
@@ -1283,7 +1337,8 @@ html.landscape-mode #s-menu .menu-tiles{
   margin-top:0;padding-left:22px;
   border-left:1px solid rgba(var(--ddp-brass-rgb),.28);
 }
-html.landscape-mode #s-menu .tile.primary{grid-column:1 / -1}
+html.landscape-mode #s-menu .tile.primary,
+html.landscape-mode #s-menu .tile.wide{grid-column:1 / -1}
 html.landscape-mode #s-menu .tile{padding:11px 13px;border-radius:14px;gap:11px}
 html.landscape-mode #s-menu .tile-icon{width:38px;height:38px;font-size:1.15rem;border-radius:11px}
 html.landscape-mode #s-menu .tile-sub{font-size:.72rem}
@@ -1914,6 +1969,19 @@ html.landscape-mode #tutorial-callout{
         <div class="tile-arrow">›</div>
       </button>
 
+      <!-- Full width like Casual Play, deliberately: it leaves the
+           remaining four tiles as an exact 2x2 in landscape, so the tuned
+           menu grid keeps its shape instead of gaining a stray fifth cell.
+           The dot is set by refreshDailyBadge() once today's hand is done. -->
+      <button class="tile wide" onclick="goDaily()">
+        <div class="tile-icon">🗓️</div>
+        <div class="tile-body">
+          <div class="tile-title">Daily Challenge<span class="tile-dot" id="menu-daily-dot"></span></div>
+          <div class="tile-sub" id="menu-daily-sub">One hand &middot; same deal for everyone</div>
+        </div>
+        <div class="tile-arrow">›</div>
+      </button>
+
       <button class="tile" onclick="goRanked()">
         <div class="tile-icon">⚔️</div>
         <div class="tile-body">
@@ -1991,6 +2059,18 @@ html.landscape-mode #tutorial-callout{
         <span class="profile-chip-edit">Edit</span>
       </button>
 
+      <!-- Match length. Only affects a game you CREATE — joining by code
+           takes whatever length the host picked, so this sits directly
+           above "Create a game" rather than at the top of the screen. -->
+      <div class="stack">
+        <p class="seg-label">Match length</p>
+        <div class="seg" id="rounds-seg">
+          <button class="seg-btn" id="rounds-4"  onclick="pickRounds(4)"><b>4</b><i>Blitz · ~10 min</i></button>
+          <button class="seg-btn" id="rounds-8"  onclick="pickRounds(8)"><b>8</b><i>Short · ~20 min</i></button>
+          <button class="seg-btn" id="rounds-16" onclick="pickRounds(16)"><b>16</b><i>Full · ~45 min</i></button>
+        </div>
+      </div>
+
       <div class="stack">
         <button class="btn btn-primary btn-block" onclick="doCreate()">Create a game</button>
       </div>
@@ -2010,6 +2090,67 @@ html.landscape-mode #tutorial-callout{
       <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
     </div>
     <div id="err-landing" class="note bad" style="display:none"></div>
+  </div>
+</section>
+
+<!-- ═══ DAILY CHALLENGE ═══
+     A menu/result screen only — the hand itself is played on the ordinary
+     pass/play table screens (it's a real room, just seeded and one round
+     long), and the result lands on the ordinary final screen. So this
+     needs no table furniture of its own; it's a rail screen like Ranked,
+     and inherits that landscape layout from the shared .center-wrap rule. -->
+<section id="s-daily" class="screen">
+  <div class="center-wrap" style="max-width:440px">
+    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Daily Challenge</h2>
+    <p class="tagline">One hand &middot; same deal for everyone</p>
+
+    <div id="daily-loading">
+      <div class="empty-state">
+        <div class="empty-icon">⏳</div>
+        <h3>Loading today's hand…</h3>
+      </div>
+    </div>
+
+    <div id="daily-error" style="display:none">
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <h3>Couldn't load the challenge</h3>
+        <p id="daily-error-msg">Something went wrong. Try again.</p>
+      </div>
+      <button class="btn btn-ghost btn-block" onclick="goDaily()" style="margin-top:8px">Retry</button>
+    </div>
+
+    <div id="daily-content" style="display:none">
+      <div class="daily-hero">
+        <div class="daily-date" id="daily-date">—</div>
+        <div class="daily-score" id="daily-score">🗓️</div>
+        <div class="daily-sub" id="daily-sub"></div>
+      </div>
+
+      <div class="daily-streaks" id="daily-streaks" style="display:none">
+        <div class="stat-card">
+          <div class="stat-value" id="daily-streak">0</div>
+          <div class="stat-label">Day streak</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="daily-best-streak">0</div>
+          <div class="stat-label">Best streak</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="daily-play" style="margin-top:14px"
+              onclick="startDaily()">Play today's hand</button>
+      <p class="note" id="daily-guest" style="display:none;margin-top:10px">
+        You're playing as a guest &mdash; log in to appear on the leaderboard and build a streak.
+      </p>
+
+      <h3 style="font-family:'Playfair Display',serif;color:var(--gold-hi);font-size:1rem;margin:18px 0 6px">Today's leaderboard</h3>
+      <div id="daily-board-empty" class="note" style="display:none">Nobody has finished today's hand yet. Be first.</div>
+      <table class="daily-rows" id="daily-board" style="display:none"><tbody id="daily-board-rows"></tbody></table>
+    </div>
+
+    <div id="err-daily" class="note bad" style="display:none"></div>
   </div>
 </section>
 
@@ -2285,6 +2426,38 @@ html.landscape-mode #tutorial-callout{
             <div class="stat-label">Longest winning streak</div>
           </div>
         </div>
+
+        <!-- Blitz totals are kept apart because a 4- or 8-round final
+             score isn't comparable with a 16-round one. Per-trick and
+             per-hand records above are match-length-agnostic and already
+             include Blitz play. -->
+        <h3 style="font-family:'Playfair Display',serif;color:var(--gold-hi);font-size:1rem;margin:18px 0 6px">Blitz (4 &amp; 8 rounds)</h3>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="st-blitz-played">0</div>
+            <div class="stat-label">Blitz games played</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-blitz-finished">0</div>
+            <div class="stat-label">Blitz games finished</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value pos" id="st-blitz-best">—</div>
+            <div class="stat-label">Best Blitz total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value neg" id="st-blitz-worst">—</div>
+            <div class="stat-label">Worst Blitz total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-blitz-avg">—</div>
+            <div class="stat-label">Average Blitz score</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-blitz-moons">0</div>
+            <div class="stat-label">Moons shot in Blitz</div>
+          </div>
+        </div>
       </div>
 
       <div id="stats-ranked" style="display:none">
@@ -2432,6 +2605,10 @@ html.landscape-mode #tutorial-callout{
     <h2>Final standings</h2>
     <div id="f-body"></div>
     <div id="f-ranked" style="display:none"></div>
+    <!-- Same slot pattern as #f-ranked: the podium and scoresheet above are
+         mode-agnostic, so a Daily Challenge only needs its own result
+         block underneath rather than a whole separate screen. -->
+    <div id="f-daily" style="display:none"></div>
     <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="newGame()">New game</button>
   </div>
 </section>
@@ -2560,7 +2737,7 @@ function show(id){
 // documents that the coverage is complete — if a screen is ever added
 // without a landscape layout, leaving it out of here is the escape
 // hatch.
-const LANDSCAPE_SCREENS=new Set(['menu','landing','ranked','rank','stats','personal',
+const LANDSCAPE_SCREENS=new Set(['menu','landing','daily','ranked','rank','stats','personal',
                                  'lobby','draw','summary','final','pass','play']);
 // Best-effort only. screen.orientation.lock() reliably works only in an
 // installed/standalone Android Chrome PWA; it's silently unavailable in
@@ -2812,6 +2989,30 @@ function tableHTML(G,opts){
 }
 
 /* ══════════ CASUAL PLAY ══════════ */
+/* Match length (Blitz). Only the four/eight/sixteen the server accepts —
+   anything else falls back to the classic 16, on both sides. Sticky
+   between sessions via the usual ddp.* localStorage convention, so
+   someone who prefers short games isn't re-picking every time. */
+const ROUND_OPTIONS=[4,8,16];
+const RK='ddp.lastRoundsTotal';
+function loadRoundsTotal(){
+  let v=16;
+  try{ v=parseInt(localStorage.getItem(RK),10); }catch(e){}
+  return ROUND_OPTIONS.includes(v)?v:16;
+}
+let roundsTotalPref=loadRoundsTotal();
+function pickRounds(n){
+  if(!ROUND_OPTIONS.includes(n)) return;
+  roundsTotalPref=n;
+  try{ localStorage.setItem(RK,String(n)); }catch(e){}
+  renderRoundsSeg();
+}
+function renderRoundsSeg(){
+  ROUND_OPTIONS.forEach(n=>{
+    const el=$('rounds-'+n);
+    if(el) el.classList.toggle('active',n===roundsTotalPref);
+  });
+}
 function goCasual(){
   const id=identity();
   const has=!!id.name;
@@ -2821,12 +3022,14 @@ function goCasual(){
     $('cp-avatar').textContent=id.avatar||initial(id.name);
     $('cp-name').textContent=id.name;
   }
+  renderRoundsSeg();
   show('landing');
 }
 function doCreate(){
   const id=identity();
   if(!id.name){ goPersonal(); return; }
-  socket.emit('createRoom',{name:id.name,avatar:id.avatar||'',accountToken:account?accountToken:''});
+  socket.emit('createRoom',{name:id.name,avatar:id.avatar||'',
+    accountToken:account?accountToken:'',roundsTotal:roundsTotalPref});
 }
 function doJoin(){
   const c=$('f-code').value.trim().toUpperCase();
@@ -2836,6 +3039,151 @@ function doJoin(){
   socket.emit('joinRoom',{code:c,name:id.name,avatar:id.avatar||'',accountToken:account?accountToken:''});
 }
 function newGame(){ clearSession(); location.href=location.pathname; }
+
+/* ══════════ DAILY CHALLENGE ══════════
+   The hand itself is an ordinary server room (seeded deck, roundsTotal 1,
+   no pass phase) and runs through the ordinary gameState router and table
+   screens — so everything below is just the front door and the result
+   readout. The server is the source of truth for score, streak and
+   standing; localStorage only holds "did I already play today" so the
+   menu dot can paint before the socket answers. */
+const DAILY_KEY='ddp.dailyLastCompleted';
+// Must match the server's dailyDateKey() — UTC, so the same puzzle is
+// live worldwide at the same instant.
+function todayKey(){ return new Date().toISOString().slice(0,10); }
+function loadDailyDone(){ try{ return localStorage.getItem(DAILY_KEY)||''; }catch(e){ return ''; } }
+function saveDailyDone(d){ try{ localStorage.setItem(DAILY_KEY,d); }catch(e){} }
+function refreshDailyBadge(playedToday){
+  const done=(playedToday===undefined)?(loadDailyDone()===todayKey()):!!playedToday;
+  const dot=$('menu-daily-dot'); if(dot) dot.classList.toggle('on',done);
+  const sub=$('menu-daily-sub');
+  if(sub) sub.textContent=done?'Played today · come back tomorrow':'One hand · same deal for everyone';
+}
+
+function goDaily(){
+  show('daily');
+  $('daily-loading').style.display='block';
+  $('daily-error').style.display='none';
+  $('daily-content').style.display='none';
+  socket.emit('getDailyStatus',{accountToken:account?accountToken:''});
+  socket.emit('getDailyLeaderboard',{accountToken:account?accountToken:''});
+}
+function startDaily(){
+  const id=identity();
+  if(!id.name){ goPersonal(); return; }
+  socket.emit('startDailyChallenge',{name:id.name,avatar:id.avatar||'',
+    accountToken:account?accountToken:''});
+}
+function fmtDailyDate(iso){
+  const d=new Date(iso+'T00:00:00Z');
+  return d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});
+}
+socket.on('dailyStatus',d=>{
+  // Only a logged-in answer means anything: "played today" is a fact about
+  // an ACCOUNT, and there's nowhere to bank a guest's attempt. So a guest
+  // response never marks the tile and never touches the cache — which also
+  // matters because one legitimately arrives before resumeSession has
+  // finished on reconnect, and would otherwise wipe a real player's dot.
+  if(!d.guest){
+    if(d.playedToday) saveDailyDone(d.date); else if(loadDailyDone()===d.date) saveDailyDone('');
+  }
+  refreshDailyBadge(d.guest?false:d.playedToday);
+  if(!$('s-daily').classList.contains('active')) return;
+  $('daily-loading').style.display='none';
+  $('daily-error').style.display='none';
+  $('daily-content').style.display='block';
+  $('daily-date').textContent=fmtDailyDate(d.date);
+  $('daily-guest').style.display=d.guest?'block':'none';
+  $('daily-streaks').style.display=d.guest?'none':'flex';
+  $('daily-streak').textContent=d.streak||0;
+  $('daily-best-streak').textContent=d.bestStreak||0;
+
+  if(d.playedToday){
+    $('daily-score').textContent=(d.score>0?'+':'')+d.score;
+    const bits=[`${d.tricksWon} trick${d.tricksWon===1?'':'s'}`];
+    if(d.position) bits.push(`${ordinal(d.position)} of ${d.entries}`);
+    if(d.shotMoon) bits.push('shot the moon 🌕');
+    $('daily-sub').textContent=bits.join(' · ');
+    $('daily-play').style.display='none';
+  }else{
+    $('daily-score').textContent='🗓️';
+    $('daily-sub').textContent="Today's hand is waiting. One attempt, no passing.";
+    $('daily-play').style.display='block';
+  }
+});
+function ordinal(n){
+  const s=['th','st','nd','rd'],v=n%100;
+  return n+(s[(v-20)%10]||s[v]||s[0]);
+}
+socket.on('dailyLeaderboardOk',d=>{
+  if(!$('s-daily').classList.contains('active')) return;
+  const rows=d.rows||[];
+  const has=rows.length>0;
+  $('daily-board').style.display=has?'table':'none';
+  $('daily-board-empty').style.display=has?'none':'block';
+  if(!has) return;
+  let h=rows.map((r,i)=>{
+    const mine=account&&r.accountId===account.id;
+    return `<tr class="${mine?'me':''}">
+      <td class="pos-col">${i+1}</td>
+      <td>${esc(r.avatar||'')} ${esc(r.nickname)}${r.shotMoon?' 🌕':''}</td>
+      <td class="score-col">${r.score>0?'+':''}${r.score}</td>
+    </tr>`;
+  }).join('');
+  // Same "pin a you row" pattern the ranked leaderboard already uses, for
+  // when the player finished outside the top slice.
+  if(d.you){
+    h+=`<tr class="me">
+      <td class="pos-col">${d.you.position}</td>
+      <td>${esc(d.you.avatar||'')} ${esc(d.you.nickname)} (you)</td>
+      <td class="score-col">${d.you.score>0?'+':''}${d.you.score}</td>
+    </tr>`;
+  }
+  $('daily-board-rows').innerHTML=h;
+});
+socket.on('dailyError',d=>{
+  if(!$('s-daily').classList.contains('active')){ toast('err-menu',d.msg); return; }
+  // A refusal ("already played today") arrives on the same channel as a
+  // real failure, so re-sync rather than parking on an error card: the
+  // status refresh repaints the screen into its correct played state.
+  if($('daily-content').style.display==='block'){ toast('err-daily',d.msg); }
+  else{
+    $('daily-loading').style.display='none';
+    $('daily-error').style.display='block';
+    $('daily-error-msg').textContent=d.msg;
+  }
+  socket.emit('getDailyStatus',{accountToken:account?accountToken:''});
+});
+
+let lastDailyResult=null;
+socket.on('dailyResult',d=>{
+  lastDailyResult=d;
+  // A guest's attempt isn't banked anywhere, so they're free to play again
+  // — don't mark the tile as done for them.
+  if(!d.guest){ saveDailyDone(d.date); refreshDailyBadge(true); }
+  renderDailyResult();
+});
+function renderDailyResult(){
+  const el=$('f-daily');
+  if(!el) return;
+  if(!lastDailyResult){ el.style.display='none'; return; }
+  const d=lastDailyResult;
+  let h='<div class="empty-state" style="padding-top:14px">'
+    +'<div class="empty-icon">🗓️</div>'
+    +`<h3>Daily Challenge &mdash; ${(d.score>0?'+':'')+d.score}</h3>`;
+  if(d.guest){
+    h+='<p>Log in to appear on the leaderboard and start a streak.</p>';
+  }else if(d.position){
+    h+=`<p>${ordinal(d.position)} of ${d.entries} today &middot; `
+      +`${d.streak} day streak</p>`;
+  }else{
+    h+='<p>Score saved.</p>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+  el.style.display='block';
+  lastDailyResult=null;
+}
 
 /* ══════════ PERSONAL (account: nickname & avatar, shared by every mode) ══════════ */
 let draftAvatar='';    // scratch value while editing the avatar picker
@@ -3025,6 +3373,12 @@ socket.on('statsOk',d=>{
   $('st-ended-positive').textContent=s.endedPositive;
   $('st-ended-negative').textContent=s.endedNegative;
   $('st-win-streak').textContent=s.winStreakBest;
+  $('st-blitz-played').textContent=s.blitzGamesPlayed||0;
+  $('st-blitz-finished').textContent=s.blitzGamesFinished||0;
+  $('st-blitz-best').textContent=fmtStat(s.blitzBestGame);
+  $('st-blitz-worst').textContent=fmtStat(s.blitzWorstGame);
+  $('st-blitz-avg').textContent=fmtStat(s.blitzAvgPoints);
+  $('st-blitz-moons').textContent=s.blitzMoonsTotal||0;
 });
 socket.on('statsError',d=>{
   $('stats-loading').style.display='none';
@@ -3203,6 +3557,9 @@ socket.on('authOk',d=>{
   saveAccountToken(accountToken);
   account=d.account;
   updateMenuProfileUI();
+  // Now that an account is attached, re-ask: the connect-time request went
+  // out as a guest and so couldn't tell us whether TODAY is already played.
+  socket.emit('getDailyStatus',{accountToken});
   if(lastAuthAction==='login'||lastAuthAction==='signup'){
     renderAccountUI();
     draftAvatar=account.avatar||'';
@@ -3236,6 +3593,10 @@ socket.on('connect',()=>{
   if(s&&s.room&&s.token&&me===-1){ socket.emit('rejoin',{code:s.room,token:s.token}); }
   else if(room&&token){ socket.emit('rejoin',{code:room,token}); }
   if(accountToken&&!account){ lastAuthAction='resume'; socket.emit('resumeSession',{token:accountToken}); }
+  // Correct the menu's Daily dot against the server rather than trusting
+  // the localStorage cache — the account may have played today on another
+  // device, and the UTC day may have rolled over while the tab sat open.
+  socket.emit('getDailyStatus',{accountToken:account?accountToken:''});
 });
 socket.on('disconnect',()=>{ $('conn').style.display='block'; });
 
@@ -3470,7 +3831,11 @@ function renderLobby(G){
   }
   $('l-slots').innerHTML=h;
   const ready=G.players.every(p=>p.connected||p.isAI);
-  $('l-status').textContent=ready?'All four seats are filled.':'Waiting for players…';
+  // Length is the host's choice at creation time — everyone else finds out
+  // here, so it's stated on the lobby rather than only implied by the
+  // round badge once play starts.
+  const len=`${G.totalRounds} rounds`;
+  $('l-status').textContent=(ready?'All four seats are filled.':'Waiting for players…')+' · '+len;
   $('l-start').style.display=host?'block':'none';
   $('l-start').disabled=!ready;
   $('l-wait').style.display=host?'none':'block';
@@ -4140,6 +4505,10 @@ function renderFinal(G){
   });
   h+='</div>'+sheetHTML(G);
   $('f-body').innerHTML=h;
+  // A non-daily game must never inherit the previous game's daily card.
+  // (The dailyResult event can land either side of this render, so the
+  // block is only ever cleared here, never populated.)
+  if(!G.daily) $('f-daily').style.display='none';
   clearSession();
 
   if(!finalFxPlayed){
@@ -4821,6 +5190,10 @@ function tutorialPartBNext(){
   // paint); this run is what marks the active swatch and syncs the
   // theme-color meta, now that the menu markup exists.
   initTableTheme();
+  renderRoundsSeg();
+  // Paints from the localStorage cache immediately; the server corrects it
+  // on the first getDailyStatus (goDaily, or the reconnect handler below).
+  refreshDailyBadge();
   const c=new URLSearchParams(location.search).get('join');
   if(c){ $('f-code').value=c.toUpperCase(); goCasual(); }
   const s=loadSession();

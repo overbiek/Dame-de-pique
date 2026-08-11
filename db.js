@@ -90,6 +90,20 @@ async function ensureSchema() {
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS mmr INTEGER NOT NULL DEFAULT 1000;`);
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS placement_games_played INTEGER NOT NULL DEFAULT 0;`);
 
+  // ── Blitz (4- and 8-round casual games) ──
+  // Only GAME-level figures need separating: a 4-round final score simply
+  // isn't comparable with a 16-round one, so blending them would quietly
+  // wreck "best game" and "average points". Per-trick and per-round
+  // records are match-length-agnostic and stay in the shared columns
+  // above. These live on `stats` rather than in their own table because
+  // Blitz is a variant of casual, not a separate ladder like ranked.
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS blitz_games_played INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS blitz_games_finished INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS blitz_points_total INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS blitz_best_game INTEGER;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS blitz_worst_game INTEGER;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS blitz_moons_total INTEGER NOT NULL DEFAULT 0;`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ranked_stats (
       account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
@@ -123,6 +137,42 @@ async function ensureSchema() {
     FROM stats
     WHERE mmr <> 1000 OR placement_games_played <> 0
     ON CONFLICT (account_id) DO NOTHING;
+  `);
+
+  // ── Daily Challenge ──
+  // One row per account per UTC day. The UNIQUE constraint is the real
+  // "one attempt per day" enforcement — the server's pre-check before
+  // dealing a hand is only there to give a friendly refusal.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS daily_challenge_scores (
+      id SERIAL PRIMARY KEY,
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      challenge_date DATE NOT NULL,
+      score INTEGER NOT NULL,
+      tricks_won INTEGER,
+      shot_moon BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (account_id, challenge_date)
+    );
+  `);
+  // Both the leaderboard slice and the "where do I stand" query are
+  // (challenge_date, score DESC) — one index covers them at any realistic
+  // scale, no separate ranking job needed.
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS daily_scores_date_score_idx
+       ON daily_challenge_scores(challenge_date, score DESC);`
+  );
+  // A companion table rather than new columns on `accounts` — streak state
+  // is gameplay data, and accounts stays purely identity.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS daily_stats (
+      account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+      streak INTEGER NOT NULL DEFAULT 0,
+      best_streak INTEGER NOT NULL DEFAULT 0,
+      days_played INTEGER NOT NULL DEFAULT 0,
+      last_played DATE,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
   `);
 }
 
@@ -251,6 +301,136 @@ async function recordGameFinished(accountId, finalScore, moonsThisGame) {
   );
 }
 
+// ── Blitz (short casual games) ─────────────────────────────────
+// Same atomic-upsert shape as the casual writes above, just landing in
+// the blitz_* columns so a 4-round score can't distort a 16-round average.
+
+async function recordBlitzGameStarted(accountId) {
+  await pool.query(
+    `INSERT INTO stats (account_id, blitz_games_played) VALUES ($1, 1)
+     ON CONFLICT (account_id) DO UPDATE SET
+       blitz_games_played = stats.blitz_games_played + 1, updated_at = now()`,
+    [accountId]
+  );
+}
+
+async function recordBlitzGameFinished(accountId, finalScore, moonsThisGame) {
+  await pool.query(
+    `INSERT INTO stats (
+       account_id, blitz_games_finished, blitz_best_game, blitz_worst_game,
+       blitz_points_total, blitz_moons_total
+     )
+     VALUES ($1, 1, $2, $2, $2, $3)
+     ON CONFLICT (account_id) DO UPDATE SET
+       blitz_games_finished = stats.blitz_games_finished + 1,
+       blitz_best_game = GREATEST(stats.blitz_best_game, $2),
+       blitz_worst_game = LEAST(stats.blitz_worst_game, $2),
+       blitz_points_total = stats.blitz_points_total + $2,
+       blitz_moons_total = stats.blitz_moons_total + $3,
+       updated_at = now()`,
+    [accountId, finalScore, moonsThisGame]
+  );
+}
+
+// ── Daily Challenge ────────────────────────────────────────────
+
+// ON CONFLICT DO NOTHING, not DO UPDATE: a second submission for the same
+// day must never overwrite the first one's score.
+async function recordDailyScore(accountId, date, score, tricksWon, shotMoon) {
+  await pool.query(
+    `INSERT INTO daily_challenge_scores (account_id, challenge_date, score, tricks_won, shot_moon)
+     VALUES ($1, $2::date, $3, $4, $5)
+     ON CONFLICT (account_id, challenge_date) DO NOTHING`,
+    [accountId, date, score, tricksWon, !!shotMoon]
+  );
+}
+
+async function getDailyScore(accountId, date) {
+  const { rows } = await pool.query(
+    `SELECT score, tricks_won, shot_moon FROM daily_challenge_scores
+     WHERE account_id = $1 AND challenge_date = $2::date`,
+    [accountId, date]
+  );
+  const r = rows[0];
+  return r ? { score: r.score, tricksWon: r.tricks_won, shotMoon: r.shot_moon } : null;
+}
+
+// Extends the streak when yesterday was played, restarts it at 1 after a
+// gap, and is a no-op if today is already banked — all decided inside the
+// one statement so two writes landing at once can't double-count.
+async function bumpDailyStreak(accountId, date) {
+  const { rows } = await pool.query(
+    `INSERT INTO daily_stats (account_id, streak, best_streak, days_played, last_played)
+     VALUES ($1, 1, 1, 1, $2::date)
+     ON CONFLICT (account_id) DO UPDATE SET
+       streak = CASE
+         WHEN daily_stats.last_played = $2::date     THEN daily_stats.streak
+         WHEN daily_stats.last_played = $2::date - 1 THEN daily_stats.streak + 1
+         ELSE 1 END,
+       best_streak = GREATEST(daily_stats.best_streak, CASE
+         WHEN daily_stats.last_played = $2::date     THEN daily_stats.streak
+         WHEN daily_stats.last_played = $2::date - 1 THEN daily_stats.streak + 1
+         ELSE 1 END),
+       days_played = daily_stats.days_played
+         + CASE WHEN daily_stats.last_played = $2::date THEN 0 ELSE 1 END,
+       last_played = $2::date,
+       updated_at = now()
+     RETURNING streak, best_streak, days_played`,
+    [accountId, date]
+  );
+  const r = rows[0];
+  return { streak: r.streak, bestStreak: r.best_streak, daysPlayed: r.days_played };
+}
+
+// The stored `streak` is only still live if the last play was today or
+// yesterday — otherwise it has already lapsed and should read 0, even
+// though the row still holds its old value until the next play rewrites it.
+async function getDailyStreak(accountId, today) {
+  const { rows } = await pool.query(
+    `SELECT streak, best_streak, days_played,
+            (last_played = $2::date)     AS played_today,
+            (last_played = $2::date - 1) AS played_yesterday
+     FROM daily_stats WHERE account_id = $1`,
+    [accountId, today]
+  );
+  const r = rows[0];
+  if (!r) return { streak: 0, bestStreak: 0, daysPlayed: 0 };
+  const live = r.played_today || r.played_yesterday;
+  return { streak: live ? r.streak : 0, bestStreak: r.best_streak, daysPlayed: r.days_played };
+}
+
+async function getDailyLeaderboard(date, limit = 25) {
+  const { rows } = await pool.query(
+    `SELECT d.account_id, a.nickname, a.avatar, d.score, d.tricks_won, d.shot_moon
+     FROM daily_challenge_scores d JOIN accounts a ON a.id = d.account_id
+     WHERE d.challenge_date = $1::date
+     ORDER BY d.score DESC, d.created_at ASC
+     LIMIT $2`,
+    [date, limit]
+  );
+  return rows.map(r => ({
+    accountId: r.account_id, nickname: r.nickname, avatar: r.avatar,
+    score: r.score, tricksWon: r.tricks_won, shotMoon: r.shot_moon,
+  }));
+}
+
+// Where one player placed on a given day, plus how many played at all —
+// used to pin a "you" row when they're outside the top slice.
+async function getDailyStanding(accountId, date) {
+  const { rows } = await pool.query(
+    `SELECT rnk, score, total FROM (
+       SELECT account_id, score,
+              RANK() OVER (ORDER BY score DESC) AS rnk,
+              COUNT(*) OVER () AS total
+       FROM daily_challenge_scores WHERE challenge_date = $1::date
+     ) t WHERE account_id = $2`,
+    [date, accountId]
+  );
+  const r = rows[0];
+  if (!r) return null;
+  return { position: Number(r.rnk), score: r.score, entries: Number(r.total) };
+}
+
 async function getStats(accountId) {
   const { rows } = await pool.query(`SELECT * FROM stats WHERE account_id = $1`, [accountId]);
   const s = rows[0];
@@ -270,6 +450,14 @@ async function getStats(accountId) {
     endedPositive: s ? s.ended_positive : 0,
     endedNegative: s ? s.ended_negative : 0,
     winStreakBest: s ? s.win_streak_best : 0,
+    blitzGamesPlayed: s ? s.blitz_games_played : 0,
+    blitzGamesFinished: s ? s.blitz_games_finished : 0,
+    blitzBestGame: s ? s.blitz_best_game : null,
+    blitzWorstGame: s ? s.blitz_worst_game : null,
+    blitzMoonsTotal: s ? s.blitz_moons_total : 0,
+    blitzAvgPoints: s && s.blitz_games_finished > 0
+      ? Math.round((s.blitz_points_total / s.blitz_games_finished) * 10) / 10
+      : null,
   };
 }
 
@@ -425,6 +613,9 @@ module.exports = {
   createAccount, findAccountByUsername, findAccountById,
   createSession, findAccountByToken, deleteSession, updateProfile,
   recordGameStarted, recordTrick, recordRound, recordGameFinished, recordQueenTaken, getStats,
+  recordBlitzGameStarted, recordBlitzGameFinished,
+  recordDailyScore, getDailyScore, bumpDailyStreak, getDailyStreak,
+  getDailyLeaderboard, getDailyStanding,
   getOrCreateRankedProfile, applyRankedMmr, getLeaderboard, getRankForAccount,
   recordRankedGameStarted, recordRankedTrick, recordRankedRound,
   recordRankedQueenTaken, recordRankedGameFinished, getRankedStats,

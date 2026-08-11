@@ -20,6 +20,20 @@ contract checked against `tutorialCommitPlay`'s handling of it, every
 checked on the whole file) rather than by running it. Treat the first
 real on-device run as the actual first test, not a formality.
 
+**Blitz and Daily Challenge (their own sections below) are in the same
+position — implemented, never executed.** No Node runtime was available
+in the environment that built them either. What *was* verified
+statically: bracket/string/template balance across `server.js`, `db.js`
+and both inline `<script>` blocks; every `db.*` call cross-checked
+against `db.js`'s exports and every export against a definition; every
+`$('id')` in the client cross-checked against the markup; every
+`onclick=` handler against a definition. Not verified: any SQL actually
+running, and the Daily Challenge's end-to-end flow. **These are the
+first things to exercise on device**, and `server.js` is no longer
+untouched-by-new-features, so a bad deploy now affects live casual and
+ranked games too — worth a local run against a throwaway Postgres
+before pushing.
+
 ## Files
 - `server.js` — game engine, socket handlers, AI, auth endpoints
 - `db.js` — Postgres layer (accounts, sessions, stats). Only active if
@@ -35,8 +49,10 @@ real on-device run as the actual first test, not a formality.
   not a bug, if it comes up again
 - Shooting the moon (all hearts + Q♠ in one round) replaces that round's
   score entirely: shooter +60, everyone else -20
-- 16 rounds; pass cycle Left→Right→Across→Keep (rounds 4/8/12/16 = Keep,
-  no passing)
+- Round count is **per room** (`G.roundsTotal`), not a global constant —
+  see the Blitz section. `DEFAULT_ROUNDS` is 16 and every call site that
+  doesn't ask for a length gets it. Pass cycle Left→Right→Across→Keep
+  (rounds 4/8/12/16 = Keep, no passing, in a 16-round game)
 - The opening card of trick 1 each round can't be a heart or Q♠
 - Pass selection has a 1-minute timer (`PASS_SELECT_MS`) — any player who
   hasn't chosen by then gets 2 random cards auto-picked (`autoPassRemaining`
@@ -839,8 +855,124 @@ real on-device run as the actual first test, not a formality.
   beat the design called for is delivered in the 4 scripted tricks;
   playing out the rest would only add time.
 
+## Blitz — per-room match length (4 / 8 / 16 rounds)
+- **The pass cycle needed no generalization at all, and that's the
+  important design note.** The spec this was built from proposed an
+  `isKeepRound(round, roundsTotal)` helper with `cycle =
+  floor(roundsTotal/4)`, which would have made a 4-round game
+  every-round-Keep (no passing anywhere) and an 8-round game
+  L/R/K/L/R/K (no "across" ever). That was **deliberately not built**:
+  every offered length is a multiple of 4, and the existing
+  `passDir(round) = ['left','right','across','keep'][(round-1)%4]`
+  already lands Keep on the *final* round of a 4-, 8- or 16-round game.
+  So a 4-round Blitz is exactly one of each direction. `passDir` is
+  untouched. If a non-multiple-of-4 length is ever offered, THAT is when
+  a helper becomes necessary — not before.
+- `ROUND_OPTIONS = [4, 8, 16]` and `sanitizeRoundsTotal()` in
+  `server.js` are the whole validation; anything else coerces to 16, on
+  the client (`ROUND_OPTIONS`/`loadRoundsTotal`) and the server
+  independently.
+- `createRoom(hostName, hostAvatar, hostAccountId, opts)` gained an
+  optional 4th argument. Every pre-existing call site passes nothing and
+  is unchanged. `TOTAL_ROUNDS` is gone — `publicState`, `advanceRound`
+  and the `passLetters` array all read `G.roundsTotal` now.
+- The client already read `G.totalRounds` everywhere (`roundBadgeHTML`,
+  `sheetHTML`, `renderSummary`), so no client render code needed
+  changing for the length itself — only the picker.
+- Picker is a `.seg`/`.seg-btn` segmented row on the **Casual Play**
+  screen directly above "Create a game", not a sixth menu tile: it only
+  affects a game you *create* (joining by code inherits the host's
+  length), and keeping it off the menu leaves the hand-tuned landscape
+  `.menu-wrap` grid alone. Sticky via `ddp.lastRoundsTotal`.
+- **Blitz gets its own GAME-level stat columns, not its own table.**
+  `stats.blitz_games_played/_finished/_points_total/_best_game/
+  _worst_game/_moons_total`, written by `recordBlitzGameStarted`/
+  `recordBlitzGameFinished` and routed by `isBlitz(G)` at the two
+  existing call sites. Per-**trick** and per-**round** records stay in
+  the shared columns on purpose — a round is 13 tricks in every mode, so
+  those are match-length-agnostic and blend correctly. Only a final
+  *game* total is incomparable across lengths.
+
+## Daily Challenge (one seeded hand per UTC day)
+- **It's an ordinary room, not a new game system.** `createDailyRoom`
+  builds a normal `G` via `createRoom` with `{daily, forceKeep,
+  dailyDate}`, sets `roundsTotal = 1` directly (1 isn't an offered
+  `ROUND_OPTIONS` value so `sanitizeRoundsTotal` would reject it), seats
+  the player at 0 with three AI, and calls `dealRound(G)` straight away
+  — no seat draw, no dealer cut, no lobby, no pass phase. Everything
+  after that is the normal play loop, the normal `gameState` broadcast,
+  the normal table screens and the normal round-summary → final flow.
+- `G.dealer = 3` so `startTricks`'s `(dealer+1)%4` makes the human lead
+  trick 1 — deterministic, identical for every player, and the reason
+  the draw phase can be skipped rather than faked.
+- **Determinism is the deck only.** `seededShuffle(deck,
+  'ddp-daily-'+date)` (mulberry32 + FNV-1a string seed, both local to
+  `server.js`, no dependency) is used *only* inside `dealRound` when
+  `G.daily`. Casual/ranked/Blitz still use `crypto.randomInt` via
+  `shuffle`. The **AI is deliberately NOT seeded** — `aiChoose`'s Monte
+  Carlo sampling stays random. Every player faces the same *deal*, which
+  is what makes the comparison meaningful; making `sampleWorld`
+  reproducible would mean touching the Monte Carlo core and wasn't worth
+  it before the mode proves itself. Revisit only if leaderboard
+  integrity actually becomes a complaint.
+- `dailyDateKey()` is **UTC** (`toISOString().slice(0,10)`) and the
+  client's `todayKey()` must stay identical — a local-date key would
+  give Auckland and Lisbon different puzzles at the same instant.
+- **No pass phase**, via `G.forceKeep`. `roundPassDir(G)` /
+  `roundPassLetter(G, round)` are the new single points of truth that
+  replaced every `passDir(G.round)` call site; they short-circuit to
+  'keep'/'K' when `forceKeep` is set and are otherwise exactly the old
+  behaviour.
+- **The score is never sent by the client.** `submitDailyResult(G)` is
+  called from `recordGameFinishedForAll` (which early-returns for daily
+  rooms, so casual/ranked stats are never touched) and reads
+  `G.players[0].score` from the server's own state. Guarded by
+  `G.dailySubmitted`.
+- **The whole submit is safe to retry**, which is why it goes through
+  `trackStat`: `recordDailyScore` is `ON CONFLICT DO NOTHING` (a second
+  submission can never overwrite the first score) and `bumpDailyStreak`
+  is a no-op when `last_played` is already today. A partial failure
+  (score written, streak not) re-runs both correctly.
+- Tables: `daily_challenge_scores` with `UNIQUE (account_id,
+  challenge_date)` — that constraint is the real one-attempt-per-day
+  enforcement; the server's pre-check in `startDailyChallenge` only
+  exists to give a friendly refusal before dealing a hand. Streaks live
+  in a companion `daily_stats` table rather than on `accounts`, which
+  stays purely identity. Index is `(challenge_date, score DESC)`, which
+  covers both the leaderboard slice and the `RANK()` standing query.
+- `getDailyStreak` returns 0 when the last play was neither today nor
+  yesterday: the stored `streak` value is stale until the next play
+  rewrites it, so liveness is computed at read time.
+- **Daily rooms are excluded from the "solo-vs-AI never expires"
+  exemption** in the cleanup `setInterval`. The result is banked in
+  Postgres the moment the hand ends and there's nothing to come back to,
+  so it closes on the normal timers. `endGame` (the end-early vote) is
+  also hard-rejected for daily rooms — otherwise a player could bank a
+  partial score. Leaving mid-hand closes the room and records nothing,
+  so the attempt is simply forfeited and can be retried.
+- **Client: `#s-daily` is a front door and leaderboard, not a game
+  screen.** The hand plays on the ordinary pass/play table screens and
+  the result lands on the ordinary final screen in a `#f-daily` block,
+  exactly mirroring how `#f-ranked` works. So Daily Challenge needed no
+  table furniture and no landscape CSS of its own — `#s-daily` is a rail
+  screen and inherits the shared `.center-wrap` layout just by being
+  added to `LANDSCAPE_SCREENS`.
+  `renderFinal` clears `#f-daily` when `!G.daily`; it never populates
+  it, since the `dailyResult` event can land either side of that render.
+- **Guests can play but nothing is banked.** No leaderboard row, no
+  streak, and the menu tile's dot is never set for them — "played today"
+  is a fact about an *account*. This also matters mechanically: a guest
+  `dailyStatus` legitimately arrives on reconnect *before*
+  `resumeSession` has attached the account, so treating it as
+  authoritative would wipe a real player's dot. That response
+  deliberately doesn't touch the `ddp.dailyLastCompleted` cache, and
+  `authOk` re-requests the status once the account is live.
+
 ## Not implemented
 - Password reset (no email service configured)
+- Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across
+  two match lengths would fragment a ranked population that isn't large
+  enough yet)
 
 ## Sound effects (public/sfx.js + public/sounds/*.ogg)
 - Self-contained module, own global `SFX` object (`SFX.play(name)`,

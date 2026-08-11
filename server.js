@@ -64,7 +64,21 @@ const SUITS = ['♠', '♥', '♦', '♣'];
 const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 const RV = {2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13,A:14};
 const SO = {'♠':0,'♥':1,'♦':2,'♣':3};
-const TOTAL_ROUNDS = 16;
+// Rounds-per-game is a per-room parameter now (Blitz), not a global.
+// DEFAULT_ROUNDS is what every existing call site gets when it doesn't ask
+// for anything, so the classic game is untouched.
+const DEFAULT_ROUNDS = 16;
+// Every option is a multiple of 4, which is what keeps the existing
+// Left→Right→Across→Keep cycle intact: (round-1)%4 already lands Keep on
+// the final round of a 4-, 8- or 16-round game, so no pass-cycle rework
+// is needed and a Blitz game still uses all four pass directions.
+const ROUND_OPTIONS = [4, 8, 16];
+function sanitizeRoundsTotal(n) {
+  const v = Number(n);
+  return ROUND_OPTIONS.includes(v) ? v : DEFAULT_ROUNDS;
+}
+// "Blitz" is just a casual room that isn't the full 16 rounds.
+function isBlitz(G) { return !G.ranked && !G.daily && G.roundsTotal !== DEFAULT_ROUNDS; }
 const AUTO_ADVANCE_MS = 60 * 1000;      // host has a minute, then it moves on by itself
 const IDLE_CLOSE_MS   = 10 * 60 * 1000; // nothing happening at all
 const EMPTY_CLOSE_MS   = 2 * 60 * 1000; // nobody connected
@@ -102,6 +116,45 @@ function shuffle(a) {
   }
   return arr;
 }
+// ── Seeded shuffle (Daily Challenge only) ────────────────────────
+// Everything else keeps using crypto.randomInt above — this exists purely
+// so every player who opens the Daily Challenge on the same UTC calendar
+// day is dealt an identical 52-card deal, which is what makes comparing
+// scores on a leaderboard meaningful at all.
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function seedFromString(s) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h >>> 0;
+}
+function seededShuffle(a, seedStr) {
+  const rnd = mulberry32(seedFromString(seedStr));
+  const arr = [...a];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+// The challenge "day" is UTC so the same deal is live worldwide at the
+// same instant — a local-date key would give someone in Auckland a
+// different puzzle than someone in Lisbon at the same moment.
+function dailyDateKey(d) {
+  return (d || new Date()).toISOString().slice(0, 10);
+}
+
 function cardVal(c) {
   if (c.suit === '♥') return -RV[c.rank];
   if (c.suit === '♠' && c.rank === 'Q') return -26;
@@ -129,6 +182,13 @@ function passSource(to, round) {
   if (d === 'across') return (to + 2) % 4;
   return to;
 }
+
+// The pass direction actually in force for a room's current round. Every
+// normal room just follows the round number; the Daily Challenge is a
+// single fixed no-pass hand, so it short-circuits to 'keep'. Everything
+// that used to call passDir(G.round) goes through here instead.
+function roundPassDir(G) { return G.forceKeep ? 'keep' : passDir(G.round); }
+function roundPassLetter(G, round) { return G.forceKeep ? 'K' : passLetter(round); }
 
 function canPlay(G, pi, card) {
   const trick = G.currentTrick;
@@ -634,7 +694,7 @@ function inferVoidSuits(G) {
 // happens before any tricks, hands only ever shrink by playing.
 function certainOpponentCards(G, pi) {
   const certain = { 0: [], 1: [], 2: [], 3: [] };
-  if (G.passSelected && passDir(G.round) !== 'keep' && G.passSelected[pi] && G.passSelected[pi].length === 2) {
+  if (G.passSelected && roundPassDir(G) !== 'keep' && G.passSelected[pi] && G.passSelected[pi].length === 2) {
     const tgt = passTarget(pi, G.round);
     const played = playedCardsThisRound(G);
     const myHand = G.players[pi].hand;
@@ -958,12 +1018,21 @@ function sanitizeAvatar(a) {
   return s || null;
 }
 
-function createRoom(hostName, hostAvatar, hostAccountId) {
+// `opts` is optional and every field defaults to the classic game, so
+// existing call sites (createRoom socket handler, formRankedMatch) keep
+// behaving exactly as before without passing anything.
+function createRoom(hostName, hostAvatar, hostAccountId, opts) {
+  const o = opts || {};
   const code = makeCode();
   rooms[code] = {
     code,
     phase: 'lobby',
     ranked: false,
+    roundsTotal: sanitizeRoundsTotal(o.roundsTotal),
+    daily: !!o.daily,            // Daily Challenge room — one seeded hand, own leaderboard
+    dailyDate: o.dailyDate || null,
+    forceKeep: !!o.forceKeep,    // no pass phase at all, whatever the round number says
+    dailySubmitted: false,
     rankedTimers: [null, null, null, null], // per-seat disconnect→AI-takeover timeout handles (ranked only)
     players: Array.from({ length: 4 }, (_, i) => ({
       name: i === 0 ? hostName : 'Empty seat',
@@ -1000,6 +1069,71 @@ function createRoom(hostName, hostAvatar, hostAccountId) {
     lastActivity: Date.now(),
   };
   return rooms[code];
+}
+
+// ── Daily Challenge ───────────────────────────────────────────────
+// One seeded hand per UTC day, solo against three computers, no pass
+// phase, scored on the normal rules and compared on a per-day
+// leaderboard. It reuses the ordinary room/G object and the ordinary
+// play loop wholesale — the only differences are the seeded deck (see
+// dealRound), roundsTotal = 1, forceKeep, and its own result pipeline.
+function createDailyRoom(name, avatar, accountId, socketId) {
+  const G = createRoom(name, avatar, accountId, {
+    daily: true, forceKeep: true, dailyDate: dailyDateKey(),
+  });
+  G.roundsTotal = 1;            // set directly: 1 isn't one of the offered ROUND_OPTIONS
+  const token = makeToken();
+  Object.assign(G.players[0], { socketId, connected: true, token });
+  G.hostSocket = socketId;
+  G.hostToken = token;
+  for (let i = 1; i < 4; i++) {
+    Object.assign(G.players[i], {
+      name: `Computer ${i + 1}`, avatar: null, accountId: null,
+      isAI: true, connected: true, socketId: null, token: null,
+    });
+  }
+  // No seat draw and no dealer cut: both are random, and the whole point
+  // is that every player faces an identical situation. Dealer 3 makes the
+  // human seat lead trick 1, the same way for everyone.
+  G.dealer = 3;
+  return { G, token };
+}
+
+// Called once, from recordGameFinishedForAll, when the single daily round
+// has been played out. The score is taken from the server's own game
+// state — the client never sends one.
+function submitDailyResult(G) {
+  if (G.dailySubmitted) return;
+  G.dailySubmitted = true;
+  const p = G.players[0];
+  const score = p.score;
+  const tricksWon = p.tricks.length / 4;
+  const shotMoon = G.moonShooter === 0;
+  const socketId = p.socketId;
+  const payload = { date: G.dailyDate, score, tricksWon, shotMoon, streak: null, position: null, entries: null };
+
+  if (!DB_ENABLED || !p.accountId) {
+    // Guests still get their score and the day's deal; they just don't
+    // appear on the leaderboard and don't carry a streak.
+    if (socketId) io.to(socketId).emit('dailyResult', { ...payload, guest: true });
+    return;
+  }
+
+  // Same retry policy as every other stat write — a Railway blip must not
+  // silently cost someone their streak.
+  trackStat(async () => {
+    await db.recordDailyScore(p.accountId, G.dailyDate, score, tricksWon, shotMoon);
+    const streak = await db.bumpDailyStreak(p.accountId, G.dailyDate);
+    const standing = await db.getDailyStanding(p.accountId, G.dailyDate);
+    if (socketId) {
+      io.to(socketId).emit('dailyResult', {
+        ...payload,
+        streak: streak.streak, bestStreak: streak.bestStreak,
+        position: standing ? standing.position : null,
+        entries: standing ? standing.entries : null,
+      });
+    }
+  });
 }
 
 // ── Ranked matchmaking ────────────────────────────────────────────
@@ -1165,6 +1299,9 @@ function applyRankedResult(G) {
 }
 
 function recordGameFinishedForAll(G) {
+  // The Daily Challenge finishes through its own pipeline
+  // (submitDailyResult) — it must never touch casual or ranked stats.
+  if (G.daily) { submitDailyResult(G); return; }
   applyRankedResult(G);
   for (let i = 0; i < 4; i++) {
     const acctId = G.players[i].accountId;
@@ -1172,6 +1309,10 @@ function recordGameFinishedForAll(G) {
     const finalScore = G.players[i].score;
     const moons = (G.moonCounts && G.moonCounts[i]) || 0;
     if (G.ranked) trackStat(() => db.recordRankedGameFinished(acctId, finalScore, moons));
+    // A 4- or 8-round game's final score isn't comparable with a 16-round
+    // one, so Blitz totals (best/worst game, average, win streak) get their
+    // own columns rather than dragging the casual averages down.
+    else if (isBlitz(G)) trackStat(() => db.recordBlitzGameFinished(acctId, finalScore, moons));
     else trackStat(() => db.recordGameFinished(acctId, finalScore, moons));
   }
 }
@@ -1216,9 +1357,10 @@ function publicState(G) {
       tricksWon: p.tricks.length / 4,
       connected: p.connected, cardCount: p.hand.length, hasPassed: p.hasPassed,
     })),
+    daily: !!G.daily,
     round: G.round,
-    totalRounds: TOTAL_ROUNDS,
-    isLastRound: G.round >= TOTAL_ROUNDS,
+    totalRounds: G.roundsTotal,
+    isLastRound: G.round >= G.roundsTotal,
     dealer: G.dealer,
     drawRound: G.drawRound,
     heartsbroken: G.heartsbroken,
@@ -1237,7 +1379,7 @@ function publicState(G) {
     endVote: G.endVote ? { by: G.endVote.by, needed: G.endVote.needed, agreed: G.endVote.agreed } : null,
     voteIn: G.voteAt ? Math.max(0, G.voteAt - Date.now()) : 0,
     voteMsg: G.voteMsg || '',
-    passLetters: Array.from({ length: TOTAL_ROUNDS }, (_, i) => passLetter(i + 1)),
+    passLetters: Array.from({ length: G.roundsTotal }, (_, i) => roundPassLetter(G, i + 1)),
   };
 }
 
@@ -1254,8 +1396,8 @@ function broadcastRoom(G) {
         myHand: sortH(p.hand),
         myReceived: G.receivedThisRound ? G.receivedThisRound[i] : [],
         myPassed: G.passSelected ? (G.passSelected[i] || []) : [],
-        passToIndex: passDir(G.round) === 'keep' ? null : passTarget(i, G.round),
-        passFromIndex: passDir(G.round) === 'keep' ? null : passSource(i, G.round),
+        passToIndex: roundPassDir(G) === 'keep' ? null : passTarget(i, G.round),
+        passFromIndex: roundPassDir(G) === 'keep' ? null : passSource(i, G.round),
         legalCards: G.phase === 'play' ? legalCards(G, i).map(c => c.rank + '|' + c.suit) : [],
       });
     }
@@ -1318,7 +1460,12 @@ function revealDrawCard(G, i) {
 // ── Deal & pass ─────────────────────────────────────────────────
 function dealRound(G) {
   clearAuto(G);
-  const deck = shuffle(makeDeck());
+  // The Daily Challenge's single hand comes off a deck seeded from the UTC
+  // date, so everyone playing that day gets exactly the same deal. Every
+  // other room shuffles for real.
+  const deck = G.daily
+    ? seededShuffle(makeDeck(), 'ddp-daily-' + G.dailyDate)
+    : shuffle(makeDeck());
   for (let i = 0; i < 4; i++) {
     G.players[i].hand = deck.slice(i * 13, (i + 1) * 13);
     G.players[i].tricks = [];
@@ -1335,7 +1482,7 @@ function dealRound(G) {
   G.playLog = [];
   G.roundBefore = G.players.map(p => p.score);
 
-  if (passDir(G.round) === 'keep') { startTricks(G); return; }
+  if (roundPassDir(G) === 'keep') { startTricks(G); return; }
 
   G.phase = 'pass';
   for (let i = 0; i < 4; i++) {
@@ -1442,7 +1589,7 @@ function resolveTrick(G) {
   const trickScore = 10 + penPts;
   G.players[winner].score += trickScore;
   G.players[winner].tricks.push(...G.currentTrick.map(t => t.card));
-  if (G.players[winner].accountId) {
+  if (G.players[winner].accountId && !G.daily) {
     const acctId = G.players[winner].accountId;
     const gotQueen = G.currentTrick.some(t => t.card.suit === '♠' && t.card.rank === 'Q');
     if (G.ranked) {
@@ -1503,7 +1650,7 @@ function endRound(G) {
     const deltas = G.players.map((p, i) => p.score - G.roundBefore[i]);
     G.history.push({
       round: G.round,
-      dir: passLetter(G.round),
+      dir: roundPassLetter(G, G.round),
       deltas,
       totals: G.players.map(p => p.score),
       moon,
@@ -1512,11 +1659,18 @@ function endRound(G) {
       if (!G.moonCounts) G.moonCounts = [0, 0, 0, 0];
       G.moonCounts[moon]++;
     }
-    for (let i = 0; i < 4; i++) {
-      const acctId = G.players[i].accountId;
-      if (!acctId) continue;
-      if (G.ranked) trackStat(() => db.recordRankedRound(acctId, deltas[i]));
-      else trackStat(() => db.recordRound(acctId, deltas[i]));
+    // Per-round records are match-length-agnostic (a round is 13 tricks in
+    // every mode), so Blitz rounds blend into the same bucket quite
+    // correctly — only *game*-level totals need splitting out, below in
+    // recordGameFinishedForAll. The Daily Challenge is excluded entirely:
+    // it has its own table and shouldn't move casual numbers at all.
+    if (!G.daily) {
+      for (let i = 0; i < 4; i++) {
+        const acctId = G.players[i].accountId;
+        if (!acctId) continue;
+        if (G.ranked) trackStat(() => db.recordRankedRound(acctId, deltas[i]));
+        else trackStat(() => db.recordRound(acctId, deltas[i]));
+      }
     }
   }
 
@@ -1533,7 +1687,7 @@ function endRound(G) {
 function advanceRound(G) {
   if (!rooms[G.code] || G.phase !== 'roundSummary') return;
   clearAuto(G);
-  if (G.round >= TOTAL_ROUNDS) { G.phase = 'final'; recordGameFinishedForAll(G); broadcastRoom(G); return; }
+  if (G.round >= G.roundsTotal) { G.phase = 'final'; recordGameFinishedForAll(G); broadcastRoom(G); return; }
   G.round++;
   G.dealer = (G.dealer + 1) % 4;
   dealRound(G);
@@ -1743,10 +1897,85 @@ io.on('connection', (socket) => {
     if (idx !== -1) rankedQueue.splice(idx, 1);
   });
 
-  socket.on('createRoom', async ({ name, avatar, accountToken }) => {
+  // ── Daily Challenge ──
+  // Whether today's hand is still available, plus streak and standing.
+  // Works for guests too (everything account-shaped just comes back null).
+  socket.on('getDailyStatus', async ({ accountToken }) => {
+    const date = dailyDateKey();
+    const acct = await lookupAccountByToken(accountToken);
+    if (!DB_ENABLED || !acct) {
+      return socket.emit('dailyStatus', {
+        date, guest: true, playedToday: false, score: null,
+        streak: 0, bestStreak: 0, position: null, entries: null,
+      });
+    }
+    try {
+      const mine = await db.getDailyScore(acct.id, date);
+      const streak = await db.getDailyStreak(acct.id, date);
+      const standing = mine ? await db.getDailyStanding(acct.id, date) : null;
+      socket.emit('dailyStatus', {
+        date, guest: false,
+        playedToday: !!mine,
+        score: mine ? mine.score : null,
+        tricksWon: mine ? mine.tricksWon : null,
+        shotMoon: mine ? mine.shotMoon : false,
+        streak: streak.streak, bestStreak: streak.bestStreak,
+        position: standing ? standing.position : null,
+        entries: standing ? standing.entries : null,
+      });
+    } catch (e) {
+      console.error('getDailyStatus error:', e.message);
+      socket.emit('dailyError', { msg: "Couldn't load today's challenge. Try again." });
+    }
+  });
+
+  socket.on('getDailyLeaderboard', async ({ accountToken }) => {
+    const date = dailyDateKey();
+    if (!DB_ENABLED) return socket.emit('dailyLeaderboardOk', { date, rows: [], you: null });
+    try {
+      const rows = await db.getDailyLeaderboard(date, 25);
+      let you = null;
+      const acct = await lookupAccountByToken(accountToken);
+      if (acct && !rows.some(r => r.accountId === acct.id)) {
+        const standing = await db.getDailyStanding(acct.id, date);
+        if (standing) {
+          you = {
+            position: standing.position, nickname: acct.nickname,
+            avatar: acct.avatar, score: standing.score,
+          };
+        }
+      }
+      socket.emit('dailyLeaderboardOk', { date, rows, you });
+    } catch (e) {
+      console.error('getDailyLeaderboard error:', e.message);
+      socket.emit('dailyError', { msg: "Couldn't load the leaderboard. Try again." });
+    }
+  });
+
+  socket.on('startDailyChallenge', async ({ name, avatar, accountToken }) => {
+    const date = dailyDateKey();
     const clean = String(name || '').trim().slice(0, 16) || 'Player';
     const acct = await lookupAccountByToken(accountToken);
-    const G = createRoom(clean, sanitizeAvatar(avatar), acct ? acct.id : null);
+    // One attempt per account per day. The UNIQUE constraint on
+    // (account_id, challenge_date) is the real enforcement; this is just
+    // the friendly refusal before a hand is dealt.
+    if (DB_ENABLED && acct) {
+      try {
+        const mine = await db.getDailyScore(acct.id, date);
+        if (mine) return socket.emit('dailyError', { msg: "You've already played today's challenge. Come back tomorrow." });
+      } catch (e) { /* a lookup blip shouldn't block play — the UNIQUE constraint still holds */ }
+    }
+    const { G, token } = createDailyRoom(clean, sanitizeAvatar(avatar), acct ? acct.id : null, socket.id);
+    socket.join(G.code);
+    socket.emit('joined', { code: G.code, playerIndex: 0, token, isHost: true });
+    dealRound(G);   // no seat draw, no dealer cut, no pass phase — straight into the hand
+  });
+
+  socket.on('createRoom', async ({ name, avatar, accountToken, roundsTotal }) => {
+    const clean = String(name || '').trim().slice(0, 16) || 'Player';
+    const acct = await lookupAccountByToken(accountToken);
+    const G = createRoom(clean, sanitizeAvatar(avatar), acct ? acct.id : null,
+                         { roundsTotal: sanitizeRoundsTotal(roundsTotal) });
     const token = makeToken();
     G.players[0].socketId = socket.id;
     G.players[0].connected = true;
@@ -1823,7 +2052,9 @@ io.on('connection', (socket) => {
     if (!G.players.every(p => p.connected || p.isAI))
       return socket.emit('errorMsg', { msg: 'All four seats need a player or an AI.' });
     for (const p of G.players) {
-      if (p.accountId) trackStat(() => db.recordGameStarted(p.accountId));
+      if (!p.accountId) continue;
+      if (isBlitz(G)) trackStat(() => db.recordBlitzGameStarted(p.accountId));
+      else trackStat(() => db.recordGameStarted(p.accountId));
     }
     startDraw(G, 1);
   });
@@ -1880,6 +2111,10 @@ io.on('connection', (socket) => {
     const G = findRoom(code);
     if (!G || !isHostSocket(G, socket)) return;
     if (G.phase === 'lobby' || G.phase === 'final') return;
+    // Daily Challenge is a single hand with a leaderboard behind it —
+    // there's no "end early" that could bank a partial score. Leaving
+    // abandons the attempt instead (leaveRoom closes the room outright).
+    if (G.daily) return;
     if (G.endVote) return;
 
     const by = G.players.findIndex(p => p.socketId === socket.id);
@@ -1992,7 +2227,12 @@ setInterval(() => {
   for (const code in rooms) {
     const G = rooms[code];
 
-    if (!G.ranked && G.players.filter(p => !p.isAI).length === 1) {
+    // A Daily Challenge room is deliberately NOT covered by the
+    // solo-vs-AI exemption below: it's a single five-minute hand, the
+    // result is already banked in Postgres the moment it ends, and there's
+    // nothing to come back to — so let it close on the normal timers
+    // instead of lingering for the life of the process.
+    if (!G.ranked && !G.daily && G.players.filter(p => !p.isAI).length === 1) {
       G.emptySince = null;
       continue;
     }

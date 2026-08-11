@@ -154,6 +154,22 @@ function seededShuffle(a, seedStr) {
 function dailyDateKey(d) {
   return (d || new Date()).toISOString().slice(0, 10);
 }
+// Every seeded choice for a day gets its OWN seed string rather than
+// pulling successive values off one stream, so the deal, the pass
+// direction and the dealer are independent of each other — otherwise
+// e.g. every "keep" day would share a family of deals.
+// The first two draws are discarded because mulberry32's opening output
+// is only weakly separated for nearby seeds, and these seed strings
+// differ by a single date character.
+function dailyPick(prefix, date, n) {
+  const rnd = mulberry32(seedFromString(prefix + date));
+  rnd(); rnd();
+  return Math.floor(rnd() * n);
+}
+// The whole hand varies by day, not just the cards: which way you pass
+// (or that you keep) and who deals are both drawn from the date too.
+function dailyPassDir(date) { return PASS_DIRS[dailyPick('ddp-daily-dir-', date, 4)]; }
+function dailyDealer(date) { return dailyPick('ddp-daily-dealer-', date, 4); }
 
 function cardVal(c) {
   if (c.suit === '♥') return -RV[c.rank];
@@ -165,30 +181,37 @@ function sortH(h) {
 }
 function eqC(a, b) { return a.rank === b.rank && a.suit === b.suit; }
 
-function passDir(round) { return ['left', 'right', 'across', 'keep'][(round - 1) % 4]; }
-function passLetter(round) { return { left: 'L', right: 'R', across: 'O', keep: 'K' }[passDir(round)]; }
-function passTarget(from, round) {
-  const d = passDir(round);
-  if (d === 'left')   return (from + 1) % 4;
-  if (d === 'right')  return (from + 3) % 4;
-  if (d === 'across') return (from + 2) % 4;
+const PASS_DIRS = ['left', 'right', 'across', 'keep'];
+const PASS_LETTER = { left: 'L', right: 'R', across: 'O', keep: 'K' };
+function passDir(round) { return PASS_DIRS[(round - 1) % 4]; }
+function passLetter(round) { return PASS_LETTER[passDir(round)]; }
+// These take a DIRECTION, not a round number. They used to derive the
+// direction from the round themselves, which silently broke any room
+// whose direction isn't a function of its round number — i.e. the Daily
+// Challenge, whose single round draws a direction from the date seed.
+function passTarget(from, dir) {
+  if (dir === 'left')   return (from + 1) % 4;
+  if (dir === 'right')  return (from + 3) % 4;
+  if (dir === 'across') return (from + 2) % 4;
   return from;
 }
 
-function passSource(to, round) {
-  const d = passDir(round);
-  if (d === 'left')   return (to + 3) % 4;
-  if (d === 'right')  return (to + 1) % 4;
-  if (d === 'across') return (to + 2) % 4;
+function passSource(to, dir) {
+  if (dir === 'left')   return (to + 3) % 4;
+  if (dir === 'right')  return (to + 1) % 4;
+  if (dir === 'across') return (to + 2) % 4;
   return to;
 }
 
 // The pass direction actually in force for a room's current round. Every
-// normal room just follows the round number; the Daily Challenge is a
-// single fixed no-pass hand, so it short-circuits to 'keep'. Everything
-// that used to call passDir(G.round) goes through here instead.
-function roundPassDir(G) { return G.forceKeep ? 'keep' : passDir(G.round); }
-function roundPassLetter(G, round) { return G.forceKeep ? 'K' : passLetter(round); }
+// normal room just follows the round number; the Daily Challenge pins one
+// direction for its single hand, drawn from that day's seed, so it can be
+// Keep one day and Across the next. Everything that used to call
+// passDir(G.round) goes through here instead.
+function roundPassDir(G) { return G.forcePassDir || passDir(G.round); }
+function roundPassLetter(G, round) {
+  return G.forcePassDir ? PASS_LETTER[G.forcePassDir] : passLetter(round);
+}
 
 function canPlay(G, pi, card) {
   const trick = G.currentTrick;
@@ -695,7 +718,7 @@ function inferVoidSuits(G) {
 function certainOpponentCards(G, pi) {
   const certain = { 0: [], 1: [], 2: [], 3: [] };
   if (G.passSelected && roundPassDir(G) !== 'keep' && G.passSelected[pi] && G.passSelected[pi].length === 2) {
-    const tgt = passTarget(pi, G.round);
+    const tgt = passTarget(pi, roundPassDir(G));
     const played = playedCardsThisRound(G);
     const myHand = G.players[pi].hand;
     for (const c of G.passSelected[pi]) {
@@ -1031,7 +1054,10 @@ function createRoom(hostName, hostAvatar, hostAccountId, opts) {
     roundsTotal: sanitizeRoundsTotal(o.roundsTotal),
     daily: !!o.daily,            // Daily Challenge room — one seeded hand, own leaderboard
     dailyDate: o.dailyDate || null,
-    forceKeep: !!o.forceKeep,    // no pass phase at all, whatever the round number says
+    // Pins one pass direction for every round, overriding the normal
+    // round-number cycle. null = ordinary cycle. 'keep' means no pass
+    // phase at all; the other three run a real one.
+    forcePassDir: PASS_DIRS.includes(o.forcePassDir) ? o.forcePassDir : null,
     dailySubmitted: false,
     rankedTimers: [null, null, null, null], // per-seat disconnect→AI-takeover timeout handles (ranked only)
     players: Array.from({ length: 4 }, (_, i) => ({
@@ -1076,10 +1102,13 @@ function createRoom(hostName, hostAvatar, hostAccountId, opts) {
 // phase, scored on the normal rules and compared on a per-day
 // leaderboard. It reuses the ordinary room/G object and the ordinary
 // play loop wholesale — the only differences are the seeded deck (see
-// dealRound), roundsTotal = 1, forceKeep, and its own result pipeline.
+// dealRound), roundsTotal = 1, a pinned pass direction, and its own
+// result pipeline. The AI seats are plain AI seats — same aiChoose, same
+// aiSelectPass, same everything a casual game runs.
 function createDailyRoom(name, avatar, accountId, socketId) {
+  const date = dailyDateKey();
   const G = createRoom(name, avatar, accountId, {
-    daily: true, forceKeep: true, dailyDate: dailyDateKey(),
+    daily: true, dailyDate: date, forcePassDir: dailyPassDir(date),
   });
   G.roundsTotal = 1;            // set directly: 1 isn't one of the offered ROUND_OPTIONS
   const token = makeToken();
@@ -1092,10 +1121,10 @@ function createDailyRoom(name, avatar, accountId, socketId) {
       isAI: true, connected: true, socketId: null, token: null,
     });
   }
-  // No seat draw and no dealer cut: both are random, and the whole point
-  // is that every player faces an identical situation. Dealer 3 makes the
-  // human seat lead trick 1, the same way for everyone.
-  G.dealer = 3;
+  // No seat draw and no dealer cut — but the dealer still varies by day,
+  // drawn from the date like everything else, so who leads trick 1 isn't
+  // always the same seat. Deterministic, hence no cut needed to settle it.
+  G.dealer = dailyDealer(date);
   return { G, token };
 }
 
@@ -1358,6 +1387,10 @@ function publicState(G) {
       connected: p.connected, cardCount: p.hand.length, hasPassed: p.hasPassed,
     })),
     daily: !!G.daily,
+    // Sent rather than re-derived client-side: renderPass used to compute
+    // it from (round-1)%4 itself, which is wrong for any room that pins a
+    // direction (the Daily Challenge draws one from the date).
+    passDir: roundPassDir(G),
     round: G.round,
     totalRounds: G.roundsTotal,
     isLastRound: G.round >= G.roundsTotal,
@@ -1396,8 +1429,8 @@ function broadcastRoom(G) {
         myHand: sortH(p.hand),
         myReceived: G.receivedThisRound ? G.receivedThisRound[i] : [],
         myPassed: G.passSelected ? (G.passSelected[i] || []) : [],
-        passToIndex: roundPassDir(G) === 'keep' ? null : passTarget(i, G.round),
-        passFromIndex: roundPassDir(G) === 'keep' ? null : passSource(i, G.round),
+        passToIndex: roundPassDir(G) === 'keep' ? null : passTarget(i, roundPassDir(G)),
+        passFromIndex: roundPassDir(G) === 'keep' ? null : passSource(i, roundPassDir(G)),
         legalCards: G.phase === 'play' ? legalCards(G, i).map(c => c.rank + '|' + c.suit) : [],
       });
     }
@@ -1523,7 +1556,7 @@ function executePass(G) {
   if (G.phase !== 'pass') return;
   const toAdd = [[], [], [], []];
   for (let i = 0; i < 4; i++) {
-    const tgt = passTarget(i, G.round);
+    const tgt = passTarget(i, roundPassDir(G));
     for (const c of G.passSelected[i]) {
       const idx = G.players[i].hand.findIndex(x => eqC(x, c));
       if (idx !== -1) toAdd[tgt].push(G.players[i].hand.splice(idx, 1)[0]);
@@ -1902,10 +1935,14 @@ io.on('connection', (socket) => {
   // Works for guests too (everything account-shaped just comes back null).
   socket.on('getDailyStatus', async ({ accountToken }) => {
     const date = dailyDateKey();
+    // Today's pass direction is public before you play — you'd see it on
+    // the pass screen anyway, so it confers nothing, and showing it is
+    // what makes "the whole hand changes daily" visible on the tile.
+    const passDir = dailyPassDir(date);
     const acct = await lookupAccountByToken(accountToken);
     if (!DB_ENABLED || !acct) {
       return socket.emit('dailyStatus', {
-        date, guest: true, playedToday: false, score: null,
+        date, passDir, guest: true, playedToday: false, score: null,
         streak: 0, bestStreak: 0, position: null, entries: null,
       });
     }
@@ -1914,7 +1951,7 @@ io.on('connection', (socket) => {
       const streak = await db.getDailyStreak(acct.id, date);
       const standing = mine ? await db.getDailyStanding(acct.id, date) : null;
       socket.emit('dailyStatus', {
-        date, guest: false,
+        date, passDir, guest: false,
         playedToday: !!mine,
         score: mine ? mine.score : null,
         tricksWon: mine ? mine.tricksWon : null,

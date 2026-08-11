@@ -3170,6 +3170,13 @@ function startDaily(){
   socket.emit('startDailyChallenge',{name:id.name,avatar:id.avatar||'',
     accountToken:account?accountToken:''});
 }
+// The deal, the pass direction and the dealer are all drawn from the
+// date, so the pass direction is worth stating up front — it changes how
+// the hand plays more than anything else that varies day to day.
+const DAILY_DIR_TEXT={
+  left:'pass 2 cards left', right:'pass 2 cards right',
+  across:'pass 2 cards across', keep:'no passing — keep your hand',
+};
 function fmtDailyDate(iso){
   const d=new Date(iso+'T00:00:00Z');
   return d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});
@@ -3203,7 +3210,7 @@ socket.on('dailyStatus',d=>{
     $('daily-play').style.display='none';
   }else{
     $('daily-score').textContent='🗓️';
-    $('daily-sub').textContent="Today's hand is waiting. One attempt, no passing.";
+    $('daily-sub').textContent=`Today's hand is waiting · ${DAILY_DIR_TEXT[d.passDir]||'one attempt'}`;
     $('daily-play').style.display='block';
   }
 });
@@ -4102,7 +4109,9 @@ function lastTrickBtnHTML(G,id){
 }
 function renderPassReveal(G){
   show('pass');
-  const dir=['left','right','across','keep'][(G.round-1)%4];
+  // G.passDir comes from the server. The (round-1)%4 fallback is only for
+  // the tutorial's fake state object, which has no passDir field.
+  const dir=G.passDir||['left','right','across','keep'][(G.round-1)%4];
   parkPassChrome();   // must precede the innerHTML rebuild — see the function
   $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir),lastTrickBtnHTML(G,"p-lt-btn"))});
   myStrip(G,'p-me',false);
@@ -4116,7 +4125,7 @@ function renderPassReveal(G){
 }
 function renderPass(G){
   show('pass');
-  const dir=['left','right','across','keep'][(G.round-1)%4];
+  const dir=G.passDir||['left','right','across','keep'][(G.round-1)%4];
   parkPassChrome();   // must precede the innerHTML rebuild — see the function
   $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir),lastTrickBtnHTML(G,"p-lt-btn"))});
   myStrip(G,'p-me',false);

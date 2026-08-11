@@ -54,6 +54,10 @@ before pushing.
   doesn't ask for a length gets it. Pass cycle Left→Right→Across→Keep
   (rounds 4/8/12/16 = Keep, no passing, in a 16-round game)
 - The opening card of trick 1 each round can't be a heart or Q♠
+- `passDir(round)` maps the round number onto that cycle, but the
+  direction actually in force is `roundPassDir(G)` — a room can pin one
+  (see Daily Challenge). `passTarget`/`passSource` take that direction
+  as their second argument, not a round number
 - Pass selection has a 1-minute timer (`PASS_SELECT_MS`) — any player who
   hasn't chosen by then gets 2 random cards auto-picked (`autoPassRemaining`
   in `server.js`), so the round can't be held hostage by someone AFK
@@ -908,34 +912,55 @@ before pushing.
 
 ## Daily Challenge (one seeded hand per UTC day)
 - **It's an ordinary room, not a new game system.** `createDailyRoom`
-  builds a normal `G` via `createRoom` with `{daily, forceKeep,
-  dailyDate}`, sets `roundsTotal = 1` directly (1 isn't an offered
+  builds a normal `G` via `createRoom` with `{daily, dailyDate,
+  forcePassDir}`, sets `roundsTotal = 1` directly (1 isn't an offered
   `ROUND_OPTIONS` value so `sanitizeRoundsTotal` would reject it), seats
   the player at 0 with three AI, and calls `dealRound(G)` straight away
-  — no seat draw, no dealer cut, no lobby, no pass phase. Everything
-  after that is the normal play loop, the normal `gameState` broadcast,
-  the normal table screens and the normal round-summary → final flow.
-- `G.dealer = 3` so `startTricks`'s `(dealer+1)%4` makes the human lead
-  trick 1 — deterministic, identical for every player, and the reason
-  the draw phase can be skipped rather than faked.
-- **Determinism is the deck only.** `seededShuffle(deck,
-  'ddp-daily-'+date)` (mulberry32 + FNV-1a string seed, both local to
-  `server.js`, no dependency) is used *only* inside `dealRound` when
-  `G.daily`. Casual/ranked/Blitz still use `crypto.randomInt` via
-  `shuffle`. The **AI is deliberately NOT seeded** — `aiChoose`'s Monte
-  Carlo sampling stays random. Every player faces the same *deal*, which
-  is what makes the comparison meaningful; making `sampleWorld`
-  reproducible would mean touching the Monte Carlo core and wasn't worth
-  it before the mode proves itself. Revisit only if leaderboard
-  integrity actually becomes a complaint.
+  — no seat draw, no dealer cut, no lobby. Everything after that is the
+  normal play loop, the normal `gameState` broadcast, the normal table
+  screens and the normal round-summary → final flow.
+- **Three things are drawn from the date, not just the cards**: the deal
+  (`seededShuffle`), the pass direction (`dailyPassDir`) and the dealer
+  (`dailyDealer`). So one day is Keep with West dealing, the next is
+  Across with you dealing — the hand genuinely differs day to day rather
+  than only the cards. All three go through `dailyPick(prefix, date, n)`,
+  and **each uses its own seed string** rather than successive draws off
+  one stream, so they're independent (otherwise every "keep" day would
+  share a family of deals). `dailyPick` discards two draws first:
+  mulberry32's opening output is only weakly separated for nearby seeds,
+  and these seed strings differ by a single date character. Verified over
+  5000 simulated days — χ²=0.32 and 2.02 (3 df) for direction and dealer,
+  joint 16.73 (15 df) — and 200/200 distinct opening hands.
+- **The AI is deliberately NOT seeded and is byte-for-byte the casual
+  AI.** `aiChoose`/`heuristicChoose`/`applyHardRules`/`aiSelectPass`
+  never read `G.round`, `G.roundsTotal`, `G.daily` or `G.ranked`, so
+  there is nothing mode-dependent to keep in sync — the only reason the
+  computers ever played differently here was the original no-pass design
+  skipping `aiSelectPass` entirely, which the seeded direction fixed.
+  `sampleWorld`'s Monte Carlo sampling stays random: every player faces
+  the same *deal*, which is what makes the comparison meaningful, and
+  making it reproducible would mean touching the Monte Carlo core.
+  Revisit only if leaderboard integrity actually becomes a complaint.
 - `dailyDateKey()` is **UTC** (`toISOString().slice(0,10)`) and the
   client's `todayKey()` must stay identical — a local-date key would
   give Auckland and Lisbon different puzzles at the same instant.
-- **No pass phase**, via `G.forceKeep`. `roundPassDir(G)` /
-  `roundPassLetter(G, round)` are the new single points of truth that
-  replaced every `passDir(G.round)` call site; they short-circuit to
-  'keep'/'K' when `forceKeep` is set and are otherwise exactly the old
-  behaviour.
+- **`passTarget`/`passSource` take a DIRECTION, not a round number.**
+  They used to derive the direction from the round themselves, which is
+  silently wrong for any room that pins one. `roundPassDir(G)` /
+  `roundPassLetter(G, round)` are the single points of truth
+  (`G.forcePassDir || passDir(G.round)`), and every call site passes
+  `roundPassDir(G)` through. A pinned `'keep'` still skips the pass
+  phase in `dealRound`; the other three run a real one.
+- **`publicState` sends `passDir`.** `renderPass`/`renderPassReveal`
+  used to recompute it as `(G.round-1)%4` client-side, which showed the
+  wrong letter badge and the wrong "pass across" prompt the moment a
+  room's direction stopped being a function of its round number. They
+  now read `G.passDir`; the old expression survives only as a fallback
+  for the tutorial's fake state object, which has no such field.
+- Today's direction is shown on `#s-daily` before you play
+  (`DAILY_DIR_TEXT`). It gives nothing away — you'd see it on the pass
+  screen regardless — and it's what makes "the whole hand changes daily"
+  visible from the front door.
 - **The score is never sent by the client.** `submitDailyResult(G)` is
   called from `recordGameFinishedForAll` (which early-returns for daily
   rooms, so casual/ranked stats are never touched) and reads

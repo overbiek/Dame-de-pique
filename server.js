@@ -1933,15 +1933,19 @@ io.on('connection', (socket) => {
     const date = dailyDateKey();
     if (!DB_ENABLED) return socket.emit('dailyLeaderboardOk', { date, rows: [], you: null });
     try {
-      const rows = await db.getDailyLeaderboard(date, 25);
+      const rows = await db.getDailyLeaderboard(date, 100);
       let you = null;
       const acct = await lookupAccountByToken(accountToken);
-      if (acct && !rows.some(r => r.accountId === acct.id)) {
+      // Sent whenever the player has a score today, even if they're
+      // already visible in the top 100 — the client pins it to the bottom
+      // of the board as a permanent "you are here", not as an
+      // outside-the-list fallback the way the ranked ladder does.
+      if (acct) {
         const standing = await db.getDailyStanding(acct.id, date);
         if (standing) {
           you = {
-            position: standing.position, nickname: acct.nickname,
-            avatar: acct.avatar, score: standing.score,
+            accountId: acct.id, position: standing.position, entries: standing.entries,
+            nickname: acct.nickname, avatar: acct.avatar, score: standing.score,
           };
         }
       }

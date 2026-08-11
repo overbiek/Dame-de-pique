@@ -211,8 +211,10 @@ before pushing.
   mistake:
   1. **Table screens** (pass/play) — bespoke, see the `--cw`/`--ch`
      furniture above.
-  2. **Rail screens** (casual, ranked, rank, statistics, My Account) —
-     narrow left rail of header chrome, body in column 2.
+  2. **Rail screens** (casual, ranked, rank, statistics, My Account,
+     Daily Challenge) — narrow left rail of header chrome, body in
+     column 2. Daily Challenge takes these rules and then overrides the
+     column split to 50/50; see its own section.
   3. **Game-flow screens** (lobby, seat draw / dealer cut, round
      summary, final) — a single wide centred column, *opted out* of the
      rail layout. Their content is wide and sequential (a row of drawn
@@ -309,9 +311,20 @@ before pushing.
   the off-screen leftmost cards. Don't "improve" the centring.
 - **Landscape main menu** is a pure CSS reflow of the portrait markup —
   no DOM change. `.menu-wrap` becomes a two-column grid: an identity
-  rail (crest / title / tagline, with the How-to-play, Sound and Install
-  utilities at its foot) and the five tiles in column 2, Casual Play
-  spanning as a hero above a 2×2. Three things there are load-bearing:
+  rail (crest / title / tagline, with the How-to-play, Sound and
+  Tutorial utilities at its foot) and the six tiles in column 2 as an
+  even **2×3**. There is deliberately no hero span any more: markup
+  order (Casual, Daily, Ranked, Rank, Statistics, My Account) is exactly
+  the reading order a plain 2-column grid produces, so **auto-placement
+  alone** pairs Casual above Ranked and Daily above Rank — no explicit
+  `grid-column`/`grid-row` on any tile. Reordering the markup reorders
+  the grid; that's the only control.
+  Six tiles in the height three used to occupy is tight, which is what
+  the landscape tile/icon/type shrink and `display:none` on
+  `.tile-arrow` are paying for. Verified non-scrolling down to
+  667×375 (the smallest realistic landscape phone). If a seventh tile is
+  ever added, re-measure — the budget is genuinely spent.
+  Three things there are load-bearing:
   - The tagline's grid row is the `1fr` one. That's what pushes the
     utility group to the bottom of the rail — an `auto` margin can't,
     because on a grid item auto margins only absorb space inside that
@@ -954,11 +967,44 @@ before pushing.
   screen.** The hand plays on the ordinary pass/play table screens and
   the result lands on the ordinary final screen in a `#f-daily` block,
   exactly mirroring how `#f-ranked` works. So Daily Challenge needed no
-  table furniture and no landscape CSS of its own — `#s-daily` is a rail
-  screen and inherits the shared `.center-wrap` layout just by being
-  added to `LANDSCAPE_SCREENS`.
+  table furniture — it's in `LANDSCAPE_SCREENS` and picks up the shared
+  `.center-wrap` rail rules, then overrides the split (below).
   `renderFinal` clears `#f-daily` when `!G.daily`; it never populates
   it, since the `dailyResult` event can land either side of that render.
+- **`#s-daily` is the one rail screen that splits 50/50 instead**, and
+  it's the fourth landscape layout family in practice. Every other rail
+  screen has a small header cluster plus ONE wide body panel, so a
+  narrow column 1 is right. This screen has TWO real panels, so the
+  divider moves to the middle: `grid-template-columns:1fr 1fr` with the
+  leaderboard filling the space under the header cluster that would
+  otherwise sit empty.
+  **Placement there is explicit, per child, on purpose.** The shared
+  rules have already assigned chrome to column 1 and *everything else*
+  to `grid-column:2;grid-row:1/-1`, so mixing auto-placement back in for
+  the board would be fragile — each child of `#s-daily>.center-wrap`
+  gets a named cell instead. The ID in those selectors is also what wins
+  the specificity tie against the shared class-only rules.
+- **`#daily-board-wrap` is a direct child of `.center-wrap`, NOT of
+  `#daily-content`** — it has to occupy the whole left half on its own,
+  so it can't be nested inside the panel that occupies the right half.
+  In portrait it simply falls below the hero, which is the right reading
+  order there too.
+  It scrolls *internally* (`.daily-board-scroll` is the `overflow-y`
+  element, `flex:1`), and the grid item itself is `overflow:hidden` —
+  that's what keeps `.daily-you` pinned to the bottom edge of the box
+  while rows move under it. Deliberately **not** `position:fixed` like
+  `#rank-you-bar`: that one spans the viewport because the ranked
+  leaderboard *is* the whole screen, whereas this box shares the screen
+  with the hero panel beside it. Portrait has no height to bound the box
+  against, hence the `max-height:46vh` there, reset to `none` in
+  landscape where the grid's `1fr` row is the bound.
+- The daily leaderboard sends the **top 100**, and `you` is returned
+  whenever the player has a score today — *including* when they're
+  already visible in the list, unlike `getLeaderboard`'s
+  outside-the-top-N fallback. The pinned row is a permanent "you are
+  here", not a fallback. Row numbers are computed from the score
+  (equal scores share a rank) rather than the array index, so the list
+  agrees with the `RANK()` figure the pinned row shows.
 - **Guests can play but nothing is banked.** No leaderboard row, no
   streak, and the menu tile's dot is never set for them — "played today"
   is a fact about an *account*. This also matters mechanically: a guest

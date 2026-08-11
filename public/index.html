@@ -698,6 +698,43 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .daily-sub{font-size:.82rem;color:var(--muted)}
 .daily-streaks{display:flex;gap:9px;margin-top:12px}
 .daily-streaks .stat-card{flex:1}
+/* The leaderboard is a self-contained box: fixed heading, scrolling rows,
+   and the player's own standing pinned to the bottom EDGE OF THE BOX.
+   Deliberately not position:fixed like #rank-you-bar — that one spans the
+   viewport because the ranked leaderboard is the whole screen, whereas
+   this one shares the screen with the hero panel beside it. */
+#daily-board-wrap{
+  display:flex;flex-direction:column;min-height:0;margin-top:16px;
+  /* portrait has no height to bound it against, so cap it rather than let
+     100 rows run down the page. Landscape resets this — there the grid's
+     1fr row is the bound. */
+  max-height:46vh;
+  border:1px solid var(--line);border-radius:14px;overflow:hidden;
+  background:rgba(var(--ddp-gloss-rgb),.03);
+}
+.daily-board-head{
+  flex:0 0 auto;padding:9px 12px;font-family:'Playfair Display',serif;
+  font-size:.92rem;color:var(--gold-hi);
+  border-bottom:1px solid var(--line);background:rgba(var(--ddp-scrim-rgb),.14);
+}
+.daily-board-scroll{
+  flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:0 4px;
+}
+.daily-you{
+  flex:0 0 auto;display:flex;align-items:center;gap:8px;
+  padding:8px 12px;border-top:1px solid rgba(var(--ddp-brass-rgb),.35);
+  background:rgba(var(--ddp-brass-rgb),.14);color:var(--gold-hi);font-size:.85rem;
+}
+.daily-you .pos{
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  flex:0 0 auto;min-width:2.6em;color:var(--muted);
+}
+.daily-you .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.daily-you .sc{
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  flex:0 0 auto;font-weight:700;
+}
 .daily-rows{width:100%;border-collapse:collapse;font-size:.85rem}
 .daily-rows th,.daily-rows td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
 .daily-rows td.pos-col,.daily-rows td.score-col{
@@ -1291,7 +1328,9 @@ html.landscape-mode #s-menu .menu-wrap{
   height:100%;
   padding:10px 4px;
   display:grid;
-  grid-template-columns:minmax(190px,258px) 1fr;
+  /* narrower than it was: six tiles in two columns need the width more
+     than the rail does, and the rail only holds three stacked buttons */
+  grid-template-columns:minmax(158px,232px) 1fr;
   /* the tagline's row is the flexible one, so the utility group is
      pushed to the foot of the rail. An `auto` margin can't do this: on a
      grid item it only absorbs space inside that item's own area, it
@@ -1330,18 +1369,27 @@ html.landscape-mode #s-menu .exit-row .btn{text-align:left}
    inside the installed PWA. */
 html.landscape-mode #s-menu #install{margin-top:0}
 
-/* action grid: the primary tile spans as a hero, the rest form a 2x2 */
+/* action grid: an even 2x3. Markup order (Casual, Daily, Ranked, Rank,
+   Statistics, My Account) is exactly the reading order this produces, so
+   auto-placement alone pairs Casual above Ranked and Daily above Rank —
+   no explicit grid-column/row anywhere. The primary tile deliberately
+   does NOT span as a hero any more; it's the first cell of a level grid,
+   and its gold icon is what still marks it out.
+   Three rows must fit one landscape viewport without scrolling, which is
+   what the tighter tile/icon sizing below is for. */
 html.landscape-mode #s-menu .menu-tiles{
   grid-column:2;grid-row:1 / -1;align-self:center;
-  display:grid;grid-template-columns:1fr 1fr;gap:9px;
-  margin-top:0;padding-left:22px;
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  margin-top:0;padding-left:18px;
   border-left:1px solid rgba(var(--ddp-brass-rgb),.28);
 }
-html.landscape-mode #s-menu .tile.primary,
-html.landscape-mode #s-menu .tile.wide{grid-column:1 / -1}
-html.landscape-mode #s-menu .tile{padding:11px 13px;border-radius:14px;gap:11px}
-html.landscape-mode #s-menu .tile-icon{width:38px;height:38px;font-size:1.15rem;border-radius:11px}
-html.landscape-mode #s-menu .tile-sub{font-size:.72rem}
+html.landscape-mode #s-menu .tile{padding:9px 12px;border-radius:14px;gap:10px}
+html.landscape-mode #s-menu .tile-icon{width:34px;height:34px;font-size:1.05rem;border-radius:10px}
+html.landscape-mode #s-menu .tile-title{font-size:.92rem}
+html.landscape-mode #s-menu .tile-sub{font-size:.68rem}
+/* the arrow is pure decoration and the first thing to go when six tiles
+   have to share the height three used to */
+html.landscape-mode #s-menu .tile-arrow{display:none}
 
 /* ══ Landscape content screens — casual, ranked, rank, statistics ══
    All four share one shape in portrait: a .center-wrap holding a header
@@ -1428,6 +1476,41 @@ html.landscape-mode .screen.active .stat-value{font-size:1.15rem}
 /* #rank-you-bar is position:fixed to the viewport bottom, so the
    leaderboard has to reserve room or its last rows sit under it */
 html.landscape-mode #s-rank #rank-content{padding-bottom:52px}
+
+/* ── Daily Challenge: an even half/half split, not the narrow rail ──
+   Every other rail screen has a small header cluster and one wide body
+   panel, so a narrow column 1 is right. This screen has TWO real panels
+   — the leaderboard and the hero/play column — so the divider moves to
+   the middle and the leaderboard fills the space under the header
+   cluster that would otherwise sit empty.
+   Placement is explicit here rather than auto, because the generic rules
+   above have already assigned columns/rows: chrome to column 1, every
+   other child to `grid-column:2;grid-row:1/-1`. Mixing that with
+   auto-placement for the board would be fragile, so every child of this
+   screen's .center-wrap gets a cell by name. */
+html.landscape-mode #s-daily>.center-wrap{
+  grid-template-columns:1fr 1fr;
+  grid-template-rows:auto auto auto 1fr auto;
+}
+html.landscape-mode #s-daily>.center-wrap>.backlink{grid-column:1;grid-row:1}
+html.landscape-mode #s-daily>.center-wrap>h2{grid-column:1;grid-row:2}
+html.landscape-mode #s-daily>.center-wrap>.tagline{grid-column:1;grid-row:3}
+html.landscape-mode #s-daily>.center-wrap>#daily-board-wrap{
+  grid-column:1;grid-row:4;
+  /* the box does its own scrolling internally (.daily-board-scroll), so
+     the grid item itself must NOT scroll or the pinned "you" row would
+     scroll away with the rows */
+  overflow:hidden;padding-left:0;border-left:0;margin-top:10px;max-height:none;
+}
+/* the divider between the halves is the generic border-left these already
+   carry — only one of the three is ever visible at a time */
+html.landscape-mode #s-daily>.center-wrap>#daily-loading,
+html.landscape-mode #s-daily>.center-wrap>#daily-error,
+html.landscape-mode #s-daily>.center-wrap>#daily-content{grid-column:2;grid-row:1 / -1}
+html.landscape-mode #s-daily>.center-wrap>#err-daily{grid-column:1;grid-row:5}
+/* two stat cards side by side is plenty in half a screen */
+html.landscape-mode #s-daily .daily-score{font-size:1.9rem}
+html.landscape-mode #s-daily .daily-hero{padding:10px 8px 8px}
 
 /* ── My Account is still the exception, but for a different reason now
    that it's a hero + tabs hub rather than a flat form ──
@@ -1969,11 +2052,10 @@ html.landscape-mode #tutorial-callout{
         <div class="tile-arrow">›</div>
       </button>
 
-      <!-- Full width like Casual Play, deliberately: it leaves the
-           remaining four tiles as an exact 2x2 in landscape, so the tuned
-           menu grid keeps its shape instead of gaining a stray fifth cell.
-           The dot is set by refreshDailyBadge() once today's hand is done. -->
-      <button class="tile wide" onclick="goDaily()">
+      <!-- Second in markup order, which is what puts it beside Casual Play
+           in the landscape 2x3 (and directly above Rank). The dot is set by
+           refreshDailyBadge() once today's hand is done. -->
+      <button class="tile" onclick="goDaily()">
         <div class="tile-icon">🗓️</div>
         <div class="tile-body">
           <div class="tile-title">Daily Challenge<span class="tile-dot" id="menu-daily-dot"></span></div>
@@ -2022,10 +2104,10 @@ html.landscape-mode #tutorial-callout{
     <div class="exit-row" style="margin-top:22px">
       <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
       <button class="btn btn-ghost btn-sm" id="sfx-toggle" onclick="toggleSfxMuted()">🔊 Sound</button>
-      <!-- Reuses .info-circle-btn — the exact same round "?" already used
-           for "How ranked works" on the Ranked/Rank screens, so this
-           reads as an established control tier rather than a new one. -->
-      <button class="info-circle-btn" onclick="replayTutorial()" title="Replay tutorial" aria-label="Replay tutorial">?</button>
+      <!-- A full-size labelled button rather than the small round "?" this
+           used to be: the tutorial is the one control here a new player
+           actually needs to find, and an unlabelled icon buried it. -->
+      <button class="btn btn-ghost btn-sm" onclick="replayTutorial()" title="Replay tutorial">🎓 Tutorial</button>
     </div>
     <div id="err-menu" class="note bad" style="display:none"></div>
     <div id="install">
@@ -2144,10 +2226,21 @@ html.landscape-mode #tutorial-callout{
       <p class="note" id="daily-guest" style="display:none;margin-top:10px">
         You're playing as a guest &mdash; log in to appear on the leaderboard and build a streak.
       </p>
+    </div>
 
-      <h3 style="font-family:'Playfair Display',serif;color:var(--gold-hi);font-size:1rem;margin:18px 0 6px">Today's leaderboard</h3>
-      <div id="daily-board-empty" class="note" style="display:none">Nobody has finished today's hand yet. Be first.</div>
-      <table class="daily-rows" id="daily-board" style="display:none"><tbody id="daily-board-rows"></tbody></table>
+    <!-- A direct child of .center-wrap, NOT of #daily-content: in landscape
+         it takes the whole left half on its own, so it can't be nested
+         inside the panel that occupies the right half. In portrait it
+         simply falls below the hero, which is the right reading order
+         there too. Its own scroll lives on .daily-board-scroll so the
+         heading and the pinned "you" row stay put while the rows move. -->
+    <div id="daily-board-wrap" style="display:none">
+      <div class="daily-board-head">Today's leaderboard</div>
+      <div class="daily-board-scroll">
+        <div id="daily-board-empty" class="note" style="display:none">Nobody has finished today's hand yet. Be first.</div>
+        <table class="daily-rows" id="daily-board" style="display:none"><tbody id="daily-board-rows"></tbody></table>
+      </div>
+      <div class="daily-you" id="daily-you" style="display:none"></div>
     </div>
 
     <div id="err-daily" class="note bad" style="display:none"></div>
@@ -3065,6 +3158,9 @@ function goDaily(){
   $('daily-loading').style.display='block';
   $('daily-error').style.display='none';
   $('daily-content').style.display='none';
+  // Hidden until the board actually lands, so a stale list from an earlier
+  // visit isn't sitting there under a "Loading…" panel.
+  $('daily-board-wrap').style.display='none';
   socket.emit('getDailyStatus',{accountToken:account?accountToken:''});
   socket.emit('getDailyLeaderboard',{accountToken:account?accountToken:''});
 }
@@ -3119,27 +3215,34 @@ socket.on('dailyLeaderboardOk',d=>{
   if(!$('s-daily').classList.contains('active')) return;
   const rows=d.rows||[];
   const has=rows.length>0;
+  $('daily-board-wrap').style.display='flex';
   $('daily-board').style.display=has?'table':'none';
   $('daily-board-empty').style.display=has?'none':'block';
-  if(!has) return;
-  let h=rows.map((r,i)=>{
+  // Positions come from the row order the server already sorted, but ties
+  // share a rank — so read the rank off the score rather than the index,
+  // which is what makes the pinned row below agree with the list.
+  let pos=0,prevScore=null;
+  $('daily-board-rows').innerHTML=rows.map((r,i)=>{
+    if(r.score!==prevScore){ pos=i+1; prevScore=r.score; }
     const mine=account&&r.accountId===account.id;
     return `<tr class="${mine?'me':''}">
-      <td class="pos-col">${i+1}</td>
+      <td class="pos-col">${pos}</td>
       <td>${esc(r.avatar||'')} ${esc(r.nickname)}${r.shotMoon?' 🌕':''}</td>
       <td class="score-col">${r.score>0?'+':''}${r.score}</td>
     </tr>`;
   }).join('');
-  // Same "pin a you row" pattern the ranked leaderboard already uses, for
-  // when the player finished outside the top slice.
+
+  // The player's own standing is pinned to the foot of the box whether or
+  // not they're in the visible 100, so "where am I" never needs a scroll.
+  const you=$('daily-you');
   if(d.you){
-    h+=`<tr class="me">
-      <td class="pos-col">${d.you.position}</td>
-      <td>${esc(d.you.avatar||'')} ${esc(d.you.nickname)} (you)</td>
-      <td class="score-col">${d.you.score>0?'+':''}${d.you.score}</td>
-    </tr>`;
+    you.innerHTML=`<span class="pos">${ordinal(d.you.position)}</span>`
+      +`<span class="who">${esc(d.you.avatar||'')} ${esc(d.you.nickname)} (you)</span>`
+      +`<span class="sc">${d.you.score>0?'+':''}${d.you.score}</span>`;
+    you.style.display='flex';
+  }else{
+    you.style.display='none';
   }
-  $('daily-board-rows').innerHTML=h;
 });
 socket.on('dailyError',d=>{
   if(!$('s-daily').classList.contains('active')){ toast('err-menu',d.msg); return; }

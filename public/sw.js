@@ -3,8 +3,12 @@
 // editing it does NOT change this file's own bytes, so without a bump
 // here the browser never sees the service worker as updated and keeps
 // serving the OLD manifest forever. This has bitten us before.
-const CACHE = 'ddp-v5';
-const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
+// v6: added the Marquee brand splash art to ASSETS. Any ASSETS change
+// needs this string bumped or the browser never re-runs install() and
+// keeps serving the old cache — same trap as the manifest note above.
+const CACHE = 'ddp-v6';
+const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
+                '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

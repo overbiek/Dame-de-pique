@@ -24,7 +24,7 @@
 <script>
 (function(){try{
   var t=localStorage.getItem('ddp.tableTheme');
-  if(t==='emeraude'||t==='clair') document.documentElement.setAttribute('data-theme',t);
+  if(t==='emeraude'||t==='clair'||t==='marquee') document.documentElement.setAttribute('data-theme',t);
 }catch(e){}})();
 </script>
 
@@ -91,6 +91,45 @@
   --ddp-ai:#A8D4FF;        --ddp-ai-rgb:110,180,255;
   --ddp-mine:#A8ECCE;      --ddp-mine-rgb:63,191,136;
   --ddp-on-brass:#1E1703;
+  --ddp-scrim-rgb:0,0,0;   --ddp-gloss-rgb:255,255,255;
+}
+/* Marquee — the brand palette (deep emerald + brass) from the logo art.
+   Note for anyone comparing this against the design handoff it came from:
+   that brief's palette.css used --ddp-felt-0/1/2, --ddp-gold*, --ddp-cream,
+   --ddp-faint and --ddp-line, which are the DERIVED layer's names with a
+   --ddp- prefix bolted on. Those tokens don't exist. The real --ddp-*
+   names are the ones below, and the derived block further down is what
+   maps them onto --felt-0/--gold/--cream/--faint/--line.
+   Palette roles: bg-edge #020605, felt base #071A15, lit panel #0D2E25,
+   gold #C49E58, gold-bright #EED08E, gold-deep #806436, mint #B0CABE. */
+[data-theme="marquee"]{
+  --ddp-bg:#020605;
+  --ddp-felt:#0D2E25;      --ddp-felt-lo:#071A15;   --ddp-felt-rgb:13,46,37;
+  /* card faces stay near-identical across the dark themes, as documented */
+  --ddp-card:#EDE1CC;      --ddp-card-hi:#F8F0E0;   --ddp-card-lo:#E2D4BB;
+  --ddp-card-edge:#CFC0A6;
+  /* body text is a cool-warm off-white, NOT the brand gold. The handoff
+     proposed #EED08E here; in this codebase that token is --cream, i.e.
+     every line of body copy in the app, and gold body text both hurts
+     readability and collides with --gold-hi headings. The emerald
+     character lives in --ddp-muted instead, which is what mint is for. */
+  --ddp-ink:#EDE4D2;       --ddp-ink-rgb:237,228,210;
+  --ddp-muted:#B0CABE;
+  --ddp-brass:#C49E58;     --ddp-brass-hi:#EED08E;  --ddp-brass-lo:#806436;
+  --ddp-brass-rgb:196,158,88;
+  --ddp-heart:#8C2233;     --ddp-heart-rgb:140,34,51;
+  --ddp-spade:#16241E;     --ddp-spade-rgb:22,36,30;
+  /* dark theme, so the status accents carry over from Bordeaux/Émeraude
+     unchanged — checked against the #0D2E25 panel they sit on, no Clair-
+     style correction block needed */
+  --ddp-pos:#7FE0B4;       --ddp-neg:#F0968C;
+  --ddp-ai:#A8D4FF;        --ddp-ai-rgb:110,180,255;
+  --ddp-mine:#A8ECCE;      --ddp-mine-rgb:63,191,136;
+  --ddp-on-brass:#1C1606;
+  /* scrim/gloss stay neutral like the other dark themes. The handoff
+     suggested tinting gloss gold (#EED08E); it's used at alphas up to .4
+     for inset highlights on brass buttons, so gold-on-gold would go
+     muddy — the felt already carries the hue. */
   --ddp-scrim-rgb:0,0,0;   --ddp-gloss-rgb:255,255,255;
 }
 [data-theme="clair"]{
@@ -870,12 +909,27 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 
 /* theme preview cards — keeps the .theme-swatch-btn hook applyTableTheme()
    toggles .active on, restyled from a bare swatch dot into a card */
-.theme-swatch-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
-.theme-card{
+/* auto-fit rather than a fixed count: four cards sit in one row where
+   there's room and fall to 2x2 in the narrower landscape account panel,
+   so adding a theme never overflows the column it lives in */
+.theme-swatch-row{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));
+  gap:10px;margin-bottom:16px;
+}
+/* Selectors are .theme-swatch-btn.theme-card, not bare .theme-card, and
+   that matters: the base .theme-swatch-btn rule (28px circle, 50% radius)
+   is declared ~800 lines LATER in this stylesheet, so at the equal
+   specificity a bare .theme-card gives, source order handed the win to
+   the circle — these cards were rendering as 28px dots with their labels
+   clipped away, which is what the overflow:hidden was hiding. Same class
+   of source-order tie the Clair correction block and the tabular-figures
+   block both call out. Two classes (0,2,0) beats one (0,1,0) outright,
+   so this no longer depends on where either block sits. */
+.theme-swatch-btn.theme-card{
   width:auto;height:auto;border-radius:14px;padding:0;overflow:hidden;border:2px solid transparent;
   background:rgba(var(--ddp-scrim-rgb),.20);box-shadow:none;display:flex;flex-direction:column;
 }
-.theme-card.active{border-color:var(--gold)}
+.theme-swatch-btn.theme-card.active{border-color:var(--gold)}
 .tc-swatch{position:relative;height:44px;display:block}
 .tc-chip{position:absolute;top:8px;left:8px;width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(var(--ddp-gloss-rgb),.25)}
 .tc-name{font-size:.72rem;font-weight:600;color:var(--muted);padding:7px 6px;text-align:center}
@@ -1643,14 +1697,45 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
 
 /* ══ Theme swatches — base dot styling; the My Account hub overrides
    this into a card via .theme-card, see the "Personal / My Account hub"
-   block above ══ */
-.theme-swatch-row{display:flex;gap:8px}
+   block above ══
+   The `.theme-swatch-row{display:flex;gap:8px}` that used to sit here is
+   deleted rather than left as a harmless leftover: it tied on specificity
+   with the card-grid rule in that block and, being ~800 lines later, won.
+   Between that and .theme-swatch-btn beating a bare .theme-card on the
+   same tie, the entire theme-card redesign was inert — the picker was
+   rendering as flex-packed 28px circles with their labels clipped off by
+   overflow:hidden. The grid rule now lives only in the hub block, and
+   .theme-card carries two classes so it can't lose that tie again. */
 .theme-swatch-btn{
   width:28px;height:28px;border-radius:50%;padding:0;
   border:2px solid transparent;cursor:pointer;
   box-shadow:inset 0 0 0 1px rgba(var(--ddp-scrim-rgb),.35);
 }
 .theme-swatch-btn.active{border-color:var(--ddp-brass)}
+
+/* ══ Brand splash ══
+   The handoff shipped a 1080x1920 portrait loading screen, but this game
+   is landscape-only: background-size:cover on a ~900x412 viewport would
+   crop that art to a thin horizontal band through its middle, losing
+   both the emblem and the wordmark. So the SQUARE logo is what renders
+   in landscape (contain-fitted, letterboxed on #020605, which is the
+   art's own edge colour so the join is invisible), and the portrait
+   art is used where it actually fits. Both are 900px/720px WebP,
+   18KB and 40KB — the source PNGs were 3.1MB and 2.8MB. */
+#splash{
+  position:fixed;inset:0;z-index:9000;background:#020605;
+  pointer-events:none;opacity:1;transition:opacity .5s ease;
+}
+#splash.gone{opacity:0}
+.splash-art{
+  width:100%;height:100%;
+  background:#020605 url('/brand/marquee-logo.webp') center/contain no-repeat;
+}
+@media (orientation:portrait){
+  .splash-art{background-image:url('/brand/marquee-splash-portrait.webp');background-size:cover}
+}
+/* prefers-reduced-motion: no fade, just go */
+@media (prefers-reduced-motion:reduce){ #splash{transition:none} }
 
 /* ══ Tutorial ══ */
 .tutorial-scrim{
@@ -1840,6 +1925,17 @@ html.landscape-mode #tutorial-callout{
 </style>
 </head>
 <body>
+
+<!-- Brand splash. There was no boot/loading state before this — the app
+     ships #s-menu already .active and paints straight to the menu — so
+     this is a new UI state, not an asset swap. It is deliberately
+     non-blocking: hideSplash() fires on socket connect OR a hard 2.2s
+     timeout, whichever lands first, so a dead server or offline start
+     can never trap anyone behind it. pointer-events:none throughout, so
+     it can't swallow the first tap (which is what unlocks Web Audio).
+     It is NOT themed: a brand mark is the brand's colours, not the
+     player's chosen felt, the same way an OS splash screen works. -->
+<div id="splash" aria-hidden="true"><div class="splash-art"></div></div>
 
 <div id="conn">Reconnecting…</div>
 
@@ -2393,6 +2489,11 @@ html.landscape-mode #tutorial-callout{
               <span class="tc-swatch" style="background:linear-gradient(160deg,#E4D9C5,#CDBFA6)"><span class="tc-chip" style="background:#A9863C"></span></span>
               <span class="tc-name">Clair</span>
             </button>
+            <button class="theme-swatch-btn theme-card" data-theme="marquee"
+              onclick="applyTableTheme('marquee')" aria-label="Marquee theme">
+              <span class="tc-swatch" style="background:linear-gradient(160deg,#0D2E25,#020605)"><span class="tc-chip" style="background:#C49E58"></span></span>
+              <span class="tc-name">Marquee</span>
+            </button>
           </div>
 
           <button class="btn btn-primary btn-block" onclick="savePersonal()">Save</button>
@@ -2749,11 +2850,11 @@ function toggleSfxMuted(){
 // Bordeaux is the default and lives on :root, so it's the one value that
 // clears data-theme rather than setting it — keeps "no attribute" and
 // "bordeaux" from being two different states.
-const DDP_THEMES=['bordeaux','emeraude','clair'];
+const DDP_THEMES=['bordeaux','emeraude','clair','marquee'];
 const DDP_THEME_KEY='ddp.tableTheme';
 // keep in step with each theme's --ddp-bg; drives the Android status-bar
 // tint, which would otherwise stay the old hardcoded green
-const DDP_THEME_BG={bordeaux:'#120A0D',emeraude:'#0D1512',clair:'#F7F2E7'};
+const DDP_THEME_BG={bordeaux:'#120A0D',emeraude:'#0D1512',clair:'#F7F2E7',marquee:'#020605'};
 
 function applyTableTheme(key){
   if(!DDP_THEMES.includes(key)) key='bordeaux';
@@ -2770,6 +2871,27 @@ function initTableTheme(){
   try{ saved=localStorage.getItem(DDP_THEME_KEY); }catch(e){}
   applyTableTheme(saved||'bordeaux');
 }
+
+/* ── brand splash ──
+   Removed from the DOM after fading, so nothing is left overlaying the
+   app. Called from socket 'connect' and from a hard timeout, and guards
+   on already-gone so whichever arrives second is a no-op. MIN_MS stops
+   it flashing past on a fast local connect. */
+const SPLASH_MIN_MS=650, SPLASH_MAX_MS=2200;
+const splashAt=Date.now();
+let splashDone=false;
+function hideSplash(){
+  if(splashDone) return;
+  splashDone=true;
+  const wait=Math.max(0,SPLASH_MIN_MS-(Date.now()-splashAt));
+  setTimeout(()=>{
+    const el=document.getElementById('splash');
+    if(!el) return;
+    el.classList.add('gone');
+    setTimeout(()=>el.remove(),600);
+  },wait);
+}
+setTimeout(hideSplash,SPLASH_MAX_MS);
 
 /* ── storage (survives app backgrounding) ── */
 const SK='ddp.session';
@@ -3698,6 +3820,7 @@ socket.on('authError',d=>{
 
 /* connection status */
 socket.on('connect',()=>{
+  hideSplash();
   $('conn').style.display='none';
   const s=loadSession();
   if(s&&s.room&&s.token&&me===-1){ socket.emit('rejoin',{code:s.room,token:s.token}); }

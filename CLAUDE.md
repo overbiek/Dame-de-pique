@@ -281,12 +281,28 @@ before pushing.
   already navigated away would still overwrite the medallion, which
   would then show stale data the next time they open the screen — same
   screen-liveness pattern the Ranked screen's own listener already uses.
-- **`.theme-swatch-btn` now has two lives.** The bare circular-dot
-  styling (28px circle) is still the base rule and would still work
-  standalone; `.theme-card` (`applyTableTheme()` toggles `.active` on
-  whichever element carries `.theme-swatch-btn`, regardless of what else
-  it's wearing) restyles it into a labelled preview card for the account
-  hub without touching the JS or the id/data-attribute contract at all.
+- **`.theme-swatch-btn` has two lives, and the card one very nearly
+  didn't work.** The bare circular-dot styling (28px circle) is the base
+  rule; `.theme-swatch-btn.theme-card` restyles it into a labelled
+  preview card for the account hub, without touching the JS or the
+  id/data-attribute contract (`applyTableTheme()` toggles `.active` on
+  whichever element carries `.theme-swatch-btn`, whatever else it wears).
+  It is written with **two classes on purpose**. As originally shipped it
+  was a bare `.theme-card`, and there was a second
+  `.theme-swatch-row{display:flex;gap:8px}` in the swatch block ~800
+  lines further down. Both tied on specificity with the card rules and
+  both won on source order, so the entire card redesign was inert — the
+  picker rendered as flex-packed 28px circles with the labels clipped off
+  by its own `overflow:hidden`. Nobody noticed because it still looked
+  like a deliberate row of dots. Fixed by deleting the stale row rule and
+  giving the card rules two classes, so neither depends on ordering.
+  Same family of trap as the Clair correction block and the
+  tabular-figures block — but those two *rely* on source order winning,
+  which is exactly why this one lost.
+- `.theme-swatch-row` is `repeat(auto-fit,minmax(82px,1fr))`, not a fixed
+  column count: four cards sit in one row where there's room and fall to
+  3+1 / 2×2 in the narrower landscape account panel. A fifth theme needs
+  no layout change.
 - `max-width:none` on those wraps needs `!important` — `s-ranked`,
   `s-rank` and `s-stats` each carry an inline `style="max-width:440px"`.
   Same class of trap as the menu's `.exit-row` inline `margin-top`;
@@ -493,8 +509,8 @@ before pushing.
   context — same reason the pre-existing `.tap:active`/`.sel` z-index
   boosts already use the same `:has()` pattern on the parent slot.
 
-## Table themes (Bordeaux / Émeraude / Clair)
-- Three swappable palettes, picked in **My Account** (`#s-personal`),
+## Table themes (Bordeaux / Émeraude / Clair / Marquee)
+- Four swappable palettes, picked in **My Account** (`#s-personal`),
   persisted to `localStorage` as `ddp.tableTheme` (same convention as
   `ddp.sfxMuted`). Bordeaux is the default and lives on `:root` directly
   — there is deliberately no `[data-theme="bordeaux"]` selector, so
@@ -535,11 +551,66 @@ before pushing.
   meta, which needs the menu markup to exist.
 - Card backs (blue) and `--ok`/`--warn` are intentionally left
   un-themed: they're identity/semantic colours, not felt or card-face.
-- `--ddp-heart` is **identical in all three themes** and that's correct,
+- **Adding a theme means FOUR enumeration points, not one.** `DDP_THEMES`
+  (validation in `applyTableTheme`), `DDP_THEME_BG` (the `theme-color`
+  meta / Android status-bar tint), the inline anti-flash `<script>` in
+  `<head>` (which string-matches theme names — miss it and a first-load
+  user on that theme flashes Bordeaux), and a `.theme-swatch-btn
+  .theme-card` button in the picker. Missing any one fails quietly.
+- **Marquee** is the brand palette from the logo art (deep emerald
+  `#020605`/`#071A15`/`#0D2E25` + brass `#C49E58`/`#EED08E`/`#806436`,
+  mint `#B0CABE` as `--ddp-muted`). Two deliberate departures from the
+  design handoff it came from, both because that brief was written
+  against `CLAUDE.md` alone and never saw the stylesheet:
+  its `palette.css` used `--ddp-felt-0/1/2`, `--ddp-gold*`, `--ddp-cream`,
+  `--ddp-faint`, `--ddp-line` — those are the DERIVED layer's names with
+  a `--ddp-` prefix added, and **none of them exist**; only 3 of its 15
+  declarations would have done anything. And it proposed
+  `--ddp-cream:#EED08E`, i.e. gold; in this codebase that token is
+  `--cream`, every line of body copy in the app. Marquee uses a warm
+  off-white `#EDE4D2` and puts the emerald character in `--ddp-muted`.
+  Needs no Clair-style correction block — it's a dark theme, so the
+  status accents carry over from Bordeaux/Émeraude unchanged.
+- `--ddp-heart` is **identical in all four themes** and that's correct,
   not an oversight. It only ever renders on a card face (suit glyphs,
   the penalty-card tint), and the card faces are near-identical across
   themes, so there's nothing for it to adapt to. It's deliberately
   desaturated (`#8C2233`) so it doesn't compete with the brass.
+
+## Brand splash (`#splash`, `public/brand/*.webp`)
+- **This is the app's only boot state and it didn't exist before.**
+  `#s-menu` ships `class="active"` and the app paints straight to the
+  menu, so the splash is a new UI state layered on top, not a screen in
+  the `show()` rotation. It lives outside `#app`, `position:fixed`,
+  `z-index:9000`.
+- **Non-blocking by construction.** `hideSplash()` fires on socket
+  `connect` *or* a hard `SPLASH_MAX_MS` (2.2s) timeout, whichever lands
+  first, and guards on an already-done flag — so an offline start or a
+  dead server can never trap anyone behind it. `SPLASH_MIN_MS` (650ms)
+  stops it flashing past on a fast local connect. It removes itself from
+  the DOM after fading.
+- `pointer-events:none` throughout, deliberately: the first `pointerdown`
+  anywhere is what unlocks Web Audio (see the Sound section), and a
+  full-screen overlay that ate it would silently mute the first game.
+- **Not themed, on purpose** — a brand mark is the brand's colours, not
+  the player's chosen felt, the same as an OS splash screen. It doesn't
+  read `data-theme` at all.
+- **The landscape image is the SQUARE logo, not the portrait loading
+  screen**, and that's the whole reason two assets exist. The handoff's
+  loading screen is 1080×1920; `cover` on a ~900×412 landscape viewport
+  crops it to a thin horizontal band through the middle, losing both the
+  emblem and the wordmark. So landscape gets `marquee-logo.webp`
+  `contain`-fitted and letterboxed on `#020605` (the art's own edge
+  colour, so the join is invisible), and the portrait art is used only
+  under `@media (orientation:portrait)`, where it fits as designed.
+- Assets are **WebP, downscaled from the source PNGs** — 18KB and 40KB
+  against 3.1MB and 2.8MB. Don't commit the originals; this is a phone
+  PWA and they're in `sw.js`'s `ASSETS` (hence the `ddp-v6` bump).
+- `manifest.json`'s icons are deliberately **left alone**. The handoff
+  offers the seal as an icon source but warns its fine ring/tick detail
+  won't survive 48px, and it's full-bleed square art with no transparent
+  padded crop — changing icons also means regenerating the maskable set
+  and re-triggering the WebAPK install caveat documented above.
 
 ## Numeric readouts use tabular figures — this is functional
 - Scores, MMR, timers, trick counters and the round badge render in

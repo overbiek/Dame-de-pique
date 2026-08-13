@@ -577,12 +577,37 @@ before pushing.
   themes, so there's nothing for it to adapt to. It's deliberately
   desaturated (`#8C2233`) so it doesn't compete with the brass.
 
+## The app runs FULLSCREEN, not standalone
+- `manifest.json` is `"display":"fullscreen"` with a
+  `"display_override":["fullscreen","standalone","minimal-ui"]` chain.
+  Standalone still paints the Android status bar strip along the top edge
+  — that strip was real reclaimed screen space, which matters on a
+  landscape-only game whose vertical budget is already spent.
+- **Android bakes the display mode into the WebAPK at install time**,
+  exactly like `orientation`, so an already-installed copy keeps its old
+  chrome until it's uninstalled and re-added. That's why there's also a
+  runtime fallback: `requestTrueFullscreen()` rides the same one-shot
+  `pointerdown` listener the Web Audio unlock uses (the Fullscreen API
+  needs user activation) and asks for fullscreen directly. Entirely
+  best-effort — a no-op when already fullscreen, silently rejected in a
+  browser tab that won't allow it — but it reclaims the strip immediately
+  without anyone reinstalling.
+- `viewport-fit=cover` was already set and is what lets the layout paint
+  into the cutout area; the `env(safe-area-inset-*)` terms in `#app` and
+  in the `--cw`/`--ch` formulas are what keep content out of it. Those
+  insets shrink in fullscreen, so the card sizing gains the space
+  automatically — no formula change was needed.
+- `manifest.json` changed, so `sw.js`'s `CACHE` is bumped (`ddp-v7`).
+
 ## `.deco-box` — the Marquee Deco box treatment
-- An opt-in decoration (edge vignette + brass inset frame + icon glow)
-  added by putting `deco-box` on an element, `deco-primary` for the
-  stronger frame. Applied to the six menu `.tile`s (primary on Casual),
-  the four `.theme-swatch-btn.theme-card`s and the three `.acct-toptab`s.
-  CSS only — no JS, no markup beyond the class name.
+- An opt-in decoration (edge vignette + brass inset frame) added by
+  putting `deco-box` on an element, `deco-primary` for the stronger
+  frame. Applied to the four `.theme-swatch-btn.theme-card`s and the
+  three `.acct-toptab`s. CSS only — no JS, no markup beyond the class.
+- **The menu tiles deliberately do NOT use it** — they carry the same
+  look written directly on `.tile` with the mockup's literal values (see
+  the next section). Applying both would stack two vignettes and two
+  frames on top of each other.
 - **The menu tile icons are typographic glyphs, not emoji** (♠ ☀ ♛ ◆ ▤ ☺,
   from the Deco mockup), and that's what makes the treatment work on
   them: emoji ignore `color` and largely ignore `text-shadow`, so they
@@ -637,6 +662,45 @@ before pushing.
   noise. `.seg-btn` (the match-length picker) is the one clean remaining
   candidate if this is ever rolled further. Table/play-screen elements
   are out of scope on purpose — vertical budget.
+
+## Menu tiles — the Marquee Deco layout
+- Each tile is a **centred vertical stack**: glyph → NAME (uppercase
+  display face, 14px) → tagline (uppercase, 9px, `--muted`). Not the
+  old icon-beside-text row. `.tile-arrow` is `display:none` everywhere —
+  a centred three-line stack has nowhere to put a chevron — and
+  `.tile-icon` is a bare glyph, not a 44px chip, which is where the
+  height for the stack came from.
+- **`align-self:stretch` + `grid-template-rows:repeat(3,1fr)`** on
+  `.menu-tiles` is what makes the six tiles divide the full column height
+  instead of clustering in the middle. The per-orientation type/size
+  overrides that used to live in the landscape block are gone: shrinking
+  the type again in landscape is exactly what made it stop matching the
+  reference. Only vertical padding is trimmed there (10px, not 12px) —
+  at 667×375 "Ranked Multiplayer" wraps to two lines and `.tile` is
+  `overflow:hidden`, so the tagline was being clipped by ~2px.
+- **Two mappings differ from the spec this was built from**, both because
+  its token names assume a different system:
+  - `--ddp-gold-rgb` is `--ddp-brass-rgb`, and `--ddp-felt-0-rgb` had no
+    equivalent at all — **`--ddp-bg-rgb` was added to all four theme
+    blocks** for the vignette, following the existing companion pattern
+    rather than hardcoding felt hex into the rule.
+  - **The felt ramp is inverted relative to the mockup.** There
+    `--felt-0` is the DARKEST stop; here `--felt-0` is `--ddp-felt`, the
+    LIGHTEST, and `--felt-2` is `--ddp-bg`, the darkest. Copying the
+    spec's `felt-2 → felt-1 → felt-0` literally runs the gradient
+    bright-side-down. The rule orders them by meaning instead.
+- `.tile.primary` uses `color-mix()` against `--ddp-brass` rather than
+  the mockup's hardcoded `#16382c`/`#0a2019`/`#050f0c`, which are
+  Marquee's emerald and would leak into the other three themes.
+- **Clair needed two corrections, for the usual reason plus a new one.**
+  The vignette fades toward `--ddp-bg`, the darkest felt — but on Clair
+  `--ddp-bg` IS the near-white page colour, so the edge fade *lightened*
+  (#e4d9c5 → #eee7d8) and read as a bloom rather than a vignette. Clair
+  fades toward its warm ink instead, at .13 for a 1.28 edge contrast, in
+  the same band as the other three (1.06/1.42/1.25). Separately, the
+  mockup's `opacity:.7` tagline measures 2.63:1 on Clair — under AA, on
+  the smallest type in the app — so Clair takes it back to full opacity
+  (4.44:1). Both live in the end-of-stylesheet Clair block.
 
 ## Brand splash (`#splash`, `public/brand/*.webp`)
 - **This is the app's only boot state and it didn't exist before.**

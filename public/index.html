@@ -60,7 +60,7 @@
    checking it's actually landing on the felt somewhere. */
 :root{
   /* Bordeaux — near-black and wine, the original look */
-  --ddp-bg:#120A0D;
+  --ddp-bg:#120A0D;      --ddp-bg-rgb:18,10,13;
   --ddp-felt:#2B0D18;      --ddp-felt-lo:#1E0B12;   --ddp-felt-rgb:43,13,24;
   --ddp-card:#EDE1CC;      --ddp-card-hi:#F8F0E0;   --ddp-card-lo:#E2D4BB;
   --ddp-card-edge:#CFC0A6;
@@ -77,7 +77,7 @@
   --ddp-scrim-rgb:0,0,0;   --ddp-gloss-rgb:255,255,255;
 }
 [data-theme="emeraude"]{
-  --ddp-bg:#0D1512;
+  --ddp-bg:#0D1512;      --ddp-bg-rgb:13,21,18;
   --ddp-felt:#1F4732;      --ddp-felt-lo:#163526;   --ddp-felt-rgb:31,71,50;
   --ddp-card:#EDE1CC;      --ddp-card-hi:#F8F0E0;   --ddp-card-lo:#E2D4BB;
   --ddp-card-edge:#CFC0A6;
@@ -103,7 +103,7 @@
    Palette roles: bg-edge #020605, felt base #071A15, lit panel #0D2E25,
    gold #C49E58, gold-bright #EED08E, gold-deep #806436, mint #B0CABE. */
 [data-theme="marquee"]{
-  --ddp-bg:#020605;
+  --ddp-bg:#020605;      --ddp-bg-rgb:2,6,5;
   --ddp-felt:#0D2E25;      --ddp-felt-lo:#071A15;   --ddp-felt-rgb:13,46,37;
   /* card faces stay near-identical across the dark themes, as documented */
   --ddp-card:#EDE1CC;      --ddp-card-hi:#F8F0E0;   --ddp-card-lo:#E2D4BB;
@@ -133,7 +133,7 @@
   --ddp-scrim-rgb:0,0,0;   --ddp-gloss-rgb:255,255,255;
 }
 [data-theme="clair"]{
-  --ddp-bg:#F7F2E7;
+  --ddp-bg:#F7F2E7;      --ddp-bg-rgb:247,242,231;
   --ddp-felt:#E4D9C5;      --ddp-felt-lo:#EDE5D6;   --ddp-felt-rgb:228,217,197;
   --ddp-card:#FFFFFF;      --ddp-card-hi:#FFFFFF;   --ddp-card-lo:#F4EFE6;
   --ddp-card-edge:#D5CBB8;
@@ -215,7 +215,10 @@
   border:1px solid rgba(var(--ddp-brass-rgb),.22);
 }
 .deco-box.deco-primary::after{border-color:rgba(var(--ddp-brass-rgb),.5)}
-.deco-box .tile-icon{text-shadow:0 0 10px rgba(var(--ddp-brass-rgb),.4)}
+/* .deco-box is now the treatment for the theme cards and account tabs
+   only — the menu tiles carry the same look written directly on .tile,
+   with the mockup's literal values. Applying both would stack two
+   vignettes and two frames on top of each other. */
 /* the tab bar's pills are ~34px tall; a 6px inset leaves a cramped
    frame, and the spec's own note is that a full tile treatment reads
    heavy on a short pill */
@@ -703,22 +706,74 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .menu-wrap{max-width:420px;margin:0 auto;padding-top:5.5vh;text-align:center}
 .menu-crest{font-size:1rem;letter-spacing:.5em;color:var(--gold-lo);opacity:.75;margin-bottom:4px}
 .menu-tiles{display:flex;flex-direction:column;gap:11px;margin-top:28px;text-align:left}
+/* ══ Menu tiles — Marquee Deco ══
+   Icon → name → tagline, stacked and centred, with a dark vertical
+   gradient, a brass glow from the top, a vignette darkening both side
+   edges, and a thin inset brass frame.
+
+   Two mappings that are NOT what the spec this came from wrote, because
+   its token names don't exist here:
+   - `--ddp-gold-rgb` is `--ddp-brass-rgb`, and `--ddp-felt-0-rgb` had no
+     equivalent at all — `--ddp-bg-rgb` was added to all four theme
+     blocks for it, following the existing companion pattern rather than
+     hardcoding the felt hex into this rule.
+   - **The felt ramp is inverted relative to the mockup.** There
+     `--felt-0` is the DARKEST stop; here `--felt-0` is `--ddp-felt`, the
+     LIGHTEST, and `--felt-2` is `--ddp-bg`, the darkest. Copying the
+     spec's `felt-2 → felt-1 → felt-0` literally would have run the
+     gradient bright-side-down. The order below is by meaning: light at
+     the top, dark at the foot, which is what the mockup shows. */
 .tile{
-  display:flex;align-items:center;gap:14px;width:100%;
-  font:inherit;text-align:left;color:inherit;appearance:none;
-  padding:15px 16px;border-radius:18px;cursor:pointer;
-  background:linear-gradient(160deg,rgba(var(--ddp-gloss-rgb),.05),rgba(var(--ddp-gloss-rgb),.015));
-  border:1px solid var(--line);
-  transition:transform .13s,border-color .2s,background .2s,box-shadow .2s;
+  position:relative;overflow:hidden;isolation:isolate;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  width:100%;font:inherit;text-align:center;color:inherit;appearance:none;
+  padding:12px 14px;border-radius:14px;cursor:pointer;
+  background:
+    radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.16), transparent 60%),
+    linear-gradient(180deg, var(--felt-0) 0%, var(--felt-1) 55%, var(--felt-2) 100%);
+  border:1px solid rgba(var(--ddp-brass-rgb),.28);
+  box-shadow:inset 0 0 0 1px rgba(var(--ddp-scrim-rgb),.4), 0 6px 16px rgba(var(--ddp-scrim-rgb),.45);
+  transition:transform .13s,border-color .2s,box-shadow .2s;
   touch-action:manipulation;
+}
+/* side-edge vignette. z-index:-1 + the isolation above keep both pseudos
+   above the tile's own background but below its icon and text — an
+   absolutely-positioned pseudo otherwise paints OVER in-flow content, and
+   the glyph sits right where this is darkest. */
+.tile::before,.tile::after{content:"";position:absolute;pointer-events:none;z-index:-1}
+.tile::before{
+  inset:0;
+  background:linear-gradient(90deg,
+    rgba(var(--ddp-bg-rgb),.55), transparent 22%,
+    transparent 78%, rgba(var(--ddp-bg-rgb),.55));
+}
+/* inset brass frame — a pseudo rather than a border on the real element,
+   so it adds no box-model size and the landscape grid math is untouched */
+.tile::after{
+  inset:6px;border-radius:9px;
+  border:1px solid rgba(var(--ddp-brass-rgb),.22);
 }
 .tile:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .tile:active{transform:scale(.98)}
-.tile:hover{border-color:rgba(var(--ddp-brass-rgb),.35);background:linear-gradient(160deg,rgba(var(--ddp-brass-rgb),.10),rgba(var(--ddp-gloss-rgb),.02))}
+.tile:hover{border-color:rgba(var(--ddp-brass-rgb),.45)}
+/* The featured tile. The mockup hardcodes #16382c/#0a2019/#050f0c, which
+   are Marquee's emerald — using them literally would leak emerald into
+   Bordeaux, Émeraude and Clair. Same effect (a lifted, warmer fill and a
+   brighter frame) expressed through the tokens instead. */
+.tile.primary{
+  background:
+    radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.22), transparent 60%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--felt-0) 88%, var(--ddp-brass)) 0%,
+      var(--felt-1) 55%, var(--felt-2) 100%);
+  border-color:rgba(var(--ddp-brass-rgb),.5);
+}
+.tile.primary::after{border-color:rgba(var(--ddp-brass-rgb),.5)}
+/* A bare glyph, not a chip: the mockup's icon has no background box, and
+   dropping the 44px tile frees the height the centred stack needs. */
 .tile-icon{
-  width:44px;height:44px;border-radius:13px;flex:0 0 auto;
-  display:grid;place-items:center;font-size:1.35rem;line-height:1;
-  background:rgba(var(--ddp-brass-rgb),.12);border:1px solid rgba(var(--ddp-brass-rgb),.25);
+  flex:0 0 auto;font-size:22px;line-height:1;
+  text-shadow:0 0 10px rgba(var(--ddp-brass-rgb),.4);
   /* The tile glyphs are TYPOGRAPHIC (♠ ☀ ♛ ◆ ▤ ☺), not colour emoji, so
      unlike emoji they take `color` and the .deco-box text-shadow glow —
      which is the whole point, it's what makes them read as brass in the
@@ -732,18 +787,23 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   color:var(--gold-hi);
   font-family:'DM Sans','Segoe UI Symbol','Noto Sans Symbols 2','Apple Symbols',sans-serif;
 }
-.tile.primary .tile-icon{
-  background:linear-gradient(175deg,var(--gold-hi),var(--gold) 45%,var(--gold-lo));
-  color:var(--ddp-on-brass);border-color:transparent;
-  box-shadow:0 3px 10px rgba(var(--ddp-scrim-rgb),.28),inset 0 1px 0 rgba(var(--ddp-gloss-rgb),.4);
-}
-.tile-body{flex:1;min-width:0}
+/* The featured tile is marked out by its brighter fill and frame, not by
+   a gold chip behind the glyph — so the glyph stays brass like the rest. */
+.tile.primary .tile-icon{text-shadow:0 0 14px rgba(var(--ddp-brass-rgb),.55)}
+.tile-body{flex:0 0 auto;width:100%;min-width:0}
+/* the name */
 .tile-title{
-  font-family:'Playfair Display',serif;font-weight:600;font-size:1.0rem;
-  color:var(--cream);display:flex;align-items:center;gap:7px;line-height:1.3;
+  font-family:'Playfair Display',serif;font-weight:700;
+  font-size:14px;letter-spacing:.03em;text-transform:uppercase;line-height:1.2;
+  color:var(--cream);display:flex;align-items:center;justify-content:center;gap:6px;
 }
-.tile-sub{font-size:.76rem;color:var(--faint);margin-top:2px}
-.tile-arrow{color:var(--faint);font-size:1.2rem;flex:0 0 auto;opacity:.7}
+/* the short explanation */
+.tile-sub{
+  font-size:9px;letter-spacing:.08em;text-transform:uppercase;line-height:1.35;
+  opacity:.7;color:var(--muted);margin-top:4px;
+}
+/* a centred three-line stack has nowhere to put a chevron */
+.tile-arrow{display:none}
 .pill-tag{font-size:.56rem;font-weight:800;letter-spacing:.05em;padding:2px 7px;
   border-radius:999px;text-transform:uppercase;white-space:nowrap}
 .pill-tag.soon{background:rgba(var(--ddp-gloss-rgb),.07);color:var(--faint);border:1px solid var(--line)}
@@ -1487,19 +1547,25 @@ html.landscape-mode #s-menu #install{margin-top:0}
    and its gold icon is what still marks it out.
    Three rows must fit one landscape viewport without scrolling, which is
    what the tighter tile/icon sizing below is for. */
+/* align-self:stretch + three equal rows, so the six tiles divide the full
+   height of the column rather than clustering in the middle and leaving
+   dead space above and below. The tiles are the content of this screen;
+   they should own the space. */
 html.landscape-mode #s-menu .menu-tiles{
-  grid-column:2;grid-row:1 / -1;align-self:center;
-  display:grid;grid-template-columns:1fr 1fr;gap:8px;
-  margin-top:0;padding-left:18px;
+  grid-column:2;grid-row:1 / -1;align-self:stretch;
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8px;
+  margin-top:0;padding-left:18px;min-height:0;
   border-left:1px solid rgba(var(--ddp-brass-rgb),.28);
 }
-html.landscape-mode #s-menu .tile{padding:9px 12px;border-radius:14px;gap:10px}
-html.landscape-mode #s-menu .tile-icon{width:34px;height:34px;font-size:1.05rem;border-radius:10px}
-html.landscape-mode #s-menu .tile-title{font-size:.92rem}
-html.landscape-mode #s-menu .tile-sub{font-size:.68rem}
-/* the arrow is pure decoration and the first thing to go when six tiles
-   have to share the height three used to */
-html.landscape-mode #s-menu .tile-arrow{display:none}
+/* the per-orientation size overrides that used to live here are gone: the
+   base .tile rules now carry the mockup's exact type sizes, and shrinking
+   them again in landscape is what made the tiles look different from the
+   reference. Height comes from the 1fr rows instead. */
+/* Slightly tighter vertical padding than the base rule: at 667x375 the
+   longest name ("Ranked Multiplayer") wraps to two lines, and with .tile
+   being overflow:hidden that clipped the tagline by ~2px rather than
+   scrolling. This buys 4px, which clears it with room to spare. */
+html.landscape-mode #s-menu .tile{min-height:0;padding:10px 12px}
 
 /* ══ Landscape content screens — casual, ranked, rank, statistics ══
    All four share one shape in portrait: a .center-wrap holding a header
@@ -1997,6 +2063,29 @@ html.landscape-mode #tutorial-callout{
 }
 [data-theme="clair"] .deco-box::after{border-color:rgba(var(--ddp-brass-rgb),.40)}
 [data-theme="clair"] .deco-box.deco-primary::after{border-color:rgba(var(--ddp-brass-rgb),.72)}
+
+/* The menu tiles' side vignette is built on --ddp-bg-rgb, the darkest
+   felt tone — except on Clair, where --ddp-bg IS the near-white page
+   colour, so the "fade to the edges" LIGHTENS instead of darkening and
+   reads as a bloom. Measured: the edge goes from #e4d9c5 to #eee7d8,
+   i.e. brighter than the tile it sits on. Clair therefore fades toward
+   its warm ink instead, at .13 for a 1.28 edge contrast — the same band
+   Bordeaux/Émeraude/Marquee land in (1.06/1.42/1.25) with .55 of their
+   own near-black bg. Frame gets the same lift as the .deco-box one. */
+[data-theme="clair"] .tile::before{
+  background:linear-gradient(90deg,
+    rgba(var(--ddp-scrim-rgb),.13), transparent 22%,
+    transparent 78%, rgba(var(--ddp-scrim-rgb),.13));
+}
+[data-theme="clair"] .tile::after{border-color:rgba(var(--ddp-brass-rgb),.40)}
+[data-theme="clair"] .tile.primary::after{border-color:rgba(var(--ddp-brass-rgb),.72)}
+[data-theme="clair"] .tile{border-color:rgba(var(--ddp-brass-rgb),.45)}
+/* The mockup's tagline is opacity .7, which works where --muted is a pale
+   mint on dark felt (Bordeaux 5.11, Émeraude 3.83, Marquee 4.89) but not
+   on Clair, where --muted is a dark ink on pale felt and .7 washes 9px
+   uppercase text down to 2.63:1 — under AA, at about the smallest type in
+   the app. Full opacity puts it back to 4.44. */
+[data-theme="clair"] .tile-sub{opacity:1}
 </style>
 </head>
 <body>
@@ -2214,7 +2303,7 @@ html.landscape-mode #tutorial-callout{
     <p class="tagline">Count your hearts, count your cards.</p>
 
     <div class="menu-tiles">
-      <button class="tile primary deco-box deco-primary" onclick="goCasual()">
+      <button class="tile primary" onclick="goCasual()">
         <div class="tile-icon">♠︎</div>
         <div class="tile-body">
           <div class="tile-title">Casual Play</div>
@@ -2226,7 +2315,7 @@ html.landscape-mode #tutorial-callout{
       <!-- Second in markup order, which is what puts it beside Casual Play
            in the landscape 2x3 (and directly above Rank). The dot is set by
            refreshDailyBadge() once today's hand is done. -->
-      <button class="tile deco-box" onclick="goDaily()">
+      <button class="tile" onclick="goDaily()">
         <div class="tile-icon">☀︎</div>
         <div class="tile-body">
           <div class="tile-title">Daily Challenge<span class="tile-dot" id="menu-daily-dot"></span></div>
@@ -2235,7 +2324,7 @@ html.landscape-mode #tutorial-callout{
         <div class="tile-arrow">›</div>
       </button>
 
-      <button class="tile deco-box" onclick="goRanked()">
+      <button class="tile" onclick="goRanked()">
         <div class="tile-icon">♛</div>
         <div class="tile-body">
           <div class="tile-title">Ranked Multiplayer</div>
@@ -2244,7 +2333,7 @@ html.landscape-mode #tutorial-callout{
         <div class="tile-arrow">›</div>
       </button>
 
-      <button class="tile deco-box" onclick="goRank()">
+      <button class="tile" onclick="goRank()">
         <div class="tile-icon">◆</div>
         <div class="tile-body">
           <div class="tile-title">Rank</div>
@@ -2253,7 +2342,7 @@ html.landscape-mode #tutorial-callout{
         <div class="tile-arrow">›</div>
       </button>
 
-      <button class="tile deco-box" onclick="goStats()">
+      <button class="tile" onclick="goStats()">
         <div class="tile-icon">▤</div>
         <div class="tile-body">
           <div class="tile-title">Statistics</div>
@@ -2262,7 +2351,7 @@ html.landscape-mode #tutorial-callout{
         <div class="tile-arrow">›</div>
       </button>
 
-      <button class="tile deco-box" onclick="goPersonal()">
+      <button class="tile" onclick="goPersonal()">
         <div class="tile-icon" id="menu-avatar-icon">☺︎</div>
         <div class="tile-body">
           <div class="tile-title">My Account</div>
@@ -2908,6 +2997,31 @@ SFX.loadCardSounds('/sounds/').catch(()=>{}); // fetch doesn't need a user gestu
 // Web Audio needs a user gesture before it'll actually make sound —
 // unlock on the very first tap/click anywhere, whichever screen that is.
 document.addEventListener('pointerdown',()=>SFX.unlock(),{once:true});
+
+/* ── true fullscreen ──
+   manifest.json is "display":"fullscreen", which is the proper fix, but
+   Android bakes the display mode into the installed WebAPK at INSTALL
+   time — an already-installed copy keeps its old standalone chrome (the
+   status bar strip at the top) until it's uninstalled and re-added. This
+   is the same caveat the orientation unlock hit, documented in CLAUDE.md.
+
+   So: also ask for fullscreen at runtime on the first real gesture. It
+   needs user activation, hence riding the same one-shot pointerdown the
+   Web Audio unlock uses. Entirely best-effort — it's a no-op when the
+   PWA is already fullscreen, and rejects harmlessly in a browser tab
+   that doesn't allow it. It reclaims the status-bar strip immediately
+   without anyone reinstalling anything. */
+function requestTrueFullscreen(){
+  try{
+    const el=document.documentElement;
+    if(document.fullscreenElement) return;
+    const fn=el.requestFullscreen||el.webkitRequestFullscreen;
+    if(!fn) return;
+    const r=fn.call(el,{navigationUI:'hide'});
+    if(r&&r.catch) r.catch(()=>{});   // denied / not user-activated — fine
+  }catch(e){}
+}
+document.addEventListener('pointerdown',requestTrueFullscreen,{once:true});
 function updateSfxToggleUI(){
   const b=$('sfx-toggle'); if(!b) return;
   const muted=loadSfxMuted();

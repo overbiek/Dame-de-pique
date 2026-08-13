@@ -583,6 +583,17 @@ before pushing.
   stronger frame. Applied to the six menu `.tile`s (primary on Casual),
   the four `.theme-swatch-btn.theme-card`s and the three `.acct-toptab`s.
   CSS only — no JS, no markup beyond the class name.
+- **The menu tile icons are typographic glyphs, not emoji** (♠ ☀ ♛ ◆ ▤ ☺,
+  from the Deco mockup), and that's what makes the treatment work on
+  them: emoji ignore `color` and largely ignore `text-shadow`, so they
+  could never take the brass tint or the `.deco-box` icon glow. The three
+  with colour-emoji presentation variants (♠ ☀ ☺) carry **U+FE0E** in the
+  markup — without it Android renders them in colour and both the tint
+  and the glow are silently lost. `.tile-icon` also carries an explicit
+  symbol font fallback, since DM Sans has no ♛ or ▤.
+  My Account's icon is the exception: `updateMenuProfileUI()` replaces it
+  with the player's own avatar emoji when they've set one, so ☺ is only
+  the fallback (in both the markup and that function — change both).
 - **Built from `--ddp-brass-rgb` / `--ddp-scrim-rgb`, never Marquee's
   hex**, so it flips with the theme like everything else. (The spec it
   came from called the brass companion `--ddp-gold-rgb` and hung the icon

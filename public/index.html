@@ -719,6 +719,18 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   width:44px;height:44px;border-radius:13px;flex:0 0 auto;
   display:grid;place-items:center;font-size:1.35rem;line-height:1;
   background:rgba(var(--ddp-brass-rgb),.12);border:1px solid rgba(var(--ddp-brass-rgb),.25);
+  /* The tile glyphs are TYPOGRAPHIC (♠ ☀ ♛ ◆ ▤ ☺), not colour emoji, so
+     unlike emoji they take `color` and the .deco-box text-shadow glow —
+     which is the whole point, it's what makes them read as brass in the
+     Marquee Deco treatment. The three with emoji presentation variants
+     (♠ ☀ ☺) carry U+FE0E in the markup, or Android renders them in
+     colour and both the tint and the glow are lost.
+     The explicit symbol fallbacks matter for the same reason: DM Sans
+     has no ♛/▤, and letting the browser pick per-glyph is what avoids
+     tofu on Android. My Account's icon is the exception — it's replaced
+     by the player's own avatar emoji when they've picked one. */
+  color:var(--gold-hi);
+  font-family:'DM Sans','Segoe UI Symbol','Noto Sans Symbols 2','Apple Symbols',sans-serif;
 }
 .tile.primary .tile-icon{
   background:linear-gradient(175deg,var(--gold-hi),var(--gold) 45%,var(--gold-lo));
@@ -2203,7 +2215,7 @@ html.landscape-mode #tutorial-callout{
 
     <div class="menu-tiles">
       <button class="tile primary deco-box deco-primary" onclick="goCasual()">
-        <div class="tile-icon">🂡</div>
+        <div class="tile-icon">♠︎</div>
         <div class="tile-body">
           <div class="tile-title">Casual Play</div>
           <div class="tile-sub">Friends &amp; AI &middot; create or join a room</div>
@@ -2215,7 +2227,7 @@ html.landscape-mode #tutorial-callout{
            in the landscape 2x3 (and directly above Rank). The dot is set by
            refreshDailyBadge() once today's hand is done. -->
       <button class="tile deco-box" onclick="goDaily()">
-        <div class="tile-icon">🗓️</div>
+        <div class="tile-icon">☀︎</div>
         <div class="tile-body">
           <div class="tile-title">Daily Challenge<span class="tile-dot" id="menu-daily-dot"></span></div>
           <div class="tile-sub" id="menu-daily-sub">One hand &middot; same deal for everyone</div>
@@ -2224,7 +2236,7 @@ html.landscape-mode #tutorial-callout{
       </button>
 
       <button class="tile deco-box" onclick="goRanked()">
-        <div class="tile-icon">⚔️</div>
+        <div class="tile-icon">♛</div>
         <div class="tile-body">
           <div class="tile-title">Ranked Multiplayer</div>
           <div class="tile-sub">Humans only &middot; climb the ladder</div>
@@ -2233,7 +2245,7 @@ html.landscape-mode #tutorial-callout{
       </button>
 
       <button class="tile deco-box" onclick="goRank()">
-        <div class="tile-icon">🏆</div>
+        <div class="tile-icon">◆</div>
         <div class="tile-body">
           <div class="tile-title">Rank</div>
           <div class="tile-sub">Leaderboard &amp; your standing</div>
@@ -2242,7 +2254,7 @@ html.landscape-mode #tutorial-callout{
       </button>
 
       <button class="tile deco-box" onclick="goStats()">
-        <div class="tile-icon">📊</div>
+        <div class="tile-icon">▤</div>
         <div class="tile-body">
           <div class="tile-title">Statistics</div>
           <div class="tile-sub">Your all-time numbers</div>
@@ -2251,7 +2263,7 @@ html.landscape-mode #tutorial-callout{
       </button>
 
       <button class="tile deco-box" onclick="goPersonal()">
-        <div class="tile-icon" id="menu-avatar-icon">👤</div>
+        <div class="tile-icon" id="menu-avatar-icon">☺︎</div>
         <div class="tile-body">
           <div class="tile-title">My Account</div>
           <div class="tile-sub" id="menu-personal-sub">Choose your nickname &amp; avatar</div>
@@ -3487,7 +3499,7 @@ let lastAuthAction='';
 
 function updateMenuProfileUI(){
   const id=identity();
-  $('menu-avatar-icon').textContent=id.avatar||'👤';
+  $('menu-avatar-icon').textContent=id.avatar||'☺︎';
   $('menu-personal-sub').textContent=id.name
     ? `Playing as ${id.name}`
     : 'Choose your nickname & avatar';

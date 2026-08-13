@@ -177,6 +177,50 @@
   --pad:clamp(12px,3.6vw,20px);
 }
 
+/* ══ Marquee Deco box treatment ══
+   A vignette toward the edges plus a brass corner-tick inset frame,
+   opt-in per element via .deco-box. Built entirely from the derived
+   token layer (--ddp-brass-rgb / --ddp-scrim-rgb), never from Marquee's
+   literal hex, so it flips with the theme like everything else — on
+   Clair the scrim token is already the warm ink rather than black.
+
+   Two notes for anyone comparing this against the spec it came from:
+   that spec named the brass companion --ddp-gold-rgb and hung the icon
+   glow off `.ic`. Neither exists here — the token is --ddp-brass-rgb and
+   the menu icon element is .tile-icon, so `.deco-box .ic` would have
+   been a rule that silently matched nothing.
+
+   The stacking is the part that isn't optional. An absolutely-positioned
+   pseudo-element paints ABOVE its host's in-flow text, so a .55-alpha
+   scrim on ::before would have washed over the tile's own icon and
+   label — and the icon sits right in the left edge band where the
+   vignette is darkest. isolation:isolate makes the host a stacking
+   context so z-index:-1 lands the decoration above the host's own
+   background but below its content, which is the only layer that works
+   without touching the markup. */
+.deco-box{position:relative;overflow:hidden;isolation:isolate}
+.deco-box::before,
+.deco-box::after{content:"";position:absolute;pointer-events:none;z-index:-1}
+.deco-box::before{
+  inset:0;
+  background:
+    radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.10), transparent 60%),
+    linear-gradient(90deg, rgba(var(--ddp-scrim-rgb),.34), transparent 24%,
+                           transparent 76%, rgba(var(--ddp-scrim-rgb),.34));
+}
+/* inset frame — no border/padding on the real element, so no box-model
+   impact and the landscape 2x3 grid math is untouched */
+.deco-box::after{
+  inset:6px;border-radius:inherit;
+  border:1px solid rgba(var(--ddp-brass-rgb),.22);
+}
+.deco-box.deco-primary::after{border-color:rgba(var(--ddp-brass-rgb),.5)}
+.deco-box .tile-icon{text-shadow:0 0 10px rgba(var(--ddp-brass-rgb),.4)}
+/* the tab bar's pills are ~34px tall; a 6px inset leaves a cramped
+   frame, and the spec's own note is that a full tile treatment reads
+   heavy on a short pill */
+.acct-toptab.deco-box::after{inset:3px}
+
 /* On narrow phones, tighten the overlap further so all 13 cards of a hand
    fit on screen at once without horizontal scrolling. */
 @media (max-width:400px){
@@ -1922,6 +1966,25 @@ html.landscape-mode #tutorial-callout{
 [data-theme="clair"] .note.bad{color:#8E2A20}
 [data-theme="clair"] .btn.danger{color:#8E2A20}
 [data-theme="clair"] .note.good{color:var(--ddp-mine)}
+
+/* Deco boxes on Clair, which breaks in BOTH directions at once — which is
+   why it needed a correction and the other three didn't. Measured as the
+   contrast of the treatment against the tile's own background:
+     vignette edge  Bordeaux 1.14 · Émeraude 1.45 · Marquee 1.26 · Clair 2.00
+     inset frame    Bordeaux 1.43 · Émeraude 1.35 · Marquee 1.43 · Clair 1.20
+   The scrim token is Clair's warm ink rather than black, so at .34 it
+   reads as a grey smudge across a pale tile; and brass at .22 all but
+   vanishes on a pale felt. The alphas below were solved for rather than
+   guessed: .14 puts the vignette at 1.31, and .40/.72 put the frame at
+   1.40/2.05 — the band the three dark themes already sit in. */
+[data-theme="clair"] .deco-box::before{
+  background:
+    radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.14), transparent 60%),
+    linear-gradient(90deg, rgba(var(--ddp-scrim-rgb),.14), transparent 24%,
+                           transparent 76%, rgba(var(--ddp-scrim-rgb),.14));
+}
+[data-theme="clair"] .deco-box::after{border-color:rgba(var(--ddp-brass-rgb),.40)}
+[data-theme="clair"] .deco-box.deco-primary::after{border-color:rgba(var(--ddp-brass-rgb),.72)}
 </style>
 </head>
 <body>
@@ -2139,7 +2202,7 @@ html.landscape-mode #tutorial-callout{
     <p class="tagline">Count your hearts, count your cards.</p>
 
     <div class="menu-tiles">
-      <button class="tile primary" onclick="goCasual()">
+      <button class="tile primary deco-box deco-primary" onclick="goCasual()">
         <div class="tile-icon">🂡</div>
         <div class="tile-body">
           <div class="tile-title">Casual Play</div>
@@ -2151,7 +2214,7 @@ html.landscape-mode #tutorial-callout{
       <!-- Second in markup order, which is what puts it beside Casual Play
            in the landscape 2x3 (and directly above Rank). The dot is set by
            refreshDailyBadge() once today's hand is done. -->
-      <button class="tile" onclick="goDaily()">
+      <button class="tile deco-box" onclick="goDaily()">
         <div class="tile-icon">🗓️</div>
         <div class="tile-body">
           <div class="tile-title">Daily Challenge<span class="tile-dot" id="menu-daily-dot"></span></div>
@@ -2160,7 +2223,7 @@ html.landscape-mode #tutorial-callout{
         <div class="tile-arrow">›</div>
       </button>
 
-      <button class="tile" onclick="goRanked()">
+      <button class="tile deco-box" onclick="goRanked()">
         <div class="tile-icon">⚔️</div>
         <div class="tile-body">
           <div class="tile-title">Ranked Multiplayer</div>
@@ -2169,7 +2232,7 @@ html.landscape-mode #tutorial-callout{
         <div class="tile-arrow">›</div>
       </button>
 
-      <button class="tile" onclick="goRank()">
+      <button class="tile deco-box" onclick="goRank()">
         <div class="tile-icon">🏆</div>
         <div class="tile-body">
           <div class="tile-title">Rank</div>
@@ -2178,7 +2241,7 @@ html.landscape-mode #tutorial-callout{
         <div class="tile-arrow">›</div>
       </button>
 
-      <button class="tile" onclick="goStats()">
+      <button class="tile deco-box" onclick="goStats()">
         <div class="tile-icon">📊</div>
         <div class="tile-body">
           <div class="tile-title">Statistics</div>
@@ -2187,7 +2250,7 @@ html.landscape-mode #tutorial-callout{
         <div class="tile-arrow">›</div>
       </button>
 
-      <button class="tile" onclick="goPersonal()">
+      <button class="tile deco-box" onclick="goPersonal()">
         <div class="tile-icon" id="menu-avatar-icon">👤</div>
         <div class="tile-body">
           <div class="tile-title">My Account</div>
@@ -2448,9 +2511,9 @@ html.landscape-mode #tutorial-callout{
       <div class="acct-main">
         <!-- TAB BAR -->
         <div class="acct-tabbar">
-          <button class="acct-toptab active" data-tab="profile" onclick="switchAccountTab('profile')">Profile</button>
-          <button class="acct-toptab" data-tab="achievements" onclick="switchAccountTab('achievements')">Achievements</button>
-          <button class="acct-toptab" data-tab="friends" onclick="switchAccountTab('friends')">Friends</button>
+          <button class="acct-toptab deco-box active" data-tab="profile" onclick="switchAccountTab('profile')">Profile</button>
+          <button class="acct-toptab deco-box" data-tab="achievements" onclick="switchAccountTab('achievements')">Achievements</button>
+          <button class="acct-toptab deco-box" data-tab="friends" onclick="switchAccountTab('friends')">Friends</button>
         </div>
 
         <!-- PROFILE PANEL -->
@@ -2474,22 +2537,22 @@ html.landscape-mode #tutorial-callout{
 
           <div class="sec-label">Table theme</div>
           <div class="theme-swatch-row">
-            <button class="theme-swatch-btn theme-card" data-theme="bordeaux"
+            <button class="theme-swatch-btn theme-card deco-box" data-theme="bordeaux"
               onclick="applyTableTheme('bordeaux')" aria-label="Bordeaux theme">
               <span class="tc-swatch" style="background:linear-gradient(160deg,#2B0D18,#120A0D)"><span class="tc-chip" style="background:#B8922E"></span></span>
               <span class="tc-name">Bordeaux</span>
             </button>
-            <button class="theme-swatch-btn theme-card" data-theme="emeraude"
+            <button class="theme-swatch-btn theme-card deco-box" data-theme="emeraude"
               onclick="applyTableTheme('emeraude')" aria-label="Émeraude theme">
               <span class="tc-swatch" style="background:linear-gradient(160deg,#1F4732,#0D1512)"><span class="tc-chip" style="background:#C9A227"></span></span>
               <span class="tc-name">Émeraude</span>
             </button>
-            <button class="theme-swatch-btn theme-card" data-theme="clair"
+            <button class="theme-swatch-btn theme-card deco-box" data-theme="clair"
               onclick="applyTableTheme('clair')" aria-label="Clair theme">
               <span class="tc-swatch" style="background:linear-gradient(160deg,#E4D9C5,#CDBFA6)"><span class="tc-chip" style="background:#A9863C"></span></span>
               <span class="tc-name">Clair</span>
             </button>
-            <button class="theme-swatch-btn theme-card" data-theme="marquee"
+            <button class="theme-swatch-btn theme-card deco-box" data-theme="marquee"
               onclick="applyTableTheme('marquee')" aria-label="Marquee theme">
               <span class="tc-swatch" style="background:linear-gradient(160deg,#0D2E25,#020605)"><span class="tc-chip" style="background:#C49E58"></span></span>
               <span class="tc-name">Marquee</span>

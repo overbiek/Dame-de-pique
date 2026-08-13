@@ -577,6 +577,56 @@ before pushing.
   themes, so there's nothing for it to adapt to. It's deliberately
   desaturated (`#8C2233`) so it doesn't compete with the brass.
 
+## `.deco-box` — the Marquee Deco box treatment
+- An opt-in decoration (edge vignette + brass inset frame + icon glow)
+  added by putting `deco-box` on an element, `deco-primary` for the
+  stronger frame. Applied to the six menu `.tile`s (primary on Casual),
+  the four `.theme-swatch-btn.theme-card`s and the three `.acct-toptab`s.
+  CSS only — no JS, no markup beyond the class name.
+- **Built from `--ddp-brass-rgb` / `--ddp-scrim-rgb`, never Marquee's
+  hex**, so it flips with the theme like everything else. (The spec it
+  came from called the brass companion `--ddp-gold-rgb` and hung the icon
+  glow off `.ic`; neither exists here — it's `--ddp-brass-rgb` and
+  `.tile-icon`, so that glow rule would have matched nothing.)
+- **The `z-index:-1` + `isolation:isolate` pairing is load-bearing, not
+  tidiness.** An absolutely-positioned pseudo-element paints ABOVE its
+  host's in-flow content, so the vignette would otherwise wash over the
+  tile's own icon and label — and the icon sits exactly in the left-edge
+  band where the vignette is darkest. `isolation:isolate` makes the host
+  a stacking context so `z-index:-1` lands the decoration above the
+  host's background but below its content. Without the isolation the
+  negative index would drop it behind the host's background instead and
+  it would vanish. Don't remove either half.
+- **Zero box-model impact by design** — both pseudo-elements are
+  absolutely positioned and `pointer-events:none`, and the inset frame is
+  a pseudo rather than a border/padding on the real element. Verified by
+  measuring every tile with and without the class: identical rects, and
+  the landscape 2×3 menu still fits 667×375 with no scroll (last tile
+  bottom 313 of 375).
+- `border-radius:inherit` on `::after` is what lets one rule serve 18px
+  tiles, 14px theme cards and 9px tab pills. The tab pills get
+  `inset:3px` instead of `6px` — a 6px inset inside a ~34px pill reads
+  as a cramped double-border.
+- **Clair needed a correction and the other three didn't, because it
+  breaks in BOTH directions at once.** Measured contrast of the treatment
+  against the tile's own background:
+  vignette — Bordeaux 1.14, Émeraude 1.45, Marquee 1.26, **Clair 2.00**;
+  frame — Bordeaux 1.43, Émeraude 1.35, Marquee 1.43, **Clair 1.20**.
+  Clair's scrim token is its warm ink rather than black, so the vignette
+  reads as a grey smudge on a pale tile, while brass at .22 all but
+  disappears on a pale felt. The correction (vignette .34→.14, frame
+  .22→.40, primary .5→.72) puts it at 1.31/1.40/2.05, in the same band as
+  the dark themes. It lives at the **end** of the stylesheet with the
+  other Clair corrections — it ties on specificity with the `.deco-box`
+  rules, so source order is what decides it.
+- Audited but deliberately **not** treated: `.stat-card` (36 of them, and
+  not clickable), `.daily-hero`, `.codebox`, `.empty-state`, `.pod`,
+  `.tc-swatch` — informational, not selection controls. `.avatar-opt` is
+  a real control but 20 dense ~44px squares would turn the frame into
+  noise. `.seg-btn` (the match-length picker) is the one clean remaining
+  candidate if this is ever rolled further. Table/play-screen elements
+  are out of scope on purpose — vertical budget.
+
 ## Brand splash (`#splash`, `public/brand/*.webp`)
 - **This is the app's only boot state and it didn't exist before.**
   `#s-menu` ships `class="active"` and the app paints straight to the

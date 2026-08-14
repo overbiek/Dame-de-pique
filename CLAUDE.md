@@ -1120,7 +1120,7 @@ before pushing.
   beat the design called for is delivered in the 4 scripted tricks;
   playing out the rest would only add time.
 
-## Blitz — per-room match length (4 / 8 / 16 rounds)
+## Blitz — per-room match length (4 / 8 / 12 / 16 rounds)
 - **The pass cycle needed no generalization at all, and that's the
   important design note.** The spec this was built from proposed an
   `isKeepRound(round, roundsTotal)` helper with `cycle =
@@ -1133,7 +1133,7 @@ before pushing.
   So a 4-round Blitz is exactly one of each direction. `passDir` is
   untouched. If a non-multiple-of-4 length is ever offered, THAT is when
   a helper becomes necessary — not before.
-- `ROUND_OPTIONS = [4, 8, 16]` and `sanitizeRoundsTotal()` in
+- `ROUND_OPTIONS = [4, 8, 12, 16]` and `sanitizeRoundsTotal()` in
   `server.js` are the whole validation; anything else coerces to 16, on
   the client (`ROUND_OPTIONS`/`loadRoundsTotal`) and the server
   independently.
@@ -1144,11 +1144,31 @@ before pushing.
 - The client already read `G.totalRounds` everywhere (`roundBadgeHTML`,
   `sheetHTML`, `renderSummary`), so no client render code needed
   changing for the length itself — only the picker.
-- Picker is a `.seg`/`.seg-btn` segmented row on the **Casual Play**
-  screen directly above "Create a game", not a sixth menu tile: it only
-  affects a game you *create* (joining by code inherits the host's
-  length), and keeping it off the menu leaves the hand-tuned landscape
-  `.menu-wrap` grid alone. Sticky via `ddp.lastRoundsTotal`.
+- Picker sits on the **Casual Play** screen directly above "Create a
+  game", not a sixth menu tile: it only affects a game you *create*
+  (joining by code inherits the host's length), and keeping it off the
+  menu leaves the hand-tuned landscape `.menu-wrap` grid alone. Sticky
+  via `ddp.lastRoundsTotal`.
+- Picker is a 2x2 `.seg-grid` of `.seg-btn` cards (not a thin segmented
+  row — four choices are the single most consequential decision on this
+  screen, so they get real touch targets). Kept on `.seg-btn`
+  specifically rather than a new class, since `.seg-btn` is one of the
+  classes wired into the shared `.deco-box` vignette/brass-frame
+  treatment (selector lists ~line 225-301) — renaming it would silently
+  drop that treatment, same trap `.theme-swatch-btn` hit once already.
+  Selection state is shown via both the `.active` background AND a
+  `.seg-check` checkmark badge, since colour-only active state on a
+  brass-tinted background is a real accessibility gap; `.seg-dots` (a 4-
+  dot relative-length indicator) uses `<em>`, not `<i>`, to avoid
+  colliding with the existing bare-`i` subtitle rule on `.seg-btn`.
+- On Casual Play specifically (landscape only — portrait is unaffected),
+  the profile chip is pulled out of the scrolling body panel and into
+  the rail directly under the title (`html.landscape-mode #s-landing
+  #casual-chip`), the one exception to the shared rail/body split every
+  other screen uses. `#casual-chip` is a direct child of `.center-wrap`
+  now (not nested in `#casual-ready`) so the landscape override can
+  target it; `goCasual()` toggles its `display` directly instead of
+  piggybacking on `#casual-ready`'s visibility.
 - **Blitz gets its own GAME-level stat columns, not its own table.**
   `stats.blitz_games_played/_finished/_points_total/_best_game/
   _worst_game/_moons_total`, written by `recordBlitzGameStarted`/

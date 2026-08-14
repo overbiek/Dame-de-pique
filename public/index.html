@@ -892,17 +892,23 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 }
 .tile-dot.on{display:block}
 
-/* ══ Segmented picker (match length on Casual Play) ══
-   Deliberately a plain flex row of buttons rather than a <select>: it has
-   to stay legible and thumb-sized inside the narrow landscape rail, and
-   .btn-style focus/active states already carry the theme tokens. */
-.seg{display:flex;gap:6px;width:100%}
+/* ══ Match-length grid (Casual Play) ══
+   A 2x2 grid of cards, not a thin segmented row — the four choices are
+   the single most consequential decision on this screen, so they get
+   real touch targets instead of a compact pill row. Deliberately still
+   .seg-btn on the button (not a new class): .seg-btn is one of the
+   classes wired into the shared .deco-box vignette/frame treatment
+   (see the selector lists ~line 225-301) — renaming it would silently
+   drop that treatment, the same trap .theme-swatch-btn hit once
+   already. Only the container is new (.seg-grid replaces .seg). */
+.seg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
 .seg-btn{
-  flex:1;min-width:0;font:inherit;color:var(--faint);appearance:none;cursor:pointer;
-  padding:9px 4px;border-radius:12px;text-align:center;line-height:1.2;
+  min-width:0;font:inherit;color:var(--faint);appearance:none;cursor:pointer;
+  padding:16px 10px;border-radius:16px;text-align:center;line-height:1.2;
   background:rgba(var(--ddp-gloss-rgb),.04);border:1px solid var(--line);
   transition:border-color .18s,background .18s,color .18s;
   touch-action:manipulation;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
 }
 .seg-btn:hover{border-color:rgba(var(--ddp-brass-rgb),.35)}
 .seg-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
@@ -911,9 +917,30 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   border-color:rgba(var(--ddp-brass-rgb),.45);
 }
 .seg-btn b{display:block;font-family:var(--font-num);font-variant-numeric:tabular-nums;
-  font-size:1.05rem;font-weight:700;color:inherit}
-.seg-btn i{display:block;font-style:normal;font-size:.63rem;opacity:.8;margin-top:1px}
+  font-size:1.65rem;font-weight:700;color:inherit}
+.seg-btn i{display:block;font-style:normal;font-size:.7rem;opacity:.8;margin-top:1px}
 .seg-label{font-size:.72rem;color:var(--faint);margin-bottom:6px;text-align:left}
+/* cards are much bigger than the old pill — the 3px compact inset from
+   the shared list at ~line 301 reads as a cramped double border here,
+   same reasoning as .stat-card staying off that list */
+.seg-grid .seg-btn{--deco-inset:6px}
+
+/* Selection state beyond colour (accessibility — colour-only active
+   state on a brass-tinted background is a real contrast gap) plus a
+   relative-length cue so "this one's longer" reads without parsing the
+   minute estimates. em, not i, for the dots deliberately: .seg-btn i
+   above targets the bare subtitle tag, and reusing it for the dots
+   would pull display:block/font-size/opacity onto every pip. */
+.seg-check{
+  position:absolute;top:9px;right:9px;width:18px;height:18px;border-radius:50%;
+  background:var(--gold);color:var(--ddp-on-brass);font-size:.65rem;font-weight:700;
+  font-style:normal;display:flex;align-items:center;justify-content:center;
+  opacity:0;transform:scale(.6);transition:opacity .15s,transform .15s;
+}
+.seg-btn.active .seg-check{opacity:1;transform:scale(1)}
+.seg-dots{display:flex;gap:4px;margin:2px 0 1px;justify-content:center}
+.seg-dots em{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.28;font-style:normal}
+.seg-dots em.on{opacity:.95}
 
 /* ══ Daily Challenge ══ */
 .daily-hero{
@@ -1729,6 +1756,28 @@ html.landscape-mode .screen.active .stat-value{font-size:1.15rem}
    leaderboard has to reserve room or its last rows sit under it */
 html.landscape-mode #s-rank #rank-content{padding-bottom:52px}
 
+/* ── Casual Play: profile chip moves into the rail ──
+   Everything else on this screen keeps the shared rail/body split
+   (chrome left, one scrolling body panel right). The profile chip is
+   the one exception — pulled into the rail, directly under the title,
+   the same way Daily Challenge below carves out its own explicit
+   per-child placement instead of relying on the generic auto-flow.
+   Row 3 (tagline) stops being the flexible row here — row 5 is, so the
+   chip sits right under the title instead of being pushed to the
+   bottom next to "How to play" by the flexible tagline row above it. */
+html.landscape-mode #s-landing>.center-wrap{
+  grid-template-rows:auto auto auto auto 1fr auto;
+}
+html.landscape-mode #s-landing>.center-wrap>.backlink{grid-row:1}
+html.landscape-mode #s-landing>.center-wrap>h2{grid-row:2}
+html.landscape-mode #s-landing>.center-wrap>.tagline{grid-row:3}
+html.landscape-mode #s-landing>.center-wrap>#casual-chip{
+  grid-column:1;grid-row:4;
+  overflow:visible;padding-left:0;border-left:0;
+  margin:14px 0 0;
+}
+html.landscape-mode #s-landing>.center-wrap>.exit-row{grid-row:6}
+
 /* ── Daily Challenge: an even half/half split, not the narrow rail ──
    Every other rail screen has a small header cluster and one wide body
    panel, so a narrow column 1 is right. This screen has TWO real panels
@@ -2454,6 +2503,20 @@ html.landscape-mode #tutorial-callout{
     <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Casual Play</h2>
     <p class="tagline">Friends and AI &middot; pick up and play</p>
 
+    <!-- Direct child of .center-wrap now, not nested in #casual-ready —
+         that's what lets landscape pull it into the rail (see the
+         html.landscape-mode #s-landing block). Portrait needs no change
+         at all: as a plain block-flow sibling sitting right after
+         .tagline it renders in exactly the same visual position it held
+         before, just one level shallower in the DOM. Visibility is no
+         longer piggybacked on #casual-ready's display toggle — goCasual()
+         now sets #casual-chip's display directly (see JS changes). -->
+    <button class="profile-chip" id="casual-chip" onclick="goPersonal()" style="display:none">
+      <span class="avatar sm" id="cp-avatar">👤</span>
+      <span class="profile-chip-name" id="cp-name"></span>
+      <span class="profile-chip-edit">Edit</span>
+    </button>
+
     <div id="casual-noprofile" style="display:none">
       <div class="empty-state">
         <div class="empty-icon">👤</div>
@@ -2465,21 +2528,36 @@ html.landscape-mode #tutorial-callout{
     </div>
 
     <div id="casual-ready" style="display:none">
-      <button class="profile-chip" onclick="goPersonal()">
-        <span class="avatar sm" id="cp-avatar">👤</span>
-        <span class="profile-chip-name" id="cp-name"></span>
-        <span class="profile-chip-edit">Edit</span>
-      </button>
-
       <!-- Match length. Only affects a game you CREATE — joining by code
            takes whatever length the host picked, so this sits directly
-           above "Create a game" rather than at the top of the screen. -->
+           above "Create a game" rather than at the top of the screen.
+           2x2 grid, not a segmented row — see the .seg-grid comment in
+           <style> for why. The 4 options are the four the server accepts
+           (ROUND_OPTIONS, both client and server) — adding a 5th needs
+           both updated together or it silently falls back to 16. -->
       <div class="stack">
         <p class="seg-label">Match length</p>
-        <div class="seg" id="rounds-seg">
-          <button class="seg-btn" id="rounds-4"  onclick="pickRounds(4)"><b>4</b><i>Blitz · ~10 min</i></button>
-          <button class="seg-btn" id="rounds-8"  onclick="pickRounds(8)"><b>8</b><i>Short · ~20 min</i></button>
-          <button class="seg-btn" id="rounds-16" onclick="pickRounds(16)"><b>16</b><i>Full · ~45 min</i></button>
+        <div class="seg-grid" id="rounds-seg">
+          <button class="seg-btn" id="rounds-4" onclick="pickRounds(4)">
+            <span class="seg-check">&check;</span><b>4</b>
+            <span class="seg-dots"><em class="on"></em><em></em><em></em><em></em></span>
+            <i>Blitz &middot; ~10 min</i>
+          </button>
+          <button class="seg-btn" id="rounds-8" onclick="pickRounds(8)">
+            <span class="seg-check">&check;</span><b>8</b>
+            <span class="seg-dots"><em class="on"></em><em class="on"></em><em></em><em></em></span>
+            <i>Short &middot; ~20 min</i>
+          </button>
+          <button class="seg-btn" id="rounds-12" onclick="pickRounds(12)">
+            <span class="seg-check">&check;</span><b>12</b>
+            <span class="seg-dots"><em class="on"></em><em class="on"></em><em class="on"></em><em></em></span>
+            <i>Medium &middot; ~30 min</i>
+          </button>
+          <button class="seg-btn" id="rounds-16" onclick="pickRounds(16)">
+            <span class="seg-check">&check;</span><b>16</b>
+            <span class="seg-dots"><em class="on"></em><em class="on"></em><em class="on"></em><em class="on"></em></span>
+            <i>Full &middot; ~45 min</i>
+          </button>
         </div>
       </div>
 
@@ -2855,11 +2933,11 @@ html.landscape-mode #tutorial-callout{
           </div>
         </div>
 
-        <!-- Blitz totals are kept apart because a 4- or 8-round final
-             score isn't comparable with a 16-round one. Per-trick and
-             per-hand records above are match-length-agnostic and already
-             include Blitz play. -->
-        <h3 style="font-family:'Playfair Display',serif;color:var(--gold-hi);font-size:1rem;margin:18px 0 6px">Blitz (4 &amp; 8 rounds)</h3>
+        <!-- Blitz totals are kept apart because a short-format final score
+             isn't comparable with a 16-round one. Per-trick and per-hand
+             records above are match-length-agnostic and already include
+             Blitz play. -->
+        <h3 style="font-family:'Playfair Display',serif;color:var(--gold-hi);font-size:1rem;margin:18px 0 6px">Blitz (4, 8 &amp; 12 rounds)</h3>
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-value" id="st-blitz-played">0</div>
@@ -3463,11 +3541,11 @@ function tableHTML(G,opts){
 }
 
 /* ══════════ CASUAL PLAY ══════════ */
-/* Match length (Blitz). Only the four/eight/sixteen the server accepts —
-   anything else falls back to the classic 16, on both sides. Sticky
-   between sessions via the usual ddp.* localStorage convention, so
-   someone who prefers short games isn't re-picking every time. */
-const ROUND_OPTIONS=[4,8,16];
+/* Match length (Blitz). Only the four/eight/twelve/sixteen the server
+   accepts — anything else falls back to the classic 16, on both sides.
+   Sticky between sessions via the usual ddp.* localStorage convention,
+   so someone who prefers short games isn't re-picking every time. */
+const ROUND_OPTIONS=[4,8,12,16];
 const RK='ddp.lastRoundsTotal';
 function loadRoundsTotal(){
   let v=16;
@@ -3490,6 +3568,7 @@ function renderRoundsSeg(){
 function goCasual(){
   const id=identity();
   const has=!!id.name;
+  $('casual-chip').style.display=has?'flex':'none';
   $('casual-noprofile').style.display=has?'none':'block';
   $('casual-ready').style.display=has?'block':'none';
   if(has){

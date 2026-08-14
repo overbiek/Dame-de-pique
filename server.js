@@ -72,7 +72,7 @@ const DEFAULT_ROUNDS = 16;
 // Left→Right→Across→Keep cycle intact: (round-1)%4 already lands Keep on
 // the final round of a 4-, 8- or 16-round game, so no pass-cycle rework
 // is needed and a Blitz game still uses all four pass directions.
-const ROUND_OPTIONS = [4, 8, 16];
+const ROUND_OPTIONS = [4, 8, 12, 16];
 function sanitizeRoundsTotal(n) {
   const v = Number(n);
   return ROUND_OPTIONS.includes(v) ? v : DEFAULT_ROUNDS;

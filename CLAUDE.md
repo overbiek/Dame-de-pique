@@ -491,6 +491,34 @@ before pushing.
   re-renders *immediately* rather than waiting for the debounce, since
   the markup (not just the styling) differs per orientation and the gap
   would briefly show portrait markup under landscape CSS.
+- **Double-tap a card to play it** — the second way to play, alongside
+  the landscape drag below. It only exists in landscape, and that's not
+  an oversight: in portrait a single press-and-release already plays the
+  card via `releasePlayPick`, so a tap is spoken for. In landscape a tap
+  in place previously did nothing at all (the drag just snapped back),
+  which is what left the gesture free to mean something.
+  Lives inside `endCardDrag`, in the not-dropped branch: a press that
+  moved ≤`TAP_SLOP_PX` and lasted ≤`TAP_MAX_MS` counts as a tap, and two
+  taps on the **same** card within `DOUBLE_TAP_MS` (320) commit it. Both
+  taps having to be the same card is what stops "tap A, tap B" playing B
+  while someone is just looking around.
+  The first tap rings the card with `.card.tap-armed` — deliberately
+  *not* `.sel`, which lifts a card by 1.12 card-heights for the portrait
+  picker's preview and reads as a bug when all you did was tap once. The
+  arm self-expires on the timer, is cleared by `cancelCardDrag`, and is
+  cleared at the top of `renderPlay` so it can't survive the hand's
+  innerHTML being rebuilt with a key pointing at a detached element.
+  Because `nearestTapCard` only ever returns `.card.tap`, an illegal card
+  can't be armed — a tap near one arms the nearest *legal* card instead,
+  and the ring is what shows you which. That's the same
+  transparently-skip behaviour the press logic already had.
+- **Fixed alongside it:** a tap-without-movement in landscape used to
+  leave `.dragging` stuck on the card. `endCardDrag`'s snap-back set
+  `el.style.transform=''` and waited for `transitionend` to call
+  `resetDragStyles` — but a tap never set a transform, so no transition
+  ever ran and the event never fired. The card stayed lifted until the
+  next `gameState` rebuilt the hand. It now resets directly when there's
+  no transform to animate.
 - Landscape play uses a different card-play gesture entirely: drag the
   card to the table center (`isLandscapePlay()`/`startCardDrag()` etc.)
   instead of portrait's hold-and-slide-then-release

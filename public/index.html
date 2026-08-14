@@ -577,7 +577,19 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .card-slot{position:relative;flex:0 0 auto;transform-origin:50% 100%;pointer-events:none}
 .card-slot .card{pointer-events:auto}
 .suitgrp .card-slot + .card-slot{margin-left:var(--overlap)}
-.hand .card.tap:active,.hand .card.sel{z-index:5}
+/* First tap of a double-tap-to-play: armed, waiting for the second.
+   Deliberately NOT .sel — that one lifts the card by 1.12 card-heights
+   for the portrait picker's preview, which reads as a bug when all you
+   did was tap once. A brass ring and a nudge is enough to show the card
+   is live, and it clears itself after DOUBLE_TAP_MS. */
+.card.tap-armed{
+  transform:translateY(-9%) scale(1.03);
+  box-shadow:0 10px 22px rgba(var(--ddp-scrim-rgb),.45),0 0 0 2px var(--gold),
+             0 0 16px rgba(var(--ddp-brass-rgb),.4);
+  transition:transform .12s ease-out,box-shadow .12s ease-out;
+}
+.card-slot:has(.card.tap-armed){z-index:60 !important}
+.hand .card.tap:active,.hand .card.sel,.hand .card.tap-armed{z-index:5}
 .card-slot:has(.card.tap:active){z-index:50 !important}
 .card-slot:has(.card.sel){z-index:60 !important}
 .card-slot:has(.card.dragging){z-index:200 !important}
@@ -4738,6 +4750,10 @@ function bindLastTrickButton(btn){
 let lastCurrentTrickLen=null;
 function renderPlay(G){
   show('play');
+  // The hand's innerHTML is about to be rebuilt, which detaches whatever
+  // card was armed for a double-tap. Clear the arm rather than leaving a
+  // key pointing at a card element that no longer exists.
+  disarmTap();
   maybeShowPassTransition(G);
   hideLastTrick();
 
@@ -4792,7 +4808,36 @@ function setPlayPick(el){
 function isLandscapePlay(){
   return S&&S.phase==='play'&&isLandscapeModeActive();
 }
-let dragEl=null, dragStartX=0, dragStartY=0;
+let dragEl=null, dragStartX=0, dragStartY=0, dragStartAt=0;
+
+/* ── Double-tap a card to play it ──
+   Only meaningful in landscape: there the play gesture is drag-to-centre,
+   so a quick tap in place currently does nothing at all, which leaves the
+   tap free to mean something. Two quick taps on the SAME card plays it.
+   Portrait needs none of this — a single press-and-release there already
+   plays the card through releasePlayPick.
+   Both taps must land on the same card, or "tap A then tap B quickly"
+   would play B by accident while the player is just looking around. */
+const DOUBLE_TAP_MS=320;   // maximum gap between the two taps
+const TAP_SLOP_PX=12;      // a tap is a press that didn't really move...
+const TAP_MAX_MS=250;      // ...and wasn't a deliberate long press
+let tapArmKey=null, tapArmAt=0, tapArmEl=null, tapArmTimer=null;
+function disarmTap(){
+  if(tapArmTimer){ clearTimeout(tapArmTimer); tapArmTimer=null; }
+  if(tapArmEl){ tapArmEl.classList.remove('tap-armed'); tapArmEl=null; }
+  tapArmKey=null;
+}
+// The first tap rings the card so it's visible that a second will commit,
+// and the arm expires on its own so a stray tap can't leave one live.
+function armTap(el,key){
+  disarmTap();
+  tapArmKey=key; tapArmAt=Date.now(); tapArmEl=el;
+  el.classList.add('tap-armed');
+  tapArmTimer=setTimeout(disarmTap,DOUBLE_TAP_MS);
+}
+function isDoubleTap(key){
+  return tapArmKey===key && Date.now()-tapArmAt<=DOUBLE_TAP_MS;
+}
 function isOverDropZone(x,y,zoneEl,pad){
   const r=zoneEl.getBoundingClientRect();
   pad=pad==null?30:pad;
@@ -4800,7 +4845,7 @@ function isOverDropZone(x,y,zoneEl,pad){
 }
 function startCardDrag(e,el){
   dragEl=el;
-  dragStartX=e.clientX; dragStartY=e.clientY;
+  dragStartX=e.clientX; dragStartY=e.clientY; dragStartAt=Date.now();
   el.classList.add('dragging');
   SFX.play('cardPickup');
 }
@@ -4829,6 +4874,7 @@ function endCardDrag(e){
   const dropped=mid&&isOverDropZone(e.clientX,e.clientY,mid,tutorialActive?110:30);
   if(mid) mid.classList.remove('drop-hover');
   if(dropped){
+    disarmTap();
     SFX.play('cardPlace');
     // See confirmPass() for why tutorial mode detours the network call
     // specifically — everything upstream of this point (the drag itself,
@@ -4837,6 +4883,32 @@ function endCardDrag(e){
     socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
     return; // the next gameState render replaces this element entirely
   }
+
+  // Not a drop. If the press barely moved and was short, it was a TAP —
+  // which is the other way to play a card: two of them in a row on the
+  // same card commits it, same as a drop would.
+  const moved=Math.hypot(e.clientX-dragStartX,e.clientY-dragStartY);
+  const wasTap=moved<=TAP_SLOP_PX&&Date.now()-dragStartAt<=TAP_MAX_MS;
+  const key=el.dataset.r+'|'+el.dataset.s;
+  if(wasTap&&isDoubleTap(key)){
+    disarmTap();
+    resetDragStyles(el);
+    SFX.play('cardPlace');
+    if(tutorialActive){ tutorialCommitPlay(el.dataset.r,el.dataset.s); return; }
+    socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
+    return;
+  }
+
+  // A tap never set an inline transform, so animating back to '' is a
+  // no-op and transitionend would never fire — which used to leave
+  // .dragging stuck on the card until the next gameState rebuilt the
+  // hand. Reset it directly in that case instead of waiting.
+  if(!el.style.transform){
+    resetDragStyles(el);
+    if(wasTap) armTap(el,key); else disarmTap();
+    return;
+  }
+  disarmTap();
   el.style.transition='transform .22s cubic-bezier(.2,.8,.3,1)';
   el.style.transform='';
   el.addEventListener('transitionend',function done(){
@@ -4845,6 +4917,7 @@ function endCardDrag(e){
   });
 }
 function cancelCardDrag(){
+  disarmTap();
   if(!dragEl)return;
   const el=dragEl; dragEl=null;
   const mid=document.querySelector('#g-table .mid');
@@ -5364,7 +5437,8 @@ function tutA_trick1(){
     `Everyone passes at once, so you got 2 back too — the `+
     `<b>${esc(TUT_RECEIVED.map(c=>c.rank+c.suit).join(' and '))}</b>. Trick 1 always `+
     `opens the round, and the opening card can never be a heart or the Q♠. `+
-    `<b>Click and drag your A♣ into the playing field to lead.</b>`,
+    `<b>Drag your A♣ into the playing field to lead</b> — or just `+
+    `<b>double-tap it</b>, whichever you prefer.`,
     {side:'right'}
   );
   tutAwaiting={type:'play',rank:'A',suit:'♣',after:tutA_trick1Resolve};

@@ -901,14 +901,14 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
    (see the selector lists ~line 225-301) — renaming it would silently
    drop that treatment, the same trap .theme-swatch-btn hit once
    already. Only the container is new (.seg-grid replaces .seg). */
-.seg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
+.seg-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;width:100%}
 .seg-btn{
   min-width:0;font:inherit;color:var(--faint);appearance:none;cursor:pointer;
-  padding:16px 10px;border-radius:16px;text-align:center;line-height:1.2;
+  padding:10px 6px;border-radius:13px;text-align:center;line-height:1.2;
   background:rgba(var(--ddp-gloss-rgb),.04);border:1px solid var(--line);
   transition:border-color .18s,background .18s,color .18s;
   touch-action:manipulation;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
 }
 .seg-btn:hover{border-color:rgba(var(--ddp-brass-rgb),.35)}
 .seg-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
@@ -917,13 +917,13 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   border-color:rgba(var(--ddp-brass-rgb),.45);
 }
 .seg-btn b{display:block;font-family:var(--font-num);font-variant-numeric:tabular-nums;
-  font-size:1.65rem;font-weight:700;color:inherit}
-.seg-btn i{display:block;font-style:normal;font-size:.7rem;opacity:.8;margin-top:1px}
+  font-size:1.05rem;font-weight:700;color:inherit}
+.seg-btn i{display:block;font-style:normal;font-size:.62rem;opacity:.8;margin-top:1px}
 .seg-label{font-size:.72rem;color:var(--faint);margin-bottom:6px;text-align:left}
-/* cards are much bigger than the old pill — the 3px compact inset from
-   the shared list at ~line 301 reads as a cramped double border here,
-   same reasoning as .stat-card staying off that list */
-.seg-grid .seg-btn{--deco-inset:6px}
+/* cards are bigger than the old pill — the 3px compact inset from the
+   shared list at ~line 301 reads as a cramped double border here, same
+   reasoning as .stat-card staying off that list */
+.seg-grid .seg-btn{--deco-inset:5px}
 
 /* Selection state beyond colour (accessibility — colour-only active
    state on a brass-tinted background is a real contrast gap) plus a
@@ -932,8 +932,8 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
    above targets the bare subtitle tag, and reusing it for the dots
    would pull display:block/font-size/opacity onto every pip. */
 .seg-check{
-  position:absolute;top:9px;right:9px;width:18px;height:18px;border-radius:50%;
-  background:var(--gold);color:var(--ddp-on-brass);font-size:.65rem;font-weight:700;
+  position:absolute;top:6px;right:6px;width:15px;height:15px;border-radius:50%;
+  background:var(--gold);color:var(--ddp-on-brass);font-size:.58rem;font-weight:700;
   font-style:normal;display:flex;align-items:center;justify-content:center;
   opacity:0;transform:scale(.6);transition:opacity .15s,transform .15s;
 }
@@ -2539,22 +2539,22 @@ html.landscape-mode #tutorial-callout{
         <p class="seg-label">Match length</p>
         <div class="seg-grid" id="rounds-seg">
           <button class="seg-btn" id="rounds-4" onclick="pickRounds(4)">
-            <span class="seg-check">&check;</span><b>4</b>
+            <span class="seg-check">&check;</span><b>4 hands</b>
             <span class="seg-dots"><em class="on"></em><em></em><em></em><em></em></span>
             <i>Blitz &middot; ~10 min</i>
           </button>
           <button class="seg-btn" id="rounds-8" onclick="pickRounds(8)">
-            <span class="seg-check">&check;</span><b>8</b>
+            <span class="seg-check">&check;</span><b>8 hands</b>
             <span class="seg-dots"><em class="on"></em><em class="on"></em><em></em><em></em></span>
             <i>Short &middot; ~20 min</i>
           </button>
           <button class="seg-btn" id="rounds-12" onclick="pickRounds(12)">
-            <span class="seg-check">&check;</span><b>12</b>
+            <span class="seg-check">&check;</span><b>12 hands</b>
             <span class="seg-dots"><em class="on"></em><em class="on"></em><em class="on"></em><em></em></span>
             <i>Medium &middot; ~30 min</i>
           </button>
           <button class="seg-btn" id="rounds-16" onclick="pickRounds(16)">
-            <span class="seg-check">&check;</span><b>16</b>
+            <span class="seg-check">&check;</span><b>16 hands</b>
             <span class="seg-dots"><em class="on"></em><em class="on"></em><em class="on"></em><em class="on"></em></span>
             <i>Full &middot; ~45 min</i>
           </button>

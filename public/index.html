@@ -75,6 +75,15 @@
   --ddp-mine:#A8ECCE;      --ddp-mine-rgb:63,191,136;
   --ddp-on-brass:#241A06;
   --ddp-scrim-rgb:0,0,0;   --ddp-gloss-rgb:255,255,255;
+  /* Deco box treatment — one definition for every card/panel/control in
+     the app. Declared HERE, in the first :root, and not in the derived
+     block below the [data-theme] rules: [data-theme="clair"] ties with
+     :root at 0,1,0, so it can only override by coming later in source
+     order, and the derived block doesn't. The var() references resolve
+     against whatever theme is live, since all of them sit on <html>. */
+  --deco-edge:rgba(var(--ddp-bg-rgb),.55);
+  --deco-frame:rgba(var(--ddp-brass-rgb),.22);
+  --deco-frame-strong:rgba(var(--ddp-brass-rgb),.5);
 }
 [data-theme="emeraude"]{
   --ddp-bg:#0D1512;      --ddp-bg-rgb:13,21,18;
@@ -178,51 +187,121 @@
 }
 
 /* ══ Marquee Deco box treatment ══
-   A vignette toward the edges plus a brass corner-tick inset frame,
-   opt-in per element via .deco-box. Built entirely from the derived
-   token layer (--ddp-brass-rgb / --ddp-scrim-rgb), never from Marquee's
-   literal hex, so it flips with the theme like everything else — on
-   Clair the scrim token is already the warm ink rather than black.
-
-   Two notes for anyone comparing this against the spec it came from:
-   that spec named the brass companion --ddp-gold-rgb and hung the icon
-   glow off `.ic`. Neither exists here — the token is --ddp-brass-rgb and
-   the menu icon element is .tile-icon, so `.deco-box .ic` would have
-   been a rule that silently matched nothing.
+   One vignette-plus-brass-frame treatment shared by every card, panel and
+   selection control in the app. Built entirely from the token layer so it
+   flips with the theme; the three --deco-* tokens are declared up in the
+   FIRST :root (with the --ddp-* block) rather than the derived one, which
+   matters — [data-theme="clair"] ties with :root on specificity (both are
+   0,1,0), so it can only win by coming later in source order, and the
+   derived :root block sits after it.
 
    The stacking is the part that isn't optional. An absolutely-positioned
-   pseudo-element paints ABOVE its host's in-flow text, so a .55-alpha
-   scrim on ::before would have washed over the tile's own icon and
-   label — and the icon sits right in the left edge band where the
-   vignette is darkest. isolation:isolate makes the host a stacking
-   context so z-index:-1 lands the decoration above the host's own
-   background but below its content, which is the only layer that works
-   without touching the markup. */
-.deco-box{position:relative;overflow:hidden;isolation:isolate}
+   pseudo-element paints ABOVE its host's in-flow text, so the edge scrim
+   would otherwise wash over the host's own icon and label — and on a menu
+   tile the glyph sits right where the vignette is darkest.
+   isolation:isolate makes the host a stacking context so z-index:-1 lands
+   the decoration above the host's own background but below its content,
+   which is the only layer that works without touching markup.
+
+   Applied by SELECTOR rather than by adding a class to every element:
+   several of these are built in JS render functions (.slot in
+   renderLobby, .pod in renderFinal, .avatar-opt in renderAvatarGrid), and
+   keeping this CSS-only means none of that had to change. `.deco-box` is
+   still there as the opt-in hook for anything one-off.
+
+   NOT treated, deliberately:
+   - .sheet-wrap — overflow:auto is what scrolls the scoresheet; the
+     overflow:hidden below would kill it.
+   - .note — its background and border carry semantic state (good / bad /
+     gold); a brass frame would fight a red error.
+   - .empty-state — a text block with no background or border of its own.
+   - .acct-tabbar / .acct-tabs — containers whose children already carry
+     the treatment; framing both nests two frames.
+   - .btn — buttons aren't boxes, and a dark vignette over the gold
+     primary button reads as a rendering fault.
+   - table rows (.lb-table, .rtable, .sheet) — a tr/td can't host absolute
+     pseudo-elements reliably.
+   - anything on the pass/play screens — vertical budget, as documented. */
+.deco-box,
+.tile,
+.stat-card,
+.slot,
+.codebox,
+.pod,
+.daily-hero,
+.profile-hero,
+#daily-board-wrap,
+.profile-chip,
+.acct-chip,
+.seg-btn,
+.avatar-opt{position:relative;overflow:hidden;isolation:isolate}
+
+.deco-box::before,.deco-box::after,
+.tile::before,.tile::after,
+.stat-card::before,.stat-card::after,
+.slot::before,.slot::after,
+.codebox::before,.codebox::after,
+.pod::before,.pod::after,
+.daily-hero::before,.daily-hero::after,
+.profile-hero::before,.profile-hero::after,
+#daily-board-wrap::before,#daily-board-wrap::after,
+.profile-chip::before,.profile-chip::after,
+.acct-chip::before,.acct-chip::after,
+.seg-btn::before,.seg-btn::after,
+.avatar-opt::before,.avatar-opt::after{
+  content:"";position:absolute;pointer-events:none;z-index:-1;
+}
+/* side-edge vignette */
 .deco-box::before,
-.deco-box::after{content:"";position:absolute;pointer-events:none;z-index:-1}
-.deco-box::before{
+.tile::before,
+.stat-card::before,
+.slot::before,
+.codebox::before,
+.pod::before,
+.daily-hero::before,
+.profile-hero::before,
+#daily-board-wrap::before,
+.profile-chip::before,
+.acct-chip::before,
+.seg-btn::before,
+.avatar-opt::before{
   inset:0;
-  background:
-    radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.10), transparent 60%),
-    linear-gradient(90deg, rgba(var(--ddp-scrim-rgb),.34), transparent 24%,
-                           transparent 76%, rgba(var(--ddp-scrim-rgb),.34));
+  /* rounded in its own right rather than relying on the host's
+     overflow:hidden to clip it — the game-flow screens' landscape block
+     (#s-lobby/#s-draw/#s-summary/#s-final > .center-wrap > *) forces
+     overflow:visible at a specificity this can't beat, so .codebox would
+     otherwise show square vignette corners poking past its 18px radius. */
+  border-radius:inherit;
+  background:linear-gradient(90deg,
+    var(--deco-edge), transparent 22%,
+    transparent 78%, var(--deco-edge));
 }
-/* inset frame — no border/padding on the real element, so no box-model
-   impact and the landscape 2x3 grid math is untouched */
-.deco-box::after{
-  inset:6px;border-radius:inherit;
-  border:1px solid rgba(var(--ddp-brass-rgb),.22);
+/* inset brass frame. A pseudo rather than a border/padding on the real
+   element, so it adds no box-model size anywhere — the landscape menu
+   grid and every other measured layout are untouched. border-radius
+   inherit lets one rule serve 20px heroes, 14px cards and 12px pills. */
+.deco-box::after,
+.tile::after,
+.stat-card::after,
+.slot::after,
+.codebox::after,
+.pod::after,
+.daily-hero::after,
+.profile-hero::after,
+#daily-board-wrap::after,
+.profile-chip::after,
+.acct-chip::after,
+.seg-btn::after,
+.avatar-opt::after{
+  inset:var(--deco-inset,6px);border-radius:inherit;
+  border:1px solid var(--deco-frame);
 }
-.deco-box.deco-primary::after{border-color:rgba(var(--ddp-brass-rgb),.5)}
-/* .deco-box is now the treatment for the theme cards and account tabs
-   only — the menu tiles carry the same look written directly on .tile,
-   with the mockup's literal values. Applying both would stack two
-   vignettes and two frames on top of each other. */
-/* the tab bar's pills are ~34px tall; a 6px inset leaves a cramped
-   frame, and the spec's own note is that a full tile treatment reads
-   heavy on a short pill */
-.acct-toptab.deco-box::after{inset:3px}
+/* compact controls: a 6px inset inside a ~40px pill reads as a cramped
+   double border, so they take a tighter one */
+.acct-toptab,.profile-chip,.acct-chip,.seg-btn,.avatar-opt,.slot{--deco-inset:3px}
+/* the featured menu tile and any opt-in .deco-primary get the brighter frame */
+.deco-box.deco-primary::after,
+.tile.primary::after{border-color:var(--deco-frame-strong)}
 
 /* On narrow phones, tighten the overlap further so all 13 cards of a hand
    fit on screen at once without horizontal scrolling. */
@@ -736,23 +815,9 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   transition:transform .13s,border-color .2s,box-shadow .2s;
   touch-action:manipulation;
 }
-/* side-edge vignette. z-index:-1 + the isolation above keep both pseudos
-   above the tile's own background but below its icon and text — an
-   absolutely-positioned pseudo otherwise paints OVER in-flow content, and
-   the glyph sits right where this is darkest. */
-.tile::before,.tile::after{content:"";position:absolute;pointer-events:none;z-index:-1}
-.tile::before{
-  inset:0;
-  background:linear-gradient(90deg,
-    rgba(var(--ddp-bg-rgb),.55), transparent 22%,
-    transparent 78%, rgba(var(--ddp-bg-rgb),.55));
-}
-/* inset brass frame — a pseudo rather than a border on the real element,
-   so it adds no box-model size and the landscape grid math is untouched */
-.tile::after{
-  inset:6px;border-radius:9px;
-  border:1px solid rgba(var(--ddp-brass-rgb),.22);
-}
+/* The vignette and inset frame come from the shared Deco block near the
+   top of this stylesheet — .tile is in its selector list. Only the
+   tile-specific fill, border and lift live here. */
 .tile:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .tile:active{transform:scale(.98)}
 .tile:hover{border-color:rgba(var(--ddp-brass-rgb),.45)}
@@ -768,7 +833,6 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
       var(--felt-1) 55%, var(--felt-2) 100%);
   border-color:rgba(var(--ddp-brass-rgb),.5);
 }
-.tile.primary::after{border-color:rgba(var(--ddp-brass-rgb),.5)}
 /* A bare glyph, not a chip: the mockup's icon has no background box, and
    dropping the 44px tile frees the height the centred stack needs. */
 .tile-icon{
@@ -2045,41 +2109,35 @@ html.landscape-mode #tutorial-callout{
 [data-theme="clair"] .btn.danger{color:#8E2A20}
 [data-theme="clair"] .note.good{color:var(--ddp-mine)}
 
-/* Deco boxes on Clair, which breaks in BOTH directions at once — which is
-   why it needed a correction and the other three didn't. Measured as the
-   contrast of the treatment against the tile's own background:
-     vignette edge  Bordeaux 1.14 · Émeraude 1.45 · Marquee 1.26 · Clair 2.00
-     inset frame    Bordeaux 1.43 · Émeraude 1.35 · Marquee 1.43 · Clair 1.20
-   The scrim token is Clair's warm ink rather than black, so at .34 it
-   reads as a grey smudge across a pale tile; and brass at .22 all but
-   vanishes on a pale felt. The alphas below were solved for rather than
-   guessed: .14 puts the vignette at 1.31, and .40/.72 put the frame at
-   1.40/2.05 — the band the three dark themes already sit in. */
-[data-theme="clair"] .deco-box::before{
-  background:
-    radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.14), transparent 60%),
-    linear-gradient(90deg, rgba(var(--ddp-scrim-rgb),.14), transparent 24%,
-                           transparent 76%, rgba(var(--ddp-scrim-rgb),.14));
+/* The Deco treatment on Clair, which breaks in BOTH directions at once —
+   which is why it needs a correction and the other three don't.
+   1. The vignette fades toward --ddp-bg, the darkest felt tone — except
+      on Clair --ddp-bg IS the near-white page colour, so the edge fade
+      LIGHTENS (#e4d9c5 -> #eee7d8) and reads as a bloom, not a vignette.
+      Clair fades toward its warm ink instead, at .13 for a 1.28 edge
+      contrast — the band the other three sit in (1.06/1.42/1.25).
+   2. Brass at .22 all but vanishes on a pale felt (1.20 against 1.35-1.43
+      on the dark themes), so the frame is lifted to .40 / .72, giving
+      1.40 / 2.05.
+   Both alphas were solved for, not guessed. Overriding the three --deco-*
+   tokens is all it takes now that every box reads them — this used to be
+   two duplicated blocks of selectors. It sits at the END of the
+   stylesheet with the other Clair corrections because [data-theme="clair"]
+   ties with :root at 0,1,0 and only wins on source order. */
+[data-theme="clair"]{
+  --deco-edge:rgba(var(--ddp-scrim-rgb),.13);
+  --deco-frame:rgba(var(--ddp-brass-rgb),.40);
+  --deco-frame-strong:rgba(var(--ddp-brass-rgb),.72);
 }
-[data-theme="clair"] .deco-box::after{border-color:rgba(var(--ddp-brass-rgb),.40)}
-[data-theme="clair"] .deco-box.deco-primary::after{border-color:rgba(var(--ddp-brass-rgb),.72)}
-
-/* The menu tiles' side vignette is built on --ddp-bg-rgb, the darkest
-   felt tone — except on Clair, where --ddp-bg IS the near-white page
-   colour, so the "fade to the edges" LIGHTENS instead of darkening and
-   reads as a bloom. Measured: the edge goes from #e4d9c5 to #eee7d8,
-   i.e. brighter than the tile it sits on. Clair therefore fades toward
-   its warm ink instead, at .13 for a 1.28 edge contrast — the same band
-   Bordeaux/Émeraude/Marquee land in (1.06/1.42/1.25) with .55 of their
-   own near-black bg. Frame gets the same lift as the .deco-box one. */
-[data-theme="clair"] .tile::before{
-  background:linear-gradient(90deg,
-    rgba(var(--ddp-scrim-rgb),.13), transparent 22%,
-    transparent 78%, rgba(var(--ddp-scrim-rgb),.13));
-}
-[data-theme="clair"] .tile::after{border-color:rgba(var(--ddp-brass-rgb),.40)}
-[data-theme="clair"] .tile.primary::after{border-color:rgba(var(--ddp-brass-rgb),.72)}
 [data-theme="clair"] .tile{border-color:rgba(var(--ddp-brass-rgb),.45)}
+/* Active tab labels: --gold-hi on the rgba(brass,.18) active pill measures
+   8.11 / 6.27 / 8.08 on Bordeaux / Émeraude / Marquee but 1.01 on Clair —
+   gold text on a gold wash over a pale bar, i.e. invisible. Grounded on
+   the ink, the same correction --tag already gets above. Covers both tab
+   families: .acct-toptab (Profile/Achievements/Friends) and .acct-tab
+   (login/signup, and Casual/Ranked on the statistics screen). */
+[data-theme="clair"] .acct-tab.active,
+[data-theme="clair"] .acct-toptab.active{color:var(--ddp-ink)}
 /* The mockup's tagline is opacity .7, which works where --muted is a pale
    mint on dark felt (Bordeaux 5.11, Émeraude 3.83, Marquee 4.89) but not
    on Clair, where --muted is a dark ink on pale felt and .7 washes 9px

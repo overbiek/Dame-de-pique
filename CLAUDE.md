@@ -600,14 +600,44 @@ before pushing.
 - `manifest.json` changed, so `sw.js`'s `CACHE` is bumped (`ddp-v7`).
 
 ## `.deco-box` — the Marquee Deco box treatment
-- An opt-in decoration (edge vignette + brass inset frame) added by
-  putting `deco-box` on an element, `deco-primary` for the stronger
-  frame. Applied to the four `.theme-swatch-btn.theme-card`s and the
-  three `.acct-toptab`s. CSS only — no JS, no markup beyond the class.
-- **The menu tiles deliberately do NOT use it** — they carry the same
-  look written directly on `.tile` with the mockup's literal values (see
-  the next section). Applying both would stack two vignettes and two
-  frames on top of each other.
+- One edge-vignette + brass-inset-frame treatment shared by **every**
+  card, panel and selection control in the app: `.tile`, `.stat-card`,
+  `.slot`, `.codebox`, `.pod`, `.daily-hero`, `.profile-hero`,
+  `#daily-board-wrap`, `.profile-chip`, `.acct-chip`, `.seg-btn`,
+  `.avatar-opt`, plus `.deco-box` as the opt-in hook (used by
+  `.theme-swatch-btn.theme-card` and `.acct-toptab`).
+- **Applied by SELECTOR, not by adding a class to every element.**
+  Several of these are built in JS render functions — `.slot` in
+  `renderLobby`, `.pod` in `renderFinal`, `.avatar-opt` in
+  `renderAvatarGrid` — so a class-based rollout would have meant editing
+  render code. This stays CSS-only. Adding a new box to the treatment
+  means adding it to three selector lists (base, `::before`, `::after`).
+- **Three tokens drive it**: `--deco-edge`, `--deco-frame`,
+  `--deco-frame-strong`, declared in the **first** `:root` (with the
+  `--ddp-*` block), *not* the derived one. That placement is
+  load-bearing: `[data-theme="clair"]` ties with `:root` at 0,1,0, so it
+  can only override by coming later in source order — and the derived
+  `:root` sits *after* the theme blocks. Clair's whole correction is now
+  three token overrides instead of two duplicated selector lists.
+- `--deco-inset` (default `6px`, `3px` on compact controls) is a
+  per-element custom property, so sizing the frame to a 40px pill vs a
+  20px hero needs no new rule.
+- **`::before` carries `border-radius:inherit`** rather than relying on
+  the host's `overflow:hidden` to clip it. The game-flow screens'
+  landscape block (`#s-lobby/#s-draw/#s-summary/#s-final > .center-wrap
+  > *`) forces `overflow:visible` at a specificity the shared rule can't
+  beat, so `.codebox` would otherwise show square vignette corners
+  poking past its 18px radius.
+- **Not treated, deliberately**: `.sheet-wrap` (its `overflow:auto` is
+  what scrolls the scoresheet — `overflow:hidden` would kill it),
+  `.note` (background and border carry semantic good/bad/gold state; a
+  brass frame fights a red error), `.empty-state` (a text block with no
+  box of its own), `.acct-tabbar`/`.acct-tabs` (containers whose
+  children already carry it — framing both nests two frames), `.btn`
+  (44 of them, and a dark vignette over the gold primary reads as a
+  rendering fault), table rows (a `tr`/`td` can't host absolute
+  pseudo-elements reliably), and everything on the pass/play screens
+  (vertical budget).
 - **The menu tile icons are typographic glyphs, not emoji** (♠ ☀ ♛ ◆ ▤ ☺,
   from the Deco mockup), and that's what makes the treatment work on
   them: emoji ignore `color` and largely ignore `text-shadow`, so they
@@ -643,25 +673,19 @@ before pushing.
   tiles, 14px theme cards and 9px tab pills. The tab pills get
   `inset:3px` instead of `6px` — a 6px inset inside a ~34px pill reads
   as a cramped double-border.
-- **Clair needed a correction and the other three didn't, because it
-  breaks in BOTH directions at once.** Measured contrast of the treatment
-  against the tile's own background:
-  vignette — Bordeaux 1.14, Émeraude 1.45, Marquee 1.26, **Clair 2.00**;
-  frame — Bordeaux 1.43, Émeraude 1.35, Marquee 1.43, **Clair 1.20**.
-  Clair's scrim token is its warm ink rather than black, so the vignette
-  reads as a grey smudge on a pale tile, while brass at .22 all but
-  disappears on a pale felt. The correction (vignette .34→.14, frame
-  .22→.40, primary .5→.72) puts it at 1.31/1.40/2.05, in the same band as
-  the dark themes. It lives at the **end** of the stylesheet with the
-  other Clair corrections — it ties on specificity with the `.deco-box`
-  rules, so source order is what decides it.
-- Audited but deliberately **not** treated: `.stat-card` (36 of them, and
-  not clickable), `.daily-hero`, `.codebox`, `.empty-state`, `.pod`,
-  `.tc-swatch` — informational, not selection controls. `.avatar-opt` is
-  a real control but 20 dense ~44px squares would turn the frame into
-  noise. `.seg-btn` (the match-length picker) is the one clean remaining
-  candidate if this is ever rolled further. Table/play-screen elements
-  are out of scope on purpose — vertical budget.
+- **Clair needs a correction and the other three don't, because it breaks
+  in BOTH directions at once.** Measured contrast of the treatment
+  against the box's own background:
+  vignette — Bordeaux 1.06, Émeraude 1.42, Marquee 1.25, **Clair
+  lightened instead of darkening** (its `--ddp-bg` is the near-white page
+  colour, so the "fade to the edges" read as a bloom);
+  frame — Bordeaux 1.43, Émeraude 1.35, Marquee 1.43, **Clair 1.20**
+  (brass at .22 all but vanishes on a pale felt).
+  So Clair fades toward its warm ink at .13 (1.28 edge contrast) and
+  lifts the frame to .40/.72 (1.40/2.05). Both alphas were solved for,
+  not guessed. It lives at the **end** of the stylesheet with the other
+  Clair corrections — see the token-placement note above for why source
+  order is what decides it.
 
 ## Menu tiles — the Marquee Deco layout
 - Each tile is a **centred vertical stack**: glyph → NAME (uppercase

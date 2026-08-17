@@ -94,6 +94,22 @@ const RANKED_RECONNECT_MS = 15 * 1000; // grace period before a disconnected ran
 const rooms = {};
 const rankedQueue = []; // { socketId, accountId, name, avatar, mmr, placementGamesPlayed, queuedAt }
 
+// accountId -> Set<socket.id>, live for exactly as long as a socket with
+// that account attached is connected (set alongside every authOk emit,
+// cleared on disconnect below). A Set rather than a single socket id
+// because the same account can have more than one tab/device open at
+// once; "online" just means the set is non-empty. This is the only
+// source of truth for friend presence/invites — nothing here touches
+// Postgres, it's pure in-memory and resets on every server restart,
+// which is fine since it's rebuilt the moment a client's session resumes.
+const accountSockets = new Map();
+function notifySocketsForAccount(accountId, event, payload) {
+  const set = accountSockets.get(accountId);
+  if (!set || !set.size) return false;
+  for (const sid of set) io.to(sid).emit(event, payload);
+  return true;
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 function makeCode() {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusing chars
@@ -1063,29 +1079,39 @@ function computeMmrChanges(scores) {
   });
 }
 
+// `tier` is the DISPLAYED name; `slug` is the stable internal key and is
+// deliberately unchanged from the original Bronze..Legend naming. That
+// split is what let the tiers be renamed (to the cosmetic sheet's
+// Novice..Legend) without touching a single one of the 22
+// `public/badges/*.svg` filenames or the eight `.tag.<slug>` CSS rules —
+// both are keyed off the slug, not the label. It also keeps
+// "Grand Master" (which has a space, and so cannot be a class name or a
+// filename) from ever reaching either.
+// The MMR thresholds are untouched: this is a rename, not a re-tuning,
+// so nobody's rank actually moved.
 const RANK_TABLE = [
-  { mmr: 0,    tier: 'Bronze',      div: 1 },
-  { mmr: 167,  tier: 'Bronze',      div: 2 },
-  { mmr: 334,  tier: 'Bronze',      div: 3 },
-  { mmr: 500,  tier: 'Silver',      div: 1 },
-  { mmr: 667,  tier: 'Silver',      div: 2 },
-  { mmr: 834,  tier: 'Silver',      div: 3 },
-  { mmr: 1000, tier: 'Gold',        div: 1 },
-  { mmr: 1167, tier: 'Gold',        div: 2 },
-  { mmr: 1334, tier: 'Gold',        div: 3 },
-  { mmr: 1500, tier: 'Platinum',    div: 1 },
-  { mmr: 1667, tier: 'Platinum',    div: 2 },
-  { mmr: 1834, tier: 'Platinum',    div: 3 },
-  { mmr: 2000, tier: 'Diamond',     div: 1 },
-  { mmr: 2167, tier: 'Diamond',     div: 2 },
-  { mmr: 2334, tier: 'Diamond',     div: 3 },
-  { mmr: 2500, tier: 'Master',      div: 1 },
-  { mmr: 2667, tier: 'Master',      div: 2 },
-  { mmr: 2834, tier: 'Master',      div: 3 },
-  { mmr: 3000, tier: 'Grandmaster', div: 1 },
-  { mmr: 3167, tier: 'Grandmaster', div: 2 },
-  { mmr: 3334, tier: 'Grandmaster', div: 3 },
-  { mmr: 3500, tier: 'Legend',      div: null },
+  { mmr: 0,    tier: 'Novice',       slug: 'bronze',      div: 1 },
+  { mmr: 167,  tier: 'Novice',       slug: 'bronze',      div: 2 },
+  { mmr: 334,  tier: 'Novice',       slug: 'bronze',      div: 3 },
+  { mmr: 500,  tier: 'Apprentice',   slug: 'silver',      div: 1 },
+  { mmr: 667,  tier: 'Apprentice',   slug: 'silver',      div: 2 },
+  { mmr: 834,  tier: 'Apprentice',   slug: 'silver',      div: 3 },
+  { mmr: 1000, tier: 'Player',       slug: 'gold',        div: 1 },
+  { mmr: 1167, tier: 'Player',       slug: 'gold',        div: 2 },
+  { mmr: 1334, tier: 'Player',       slug: 'gold',        div: 3 },
+  { mmr: 1500, tier: 'Gambler',      slug: 'platinum',    div: 1 },
+  { mmr: 1667, tier: 'Gambler',      slug: 'platinum',    div: 2 },
+  { mmr: 1834, tier: 'Gambler',      slug: 'platinum',    div: 3 },
+  { mmr: 2000, tier: 'Ace',          slug: 'diamond',     div: 1 },
+  { mmr: 2167, tier: 'Ace',          slug: 'diamond',     div: 2 },
+  { mmr: 2334, tier: 'Ace',          slug: 'diamond',     div: 3 },
+  { mmr: 2500, tier: 'Master',       slug: 'master',      div: 1 },
+  { mmr: 2667, tier: 'Master',       slug: 'master',      div: 2 },
+  { mmr: 2834, tier: 'Master',       slug: 'master',      div: 3 },
+  { mmr: 3000, tier: 'Grand Master', slug: 'grandmaster', div: 1 },
+  { mmr: 3167, tier: 'Grand Master', slug: 'grandmaster', div: 2 },
+  { mmr: 3334, tier: 'Grand Master', slug: 'grandmaster', div: 3 },
+  { mmr: 3500, tier: 'Legend',       slug: 'legend',      div: null },
 ];
 const DIV_ROMAN = { 1: 'I', 2: 'II', 3: 'III' };
 function rankForMmr(mmr) {
@@ -1095,16 +1121,307 @@ function rankForMmr(mmr) {
   }
   return {
     tier: best.tier,
+    slug: best.slug,
     division: best.div,
     label: best.div ? `${best.tier} ${DIV_ROMAN[best.div]}` : best.tier,
     mmr,
   };
 }
 
+// ── Achievements & cosmetics ────────────────────────────────────
+// ONE registry, server-side, and it is the only authority. The client
+// carries a parallel table of *presentation* only (display names, the SVG
+// crest art, scene CSS) keyed by these same IDs — it never decides what's
+// unlocked, and `saveCosmetics` re-checks every incoming ID against a
+// freshly evaluated unlock set, so a hand-crafted socket message can't
+// equip something that wasn't earned.
+//
+// IDs are stable and must stay so: they're persisted in
+// player_cosmetics. Thresholds are NOT — they're re-evaluated on every
+// read, so retuning one takes effect immediately for everyone (upward
+// too, which is the deliberate cost of never storing unlock rows; see
+// db.js's player_cosmetics comment).
+//
+// `stat` names a key of db.getAchievementStats(). Adding an achievement
+// means adding a counter there and a row here, nothing else — the crest,
+// the title it grants, the Achievements tab entry and the cosmetics it
+// gates all fall out of this table.
+const ACHIEVEMENTS = [
+  { id: 'ach_queen_hunter',   name: 'Queen Hunter',     desc: 'Take the Queen of Spades 25 times.',
+    stat: 'queensTaken',        threshold: 25,   crest: 'crest_queen_of_spades', title: 'title_queen_hunter' },
+  { id: 'ach_four_suit',      name: 'Four-Suit Master', desc: 'Win a game after taking tricks in all four suits — 10 times.',
+    stat: 'fourSuitGames',      threshold: 10,   crest: 'crest_four_suits',      title: 'title_four_suit_master' },
+  { id: 'ach_the_house',      name: 'The House',        desc: 'Win 25 complete games.',
+    stat: 'gamesWon',           threshold: 25,   crest: 'crest_crown',           title: 'title_the_house' },
+  { id: 'ach_moon_chaser',    name: 'Moon Chaser',      desc: 'Shoot the moon 5 times.',
+    stat: 'moonsTotal',         threshold: 5,    crest: 'crest_crescent',        title: 'title_moon_chaser' },
+  { id: 'ach_ace_collector',  name: 'Ace Collector',    desc: 'Win 10 games.',
+    stat: 'gamesWon',           threshold: 10,   crest: 'crest_ace',             title: 'title_ace_collector' },
+  { id: 'ach_heartbreaker',   name: 'Heartbreaker',     desc: 'Win 10 games with a positive final score.',
+    stat: 'gamesWonPositive',   threshold: 10,   crest: 'crest_rose',            title: 'title_heartbreaker' },
+  { id: 'ach_strategist',     name: 'The Strategist',   desc: 'Win 10 ranked games.',
+    stat: 'rankedGamesWon',     threshold: 10,   crest: 'crest_snake',           title: 'title_strategist' },
+  { id: 'ach_silent_dealer',  name: 'The Silent Dealer', desc: 'Finish 10 games without ending them early.',
+    stat: 'gamesCompletedFull', threshold: 10,   crest: 'crest_raven',           title: 'title_dealers_nemesis' },
+  { id: 'ach_high_roller',    name: 'High Roller',      desc: 'Reach 1400 MMR in ranked.',
+    stat: 'mmrPeak',            threshold: 1400, crest: 'crest_diamond',         title: 'title_high_roller' },
+  { id: 'ach_card_master',    name: 'Card Master',      desc: 'Complete 50 games.',
+    stat: 'gamesCompleted',     threshold: 50,   crest: 'crest_card_fan',        title: 'title_trick_taker' },
+  // The brief's own preferred fallback: this game has no "elimination"
+  // concept for its first suggested condition to hang off, so it uses the
+  // supported completed-games stat instead.
+  { id: 'ach_observer',       name: 'The Observer',     desc: 'Complete 25 games.',
+    stat: 'gamesCompleted',     threshold: 25,   crest: 'crest_eye',             title: 'title_clean_sweep' },
+  { id: 'ach_the_dealer',     name: 'The Dealer',       desc: 'Deal 25 rounds.',
+    stat: 'dealerRounds',       threshold: 25,   crest: 'crest_dealer_button',   title: 'title_blame_the_dealer' },
+];
+
+// Scenes and card fronts. `unlock: null` means always available — every
+// category needs exactly one such entry so a brand-new account has
+// something equipped rather than an empty picker. Crests and titles have
+// no free entry on purpose: an unequipped crest/title is simply nothing
+// shown, which is a valid state, whereas an unequipped scene would leave
+// the table with no background at all.
+const COSMETICS = {
+  scenes: [
+    { id: 'scene_velvet_room',   name: 'The Velvet Room',  unlock: null },
+    { id: 'scene_rooftop',       name: 'The Rooftop',      unlock: 'ach_observer' },
+    { id: 'scene_grand_library', name: 'The Grand Library', unlock: 'ach_card_master' },
+    { id: 'scene_winter_casino', name: 'The Winter Casino', unlock: 'ach_the_house' },
+    { id: 'scene_moon_room',     name: 'The Moon Room',    unlock: 'ach_moon_chaser' },
+    { id: 'scene_garden',        name: 'The Garden',       unlock: 'ach_heartbreaker' },
+    { id: 'scene_train',         name: 'The Train',        unlock: 'ach_the_dealer' },
+    { id: 'scene_observatory',   name: 'The Observatory',  unlock: 'ach_high_roller' },
+  ],
+  cardFronts: [
+    { id: 'cardfront_standard',    name: 'Classic',     unlock: null },
+    { id: 'cardfront_royal_court', name: 'Royal Court', unlock: 'ach_queen_hunter' },
+  ],
+  // Crests are 1:1 with achievements by design (the brief's whole point:
+  // a crest IS the visible proof of an achievement), so they're derived
+  // from ACHIEVEMENTS rather than listed twice and kept in sync by hand.
+  get crests() {
+    return ACHIEVEMENTS.map(a => ({ id: a.crest, name: a.name, unlock: a.id }));
+  },
+  // Rank sets, derived from RANK_COSMETICS rather than listed twice.
+  // `rankTier` is what marks them tier-unlocked in cosmeticsFor, the
+  // same mechanism the rank titles already use.
+  get rankSets() {
+    return RANK_COSMETICS.map(r => ({
+      id: 'rank_' + r.slug, name: r.tier, rankTier: r.slug,
+      material: r.material, emblem: r.emblem,
+    }));
+  },
+  // Titles: one per achievement (deduplicated — two achievements may
+  // grant the same title), plus the rank titles, which unlock off the
+  // ranked tier the server already derives rather than any new counter.
+  titles: [
+    { id: 'title_queen_hunter',      name: 'The Queen Hunter',    unlock: 'ach_queen_hunter' },
+    { id: 'title_four_suit_master',  name: 'Four-Suit Master',    unlock: 'ach_four_suit' },
+    { id: 'title_the_house',         name: 'The House',           unlock: 'ach_the_house' },
+    { id: 'title_moon_chaser',       name: 'Moon Chaser',         unlock: 'ach_moon_chaser' },
+    { id: 'title_ace_collector',     name: 'Ace Collector',       unlock: 'ach_ace_collector' },
+    { id: 'title_heartbreaker',      name: 'Heartbreaker',        unlock: 'ach_heartbreaker' },
+    { id: 'title_strategist',        name: 'The Strategist',      unlock: 'ach_strategist' },
+    { id: 'title_dealers_nemesis',   name: "Dealer's Nemesis",    unlock: 'ach_silent_dealer' },
+    { id: 'title_high_roller',       name: 'High Roller',         unlock: 'ach_high_roller' },
+    { id: 'title_trick_taker',       name: 'The Trick Taker',     unlock: 'ach_card_master' },
+    { id: 'title_clean_sweep',       name: 'Clean Sweep',         unlock: 'ach_observer' },
+    { id: 'title_blame_the_dealer',  name: 'Blame the Dealer',    unlock: 'ach_the_dealer' },
+    // rankTier is a SLUG, not a display name — tierReached compares
+    // against RANK_TABLE's slug, so a capitalised tier name here would
+    // silently never match and lock every rank title forever.
+    { id: 'title_rising_star',       name: 'Rising Star',         rankTier: 'silver' },
+    { id: 'title_ace',               name: 'The Ace',             rankTier: 'gold' },
+    { id: 'title_no_hearts_please',  name: 'No Hearts, Please',   rankTier: 'platinum' },
+    { id: 'title_grandmaster',       name: 'The Grandmaster',     rankTier: 'diamond' },
+    { id: 'title_definitely_not_counting_cards', name: 'Definitely Not Counting Cards', rankTier: 'master' },
+    { id: 'title_one_more_game',     name: 'One More Game',       rankTier: 'grandmaster' },
+    { id: 'title_the_legend',        name: 'The Legend',          rankTier: 'legend' },
+  ],
+};
+
+// Rank titles unlock at a tier and STAY unlocked — RANK_TABLE's order is
+// the ladder, so "have I ever been at least this tier" is an index
+// comparison against the peak MMR the ranked table already stores. Peak,
+// not current, so a cosmetic is never silently revoked by a losing streak
+// (the brief is explicit about that).
+// Ordered by slug, not by display name — the slug is the stable key (see
+// RANK_TABLE), so renaming a tier can never silently break this ladder
+// comparison the way matching on a label would.
+const TIER_ORDER = ['bronze', 'silver', 'gold', 'platinum', 'diamond', 'master', 'grandmaster', 'legend'];
+function tierReached(mmrPeak, slug) {
+  const reached = rankForMmr(mmrPeak || 0).slug;
+  return TIER_ORDER.indexOf(reached) >= TIER_ORDER.indexOf(slug);
+}
+
+// ── Rank cosmetics ──────────────────────────────────────────────
+// One set per TIER (8), not per rank state (22): the reference sheet
+// defines eight, and divisions within a tier share a look. Unlocked
+// purely by reaching the tier — never purchasable, and never revoked if
+// MMR later falls, which is why tierReached reads PEAK mmr.
+// `material` is the sheet's own colour-theme name and is what the CSS
+// fallback renders from until the exported emblem art lands; `emblem`
+// names the artwork so a missing file is obvious in devtools.
+const RANK_COSMETICS = [
+  { slug: 'bronze',      tier: 'Novice',       material: 'paper',    emblem: 'shield' },
+  { slug: 'silver',      tier: 'Apprentice',   material: 'ink',      emblem: 'pen' },
+  { slug: 'gold',        tier: 'Player',       material: 'velvet',   emblem: 'fleur' },
+  { slug: 'platinum',    tier: 'Gambler',      material: 'brass',    emblem: 'chip' },
+  { slug: 'diamond',     tier: 'Ace',          material: 'gold',     emblem: 'spade' },
+  { slug: 'master',      tier: 'Master',       material: 'royal',    emblem: 'crown' },
+  { slug: 'grandmaster', tier: 'Grand Master', material: 'obsidian', emblem: 'shard' },
+  { slug: 'legend',      tier: 'Legend',       material: 'diamond',  emblem: 'diamond' },
+];
+
+// ── Portrait avatars ────────────────────────────────────────────
+// 20 across 5 collections. Unlike scenes/crests these carry NO unlock
+// condition — the reference sheet states one for the rank cosmetics and
+// pointedly not for these, and the emoji avatars they sit beside have
+// always been free. They do still require an account, but only because
+// editing your identity already did (see the guest gate on the account
+// screen), not because of anything cosmetic.
+//
+// They are stored in `accounts.avatar`, the SAME column the emoji
+// avatars use, rather than in player_cosmetics — an avatar is identity,
+// it is already carried through publicState and every leaderboard query,
+// and giving it a second home would mean two sources of truth for what
+// a player looks like.
+const AVATAR_COLLECTIONS = [
+  { id: 'royal_court',     name: 'Royal Court',     dir: 'royal-court',
+    avatars: [['royal_king', 'The King', 'king'], ['royal_queen', 'The Queen', 'queen'],
+              ['royal_duke', 'The Duke', 'duke'], ['royal_duchess', 'The Duchess', 'duchess']] },
+  { id: 'noir_casino',     name: 'Noir Casino',     dir: 'noir-casino',
+    avatars: [['noir_gambler', 'The Gambler', 'gambler'], ['noir_dealer', 'The Dealer', 'dealer'],
+              ['noir_femme_fatale', 'Femme Fatale', 'femme_fatale'], ['noir_detective', 'The Detective', 'detective']] },
+  { id: 'emerald_society', name: 'Emerald Society', dir: 'emerald-society',
+    avatars: [['emerald_alchemist', 'The Alchemist', 'alchemist'], ['emerald_serpent', 'The Serpent', 'serpent'],
+              ['emerald_mask', 'The Mask', 'mask'], ['emerald_oracle', 'The Oracle', 'oracle']] },
+  { id: 'moonlit_occult',  name: 'Moonlit Occult',  dir: 'moonlit-occult',
+    avatars: [['occult_priestess', 'Moon Priestess', 'priestess'], ['occult_astrologer', 'The Astrologer', 'astrologer'],
+              ['occult_raven', 'The Raven', 'raven'], ['occult_magician', 'The Magician', 'magician']] },
+  { id: 'grand_hotel',     name: 'Grand Hotel',     dir: 'grand-hotel',
+    avatars: [['hotel_concierge', 'The Concierge', 'concierge'], ['hotel_bellboy', 'The Bellboy', 'bellboy'],
+              ['hotel_heiress', 'The Heiress', 'heiress'], ['hotel_traveler', 'The Traveler', 'traveler']] },
+];
+const AVATAR_IDS = new Set(
+  AVATAR_COLLECTIONS.flatMap(c => c.avatars.map(a => a[0]))
+);
+
+// The single evaluation point. Everything downstream — the Achievements
+// tab, every cosmetic picker, and save-time validation — reads this one
+// result, so there is exactly one definition of "unlocked" in the app.
+function evaluateAchievements(stats) {
+  return ACHIEVEMENTS.map(a => {
+    const value = stats[a.stat] || 0;
+    return {
+      id: a.id, name: a.name, desc: a.desc, crest: a.crest, title: a.title,
+      threshold: a.threshold,
+      progress: Math.min(value, a.threshold),
+      unlocked: value >= a.threshold,
+    };
+  });
+}
+
+function cosmeticsFor(achievements, stats) {
+  const done = new Set(achievements.filter(a => a.unlocked).map(a => a.id));
+  // rankTierName is sent alongside the slug so the client can say
+  // "Reach Gambler" without carrying its own copy of RANK_TABLE — the
+  // rule that visible rank is server-derived applies here too.
+  const tierName = slug => (RANK_COSMETICS.find(r => r.slug === slug) || {}).tier || slug;
+  const mark = list => list.map(c => ({
+    id: c.id, name: c.name, unlock: c.unlock || null,
+    unlockName: c.unlock ? (ACHIEVEMENTS.find(a => a.id === c.unlock) || {}).name || null : null,
+    rankTier: c.rankTier || null,
+    rankTierName: c.rankTier ? tierName(c.rankTier) : null,
+    material: c.material || null,
+    emblem: c.emblem || null,
+    unlocked: c.rankTier ? tierReached(stats.mmrPeak, c.rankTier)
+            : (!c.unlock || done.has(c.unlock)),
+  }));
+  return {
+    scenes: mark(COSMETICS.scenes),
+    cardFronts: mark(COSMETICS.cardFronts),
+    crests: mark(COSMETICS.crests),
+    titles: mark(COSMETICS.titles),
+    rankSets: mark(COSMETICS.rankSets),
+  };
+}
+
+// Drops anything the account hasn't (or no longer has) unlocked, so a
+// stale equip can never render. Returns the same shape getCosmetics does.
+function filterEquipped(equipped, catalog) {
+  const ok = (list, id) => {
+    if (!id) return null;
+    const found = list.find(c => c.id === id);
+    return found && found.unlocked ? id : null;
+  };
+  // Rank set falls back to the HIGHEST one unlocked rather than to a
+  // fixed default: it's the one cosmetic that's automatic, so a player
+  // who never opens the picker should still be wearing the set they
+  // earned, and should be re-dressed the moment they rank up. Picking a
+  // lower set explicitly is still honoured, since ok() runs first.
+  const highestRank = [...catalog.rankSets].reverse().find(r => r.unlocked);
+  return {
+    scene: ok(catalog.scenes, equipped.scene) || 'scene_velvet_room',
+    cardFront: ok(catalog.cardFronts, equipped.cardFront) || 'cardfront_standard',
+    crest: ok(catalog.crests, equipped.crest),
+    title: ok(catalog.titles, equipped.title),
+    rankSet: ok(catalog.rankSets, equipped.rankSet) || (highestRank ? highestRank.id : null),
+  };
+}
+
+// Everything the account screen needs in one round trip: what's unlocked,
+// what's equipped (already filtered), and which unlocks haven't been
+// celebrated yet. Also used at room-join time to look up a display title.
+async function loadPlayerCosmetics(accountId) {
+  const stats = await db.getAchievementStats(accountId);
+  const achievements = evaluateAchievements(stats);
+  const catalog = cosmeticsFor(achievements, stats);
+  const stored = await db.getCosmetics(accountId);
+  const equipped = filterEquipped(stored, catalog);
+  const seen = new Set(stored.seen);
+  const fresh = achievements.filter(a => a.unlocked && !seen.has(a.id)).map(a => a.id);
+  return { stats, achievements, catalog, equipped, fresh };
+}
+
+// The display string for a seat, or null. Guests and accounts with no
+// title equipped both come back null, which every render path already
+// treats as "just show the name".
+function titleNameFor(id) {
+  const t = COSMETICS.titles.find(x => x.id === id);
+  return t ? t.name : null;
+}
+
+// What another player sees on your seat: your title and your rank set's
+// material. Resolved ONCE per join — see the note on the player object's
+// `title` field for why this must not move into publicState.
+// Returns the empty shape rather than throwing: these are decorations,
+// and a DB blip must never stop someone sitting down.
+const NO_SEAT_COSMETICS = { title: null, rankMaterial: null };
+async function lookupSeatCosmetics(accountId) {
+  if (!DB_ENABLED || !accountId) return NO_SEAT_COSMETICS;
+  try {
+    const { equipped, catalog } = await loadPlayerCosmetics(accountId);
+    const set = catalog.rankSets.find(r => r.id === equipped.rankSet);
+    return {
+      title: titleNameFor(equipped.title),
+      rankMaterial: set ? set.material : null,
+    };
+  } catch (e) {
+    return NO_SEAT_COSMETICS;
+  }
+}
+
 // ── Room lifecycle ──────────────────────────────────────────────
 function sanitizeAvatar(a) {
-  const s = String(a || '').trim().slice(0, 8);
-  return s || null;
+  const s = String(a || '').trim();
+  // A portrait-avatar ID is a known constant, so it's passed through
+  // whole. The 8-char slice below exists to bound arbitrary emoji input
+  // and would mangle these ("royal_king" -> "royal_ki"), which is why
+  // the allow-list check has to come first.
+  if (AVATAR_IDS.has(s)) return s;
+  return s.slice(0, 8) || null;
 }
 
 // `opts` is optional and every field defaults to the classic game, so
@@ -1130,8 +1447,19 @@ function createRoom(hostName, hostAvatar, hostAccountId, opts) {
       name: i === 0 ? hostName : 'Empty seat',
       avatar: i === 0 ? sanitizeAvatar(hostAvatar) : null,
       accountId: i === 0 ? (hostAccountId || null) : null,
+      // Equipped player title and rank-set material, resolved once at
+      // join time (see lookupSeatCosmetics) rather than per broadcast —
+      // they're cosmetic strings, and re-reading them on every gameState
+      // would put a DB round trip in the hot path of every card played.
+      title: null,
+      rankMaterial: null,
       isAI: false, socketId: null, token: null,
       score: 0, hand: [], tricks: [], connected: false, hasPassed: false,
+      // Suits this player has won a trick in, for the whole GAME — the
+      // Four-Suit Master achievement. `tricks` can't serve: dealRound
+      // clears it every hand, so by the final round it only describes
+      // that hand. Reset in startDraw/startGame, read once at game end.
+      suitsWon: [],
     })),
     hostSocket: null,
     hostToken: null,
@@ -1240,6 +1568,7 @@ function formRankedMatch(group) {
     const token = makeToken();
     Object.assign(G.players[i], {
       name: p.name, avatar: sanitizeAvatar(p.avatar), accountId: p.accountId,
+      ...(p.seatCos || NO_SEAT_COSMETICS),
       socketId: p.socketId, token, connected: true, isAI: false,
     });
     if (i === 0) { G.hostSocket = p.socketId; G.hostToken = token; }
@@ -1393,16 +1722,33 @@ function applyRankedResult(G) {
   }
 }
 
-function recordGameFinishedForAll(G) {
+// `natural` distinguishes a game that played out its full round count
+// from one cut short by the end-early vote — the only difference that
+// matters to The Silent Dealer, and the reason finishEarly passes false.
+function recordGameFinishedForAll(G, natural) {
   // The Daily Challenge finishes through its own pipeline
   // (submitDailyResult) — it must never touch casual or ranked stats.
   if (G.daily) { submitDailyResult(G); return; }
   applyRankedResult(G);
+  // Highest score wins. A tie counts as a win for everyone tied — the
+  // game has no tiebreak rule, so inventing one here just to deny an
+  // achievement would be worse than being generous.
+  const topScore = Math.max(...G.players.map(p => p.score));
   for (let i = 0; i < 4; i++) {
     const acctId = G.players[i].accountId;
     if (!acctId) continue;
     const finalScore = G.players[i].score;
     const moons = (G.moonCounts && G.moonCounts[i]) || 0;
+    const won = finalScore === topScore;
+    trackStat(() => db.recordAchievementGame(acctId, {
+      completed: 1,
+      completedFull: natural ? 1 : 0,
+      won: won ? 1 : 0,
+      wonPositive: won && finalScore > 0 ? 1 : 0,
+      rankedWon: G.ranked && won ? 1 : 0,
+      moons,
+      fourSuit: won && (G.players[i].suitsWon || []).length === 4 ? 1 : 0,
+    }));
     if (G.ranked) trackStat(() => db.recordRankedGameFinished(acctId, finalScore, moons));
     // A 4- or 8-round game's final score isn't comparable with a 16-round
     // one, so Blitz totals (best/worst game, average, win streak) get their
@@ -1418,7 +1764,7 @@ function finishEarly(G) {
   G.endVote = null;
   G.voteMsg = '';
   G.phase = 'final';
-  recordGameFinishedForAll(G);
+  recordGameFinishedForAll(G, false);   // ended early by vote — see The Silent Dealer
   broadcastRoom(G);
 }
 
@@ -1447,7 +1793,9 @@ function publicState(G) {
     phase: G.phase,
     ranked: !!G.ranked,
     players: G.players.map((p, i) => ({
-      name: p.name, avatar: p.avatar || null, isAI: p.isAI, score: p.score,
+      name: p.name, avatar: p.avatar || null, title: p.title || null,
+      rankMaterial: p.rankMaterial || null,
+      isAI: p.isAI, score: p.score,
       roundScore: p.score - (G.roundBefore[i] || 0),
       tricksWon: p.tricks.length / 4,
       connected: p.connected, cardCount: p.hand.length, hasPassed: p.hasPassed,
@@ -1507,6 +1855,10 @@ function broadcastRoom(G) {
 function startDraw(G, round) {
   G.phase = 'draw';
   G.drawRound = round;
+  // Round 1's cut is the start of the game proper, so the game-scoped
+  // achievement accumulator resets here. Belt-and-braces: a room only
+  // ever plays one game today, so this is already [] from createRoom.
+  if (round === 1) for (const p of G.players) p.suitsWon = [];
   const deck = shuffle(makeDeck());
   G.drawCards = deck.slice(0, 4);
   G.drawRevealed = [false, false, false, false];
@@ -1580,6 +1932,12 @@ function dealRound(G) {
   G.lastTrickMsg = '';
   G.playLog = [];
   G.roundBefore = G.players.map(p => p.score);
+
+  // The Dealer achievement. Counted here, once per hand actually dealt,
+  // rather than per game — a 16-round game deals 16 hands and a Blitz
+  // deals 4, which is exactly the difference the achievement is about.
+  const dealer = G.players[G.dealer];
+  if (dealer && dealer.accountId) trackStat(() => db.recordDealerRound(dealer.accountId));
 
   if (roundPassDir(G) === 'keep') { startTricks(G); return; }
 
@@ -1688,9 +2046,15 @@ function resolveTrick(G) {
   const trickScore = 10 + penPts;
   G.players[winner].score += trickScore;
   G.players[winner].tricks.push(...G.currentTrick.map(t => t.card));
+  // Game-scoped, mode-agnostic and kept regardless of whether the winner
+  // is even logged in — it's read once at game end, where the account
+  // check happens. The led suit is what a trick "is": you can't win a
+  // trick in a suit you didn't follow.
+  const ledSuit = G.currentTrick[0].card.suit;
+  if (!G.players[winner].suitsWon.includes(ledSuit)) G.players[winner].suitsWon.push(ledSuit);
+  const gotQueen = G.currentTrick.some(t => t.card.suit === '♠' && t.card.rank === 'Q');
   if (G.players[winner].accountId && !G.daily) {
     const acctId = G.players[winner].accountId;
-    const gotQueen = G.currentTrick.some(t => t.card.suit === '♠' && t.card.rank === 'Q');
     if (G.ranked) {
       trackStat(() => db.recordRankedTrick(acctId, trickScore));
       if (gotQueen) trackStat(() => db.recordRankedQueenTaken(acctId));
@@ -1698,6 +2062,14 @@ function resolveTrick(G) {
       trackStat(() => db.recordTrick(acctId, trickScore));
       if (gotQueen) trackStat(() => db.recordQueenTaken(acctId));
     }
+  }
+  // Achievement counters span every mode, so this write is deliberately
+  // OUTSIDE the casual/ranked branch above and outside its !G.daily
+  // guard: taking the queen in the Daily Challenge is still taking the
+  // queen. (Daily's own score pipeline is untouched — this table is not
+  // a statistic, see db.js.)
+  if (gotQueen && G.players[winner].accountId) {
+    trackStat(() => db.recordAchievementQueen(G.players[winner].accountId));
   }
   G.lastTrickMsg = `${G.players[winner].name} wins trick ${G.trickNum} · +10${penPts !== 0 ? ' ' + penPts : ''}`;
   if (!G.playLog) G.playLog = [];
@@ -1786,7 +2158,7 @@ function endRound(G) {
 function advanceRound(G) {
   if (!rooms[G.code] || G.phase !== 'roundSummary') return;
   clearAuto(G);
-  if (G.round >= G.roundsTotal) { G.phase = 'final'; recordGameFinishedForAll(G); broadcastRoom(G); return; }
+  if (G.round >= G.roundsTotal) { G.phase = 'final'; recordGameFinishedForAll(G, true); broadcastRoom(G); return; }
   G.round++;
   G.dealer = (G.dealer + 1) % 4;
   dealRound(G);
@@ -1816,6 +2188,47 @@ function resumeAfterSeatChange(G) {
 function findRoom(code) { return rooms[String(code || '').toUpperCase()]; }
 function isHostSocket(G, socket) { return G.hostSocket === socket.id; }
 
+// Marks this socket as belonging to accountId for friend presence/invite
+// purposes, and tells the account's online friends it just came online
+// (skipped if it already had another tab/device connected, so a second
+// tab from the same account doesn't re-announce). Call this at every
+// point a socket actually becomes "this account" — signup, login, and
+// resumeSession — not updateProfile, which re-authenticates an already-
+// attached socket and would just be a harmless no-op there anyway.
+function attachAccountSocket(socket, accountId) {
+  socket.accountId = accountId;
+  let set = accountSockets.get(accountId);
+  const wasOffline = !set || set.size === 0;
+  if (!set) { set = new Set(); accountSockets.set(accountId, set); }
+  set.add(socket.id);
+  if (wasOffline) announceFriendPresence(accountId, true);
+}
+async function announceFriendPresence(accountId, online) {
+  if (!DB_ENABLED) return;
+  try {
+    const friends = await db.getFriends(accountId);
+    for (const f of friends) notifySocketsForAccount(f.id, 'friendPresence', { id: accountId, online });
+  } catch (e) {
+    console.error('announceFriendPresence error:', e.message);
+  }
+}
+// The disconnect/logout-time mirror of attachAccountSocket. Only
+// announces "offline" once the *last* socket for that account is gone —
+// a second open tab keeps the account online for friends.
+function detachAccountSocket(socket) {
+  const accountId = socket.accountId;
+  if (!accountId) return;
+  const set = accountSockets.get(accountId);
+  if (set) {
+    set.delete(socket.id);
+    if (set.size === 0) {
+      accountSockets.delete(accountId);
+      announceFriendPresence(accountId, false);
+    }
+  }
+  socket.accountId = null;
+}
+
 io.on('connection', (socket) => {
 
   // ── Accounts ─────────────────────────────────────────────────
@@ -1837,6 +2250,7 @@ io.on('connection', (socket) => {
       const account = await db.createAccount({ username: u, passwordHash, nickname: nick, avatar: sanitizeAvatar(avatar) });
       const token = makeToken();
       await db.createSession(account.id, token);
+      attachAccountSocket(socket, account.id);
       socket.emit('authOk', { token, account: db.toPublic(account) });
     } catch (e) {
       console.error('signup error:', e.message);
@@ -1859,6 +2273,7 @@ io.on('connection', (socket) => {
       if (!ok) return socket.emit('authError', { msg: 'Wrong username or password.' });
       const token = makeToken();
       await db.createSession(account.id, token);
+      attachAccountSocket(socket, account.id);
       socket.emit('authOk', { token, account: db.toPublic(account) });
     } catch (e) {
       console.error('login error:', e.message);
@@ -1870,7 +2285,10 @@ io.on('connection', (socket) => {
     if (!DB_ENABLED || !token) return;
     try {
       const account = await db.findAccountByToken(token);
-      if (account) socket.emit('authOk', { token, account: db.toPublic(account) });
+      if (account) {
+        attachAccountSocket(socket, account.id);
+        socket.emit('authOk', { token, account: db.toPublic(account) });
+      }
     } catch (e) {
       console.error('resumeSession error:', e.message);
     }
@@ -1878,6 +2296,7 @@ io.on('connection', (socket) => {
 
   socket.on('logout', async ({ token }) => {
     if (!DB_ENABLED || !token) return;
+    detachAccountSocket(socket);
     try { await db.deleteSession(token); } catch (e) { /* not actionable client-side */ }
   });
 
@@ -1893,6 +2312,102 @@ io.on('connection', (socket) => {
     } catch (e) {
       console.error('updateProfile error:', e.message);
       socket.emit('authError', { msg: 'Could not save your profile. Try again.' });
+    }
+  });
+
+  // ── Friends ──────────────────────────────────────────────────
+  socket.on('getFriendCode', async ({ token }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
+      const code = await db.getOrCreateFriendCode(account.id);
+      socket.emit('friendCodeOk', { code });
+    } catch (e) {
+      console.error('getFriendCode error:', e.message);
+      socket.emit('friendsError', { msg: 'Could not load your friend code. Try again.' });
+    }
+  });
+
+  socket.on('getFriends', async ({ token }) => {
+    if (!DB_ENABLED || !token) return socket.emit('friendsError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
+      const friends = await db.getFriends(account.id);
+      socket.emit('friendsOk', {
+        friends: friends.map(f => ({ ...f, online: accountSockets.has(f.id) })),
+      });
+    } catch (e) {
+      console.error('getFriends error:', e.message);
+      socket.emit('friendsError', { msg: 'Could not load your friends. Try again.' });
+    }
+  });
+
+  socket.on('addFriendByCode', async ({ token, code }) => {
+    if (!DB_ENABLED || !token) return socket.emit('friendsError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
+      const c = String(code || '').trim();
+      if (!c) return socket.emit('friendsError', { msg: 'Enter a friend code first.' });
+      const target = await db.findAccountByFriendCode(c);
+      if (!target) return socket.emit('friendsError', { msg: 'No player found with that code.' });
+      if (target.id === account.id) return socket.emit('friendsError', { msg: "That's your own code." });
+      await db.addFriend(account.id, target.id);
+      const friends = await db.getFriends(account.id);
+      socket.emit('friendsOk', { friends: friends.map(f => ({ ...f, online: accountSockets.has(f.id) })) });
+      // Tell the other side too, live, if they're online right now — no
+      // need to wait for them to reload their own Friends tab to see it.
+      notifySocketsForAccount(target.id, 'friendAdded', {
+        id: account.id, nickname: account.nickname, avatar: account.avatar, online: true,
+      });
+    } catch (e) {
+      console.error('addFriendByCode error:', e.message);
+      socket.emit('friendsError', { msg: 'Could not add that friend. Try again.' });
+    }
+  });
+
+  socket.on('removeFriend', async ({ token, friendId }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
+      await db.removeFriend(account.id, Number(friendId));
+      const friends = await db.getFriends(account.id);
+      socket.emit('friendsOk', { friends: friends.map(f => ({ ...f, online: accountSockets.has(f.id) })) });
+    } catch (e) {
+      console.error('removeFriend error:', e.message);
+      socket.emit('friendsError', { msg: 'Could not remove that friend. Try again.' });
+    }
+  });
+
+  // Invites a friend into the room the sender is currently seated in —
+  // it deliberately does NOT create a room on the friend's behalf; that
+  // keeps this from having to duplicate createRoom's seating/AI/options
+  // logic. If the sender isn't in a live casual room, the honest answer
+  // is "go create or join one first, then invite from the lobby".
+  socket.on('inviteFriend', async ({ token, friendId, code }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
+      const G = findRoom(code);
+      if (!G || G.ranked || G.daily) {
+        return socket.emit('friendsError', { msg: 'Create or join a casual room first, then invite from the lobby.' });
+      }
+      const inRoom = G.players.some(p => p.socketId === socket.id);
+      if (!inRoom) return socket.emit('friendsError', { msg: "That's not your room." });
+      const isFriend = await db.areFriends(account.id, Number(friendId));
+      if (!isFriend) return socket.emit('friendsError', { msg: 'Not on your friends list.' });
+      const sent = notifySocketsForAccount(Number(friendId), 'friendInvite', {
+        code: G.code, fromName: account.nickname, fromAvatar: account.avatar || '',
+      });
+      if (sent) socket.emit('friendInviteSent', { friendId: Number(friendId) });
+      else socket.emit('friendsError', { msg: "They're not online right now." });
+    } catch (e) {
+      console.error('inviteFriend error:', e.message);
+      socket.emit('friendsError', { msg: 'Could not send the invite. Try again.' });
     }
   });
 
@@ -1919,6 +2434,78 @@ io.on('connection', (socket) => {
     } catch (e) {
       console.error('getRankedStats error:', e.message);
       socket.emit('rankedStatsError', { msg: 'Could not load your ranked stats. Try again.' });
+    }
+  });
+
+  // ── Achievements & cosmetics ─────────────────────────────────
+  // One event covers both: the account screen always needs the unlock
+  // state and the equipped set together (a picker can't render either
+  // half on its own), and unlock state is derived from the same query
+  // the achievement list needs anyway.
+  socket.on('getProfileCosmetics', async ({ token }) => {
+    if (!DB_ENABLED || !token) {
+      return socket.emit('profileCosmeticsError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    }
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('profileCosmeticsError', { msg: 'Your session expired — log in again.' });
+      const { achievements, catalog, equipped, fresh } = await loadPlayerCosmetics(account.id);
+      socket.emit('profileCosmeticsOk', { achievements, catalog, equipped, fresh });
+    } catch (e) {
+      console.error('getProfileCosmetics error:', e.message);
+      socket.emit('profileCosmeticsError', { msg: 'Could not load your collection. Try again.' });
+    }
+  });
+
+  // Every incoming ID is re-checked against a freshly evaluated unlock
+  // set — the client's copy of the catalog is presentation only and is
+  // never trusted. An unrecognised or still-locked ID is dropped rather
+  // than rejected outright, so a partially-stale client (one that hasn't
+  // reloaded since a cosmetic was renamed) still saves the fields it got
+  // right instead of failing the whole request.
+  socket.on('saveCosmetics', async ({ token, scene, cardFront, crest, title, rankSet }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('profileCosmeticsError', { msg: 'Your session expired — log in again.' });
+      const { catalog } = await loadPlayerCosmetics(account.id);
+      const pick = (list, id) => {
+        if (id === undefined) return undefined;          // field not being changed
+        if (!id) return '';                              // explicit unequip
+        const found = list.find(c => c.id === id);
+        return found && found.unlocked ? id : undefined; // locked/unknown: leave as-is
+      };
+      await db.saveCosmetics(account.id, {
+        scene: pick(catalog.scenes, scene),
+        cardFront: pick(catalog.cardFronts, cardFront),
+        crest: pick(catalog.crests, crest),
+        title: pick(catalog.titles, title),
+        rankSet: pick(catalog.rankSets, rankSet),
+      });
+      const after = await loadPlayerCosmetics(account.id);
+      socket.emit('profileCosmeticsOk', {
+        achievements: after.achievements, catalog: after.catalog,
+        equipped: after.equipped, fresh: after.fresh, saved: true,
+      });
+    } catch (e) {
+      console.error('saveCosmetics error:', e.message);
+      socket.emit('profileCosmeticsError', { msg: 'Could not save that. Try again.' });
+    }
+  });
+
+  // Fire-and-forget: the client calls this once it has shown the unlock
+  // celebration for a set of achievements, so they're not celebrated
+  // again on the next visit.
+  socket.on('markAchievementsSeen', async ({ token, ids }) => {
+    if (!DB_ENABLED || !token || !Array.isArray(ids) || !ids.length) return;
+    const valid = ids.filter(id => ACHIEVEMENTS.some(a => a.id === id));
+    if (!valid.length) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return;
+      await db.markAchievementsSeen(account.id, valid);
+    } catch (e) {
+      console.error('markAchievementsSeen error:', e.message);
     }
   });
 
@@ -1985,7 +2572,7 @@ io.on('connection', (socket) => {
     const { mmr, placementGamesPlayed } = await db.getOrCreateRankedProfile(acct.id);
     rankedQueue.push({
       socketId: socket.id, accountId: acct.id,
-      name: acct.nickname, avatar: acct.avatar,
+      name: acct.nickname, avatar: acct.avatar, seatCos: await lookupSeatCosmetics(acct.id),
       mmr, placementGamesPlayed, queuedAt: Date.now(),
     });
     socket.emit('rankedQueueUpdate', { elapsedMs: 0, radius: RANKED_MIN_RADIUS, queueSize: rankedQueue.length });
@@ -2073,6 +2660,7 @@ io.on('connection', (socket) => {
       } catch (e) { /* a lookup blip shouldn't block play — the UNIQUE constraint still holds */ }
     }
     const { G, token } = createDailyRoom(clean, sanitizeAvatar(avatar), acct ? acct.id : null, socket.id);
+    if (acct) Object.assign(G.players[0], await lookupSeatCosmetics(acct.id));
     socket.join(G.code);
     socket.emit('joined', { code: G.code, playerIndex: 0, token, isHost: true });
     dealRound(G);   // no seat draw, no dealer cut, no pass phase — straight into the hand
@@ -2084,6 +2672,7 @@ io.on('connection', (socket) => {
     const G = createRoom(clean, sanitizeAvatar(avatar), acct ? acct.id : null,
                          { roundsTotal: sanitizeRoundsTotal(roundsTotal) });
     const token = makeToken();
+    Object.assign(G.players[0], acct ? await lookupSeatCosmetics(acct.id) : NO_SEAT_COSMETICS);
     G.players[0].socketId = socket.id;
     G.players[0].connected = true;
     G.players[0].token = token;
@@ -2107,12 +2696,18 @@ io.on('connection', (socket) => {
     if (slot === -1) return socket.emit('errorMsg', { msg: 'That room is full.' });
 
     const acct = await lookupAccountByToken(accountToken);
+    // Resolved BEFORE the seat-taken re-check below, not after: every
+    // await here is a window in which another socket can claim the same
+    // slot, and that check is what closes it. Awaiting anything between
+    // it and the assignments would reopen exactly the race it exists for.
+    const seatCos = acct ? await lookupSeatCosmetics(acct.id) : NO_SEAT_COSMETICS;
     if (!rooms[code] || G.players[slot].connected) return socket.emit('errorMsg', { msg: 'That seat just got taken — try again.' });
 
     const token = makeToken();
     G.players[slot].name = String(name || '').trim().slice(0, 16) || `Player ${slot + 1}`;
     G.players[slot].avatar = sanitizeAvatar(avatar);
     G.players[slot].accountId = acct ? acct.id : null;
+    Object.assign(G.players[slot], seatCos);
     G.players[slot].socketId = socket.id;
     G.players[slot].connected = true;
     G.players[slot].token = token;
@@ -2269,8 +2864,9 @@ io.on('connection', (socket) => {
     if (G.phase === 'lobby' || G.phase === 'final') {
       // Free the seat entirely
       Object.assign(G.players[idx], {
-        name: 'Empty seat', avatar: null, accountId: null, isAI: false, socketId: null, token: null,
-        connected: false, score: 0, hand: [], tricks: [], hasPassed: false,
+        name: 'Empty seat', avatar: null, accountId: null, title: null, rankMaterial: null,
+        isAI: false, socketId: null, token: null,
+        connected: false, score: 0, hand: [], tricks: [], hasPassed: false, suitsWon: [],
       });
     } else if (G.ranked) {
       // Ranked seats are never handed straight to AI — treat an explicit
@@ -2281,7 +2877,7 @@ io.on('connection', (socket) => {
       scheduleRankedTakeover(G, idx);
     } else {
       // Mid-game: hand the seat to the computer so the others can finish
-      Object.assign(G.players[idx], { isAI: true, avatar: null, accountId: null, connected: true, socketId: null, token: null });
+      Object.assign(G.players[idx], { isAI: true, avatar: null, accountId: null, title: null, rankMaterial: null, connected: true, socketId: null, token: null });
     }
 
     if (wasHost) {
@@ -2308,6 +2904,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    detachAccountSocket(socket);
     const qIdx = rankedQueue.findIndex(q => q.socketId === socket.id);
     if (qIdx !== -1) rankedQueue.splice(qIdx, 1);
     for (const code in rooms) {

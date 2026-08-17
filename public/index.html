@@ -783,13 +783,16 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .or::before,.or::after{content:'';flex:1;height:1px;background:var(--line)}
 .row{display:flex;gap:8px}
 .row .grow{flex:1;min-width:0}
-/* display:inline-block used to leave this centered inside .center-wrap's
-   text-align:center in portrait — Rank's backlink only ever looked right
-   because it happens to sit inside the flex .screen-header below, which
-   left-aligns it regardless. block + fit-content + margin-right:auto
-   pins it to the start the same way, independent of the parent's
-   text-align, in both portrait and the landscape rail. */
-.backlink{display:block;width:fit-content;margin:0 auto 18px 0}
+/* Bare .backlink is inline-block, so as a direct child of .center-wrap
+   (text-align:center in portrait) it visually floats to the middle
+   instead of sitting at the left — the reason Rank's back button always
+   looked right is that it's wrapped in .screen-header below, a flex row
+   that left-aligns its children regardless of the ancestor's text-align.
+   Every screen's backlink is now wrapped the same way (see the markup)
+   instead of relying on a standalone CSS trick, so it's byte-for-byte
+   the same working pattern everywhere, not a second mechanism to keep
+   in sync with it. */
+.backlink{display:inline-block;margin-bottom:18px}
 .screen-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
 .screen-header .backlink{margin:0}
 .info-circle-btn{
@@ -1008,6 +1011,47 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .daily-rows td.score-col{text-align:right;font-weight:700;color:var(--cream)}
 .daily-rows tr.me td{background:rgba(var(--ddp-brass-rgb),.12);color:var(--gold-hi)}
 
+/* ══ Friends list (My Account) ══ */
+.friend-row{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)}
+.friend-row:last-child{border-bottom:none}
+.friend-avatar{
+  position:relative;flex:0 0 auto;width:34px;height:34px;border-radius:50%;
+  display:grid;place-items:center;font-size:1.05rem;
+  background:rgba(0,0,0,.24);border:1px solid var(--line);
+}
+.friend-dot{
+  position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;
+  background:var(--muted);border:2px solid var(--felt-1);
+}
+.friend-dot.on{background:#3fbf88}
+.friend-info{flex:1;min-width:0}
+.friend-name{font-size:.86rem;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.friend-status{font-size:.68rem;color:var(--faint)}
+.friend-actions{flex:0 0 auto;display:flex;gap:6px}
+.friend-btn{
+  font:600 .72rem 'DM Sans',sans-serif;padding:6px 10px;border-radius:999px;cursor:pointer;
+  background:transparent;border:1px solid var(--line);color:var(--faint);
+  touch-action:manipulation;
+}
+.friend-btn.invite{border-color:rgba(var(--ddp-brass-rgb),.4);color:var(--gold-hi)}
+.friend-btn:active{background:rgba(214,90,70,.14)}
+
+/* ══ Friend invite banner — floats above any screen ══ */
+.friend-invite-banner{
+  position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom) + 14px);
+  z-index:500;display:flex;align-items:center;gap:9px;
+  background:rgba(20,14,8,.96);border:1px solid rgba(var(--ddp-brass-rgb),.4);
+  border-radius:999px;padding:7px 8px 7px 14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);
+  max-width:92vw;
+}
+.friend-invite-banner .fi-avatar{flex:0 0 auto;font-size:1.2rem}
+.friend-invite-banner .fi-text{
+  font-size:.8rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.friend-invite-banner .btn-sm{padding:7px 12px;font-size:.74rem}
+
 /* ══ Empty / placeholder states (ranked, rank) ══ */
 .empty-state{text-align:center;padding:30px 6px 6px}
 .empty-icon{font-size:2.2rem;margin-bottom:10px;opacity:.85}
@@ -1070,11 +1114,39 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 /* Hidden until the avatar above is tapped — grid rather than the old
    horizontal scroll strip, since it now sits inside a fixed-width
    column instead of a full-bleed row. */
-.avatar-grid{
-  display:none;grid-template-columns:repeat(6,1fr);gap:8px;
-  overflow:visible;margin:0 0 16px;padding:0;
+/* Was the grid itself; now a block container holding one grid per
+   collection (see renderAvatarGrid), hence display:block when open. */
+.avatar-grid{display:none;overflow:visible;margin:0 0 16px;padding:0}
+.avatar-grid.open{display:block}
+.av-sec{margin-top:12px}
+.av-sec:first-child{margin-top:0}
+/* Portraits get 4 across (one row per collection, matching the reference
+   sheet's own grouping); the emoji set keeps its denser 6. */
+.av-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px}
+.av-row.emoji{grid-template-columns:repeat(6,1fr)}
+/* A portrait avatar wherever one is drawn. Every host (.avatar,
+   .avatar.sm, .avatar-preview, .avatar-opt, .tile-icon) is already a
+   fixed-size round well, so filling it and inheriting its radius is the
+   whole job — no per-site sizing. object-fit:cover keeps faces centred
+   if a replacement asset is ever exported at a different aspect. */
+.av-img{
+  display:block;width:100%;height:100%;object-fit:cover;
+  border-radius:inherit;user-select:none;-webkit-user-drag:none;
 }
-.avatar-grid.open{display:grid}
+.avatar-preview .av-img,.avatar .av-img,.avatar-opt .av-img{border-radius:50%}
+.avatar-opt{overflow:hidden}
+/* Inline avatars in the two leaderboards, which are text rows rather
+   than round wells — sized to the line and nudged onto the baseline the
+   same way .lb-table's rank badges already are. */
+.lb-av{display:inline-block;width:20px;height:20px;vertical-align:-5px}
+.lb-av .av-img{border-radius:50%}
+/* The My Account menu tile when a portrait is equipped: drop the
+   typographic-glyph treatment (font sizing, brass tint, text-shadow)
+   that .tile-icon applies to ♠/☀/☺ and let the image fill instead. */
+.tile-icon.has-portrait{
+  width:34px;height:34px;line-height:0;text-shadow:none;
+  border-radius:50%;overflow:hidden;margin:0 auto;
+}
 .avatar-opt{
   width:auto;aspect-ratio:1;border-radius:12px;display:grid;place-items:center;
   font-size:1.15rem;background:rgba(var(--ddp-scrim-rgb),.22);border:1.5px solid var(--line);
@@ -1124,6 +1196,35 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .acct-panel{display:none}
 .acct-panel.active{display:block}
 
+/* ── account layout: hero card left, tabs/panel right ──
+   Narrow phone portrait (below the breakpoint) keeps the original
+   stacked layout — hero on top, full-width tabs below — since splitting
+   a ~375px screen into two columns would cramp both sides and shrink
+   the very theme-swatch/achievement grids this is meant to give more
+   room to. Past the breakpoint (tablet, landscape, a wide phone, or a
+   desktop browser window) it switches to hero-left/tabs-right, with the
+   tab column getting comfortably more than half the available width.
+   Width-based rather than gated on html.landscape-mode specifically —
+   that flag is pure device *orientation* (see isLandscapeModeActive),
+   completely independent of actual width, so a wide portrait window
+   couldn't reach this layout any other way. Landscape mode already
+   clears this breakpoint on every real device, so it's covered by the
+   same rule; only its sticky hero (landscape's column already scrolls
+   internally — see the landscape-mode block below) and the shorter
+   theme-swatch height stay as landscape-specific additions. */
+.acct-wrap{max-width:440px}
+@media (min-width:560px){
+  .acct-wrap{max-width:760px}
+  #s-personal .acct-layout{
+    display:grid;
+    grid-template-columns:minmax(160px,220px) 1fr;
+    column-gap:24px;align-items:start;
+  }
+  #s-personal .acct-main{
+    padding-left:24px;border-left:1px solid rgba(var(--ddp-brass-rgb),.24);
+  }
+}
+
 .sec-label{
   font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-lo);
   margin:0 2px 9px;display:flex;align-items:center;gap:8px;text-align:left;
@@ -1159,6 +1260,620 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .tc-chip{position:absolute;top:8px;left:8px;width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(var(--ddp-gloss-rgb),.25)}
 .tc-name{font-size:.72rem;font-weight:600;color:var(--muted);padding:7px 6px;text-align:center}
 
+/* ══════════════════════════════════════════════════════════════
+   Cosmetics: customization sub-tabs inside the Profile panel
+   ══════════════════════════════════════════════════════════════
+   A SECOND level of tabs, nested inside the Profile panel of the
+   .acct-toptab bar. Three tab families now live on #s-personal at once
+   and none of them may be merged:
+     .acct-toptab  — Profile / Achievements / Friends   (panel switcher)
+     .acct-tab     — Log in / Create account            (auth form)
+     .cos-tab      — Theme / Scene / Cards / Crest / Title (this block)
+   Same naming pattern, three different jobs — same trap the
+   .acct-toptab vs .acct-tab pair already documents.
+   Visually deliberately quieter than .acct-toptab (underline, not a
+   filled pill) so the hierarchy reads correctly: these sit *inside* a
+   panel that a filled pill row already introduced. */
+/* Five equal columns (flex:1 1 0 + min-width:0), NOT sized to content.
+   Content-sized tabs measured 405px against the 328px available inside
+   the account panel at 375px — the narrowest phone this targets — which
+   pushed "Crests" and "Titles" off the end of a strip with no scroll
+   affordance. Dividing the width instead makes the fit independent of
+   how long the labels are and of whether a locked-count badge is
+   showing, so it can't silently regress the next time either changes. */
+.cos-tabs{
+  display:flex;gap:2px;margin:0 0 14px;
+  border-bottom:1px solid rgba(var(--ddp-brass-rgb),.20);
+}
+.cos-tab{
+  flex:1 1 0;min-width:0;padding:8px 2px 9px;border:none;background:transparent;color:var(--faint);
+  font:600 .69rem 'DM Sans',sans-serif;letter-spacing:0;cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:color .16s,border-color .16s;touch-action:manipulation;
+}
+.cos-tab.active{color:var(--gold-hi);border-bottom-color:var(--gold)}
+/* "There's something locked in here" — a bare dot, because it has to fit
+   inside a 64px equal-width tab beside a word. A padlock emoji plus a
+   number was measured at wider than the space left over and pushed the
+   label into an ellipsis. The dot is only the affordance; the exact
+   count is spelled out in the panel's own section label, where there is
+   room for words, so nothing depends on reading a 4px mark. It is a
+   shape rather than a colour change, per the brief's accessibility rule. */
+.cos-tab .cos-tab-n{
+  font-size:.9rem;line-height:0;vertical-align:middle;
+  color:var(--gold-lo);margin-left:3px;
+}
+.sec-count{
+  font-family:var(--font-num);font-weight:600;letter-spacing:.04em;
+  color:var(--faint);text-transform:none;
+}
+.cos-panel{display:none}
+.cos-panel.active{display:block}
+
+/* ── cosmetic pickers ──
+   auto-fit, same reasoning as .theme-swatch-row: these render in a
+   narrow landscape account column AND a full-width portrait one, and a
+   9th scene must never need a layout change. */
+.cos-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));
+  gap:10px;margin-bottom:14px;
+}
+.cos-grid.wide{grid-template-columns:repeat(auto-fit,minmax(132px,1fr))}
+.cos-item{
+  position:relative;display:flex;flex-direction:column;align-items:stretch;
+  padding:0;overflow:hidden;border-radius:14px;text-align:left;
+  border:2px solid transparent;background:rgba(var(--ddp-scrim-rgb),.20);
+  font:inherit;color:inherit;cursor:pointer;appearance:none;
+  transition:border-color .16s,transform .12s,opacity .16s;
+  touch-action:manipulation;
+}
+.cos-item:active{transform:scale(.97)}
+.cos-item.equipped{border-color:var(--gold)}
+/* Locked items stay legible on purpose — the whole point of showing them
+   is that you can read what they are and what earns them. Dimmed art,
+   full-strength text. */
+.cos-item.locked{cursor:default}
+.cos-item.locked .cos-thumb{filter:grayscale(.85) brightness(.55)}
+.cos-item.locked:active{transform:none}
+.cos-thumb{
+  position:relative;display:block;height:52px;width:100%;
+  border-bottom:1px solid rgba(var(--ddp-brass-rgb),.14);
+}
+.cos-body{padding:7px 8px 8px}
+.cos-name{font-size:.72rem;font-weight:600;color:var(--cream);line-height:1.25}
+.cos-req{
+  font-size:.62rem;color:var(--faint);line-height:1.3;margin-top:3px;
+  display:flex;align-items:baseline;gap:4px;
+}
+/* Never colour alone (brief §21): locked shows a padlock + the
+   achievement name, equipped shows a checkmark + the word. */
+.cos-flag{
+  position:absolute;top:5px;right:5px;z-index:2;
+  width:19px;height:19px;border-radius:50%;display:grid;place-items:center;
+  font-size:.62rem;line-height:1;
+  background:rgba(var(--ddp-scrim-rgb),.72);border:1px solid rgba(var(--ddp-gloss-rgb),.22);
+  color:var(--cream);
+}
+.cos-item.equipped .cos-flag{background:var(--gold);color:var(--ddp-on-brass);border-color:transparent}
+.cos-status{
+  font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--gold-lo);margin-top:4px;display:block;
+}
+.cos-item.equipped .cos-status{color:var(--gold-hi)}
+.cos-empty{
+  font-size:.75rem;color:var(--faint);text-align:center;
+  padding:14px 10px;line-height:1.5;
+}
+
+/* ── titles: a text chip list, not an art grid ── */
+.title-list{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+.title-opt{
+  display:flex;align-items:center;gap:9px;width:100%;
+  padding:9px 12px;border-radius:12px;text-align:left;
+  border:1.5px solid var(--line);background:rgba(var(--ddp-scrim-rgb),.18);
+  font:inherit;color:inherit;cursor:pointer;appearance:none;
+  transition:border-color .16s,background .16s,transform .12s;
+  touch-action:manipulation;
+}
+.title-opt:active{transform:scale(.985)}
+.title-opt.equipped{border-color:var(--gold);background:rgba(var(--ddp-brass-rgb),.11)}
+.title-opt.locked{cursor:default;opacity:.72}
+.title-opt.locked:active{transform:none}
+.title-opt .to-name{
+  flex:1;min-width:0;font-family:'Playfair Display',serif;font-size:.92rem;
+  font-weight:600;color:var(--cream);
+}
+.title-opt.locked .to-name{color:var(--muted)}
+.title-opt .to-req{font-size:.62rem;color:var(--faint);text-align:right;flex:0 0 auto;max-width:48%}
+.title-opt .to-mark{flex:0 0 auto;font-size:.8rem;width:18px;text-align:center}
+
+/* ── crest art ──
+   Inline SVG, not raster: a crest is flat geometry and an emblem that
+   has to stay crisp at 22px (hero badge) and 52px (picker thumb) alike.
+   It also means the whole crest set costs zero network requests and
+   inherits the theme's brass through currentColor. */
+.crest-art{display:block;width:100%;height:100%}
+.crest-art svg{display:block;width:100%;height:100%}
+.cos-thumb.crest{
+  display:grid;place-items:center;padding:5px;
+  background:radial-gradient(70% 70% at 50% 42%,rgba(var(--ddp-brass-rgb),.13),transparent 72%);
+}
+.cos-thumb.crest .crest-art{width:42px;height:42px}
+
+/* ── hero additions: title line + equipped crest ── */
+/* Reserves its line even when empty (visibility, not display) — the
+   same constant-space rule the .mystrip badge follows, so equipping or
+   clearing a title can't make the hero card change height and shove the
+   panel beside it. */
+.hero-plate{margin-top:9px}
+.hero-title{
+  margin-top:3px;min-height:1.05rem;
+  font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--gold-lo);
+}
+.hero-title:empty::after{content:'\00a0'}
+.hero-crest{
+  position:absolute;right:-4px;bottom:-4px;width:28px;height:28px;
+  border-radius:50%;display:none;place-items:center;padding:3px;
+  background:rgba(var(--ddp-bg-rgb),.9);border:1.5px solid rgba(var(--ddp-brass-rgb),.55);
+  box-shadow:0 2px 8px rgba(var(--ddp-scrim-rgb),.45);
+}
+.hero-crest.on{display:grid}
+.hero-avatar-wrap{position:relative;display:inline-block}
+
+/* ── achievements list ── */
+.ach-list{display:flex;flex-direction:column;gap:9px}
+.ach-row{
+  display:flex;align-items:center;gap:11px;
+  padding:11px 13px;border-radius:14px;
+  background:rgba(var(--ddp-scrim-rgb),.18);border:1px solid var(--line);
+}
+.ach-row.done{border-color:rgba(var(--ddp-brass-rgb),.44);background:rgba(var(--ddp-brass-rgb),.08)}
+.ach-crest{flex:0 0 auto;width:38px;height:38px}
+.ach-row:not(.done) .ach-crest{filter:grayscale(.9) brightness(.5)}
+.ach-info{flex:1;min-width:0}
+.ach-name{font-size:.84rem;font-weight:600;color:var(--cream)}
+.ach-row:not(.done) .ach-name{color:var(--muted)}
+.ach-desc{font-size:.68rem;color:var(--faint);line-height:1.4;margin-top:2px}
+.ach-bar{
+  height:5px;border-radius:999px;margin-top:7px;overflow:hidden;
+  background:rgba(var(--ddp-scrim-rgb),.42);
+}
+.ach-bar>i{display:block;height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--gold-lo),var(--gold-hi))}
+.ach-prog{
+  flex:0 0 auto;font-family:var(--font-num);font-size:.66rem;color:var(--faint);
+  text-align:right;min-width:46px;
+}
+.ach-row.done .ach-prog{color:var(--gold-hi)}
+
+/* ── unlock celebration ──
+   A banner, not a full-screen takeover: unlocks land while you're on the
+   account screen (the moment the collection loads after a game), and a
+   modal there would block the very pickers it's telling you about. */
+.unlock-pop{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(-140%);
+  top:calc(env(safe-area-inset-top) + 10px);z-index:400;
+  display:flex;align-items:center;gap:11px;max-width:min(92vw,420px);
+  padding:11px 15px;border-radius:16px;
+  background:linear-gradient(160deg,rgba(var(--ddp-brass-rgb),.30),rgba(var(--ddp-bg-rgb),.94));
+  border:1px solid rgba(var(--ddp-brass-rgb),.6);
+  box-shadow:0 10px 34px rgba(var(--ddp-scrim-rgb),.55);
+  transition:transform .45s cubic-bezier(.2,.9,.3,1.25);
+  pointer-events:none;
+}
+.unlock-pop.show{transform:translateX(-50%) translateY(0)}
+.unlock-pop .up-crest{flex:0 0 auto;width:38px;height:38px}
+.unlock-pop .up-kicker{font-size:.6rem;font-weight:700;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--gold-hi)}
+.unlock-pop .up-name{font-family:'Playfair Display',serif;font-size:1rem;font-weight:600;color:var(--cream)}
+.unlock-pop .up-sub{font-size:.66rem;color:var(--muted);margin-top:1px}
+
+/* ══════════════════════════════════════════════════════════════
+   RANK COSMETICS — 8 materials
+   ══════════════════════════════════════════════════════════════
+   Frame (a ring on the avatar), nameplate (a badge under the name) and
+   table badge, in the eight materials named on the reference sheet.
+   Everything here is the FALLBACK: the exported emblem art layers on top
+   via .rank-art when the files land in public/ranks/. That ordering is
+   deliberate — it means the feature is complete and shippable now, and
+   the art is a pure upgrade rather than a dependency.
+
+   Materials are NOT themed per felt palette, unlike the rest of the app.
+   A rank is the same rank whatever table you're sitting at, and the
+   sheet specifies them as fixed materials (paper, ink, velvet, brass,
+   gold, royal, obsidian, diamond) — the same reasoning that leaves card
+   backs and --ok/--warn un-themed. */
+[data-material]{
+  --rm-lo:#3A3226; --rm-hi:#EFE4C8; --rm-ink:#231C13; --rm-edge:#C9B892;
+}
+/* The nameplate prints --rm-ink over a --rm-hi -> --rm-lo gradient, so
+   the text has to clear AA against BOTH ends, not just the midpoint.
+   Measured worst-case contrast of ink vs the two stops:
+     paper 7.03  ink 7.20  velvet 7.34  royal 7.60  obsidian 8.60
+     brass 2.90  gold 3.21  diamond 2.26      <- the three that failed
+   Those three each failed at one end only (brass' ink is light and its
+   hi stop was too pale; gold's and diamond's inks are dark and their lo
+   stops were too deep). Solved for, not nudged: the offending stop was
+   walked toward black/white until the worse end cleared 4.5, which lands
+   brass 4.64, gold 4.56, diamond 4.63. The five that already passed are
+   untouched. */
+[data-material="paper"]   {--rm-lo:#CFC0A0;--rm-hi:#F3E9CF;--rm-ink:#3A3226;--rm-edge:#B9A57E}
+[data-material="ink"]     {--rm-lo:#1B1E24;--rm-hi:#454B57;--rm-ink:#E6E9EF;--rm-edge:#6E7686}
+[data-material="velvet"]  {--rm-lo:#3E1020;--rm-hi:#7E2439;--rm-ink:#F3DCE1;--rm-edge:#A8425A}
+[data-material="brass"]   {--rm-lo:#5C441C;--rm-hi:#806534;--rm-ink:#F6EBD5;--rm-edge:#C8A25C}
+[data-material="gold"]    {--rm-lo:#9F8547;--rm-hi:#E2BC5C;--rm-ink:#2A1F06;--rm-edge:#F0D48A}
+[data-material="royal"]   {--rm-lo:#141C4A;--rm-hi:#33418C;--rm-ink:#E4E8FF;--rm-edge:#6070C4}
+[data-material="obsidian"]{--rm-lo:#221232;--rm-hi:#4E2C74;--rm-ink:#EDE0FA;--rm-edge:#8A5FBE}
+[data-material="diamond"] {--rm-lo:#6D8D9F;--rm-hi:#9FD4EC;--rm-ink:#0C2230;--rm-edge:#CFEBF8}
+
+/* the exported art, whenever it exists, sits over the CSS treatment */
+.rank-art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+
+/* ── nameplate: a horizontal badge under the name ── */
+.rank-plate{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  min-width:104px;padding:4px 16px;border-radius:5px;
+  background:linear-gradient(180deg,var(--rm-hi),var(--rm-lo));
+  border:1px solid var(--rm-edge);
+  box-shadow:0 1px 5px rgba(var(--ddp-scrim-rgb),.4),inset 0 1px 0 rgba(255,255,255,.18);
+}
+/* the clipped corners that make it read as Deco rather than as a button */
+.rank-plate::before,.rank-plate::after{
+  content:'';position:absolute;top:2px;bottom:2px;width:5px;
+  border-top:1px solid var(--rm-edge);border-bottom:1px solid var(--rm-edge);
+}
+.rank-plate::before{left:3px;border-left:1px solid var(--rm-edge)}
+.rank-plate::after{right:3px;border-right:1px solid var(--rm-edge)}
+.rp-text{
+  position:relative;z-index:1;
+  font-family:'Playfair Display',serif;font-size:.78rem;font-weight:600;
+  letter-spacing:.09em;text-transform:uppercase;color:var(--rm-ink);
+  white-space:nowrap;
+}
+.rank-plate.sm{min-width:0;padding:2px 10px}
+.rank-plate.sm .rp-text{font-size:.62rem;letter-spacing:.07em}
+
+/* ── avatar frame: a material ring, not a new box ──
+   Applied to the EXISTING avatar well via a data-material attribute, so
+   it changes no geometry anywhere — purely border + glow, which is what
+   keeps it safe to put on the table seats. */
+.rank-framed{
+  border-color:var(--rm-edge) !important;
+  box-shadow:0 0 0 1px var(--rm-lo),0 0 14px rgba(var(--ddp-scrim-rgb),.45);
+}
+.profile-hero .avatar-preview.rank-framed{border-width:3px}
+
+/* ── table badge ── */
+.rank-tbadge{
+  position:relative;display:inline-block;flex:0 0 auto;
+  width:var(--rb,14px);height:var(--rb,14px);border-radius:50%;
+  background:radial-gradient(circle at 38% 32%,var(--rm-hi),var(--rm-lo) 78%);
+  border:1px solid var(--rm-edge);
+  vertical-align:-2px;
+}
+/* On the landscape table captions the badge must cost ZERO height. At
+   11px with vertical-align:-2px it grew each .tcap's line box from 12px
+   to 14px — three captions, so 6px off a vertical budget the --ch
+   formula treats as fully spent. It still fitted (measured at both
+   915x412 and the tightest documented 667x375), but spending measured
+   slack for decoration is exactly what the budget note warns about.
+   Sized under the 11.52px line-height and middle-aligned, it rides
+   inside the existing line box instead of stretching it. */
+.tcap .rank-tbadge{--rb:9px;vertical-align:middle;margin-right:1px}
+/* Same reasoning for the portrait seat name, which has its own row. */
+.seat-name .rank-tbadge{--rb:10px;vertical-align:middle;margin-right:2px}
+
+/* ── the picker's own preview ── */
+.cos-thumb.rankset{
+  display:flex;align-items:center;justify-content:center;gap:6px;padding:6px;
+  background:linear-gradient(160deg,var(--rm-hi),var(--rm-lo));
+}
+.cos-thumb.rankset .rank-tbadge{--rb:22px}
+.cos-thumb.rankset .rank-plate{min-width:0;padding:2px 8px}
+.cos-thumb.rankset .rp-text{font-size:.55rem}
+.pod-plate{margin-top:5px}
+
+/* ══════════════════════════════════════════════════════════════
+   SCENES — cosmetic table backgrounds
+   ══════════════════════════════════════════════════════════════
+   Pure CSS gradient compositions, no image assets. That's a deliberate
+   choice, not a stopgap: this is a phone PWA whose service worker
+   pre-caches its assets, and eight full-bleed photographic backgrounds
+   would dwarf everything else it ships. Gradients also scale to any
+   viewport with no art direction problem and cost nothing to load.
+
+   ONE definition serves two very different sizes — the full-screen
+   #scene-layer and the 52px picker thumbnail — because every stop is a
+   PERCENTAGE. Both carry .scene-art; nothing is duplicated per size.
+
+   Composition follows the brief's rule for every scene: detail at the
+   edges, centre kept quiet. The shared ::after below is what guarantees
+   it, so an individual scene can't accidentally break card readability
+   however busy its own layers are. */
+.scene-art{position:relative;overflow:hidden;background:var(--ddp-bg)}
+.scene-art::before,.scene-art::after{content:'';position:absolute;inset:0;pointer-events:none}
+/* the "keep the middle calm" scrim every scene shares */
+.scene-art::after{
+  background:radial-gradient(58% 46% at 50% 52%,rgba(var(--ddp-scrim-rgb),.78) 0%,
+             rgba(var(--ddp-scrim-rgb),.45) 45%,transparent 78%);
+  z-index:2;
+}
+
+/* 4.1 The Velvet Room — bordeaux curtains, brass lamps, dark wood */
+.scene-art[data-scene="scene_velvet_room"]{
+  background:
+    radial-gradient(38% 46% at 8% 26%,rgba(238,208,142,.34),transparent 68%),
+    radial-gradient(38% 46% at 92% 26%,rgba(238,208,142,.34),transparent 68%),
+    linear-gradient(180deg,#321018 0%,#4A1320 42%,#241016 78%,#171411 100%);
+}
+.scene-art[data-scene="scene_velvet_room"]::before{
+  background:
+    repeating-linear-gradient(90deg,rgba(23,20,17,.42) 0 2.2%,transparent 2.2% 5.4%),
+    linear-gradient(90deg,#641A2A 0 17%,transparent 17% 83%,#641A2A 83% 100%);
+  -webkit-mask-image:linear-gradient(90deg,#000 0 20%,transparent 30% 70%,#000 80% 100%);
+  mask-image:linear-gradient(90deg,#000 0 20%,transparent 30% 70%,#000 80% 100%);
+  opacity:.8;
+}
+
+/* 4.2 The Rooftop — Deco skyline, moon, night haze */
+.scene-art[data-scene="scene_rooftop"]{
+  background:
+    radial-gradient(14% 20% at 78% 17%,rgba(237,228,210,.85),rgba(237,228,210,.16) 62%,transparent 76%),
+    linear-gradient(180deg,#0A1424 0%,#132239 44%,#1E2C42 74%,#0C1420 100%);
+}
+.scene-art[data-scene="scene_rooftop"]::before{
+  top:auto;height:46%;
+  background:
+    repeating-linear-gradient(90deg,
+      #050A12 0 6%,transparent 6% 8%,#070E19 8% 12%,transparent 12% 15%,
+      #04080F 15% 22%,transparent 22% 24%),
+    linear-gradient(180deg,transparent 0%,#050A12 34%);
+  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 38%);
+  mask-image:linear-gradient(180deg,transparent 0,#000 38%);
+}
+
+/* 4.3 The Grand Library — symmetric shelves, green lamps */
+.scene-art[data-scene="scene_grand_library"]{
+  background:
+    radial-gradient(26% 30% at 22% 34%,rgba(96,200,150,.30),transparent 70%),
+    radial-gradient(26% 30% at 78% 34%,rgba(96,200,150,.30),transparent 70%),
+    linear-gradient(180deg,#2A1D12 0%,#3A2717 46%,#241809 80%,#150E07 100%);
+}
+.scene-art[data-scene="scene_grand_library"]::before{
+  background:
+    repeating-linear-gradient(90deg,
+      rgba(196,158,88,.34) 0 1.4%,rgba(100,26,42,.42) 1.4% 3%,
+      rgba(20,14,7,.5) 3% 4.4%,transparent 4.4% 6%),
+    repeating-linear-gradient(180deg,transparent 0 26%,rgba(196,158,88,.20) 26% 27.4%);
+  -webkit-mask-image:linear-gradient(90deg,#000 0 26%,transparent 40% 60%,#000 74% 100%);
+  mask-image:linear-gradient(90deg,#000 0 26%,transparent 40% 60%,#000 74% 100%);
+}
+
+/* 4.4 The Winter Casino — warm room, cold windows at the edges */
+.scene-art[data-scene="scene_winter_casino"]{
+  background:
+    radial-gradient(46% 52% at 50% 46%,rgba(196,158,88,.22),transparent 74%),
+    linear-gradient(180deg,#3A1420 0%,#4C1A26 40%,#2A1017 78%,#160B10 100%);
+}
+.scene-art[data-scene="scene_winter_casino"]::before{
+  background:
+    linear-gradient(180deg,rgba(176,206,222,.55) 0 58%,transparent 58%),
+    repeating-linear-gradient(90deg,transparent 0 3%,rgba(20,11,16,.9) 3% 4%);
+  -webkit-mask-image:
+    radial-gradient(11% 30% at 7% 34%,#000 62%,transparent 70%),
+    radial-gradient(11% 30% at 27% 34%,#000 62%,transparent 70%),
+    radial-gradient(11% 30% at 73% 34%,#000 62%,transparent 70%),
+    radial-gradient(11% 30% at 93% 34%,#000 62%,transparent 70%);
+  mask-image:
+    radial-gradient(11% 30% at 7% 34%,#000 62%,transparent 70%),
+    radial-gradient(11% 30% at 27% 34%,#000 62%,transparent 70%),
+    radial-gradient(11% 30% at 73% 34%,#000 62%,transparent 70%),
+    radial-gradient(11% 30% at 93% 34%,#000 62%,transparent 70%);
+  -webkit-mask-composite:source-over;mask-composite:add;
+}
+
+/* 4.5 The Moon Room — the moon sits OFF-centre, per the brief, so it's
+   never behind the trick cross */
+.scene-art[data-scene="scene_moon_room"]{
+  background:
+    radial-gradient(19% 26% at 80% 24%,rgba(237,228,210,.92),rgba(200,206,224,.28) 58%,transparent 72%),
+    radial-gradient(60% 44% at 80% 24%,rgba(150,175,225,.20),transparent 76%),
+    linear-gradient(180deg,#0A1230 0%,#141F4A 46%,#0B1230 82%,#060A1A 100%);
+}
+.scene-art[data-scene="scene_moon_room"]::before{
+  background-image:
+    radial-gradient(circle,rgba(237,228,210,.85) 0 1px,transparent 1.6px),
+    radial-gradient(circle,rgba(237,228,210,.55) 0 1px,transparent 1.6px);
+  background-size:13% 26%,21% 34%;
+  background-position:3% 7%,11% 19%;
+  opacity:.65;
+}
+
+/* 4.6 The Garden — dark hedged perimeter, a fountain glow below centre */
+.scene-art[data-scene="scene_garden"]{
+  background:
+    radial-gradient(24% 22% at 50% 68%,rgba(196,158,88,.34),transparent 72%),
+    linear-gradient(180deg,#08160F 0%,#12301F 44%,#0C2016 76%,#050D09 100%);
+}
+.scene-art[data-scene="scene_garden"]::before{
+  background:
+    repeating-linear-gradient(90deg,rgba(6,18,11,.85) 0 4%,rgba(24,58,38,.7) 4% 9%),
+    repeating-linear-gradient(180deg,rgba(6,18,11,.5) 0 8%,transparent 8% 17%);
+  -webkit-mask-image:radial-gradient(64% 58% at 50% 50%,transparent 42%,#000 88%);
+  mask-image:radial-gradient(64% 58% at 50% 50%,transparent 42%,#000 88%);
+}
+
+/* 4.7 The Train — perspective lines lead to the centre, velvet + brass */
+.scene-art[data-scene="scene_train"]{
+  background:
+    conic-gradient(from 210deg at 50% 50%,
+      rgba(196,158,88,.13) 0deg 12deg,transparent 12deg 30deg,
+      rgba(196,158,88,.10) 30deg 42deg,transparent 42deg 60deg),
+    linear-gradient(180deg,#2A1016 0%,#4A1A24 40%,#25121A 78%,#12090D 100%);
+}
+.scene-art[data-scene="scene_train"]::before{
+  background:
+    linear-gradient(180deg,rgba(196,158,88,.42) 0 6%,transparent 6%),
+    linear-gradient(180deg,transparent 0 30%,rgba(12,20,34,.92) 30% 62%,rgba(100,26,42,.65) 62%);
+  -webkit-mask-image:linear-gradient(90deg,#000 0 22%,transparent 34% 66%,#000 78% 100%);
+  mask-image:linear-gradient(90deg,#000 0 22%,transparent 34% 66%,#000 78% 100%);
+}
+
+/* 4.8 The Observatory — dome ribs around the upper perimeter, telescope
+   mass toward a corner */
+.scene-art[data-scene="scene_observatory"]{
+  background:
+    radial-gradient(30% 34% at 14% 78%,rgba(196,158,88,.30),transparent 70%),
+    linear-gradient(180deg,#0B1330 0%,#14204A 42%,#0D1734 78%,#060A18 100%);
+}
+.scene-art[data-scene="scene_observatory"]::before{
+  background:
+    repeating-conic-gradient(from 180deg at 50% 96%,
+      rgba(196,158,88,.26) 0deg 1.6deg,transparent 1.6deg 15deg),
+    radial-gradient(circle,rgba(237,228,210,.7) 0 1px,transparent 1.6px);
+  background-size:auto,17% 30%;
+  -webkit-mask-image:radial-gradient(72% 72% at 50% 96%,transparent 46%,#000 82%);
+  mask-image:radial-gradient(72% 72% at 50% 96%,transparent 46%,#000 82%);
+}
+
+/* The live scene layer. Fixed and BEHIND #app (which is z-index:1), so
+   it can never sit over a card or a control however busy a scene is —
+   the brief's "no cosmetic layer captures pointer events" is enforced
+   structurally here rather than per-scene.
+   Hidden unless html.scene-on, which show() sets for the pass/play
+   screens only: a scene is table furniture, and painting one behind the
+   menu or the leaderboard would fight text that was contrast-tuned
+   against the plain felt. */
+#scene-layer{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  opacity:0;transition:opacity .5s ease;
+}
+html.scene-on #scene-layer{opacity:1}
+/* Clair is a LIGHT theme: every scene is a dark room, and at full
+   strength one would invert the whole palette the screen's text was
+   tuned against. Same class of correction as the other Clair blocks —
+   it holds the scene back to a tint rather than dropping the feature.
+   Two classes + an attribute + an id beats html.scene-on #scene-layer
+   outright, so unlike the end-of-stylesheet Clair blocks this one does
+   NOT depend on source order. */
+html.scene-on[data-theme="clair"] #scene-layer{opacity:.30}
+
+/* ══════════════════════════════════════════════════════════════
+   ROYAL COURT card front
+   ══════════════════════════════════════════════════════════════
+   A cosmetic re-skin of the EXISTING card markup — cardHTML() is not
+   touched, and neither is any geometry. Everything below keys off the
+   data-r / data-s attributes cardHTML already emits, so the card's size,
+   hit area, fan rotation, overlap and drag behaviour are byte-for-byte
+   what they were. That is what makes this safe to ship against the
+   hand-tuned --cw/--overlap work.
+
+   The frame lives on ::before, NOT in box-shadow: .card.tap:active,
+   .card.sel, .card.dragging and .card.received all replace box-shadow
+   outright, so a frame drawn there would vanish exactly when a card is
+   picked up. ::after is left alone — .card.received owns it. */
+html[data-cardfront="royal_court"] .card:not(.back){
+  background:linear-gradient(158deg,#FBF5E6,#F0E5CE 52%,#E4D6B8);
+  border-color:#C49E58;color:#191613;
+}
+html[data-cardfront="royal_court"] .card.red:not(.back){color:#8C2233}
+html[data-cardfront="royal_court"] .card.pen:not(.back){
+  background:linear-gradient(158deg,#FBF3E4,#F2E0D2 55%,#E9CFC2);
+  border-color:#A8623F;
+}
+html[data-cardfront="royal_court"] .card:not(.back)::before{
+  content:'';position:absolute;inset:2px;border-radius:calc(var(--cw)*.09);
+  pointer-events:none;
+  border:1px solid rgba(196,158,88,.85);
+  box-shadow:inset 0 0 0 1.5px rgba(100,26,42,.30);
+  /* the "small crown ornament at the midpoint of each edge" from the
+     brief, as four gold dots — legible at 38px, where an actual crown
+     glyph would be mud */
+  background:
+    radial-gradient(circle at 50% 0,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 50% 100%,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 0 50%,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 100% 50%,rgba(196,158,88,.9) 0 1px,transparent 1.6px);
+}
+/* Aces: a large central suit over a geometric sunburst. .big is
+   repositioned rather than replaced, so the glyph itself is still the
+   first visual read — the brief's explicit requirement. */
+html[data-cardfront="royal_court"] .card[data-r="A"]:not(.back) .big{
+  right:auto;bottom:auto;left:50%;top:52%;transform:translate(-50%,-50%);
+  font-size:calc(var(--cw)*.72);opacity:.9;
+}
+html[data-cardfront="royal_court"] .card[data-r="A"]:not(.back)::before{
+  background-image:
+    repeating-conic-gradient(from 0deg at 50% 52%,
+      rgba(196,158,88,.20) 0deg 6deg,transparent 6deg 18deg),
+    radial-gradient(circle at 50% 0,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 50% 100%,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 0 50%,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 100% 50%,rgba(196,158,88,.9) 0 1px,transparent 1.6px);
+}
+/* Court cards: a deeper burgundy portrait panel behind the suit, K > Q >
+   J in weight, matching the brief's "the King is the focal point of the
+   deck" hierarchy. Rank and suit stay exactly where they were. */
+html[data-cardfront="royal_court"] .card[data-r="J"]:not(.back) .big,
+html[data-cardfront="royal_court"] .card[data-r="Q"]:not(.back) .big,
+html[data-cardfront="royal_court"] .card[data-r="K"]:not(.back) .big{
+  right:auto;bottom:auto;left:50%;top:54%;transform:translate(-50%,-50%);
+  font-size:calc(var(--cw)*.56);opacity:.82;
+}
+html[data-cardfront="royal_court"] .card[data-r="J"]:not(.back)::before{
+  background-image:
+    linear-gradient(180deg,transparent 22%,rgba(100,26,42,.14) 34% 76%,transparent 88%),
+    radial-gradient(circle at 50% 0,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 50% 100%,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 0 50%,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 100% 50%,rgba(196,158,88,.9) 0 1px,transparent 1.6px);
+}
+html[data-cardfront="royal_court"] .card[data-r="Q"]:not(.back)::before{
+  background-image:
+    repeating-conic-gradient(from 200deg at 50% 54%,
+      rgba(196,158,88,.16) 0deg 8deg,transparent 8deg 22deg),
+    linear-gradient(180deg,transparent 20%,rgba(100,26,42,.20) 32% 78%,transparent 90%),
+    radial-gradient(circle at 50% 0,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 50% 100%,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 0 50%,rgba(196,158,88,.9) 0 1px,transparent 1.6px),
+    radial-gradient(circle at 100% 50%,rgba(196,158,88,.9) 0 1px,transparent 1.6px);
+}
+html[data-cardfront="royal_court"] .card[data-r="K"]:not(.back)::before{
+  border-color:rgba(196,158,88,1);
+  background-image:
+    repeating-conic-gradient(from 180deg at 50% 54%,
+      rgba(196,158,88,.24) 0deg 7deg,transparent 7deg 19deg),
+    linear-gradient(180deg,transparent 16%,rgba(100,26,42,.28) 28% 80%,transparent 92%),
+    radial-gradient(circle at 50% 0,rgba(196,158,88,1) 0 1.4px,transparent 2px),
+    radial-gradient(circle at 50% 100%,rgba(196,158,88,1) 0 1.4px,transparent 2px),
+    radial-gradient(circle at 0 50%,rgba(196,158,88,1) 0 1.4px,transparent 2px),
+    radial-gradient(circle at 100% 50%,rgba(196,158,88,1) 0 1.4px,transparent 2px);
+}
+/* The picker thumbnail reuses the real card face rather than a separate
+   preview image, so what you choose is literally what you get. */
+.cf-preview{
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  height:100%;padding:6px 4px;
+  background:radial-gradient(70% 70% at 50% 45%,rgba(var(--ddp-brass-rgb),.12),transparent 74%);
+}
+.cf-mini{
+  width:24px;height:34px;border-radius:4px;flex:0 0 auto;position:relative;
+  font-family:'Playfair Display',serif;font-size:.58rem;font-weight:700;
+  line-height:1;padding:3px 0 0 3px;
+}
+.cf-mini.classic{
+  background:linear-gradient(158deg,var(--ddp-card-hi),var(--ddp-card) 55%,var(--ddp-card-lo));
+  border:1px solid var(--ddp-card-edge);color:var(--ddp-ink);
+}
+.cf-mini.royal{
+  background:linear-gradient(158deg,#FBF5E6,#F0E5CE 52%,#E4D6B8);
+  border:1px solid #C49E58;color:#191613;
+  box-shadow:inset 0 0 0 1px rgba(196,158,88,.6);
+}
+.cf-mini.royal.r,.cf-mini.classic.r{color:#8C2233}
+
 /* ══ Lobby ══ */
 .codebox{
   background:rgba(var(--ddp-scrim-rgb),.24);border:1px solid rgba(var(--ddp-brass-rgb),.26);
@@ -1176,6 +1891,18 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .slot .dot.on{background:var(--ok);box-shadow:0 0 8px rgba(var(--ddp-mine-rgb),.6)}
 .slot .dot.bot{background:#6cb6ff;box-shadow:0 0 8px rgba(108,182,255,.5)}
 .slot .nm{flex:1;font-size:.92rem;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Player title under the lobby name (brief §8's two-line form). The
+   wrapper takes over the flex:1 the bare name used to carry, so the
+   name keeps its own ellipsis behaviour and the row's other children
+   (dot, tags, AI button) are positioned exactly as before. Rendered
+   only when a seat actually has a title, so a lobby of players with
+   none is pixel-identical to the old one. */
+.slot .who{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.slot .who .nm{flex:none;width:100%}
+.slot .ttl{
+  font-size:.6rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--gold-lo);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
 .tag{font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
   padding:3px 8px;border-radius:999px;flex:0 0 auto}
 .tag.you{background:rgba(var(--ddp-mine-rgb),.16);color:#8fe0be;border:1px solid rgba(var(--ddp-mine-rgb),.3)}
@@ -1774,7 +2501,7 @@ html.landscape-mode #s-rank #rank-content{padding-bottom:52px}
 html.landscape-mode #s-landing>.center-wrap{
   grid-template-rows:auto auto auto auto 1fr auto;
 }
-html.landscape-mode #s-landing>.center-wrap>.backlink{grid-row:1}
+html.landscape-mode #s-landing>.center-wrap>.screen-header{grid-row:1}
 html.landscape-mode #s-landing>.center-wrap>h2{grid-row:2}
 html.landscape-mode #s-landing>.center-wrap>.tagline{grid-row:3}
 html.landscape-mode #s-landing>.center-wrap>#casual-chip{
@@ -1799,7 +2526,7 @@ html.landscape-mode #s-daily>.center-wrap{
   grid-template-columns:1fr 1fr;
   grid-template-rows:auto auto auto 1fr auto;
 }
-html.landscape-mode #s-daily>.center-wrap>.backlink{grid-column:1;grid-row:1}
+html.landscape-mode #s-daily>.center-wrap>.screen-header{grid-column:1;grid-row:1}
 html.landscape-mode #s-daily>.center-wrap>h2{grid-column:1;grid-row:2}
 html.landscape-mode #s-daily>.center-wrap>.tagline{grid-column:1;grid-row:3}
 html.landscape-mode #s-daily>.center-wrap>#daily-board-wrap{
@@ -1819,29 +2546,21 @@ html.landscape-mode #s-daily>.center-wrap>#err-daily{grid-column:1;grid-row:5}
 html.landscape-mode #s-daily .daily-score{font-size:1.9rem}
 html.landscape-mode #s-daily .daily-hero{padding:10px 8px 8px}
 
-/* ── My Account is still the exception, but for a different reason now
-   that it's a hero + tabs hub rather than a flat form ──
+/* ── My Account: landscape-only additions ──
    .backlink still lands in the outer rail via the generic chrome
    selector above, same as every other screen. .acct-layout is the only
    OTHER direct child of .center-wrap, so the generic "everything else"
    rule already parks it in column 2, full height, scrollable, with the
    standard divider — that part needs no override at all.
-   What it doesn't have is My Account's OWN internal split: a hero rail
-   (avatar, name, login pill, rank medallion) beside the tab bar and
-   active panel. That's added here as a grid nested inside that already-
-   scrollable column-2 box, which is also why position:sticky on
-   .profile-hero works — it sticks against .acct-layout's own scroll,
-   not the page's. */
-html.landscape-mode #s-personal>.center-wrap>.acct-layout{
-  display:grid;
-  grid-template-columns:minmax(160px,200px) 1fr;
-  column-gap:22px;align-items:start;
-}
+   The hero-left/tabs-right split itself is now the general, width-based
+   .acct-wrap rule (near .acct-tabbar in <style>) rather than landscape-
+   only, so only two genuinely orientation-specific things are left
+   here: position:sticky on the hero only means anything because this
+   column scrolls internally in landscape (see the generic rail rule
+   above) — plain portrait/wide-window scroll has no such container to
+   stick against, so it stays scoped to landscape; and keeping the theme
+   cards from stretching too tall on a short landscape viewport. */
 html.landscape-mode #s-personal .profile-hero{margin:0;position:sticky;top:0}
-html.landscape-mode #s-personal .acct-main{
-  padding-left:22px;border-left:1px solid rgba(var(--ddp-brass-rgb),.24);
-}
-/* keep the theme cards from stretching too tall on short viewports */
 html.landscape-mode #s-personal .tc-swatch{height:40px}
 
 /* ── Game-flow screens: lobby, seat draw / dealer cut, round summary,
@@ -2211,6 +2930,35 @@ html.landscape-mode #tutorial-callout{
    uppercase text down to 2.63:1 — under AA, at about the smallest type in
    the app. Full opacity puts it back to 4.44. */
 [data-theme="clair"] .tile-sub{opacity:1}
+/* ── Clair corrections for the cosmetics UI ──
+   Measured, not guessed, the same way the two blocks above were.
+   Contrast of each new surface against its own composited background:
+
+                     Bordeaux  Émeraude  Clair   Marquee
+     .cos-tab.active   10.90     12.13    2.12    13.63
+     .cos-req           3.38      3.42    2.33     3.38
+     .sec-count         3.40      3.43    2.54     3.39
+     .cos-tab idle      3.40      3.43    2.54     3.39
+
+   The active tab is the important one: on Clair it was the LEAST
+   readable thing in the strip, i.e. selecting a tab made its label
+   harder to read than the ones beside it. Same failure and same fix as
+   the .acct-tab/.acct-toptab correction just above — brass on a pale
+   ground — so it's grounded on --gold-lo, the dark end of the ramp,
+   which the hero title already measures 5.28 with here.
+   The three small-text ones are only out of family on Clair (2.3-2.5 vs
+   a 3.4 band everywhere else) because --faint is a dark ink at .42 on a
+   pale felt rather than a pale cream on a dark one. Taking the alpha to
+   .72 puts them at 4.5+, ahead of the dark themes rather than behind.
+   Lives at the END of the stylesheet with the other Clair blocks for
+   the documented reason: [data-theme="clair"] .cos-req ties with
+   .cos-req on nothing — it wins on specificity — but .cos-tab.active is
+   a genuine 0,2,0-vs-0,2,0 tie that only source order settles. */
+[data-theme="clair"] .cos-tab.active{color:var(--gold-lo)}
+[data-theme="clair"] .cos-req,
+[data-theme="clair"] .title-opt .to-req,
+[data-theme="clair"] .sec-count,
+[data-theme="clair"] .cos-tab{color:rgba(var(--ddp-ink-rgb),.72)}
 </style>
 </head>
 <body>
@@ -2227,6 +2975,26 @@ html.landscape-mode #tutorial-callout{
 <div id="splash" aria-hidden="true"><div class="splash-art"></div></div>
 
 <div id="conn">Reconnecting…</div>
+
+<!-- Cosmetic scene layer. Outside #app and BEHIND it (z-index 0 vs #app's
+     1), so it is structurally incapable of covering a card or a control
+     no matter what a scene paints. pointer-events:none as well, per the
+     brief. Empty data-scene until applyScene() runs; the class is what
+     fades it in, and show() only adds html.scene-on for the table
+     screens. -->
+<div id="scene-layer" class="scene-art" data-scene="" aria-hidden="true"></div>
+
+<!-- Achievement unlock banner (see .unlock-pop). Populated and shown by
+     showUnlockPop(); starts off-screen via transform, never display:none,
+     so the slide-in transition has something to animate from. -->
+<div id="unlock-pop" class="unlock-pop" role="status" aria-live="polite">
+  <div class="up-crest crest-art" id="unlock-crest"></div>
+  <div>
+    <div class="up-kicker">Achievement unlocked</div>
+    <div class="up-name" id="unlock-name"></div>
+    <div class="up-sub" id="unlock-sub"></div>
+  </div>
+</div>
 
 
 <div id="rules" onclick="if(event.target===this)closeRules()">
@@ -2505,7 +3273,9 @@ html.landscape-mode #tutorial-callout{
 <!-- ═══ CASUAL PLAY (create / join) ═══ -->
 <section id="s-landing" class="screen">
   <div class="center-wrap">
-    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    <div class="screen-header">
+      <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    </div>
     <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Casual Play</h2>
     <p class="tagline">Friends and AI &middot; pick up and play</p>
 
@@ -2597,7 +3367,9 @@ html.landscape-mode #tutorial-callout{
      and inherits that landscape layout from the shared .center-wrap rule. -->
 <section id="s-daily" class="screen">
   <div class="center-wrap" style="max-width:440px">
-    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    <div class="screen-header">
+      <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    </div>
     <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Daily Challenge</h2>
     <p class="tagline">One hand &middot; same deal for everyone</p>
 
@@ -2664,7 +3436,9 @@ html.landscape-mode #tutorial-callout{
 <!-- ═══ RANKED MULTIPLAYER ═══ -->
 <section id="s-ranked" class="screen">
   <div class="center-wrap" style="max-width:440px">
-    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    <div class="screen-header">
+      <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    </div>
     <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Ranked Multiplayer</h2>
     <p class="tagline">Humans only &middot; no AI seats</p>
 
@@ -2740,15 +3514,35 @@ html.landscape-mode #tutorial-callout{
 
 <!-- ═══ PERSONAL (avatar & name) ═══ -->
 <section id="s-personal" class="screen">
-  <div class="center-wrap acct-wrap" style="max-width:440px">
-    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+  <div class="center-wrap acct-wrap">
+    <div class="screen-header">
+      <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    </div>
 
     <div class="acct-layout">
       <!-- HERO player card -->
       <div class="profile-hero">
-        <div class="avatar-preview" id="pv-avatar" onclick="toggleAvatarPicker()">👤</div>
+        <!-- The wrapper exists purely so the equipped crest can sit on
+             the avatar's corner; .avatar-preview keeps its exact id,
+             class and click handler so the picker is unaffected. -->
+        <div class="hero-avatar-wrap">
+          <div class="avatar-preview" id="pv-avatar" onclick="toggleAvatarPicker()">👤</div>
+          <div class="hero-crest crest-art" id="pv-crest"></div>
+        </div>
         <input type="text" id="pv-name" class="hero-name-input" placeholder="Your name"
-               maxlength="16" autocomplete="nickname" oninput="updateAvatarPreview()"/>
+               maxlength="16" autocomplete="nickname" oninput="updateAvatarPreview()"
+               onfocus="if(!account){this.blur();openAuthForm('signup');}"/>
+        <!-- Rank nameplate, then the player title, directly under the
+             name. The plate is display:none when no rank set is equipped
+             (a guest, or an account that has never played ranked) rather
+             than reserving space — unlike .hero-title, which DOES
+             reserve its line, because a title is toggled from the picker
+             on this very screen and the hero must not resize under the
+             player's finger while they browse. A rank set can only
+             change by playing a ranked game, never while this screen is
+             open, so it has nothing to jump against. -->
+        <div class="hero-plate" id="pv-plate" style="display:none"></div>
+        <div class="hero-title" id="pv-title"></div>
         <button class="acct-chip" id="acct-chip" onclick="handleAcctChip()">
           <span class="acct-chip-icon" id="acct-chip-icon">👤</span>
           <span class="acct-chip-text" id="acct-chip-text">Guest</span>
@@ -2786,10 +3580,52 @@ html.landscape-mode #tutorial-callout{
             <div id="err-auth" class="note bad" style="display:none"></div>
           </div>
 
-          <!-- avatar picker: hidden until #pv-avatar tapped (.open) -->
-          <p class="pick-hint" id="avatar-hint">Tap your avatar to change it</p>
-          <div class="avatar-grid" id="avatar-grid"></div>
+          <!-- Guests can't set a name/avatar at all anymore — friends and
+               cross-device sync both need a real account to hang an
+               identity off of. An existing local guest profile from
+               before this changed keeps playing under its old name
+               (identity() in the JS still falls back to it) — it just
+               can't be edited here without logging in. -->
+          <div class="empty-state" id="acct-guest-gate" style="display:none">
+            <div class="empty-icon">🔒</div>
+            <h3>Log in to set your name and avatar</h3>
+            <p>Your profile is tied to your account so it follows you everywhere &mdash; and so friends can find you.</p>
+            <button class="btn btn-primary btn-block" onclick="openAuthForm('signup')" style="margin-top:10px">Create account</button>
+            <button class="btn btn-ghost btn-block" onclick="openAuthForm('login')" style="margin-top:8px">Log in</button>
+          </div>
 
+          <div id="acct-identity-editor">
+            <!-- avatar picker: hidden until #pv-avatar tapped (.open) -->
+            <p class="pick-hint" id="avatar-hint">Tap your avatar to change it</p>
+            <div class="avatar-grid" id="avatar-grid"></div>
+          </div>
+
+          <!-- ── CUSTOMIZATION: sub-tabs inside the Profile panel ──
+               Table theme was a flat section here; it's now the first of
+               five sibling pickers behind their own tab strip. Theme and
+               Card front change how the game is drawn, Scene what's
+               behind it, Crest and Title what other people see on you.
+               Only the Table theme tab is available to guests — the other
+               four are unlocked by achievements, which are a fact about
+               an account (same reasoning as the Daily Challenge's "guests
+               play but nothing is banked"). -->
+          <div class="sec-label">Customization</div>
+          <!-- Tab labels are ONE WORD each, deliberately: five tabs at
+               375px (the narrowest phone this targets) overflowed the
+               strip with "Table theme"/"Backgrounds"/"Card fronts", and
+               a horizontally-scrolling tab row with no affordance hides
+               the last two tabs completely. The full name lives in each
+               panel's own .sec-label instead, so nothing is lost. -->
+          <div class="cos-tabs" id="cos-tabs">
+            <button class="cos-tab active" data-cos="theme" onclick="switchCosTab('theme')">Theme</button>
+            <button class="cos-tab" data-cos="scene" onclick="switchCosTab('scene')">Scenes<span class="cos-tab-n" id="cos-n-scene"></span></button>
+            <button class="cos-tab" data-cos="cards" onclick="switchCosTab('cards')">Cards<span class="cos-tab-n" id="cos-n-cards"></span></button>
+            <button class="cos-tab" data-cos="crest" onclick="switchCosTab('crest')">Crests<span class="cos-tab-n" id="cos-n-crest"></span></button>
+            <button class="cos-tab" data-cos="title" onclick="switchCosTab('title')">Titles<span class="cos-tab-n" id="cos-n-title"></span></button>
+            <button class="cos-tab" data-cos="rank" onclick="switchCosTab('rank')">Rank<span class="cos-tab-n" id="cos-n-rank"></span></button>
+          </div>
+
+          <div class="cos-panel active" id="cos-panel-theme">
           <div class="sec-label">Table theme</div>
           <div class="theme-swatch-row">
             <button class="theme-swatch-btn theme-card deco-box" data-theme="bordeaux"
@@ -2813,27 +3649,76 @@ html.landscape-mode #tutorial-callout{
               <span class="tc-name">Marquee</span>
             </button>
           </div>
+          </div><!-- /cos-panel-theme -->
 
-          <button class="btn btn-primary btn-block" onclick="savePersonal()">Save</button>
-          <div id="err-personal" class="note bad" style="display:none"></div>
-          <p id="pv-saved" class="note gold" style="display:none;margin-top:10px;text-align:center">Saved.</p>
-        </div>
+          <!-- The four unlockable pickers. Every one is rendered from the
+               server's catalog by renderCosmeticPanels(); the markup is
+               just the mount point, so adding a scene or a crest needs no
+               HTML change at all. -->
+          <div class="cos-panel" id="cos-panel-scene"></div>
+          <div class="cos-panel" id="cos-panel-cards"></div>
+          <div class="cos-panel" id="cos-panel-crest"></div>
+          <div class="cos-panel" id="cos-panel-title"></div>
+          <div class="cos-panel" id="cos-panel-rank"></div>
 
-        <!-- ACHIEVEMENTS PANEL (placeholder) -->
-        <div class="acct-panel" id="acct-panel-achievements">
-          <div class="empty-state">
-            <div class="empty-icon">🏅</div>
-            <h3>Achievements coming soon</h3>
-            <p>Milestones, moon-shots and win streaks will show up here.</p>
+          <div id="acct-save-row">
+            <button class="btn btn-primary btn-block" onclick="savePersonal()">Save</button>
+            <div id="err-personal" class="note bad" style="display:none"></div>
+            <p id="pv-saved" class="note gold" style="display:none;margin-top:10px;text-align:center">Saved.</p>
           </div>
         </div>
 
-        <!-- FRIENDS PANEL (placeholder) -->
+        <!-- ACHIEVEMENTS PANEL -->
+        <div class="acct-panel" id="acct-panel-achievements">
+          <!-- Guests see the gate; logged-in players get the real list,
+               rendered by renderAchievements() from the same server
+               payload the cosmetic pickers read, so an achievement can
+               never show as complete here and locked in a picker. -->
+          <div class="empty-state" id="ach-guest-gate" style="display:none">
+            <div class="empty-icon">🏅</div>
+            <h3>Log in to earn achievements</h3>
+            <p>Achievements unlock crests, titles, table backgrounds and card designs &mdash; all tied to your account.</p>
+            <button class="btn btn-primary btn-block" onclick="openAuthForm('signup')" style="margin-top:10px">Create account</button>
+          </div>
+          <div id="ach-loading" class="cos-empty" style="display:none">Loading your achievements…</div>
+          <div id="ach-list" class="ach-list"></div>
+        </div>
+
+        <!-- FRIENDS PANEL -->
         <div class="acct-panel" id="acct-panel-friends">
-          <div class="empty-state">
-            <div class="empty-icon">👥</div>
-            <h3>Friends coming soon</h3>
-            <p>Add friends, see who's online, and invite them straight to a table.</p>
+          <!-- Friends are account-only — a local guest identity has
+               nothing stable to be found by. -->
+          <div class="empty-state" id="friends-guest-gate" style="display:none">
+            <div class="empty-icon">🔒</div>
+            <h3>Log in to add friends</h3>
+            <p>Friends are tied to your account so they follow you across devices.</p>
+            <button class="btn btn-primary btn-block" onclick="openAuthForm('signup')" style="margin-top:10px">Create account</button>
+            <button class="btn btn-ghost btn-block" onclick="openAuthForm('login')" style="margin-top:8px">Log in</button>
+          </div>
+
+          <div id="friends-content" style="display:none">
+            <div class="codebox" style="margin-bottom:16px">
+              <p style="font-size:.75rem;color:var(--faint)">Your friend code</p>
+              <div class="code" id="friend-code">······</div>
+              <p class="codehint" id="friend-code-hint" onclick="copyFriendCode()" style="cursor:pointer">Tap to copy</p>
+            </div>
+
+            <div class="sec-label">Add a friend</div>
+            <div class="row" style="margin-bottom:12px">
+              <input class="grow" type="text" id="add-friend-code" placeholder="Their code" maxlength="6"
+                     style="text-transform:uppercase;letter-spacing:.16em;font-weight:600"
+                     onkeydown="if(event.key==='Enter')submitAddFriend()"/>
+              <button class="btn" onclick="submitAddFriend()">Add</button>
+            </div>
+            <div id="err-friends" class="note bad" style="display:none;margin-bottom:12px"></div>
+
+            <div class="sec-label">Your friends</div>
+            <div id="friends-list"></div>
+            <div class="empty-state" id="friends-empty" style="display:none;padding-top:6px">
+              <div class="empty-icon">👥</div>
+              <h3>No friends yet</h3>
+              <p>Share your code above, or add someone else's to get started.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -2844,7 +3729,9 @@ html.landscape-mode #tutorial-callout{
 <!-- ═══ STATISTICS ═══ -->
 <section id="s-stats" class="screen">
   <div class="center-wrap" style="max-width:440px">
-    <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    <div class="screen-header">
+      <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    </div>
     <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Statistics</h2>
     <p class="tagline">Your all-time numbers</p>
 
@@ -3047,6 +3934,12 @@ html.landscape-mode #tutorial-callout{
     </div>
     <div id="l-slots"></div>
     <p id="l-status" style="font-size:.82rem;color:var(--faint);margin:10px 0"></p>
+    <!-- Only for a real casual room (never ranked/daily — those don't
+         have open seats to invite into) and only once there's at least
+         one online friend to show, both decided in renderLobby/
+         renderLobbyFriendPicker. -->
+    <button class="btn btn-ghost btn-block" id="l-invite-btn" onclick="toggleLobbyFriendPicker()" style="display:none;margin-bottom:10px">Invite friends</button>
+    <div id="l-friend-picker" style="display:none;margin-bottom:10px"></div>
     <button class="btn btn-primary btn-block" id="l-start" onclick="send('startGame')" disabled>Start game</button>
     <p id="l-wait" class="prompt wait" style="display:none">Waiting for the host to start…</p>
     <div class="exit-row">
@@ -3129,6 +4022,20 @@ html.landscape-mode #tutorial-callout{
     <button class="btn btn-ghost btn-block" id="f-daily-return" style="display:none;margin-top:14px" onclick="goDaily()">Back to Daily Challenge</button>
   </div>
 </section>
+
+<!-- ═══ FRIEND INVITE BANNER ═══
+     A plain sibling of every screen, not nested in any of them — fixed
+     positioning makes its place in the DOM irrelevant for where it
+     visually lands, but it DOES matter for whether it renders at all:
+     inside a .screen it would inherit that screen's display:none the
+     moment a different one is active. Living here means it can show up
+     no matter which screen the recipient is actually on. -->
+<div id="friend-invite" class="friend-invite-banner" style="display:none">
+  <span class="fi-avatar" id="fi-avatar">👤</span>
+  <span class="fi-text" id="fi-text"></span>
+  <button class="btn btn-primary btn-sm" onclick="acceptFriendInvite()">Join</button>
+  <button class="btn btn-ghost btn-sm" onclick="dismissFriendInvite()">✕</button>
+</div>
 
 </div>
 
@@ -3220,6 +4127,67 @@ function initTableTheme(){
   applyTableTheme(saved||'bordeaux');
 }
 
+/* ══════════ COSMETICS: scene & card front ══════════
+   Both are applied as a single attribute on <html> and everything else
+   is CSS (see the SCENES and ROYAL COURT blocks in <style>). No render
+   function, no markup and — critically — no card-geometry code is aware
+   either exists, which is what keeps the hand-tuned --cw/--overlap and
+   hit-testing work untouched.
+
+   The server is the authority on what's UNLOCKED (it re-validates every
+   equip), but these localStorage keys cache what it last said is
+   EQUIPPED, purely so the right scene and card face are already painted
+   on the first frame rather than snapping in when the socket answers —
+   the same anti-flash reasoning as the theme's inline <head> script.
+   The cache is overwritten by every server response and cleared on
+   logout, so it can never keep a cosmetic alive past its account. */
+const SCENE_KEY='ddp.scene', CARDFRONT_KEY='ddp.cardFront';
+const DEFAULT_SCENE='scene_velvet_room', DEFAULT_CARDFRONT='cardfront_standard';
+// Mirrors the server's COSMETICS registry IDs. Presentation only — being
+// listed here does NOT make something equippable; the server decides.
+const SCENE_IDS=['scene_velvet_room','scene_rooftop','scene_grand_library','scene_winter_casino',
+                 'scene_moon_room','scene_garden','scene_train','scene_observatory'];
+const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court'];
+// The tail of each ID is the CSS hook, so a data-cardfront value stays
+// readable in devtools ("royal_court", not the full ID).
+const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court'};
+
+let equippedScene=DEFAULT_SCENE, equippedCardFront=DEFAULT_CARDFRONT;
+
+function applyScene(id,persist){
+  equippedScene=SCENE_IDS.includes(id)?id:DEFAULT_SCENE;
+  const el=$('scene-layer');
+  if(el) el.setAttribute('data-scene',equippedScene);
+  if(persist!==false){ try{ localStorage.setItem(SCENE_KEY,equippedScene); }catch(e){} }
+}
+function applyCardFront(id,persist){
+  equippedCardFront=CARDFRONT_IDS.includes(id)?id:DEFAULT_CARDFRONT;
+  document.documentElement.setAttribute('data-cardfront',CARDFRONT_ATTR[equippedCardFront]);
+  if(persist!==false){ try{ localStorage.setItem(CARDFRONT_KEY,equippedCardFront); }catch(e){} }
+}
+// A scene is table furniture: it's revealed only on the two screens that
+// have a table. Every other screen's text and panels were contrast-tuned
+// against the plain felt, and painting a lit room behind the leaderboard
+// would fight all of it. Called from show(), same as
+// applyOrientationLock/updateLandscapeMode.
+function updateSceneLayer(){
+  const onTable=currentScreenId==='pass'||currentScreenId==='play';
+  document.documentElement.classList.toggle('scene-on',onTable);
+}
+function initCosmeticLook(){
+  let s=null,c=null;
+  try{ s=localStorage.getItem(SCENE_KEY); c=localStorage.getItem(CARDFRONT_KEY); }catch(e){}
+  applyScene(s||DEFAULT_SCENE,false);
+  applyCardFront(c||DEFAULT_CARDFRONT,false);
+}
+// Logging out drops back to the free defaults immediately rather than
+// leaving the previous account's unlocks on screen until the next load.
+function resetCosmeticLook(){
+  try{ localStorage.removeItem(SCENE_KEY); localStorage.removeItem(CARDFRONT_KEY); }catch(e){}
+  applyScene(DEFAULT_SCENE,false);
+  applyCardFront(DEFAULT_CARDFRONT,false);
+}
+
 /* ── brand splash ──
    Removed from the DOM after fading, so nothing is left overlaying the
    app. Called from socket 'connect' and from a hard timeout, and guards
@@ -3253,6 +4221,65 @@ const PK='ddp.profile';
 // It's just emoji characters — add, remove, or reorder freely, no other
 // code needs to change. Paste any emoji in; the grid re-flows automatically.
 const AVATARS=['👑','🃏','🦊','🐺','🦁','🐯','🦅','🐉','🎩','🕶️','💎','🎲','🍀','🔱','⚜️','🌙','⭐','🔥','⚔️','🛡️'];
+
+/* ── portrait avatars: 20 across 5 collections ──
+   These live in the SAME `accounts.avatar` column the emoji avatars use,
+   so everything that already carries an avatar — publicState, every
+   leaderboard query, the friends list — carries these for free. The
+   stored value is just an id string instead of an emoji character, and
+   `avatarHTML` below is the one place that tells them apart.
+   Mirrors server.js's AVATAR_COLLECTIONS, which is the validation side
+   (sanitizeAvatar allow-lists these ids); this copy is presentation.
+   The `dir`/file split keeps the id free of path detail, so the art can
+   be reorganised on disk without touching a stored value. */
+const AVATAR_COLLECTIONS=[
+  {id:'royal_court',name:'Royal Court',dir:'royal-court',avatars:[
+    ['royal_king','The King','king'],['royal_queen','The Queen','queen'],
+    ['royal_duke','The Duke','duke'],['royal_duchess','The Duchess','duchess']]},
+  {id:'noir_casino',name:'Noir Casino',dir:'noir-casino',avatars:[
+    ['noir_gambler','The Gambler','gambler'],['noir_dealer','The Dealer','dealer'],
+    ['noir_femme_fatale','Femme Fatale','femme_fatale'],['noir_detective','The Detective','detective']]},
+  {id:'emerald_society',name:'Emerald Society',dir:'emerald-society',avatars:[
+    ['emerald_alchemist','The Alchemist','alchemist'],['emerald_serpent','The Serpent','serpent'],
+    ['emerald_mask','The Mask','mask'],['emerald_oracle','The Oracle','oracle']]},
+  {id:'moonlit_occult',name:'Moonlit Occult',dir:'moonlit-occult',avatars:[
+    ['occult_priestess','Moon Priestess','priestess'],['occult_astrologer','The Astrologer','astrologer'],
+    ['occult_raven','The Raven','raven'],['occult_magician','The Magician','magician']]},
+  {id:'grand_hotel',name:'Grand Hotel',dir:'grand-hotel',avatars:[
+    ['hotel_concierge','The Concierge','concierge'],['hotel_bellboy','The Bellboy','bellboy'],
+    ['hotel_heiress','The Heiress','heiress'],['hotel_traveler','The Traveler','traveler']]},
+];
+const AVATAR_ART={};
+for(const c of AVATAR_COLLECTIONS)
+  for(const [id,name,file] of c.avatars)
+    AVATAR_ART[id]={name,collection:c.name,src:`/avatars/${c.dir}/${file}.webp`};
+
+/* The single place an avatar value becomes markup. Three cases, in
+   order: a portrait id -> <img>; any other non-empty value -> the emoji
+   it has always been; nothing -> the name's initial. Returning a STRING
+   (not setting a node) is what let every existing call site keep its
+   shape — most of them build an innerHTML template already.
+
+   `lazy` is OPT-IN and only the picker uses it. It renders 20 portraits
+   at once inside a panel that starts collapsed, which is exactly what
+   lazy loading is for. Everywhere else is eager on purpose: the table
+   rebuilds its seats' innerHTML on every single gameState (i.e. every
+   card played), so those <img> elements are destroyed and recreated
+   constantly — deferring them re-runs the intersection check on each
+   rebuild and risks the avatar visibly popping mid-trick, to save
+   nothing, since a seat avatar is on screen by definition. */
+function avatarHTML(v,name,lazy){
+  const a=AVATAR_ART[v];
+  if(a) return `<img class="av-img" src="${a.src}" alt="${esc(a.name)}"`+
+                ` loading="${lazy?'lazy':'eager'}" draggable="false"/>`;
+  return v?esc(v):esc(initial(name||'?'));
+}
+// For the handful of sites that were assigning .textContent. Kept as its
+// own helper rather than inlining `.innerHTML=avatarHTML(...)` so the
+// "an avatar may be an image now" rule stays greppable.
+function setAvatarInto(el,v,name){
+  if(el) el.innerHTML=avatarHTML(v,name);
+}
 function loadProfile(){
   try{ return Object.assign({name:'',avatar:''},JSON.parse(localStorage.getItem(PK)||'null')); }
   catch(e){ return {name:'',avatar:''}; }
@@ -3293,6 +4320,7 @@ function show(id){
   currentScreenId=id;
   applyOrientationLock(id);
   updateLandscapeMode();
+  updateSceneLayer();
 }
 // The game is landscape-only: every screen has a landscape layout, so
 // every screen asks to be locked there. Kept as a set (rather than
@@ -3333,6 +4361,7 @@ function updateLandscapeMode(){
 // the user happened to navigate. Both are idempotent.
 applyOrientationLock(currentScreenId);
 updateLandscapeMode();
+updateSceneLayer();
 // The class toggle and the markup must flip together — tableHTML() emits
 // a different structure per orientation (seat blocks vs. per-slot
 // captions), so re-render straight away rather than waiting for the
@@ -3441,10 +4470,16 @@ function seatHTML(G,i,opts){
   // Frozen at the score before this round started — only moves once the
   // hand finishes, never mid-trick, so it doesn't flicker during play.
   const total=(G.roundBefore&&typeof G.roundBefore[i]==='number')?G.roundBefore[i]:p.score;
-  const avatarContent=p.isAI?'🤖':(p.avatar?esc(p.avatar):esc(initial(p.name)));
+  const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
+  // Rank cosmetics on a table seat are strictly zero-height: the frame
+  // is border+glow on the avatar well that already exists, and the badge
+  // is inline in the name line. Nothing here may add a row — the
+  // landscape vertical budget is spent (see the --ch formula).
+  const mat=p.rankMaterial||'';
+  const frame=mat?` rank-framed" data-material="${mat}`:'';
   return `<div class="seat ${cls}">
-    <div class="avatar">${avatarContent}<span class="dealer-badge${i===G.dealer?' on':''}">D</span></div>
-    <div class="seat-name">${esc(p.name)}${mine?' · you':''}</div>
+    <div class="avatar${frame}">${avatarContent}<span class="dealer-badge${i===G.dealer?' on':''}">D</span></div>
+    <div class="seat-name">${mat?rankBadgeHTML(mat)+' ':''}${esc(p.name)}${mine?' · you':''}</div>
     <div class="seat-score">${tw} trick${tw===1?'':'s'}<small>${total}</small></div>
     ${fan?`<div class="seat-cards">${fan}</div><span class="count-pill">${p.cardCount}</span>`:''}
   </div>`;
@@ -3466,7 +4501,7 @@ function myStrip(G,elId,isMyTurn){
   const rs=roundOf(G,me);
   const cls=rs>0?'up':rs<0?'down':'flat';
   el.classList.toggle('turn',!!isMyTurn);
-  const avatarContent=p.avatar?esc(p.avatar):esc(initial(p.name));
+  const avatarContent=avatarHTML(p.avatar,p.name);
   // Always render the (visibility:hidden-by-default) turn badge, on every
   // screen that uses .mystrip — not just the play screen — so the strip
   // reserves identical space everywhere and doesn't change size between
@@ -3509,6 +4544,7 @@ function tableHTML(G,opts){
     const cls=[i===active?'turn':'',i===me?'mine':'',
                (!p.connected&&!p.isAI)?'off':''].join(' ');
     return `<div class="tcap ${cls}">`
+      +(p.rankMaterial?rankBadgeHTML(p.rankMaterial):'')
       +`<span class="nm">${esc(p.name)}</span>`
       +`<span class="sc">${tw}<small> · ${total}</small></span>`
       +(i===G.dealer?'<span class="dl">D</span>':'')
@@ -3583,7 +4619,7 @@ function goCasual(){
   $('casual-noprofile').style.display=has?'none':'block';
   $('casual-ready').style.display=has?'block':'none';
   if(has){
-    $('cp-avatar').textContent=id.avatar||initial(id.name);
+    setAvatarInto($('cp-avatar'),id.avatar,id.name);
     $('cp-name').textContent=id.name;
   }
   renderRoundsSeg();
@@ -3705,7 +4741,7 @@ socket.on('dailyLeaderboardOk',d=>{
     const mine=account&&r.accountId===account.id;
     return `<tr class="${mine?'me':''}">
       <td class="pos-col">${pos}</td>
-      <td>${esc(r.avatar||'')} ${esc(r.nickname)}${r.shotMoon?' 🌕':''}</td>
+      <td><span class="lb-av">${avatarHTML(r.avatar,r.nickname)}</span> ${esc(r.nickname)}${r.shotMoon?' 🌕':''}</td>
       <td class="score-col">${r.score>0?'+':''}${r.score}</td>
     </tr>`;
   }).join('');
@@ -3715,7 +4751,7 @@ socket.on('dailyLeaderboardOk',d=>{
   const you=$('daily-you');
   if(d.you){
     you.innerHTML=`<span class="pos">${ordinal(d.you.position)}</span>`
-      +`<span class="who">${esc(d.you.avatar||'')} ${esc(d.you.nickname)} (you)</span>`
+      +`<span class="who"><span class="lb-av">${avatarHTML(d.you.avatar,d.you.nickname)}</span> ${esc(d.you.nickname)} (you)</span>`
       +`<span class="sc">${d.you.score>0?'+':''}${d.you.score}</span>`;
     you.style.display='flex';
   }else{
@@ -3773,16 +4809,40 @@ let lastAuthAction='';
 
 function updateMenuProfileUI(){
   const id=identity();
-  $('menu-avatar-icon').textContent=id.avatar||'☺︎';
+  // The one menu tile whose glyph is replaced by the player's own
+  // avatar. ☺︎ stays the fallback in BOTH places (here and the markup).
+  // A portrait avatar comes through as an <img>, so the tile gets a
+  // class that swaps the typographic glyph styling for a round image —
+  // without it the img would inherit .tile-icon's font sizing and
+  // text-shadow and render at the wrong scale.
+  const mi=$('menu-avatar-icon');
+  mi.classList.toggle('has-portrait',!!AVATAR_ART[id.avatar]);
+  mi.innerHTML=id.avatar?avatarHTML(id.avatar,id.name):'☺︎';
   $('menu-personal-sub').textContent=id.name
     ? `Playing as ${id.name}`
     : 'Choose your nickname & avatar';
 }
+/* The picker is now sectioned — five portrait collections plus the
+   original emoji set — so #avatar-grid became a plain block container
+   with a grid per section, rather than being the grid itself. That's why
+   its .open rule is display:block now. `pickAvatar` and the .sel toggle
+   are untouched: a portrait is selected exactly the way an emoji is,
+   the stored value is just an id instead of a character. */
 function renderAvatarGrid(){
   const el=$('avatar-grid'); if(!el) return;
-  el.innerHTML=AVATARS.map(a=>
-    `<div class="avatar-opt${a===draftAvatar?' sel':''}" onclick="pickAvatar('${a}')">${a}</div>`
-  ).join('');
+  const opt=(val,label,inner)=>
+    `<div class="avatar-opt${val===draftAvatar?' sel':''}" role="button" tabindex="0"`+
+    ` title="${esc(label)}" aria-label="${esc(label)}" onclick="pickAvatar('${val}')">${inner}</div>`;
+  let h='';
+  for(const c of AVATAR_COLLECTIONS){
+    h+=`<div class="sec-label av-sec">${esc(c.name)}</div><div class="av-row">`
+      +c.avatars.map(([id,name])=>opt(id,name,avatarHTML(id,name,true))).join('')
+      +`</div>`;
+  }
+  h+=`<div class="sec-label av-sec">Classic</div><div class="av-row emoji">`
+    +AVATARS.map(a=>opt(a,'Avatar '+a,a)).join('')
+    +`</div>`;
+  el.innerHTML=h;
 }
 function pickAvatar(a){
   draftAvatar=(draftAvatar===a)?'':a;   // tap again to clear
@@ -3791,9 +4851,10 @@ function pickAvatar(a){
 }
 function updateAvatarPreview(){
   const n=$('pv-name').value.trim()||identity().name;
-  $('pv-avatar').textContent=draftAvatar||initial(n||'?');
+  setAvatarInto($('pv-avatar'),draftAvatar,n||'?');
 }
 function toggleAvatarPicker(){
+  if(!account){ openAuthForm('signup'); return; }
   $('avatar-grid').classList.toggle('open');
 }
 function goPersonal(){
@@ -3806,14 +4867,27 @@ function goPersonal(){
   updateAvatarPreview();
   renderAccountUI();
   switchAccountTab('profile');
+  // Reset the customization strip to Table theme for the same reason
+  // switchAccountTab('profile') is called above — a stale sub-tab left
+  // behind a return visit is confusing, and Table theme is the one tab
+  // that works for everyone.
+  switchCosTab('theme');
   if(account){ renderAccountRank(null); socket.emit('getRankedProfile',{token:accountToken}); }
   else renderAccountRank();
+  // Re-requested on every visit rather than cached for the session:
+  // finishing a game is exactly what changes it, and this screen is
+  // where the unlock is meant to be discovered.
+  requestCosmetics();
+  renderCosmeticPanels();
+  renderAchievements();
+  renderHeroCosmetics();
 }
 function switchAccountTab(tab){
   document.querySelectorAll('#s-personal .acct-toptab').forEach(b=>
     b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('#s-personal .acct-panel').forEach(p=>
     p.classList.toggle('active',p.id==='acct-panel-'+tab));
+  if(tab==='friends') renderFriendsGate();
 }
 // Reuses badgeSrc/badgeImg (defined with the Ranked screen) and the same
 // rankedProfileOk/rankedProfileError events that screen already listens
@@ -3849,6 +4923,477 @@ function renderAccountRank(d){
 socket.on('rankedProfileOk',d=>{
   if($('s-personal').classList.contains('active')) renderAccountRank(d);
 });
+
+/* ══════════════════════════════════════════════════════════════
+   COSMETICS & ACHIEVEMENTS (client side)
+   ══════════════════════════════════════════════════════════════
+   Everything here is PRESENTATION. server.js owns the ACHIEVEMENTS /
+   COSMETICS registry, evaluates every threshold and re-validates every
+   equip, so this file never decides what's unlocked — it renders the
+   catalog it's handed and sends back an ID. That split is what keeps a
+   crafted socket message from equipping something unearned, and it's
+   why the art below is keyed by ID with no thresholds in sight.
+
+   Crests are inline SVG rather than image files: they're flat Deco
+   geometry that has to stay crisp at 22px (the hero badge) and 38-52px
+   (the achievement rows and picker thumbs), they cost zero requests, and
+   they pick up the active theme's brass through var(--gold*) — a raster
+   crest would be stuck on whichever palette it was drawn in. Same
+   reasoning as the menu's typographic tile icons.
+
+   Suit glyphs are drawn as <text>, not emoji, for exactly the reason the
+   menu tiles document: emoji ignore `fill`, so they could never take the
+   brass tint. */
+const CREST_RIM=
+  `<circle cx="24" cy="24" r="22.6" fill="none" stroke="var(--gold)" stroke-width="2.2"/>`+
+  `<circle cx="24" cy="24" r="19.4" fill="none" stroke="var(--gold-lo)" stroke-width=".9" opacity=".75"/>`;
+// A circle stroked far wider than the gap between its two radii, then
+// dashed, reads as radial spokes — a sunburst without a dozen <line>s.
+const CREST_RAYS=
+  `<circle cx="24" cy="24" r="13" fill="none" stroke="var(--gold-lo)" stroke-width="12"`+
+  ` stroke-dasharray="2 5.6" opacity=".38"/>`;
+function crestGlyph(ch,size,fill,y){
+  return `<text x="24" y="${y||24}" text-anchor="middle" dominant-baseline="central"`+
+         ` font-family="'Playfair Display',serif" font-size="${size}" fill="${fill}">${ch}</text>`;
+}
+const CREST_ART={
+  crest_queen_of_spades:
+    `<circle cx="24" cy="24" r="18" fill="#111014"/>`+
+    `<path d="M15 17l4.2 3.6L24 13.5l4.8 7.1L33 17l-1.7 6.4H16.7z" fill="var(--gold)"/>`+
+    crestGlyph('&#9824;',17,'var(--gold-hi)',31),
+  crest_four_suits:
+    `<circle cx="24" cy="24" r="18" fill="#16121A"/>`+
+    `<text x="24" y="17" text-anchor="middle" dominant-baseline="central" font-family="'Playfair Display',serif" font-size="10" fill="var(--gold-hi)">&#9824;</text>`+
+    `<text x="24" y="31" text-anchor="middle" dominant-baseline="central" font-family="'Playfair Display',serif" font-size="10" fill="#8C2233">&#9827;</text>`+
+    `<text x="15" y="24" text-anchor="middle" dominant-baseline="central" font-family="'Playfair Display',serif" font-size="10" fill="#8C2233">&#9829;</text>`+
+    `<text x="33" y="24" text-anchor="middle" dominant-baseline="central" font-family="'Playfair Display',serif" font-size="10" fill="var(--gold-hi)">&#9830;</text>`+
+    `<path d="M24 8v4M24 36v4M8 24h4M36 24h4" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round"/>`,
+  crest_crown:
+    `<circle cx="24" cy="24" r="18" fill="#1A1207"/>`+CREST_RAYS+
+    `<path d="M13 20l5.4 4.6L24 15l5.6 9.6L35 20l-2.2 10.5H15.2z" fill="var(--gold)"/>`+
+    `<circle cx="24" cy="13.6" r="2" fill="var(--gold-hi)"/>`+
+    `<rect x="15" y="32" width="18" height="2.4" rx="1.2" fill="var(--gold-lo)"/>`,
+  crest_crescent:
+    `<circle cx="24" cy="24" r="18" fill="#0B1230"/>`+
+    `<path d="M29.5 12.5a13 13 0 100 23 15.5 15.5 0 010-23z" fill="var(--gold)"/>`+
+    `<circle cx="31" cy="17" r="1.5" fill="var(--gold-hi)"/>`+
+    `<circle cx="33.5" cy="26" r="1.1" fill="var(--gold-hi)"/>`+
+    `<circle cx="29.5" cy="32.5" r="1" fill="var(--gold-hi)"/>`,
+  crest_ace:
+    `<circle cx="24" cy="24" r="18" fill="#141019"/>`+CREST_RAYS+
+    `<text x="24" y="20" text-anchor="middle" dominant-baseline="central" font-family="'Playfair Display',serif" font-size="16" font-weight="700" fill="var(--gold-hi)">A</text>`+
+    crestGlyph('&#9824;',11,'var(--gold)',32),
+  crest_rose:
+    `<circle cx="24" cy="24" r="18" fill="#2B0D18"/>`+
+    `<path d="M24 11l9.2 5.3v10.4L24 32l-9.2-5.3V16.3z" fill="none" stroke="var(--gold)" stroke-width="1.5"/>`+
+    `<path d="M24 16l5.6 3.2v6.4L24 28.8l-5.6-3.2v-6.4z" fill="#641A2A" stroke="var(--gold-lo)" stroke-width="1"/>`+
+    `<circle cx="24" cy="22" r="2.4" fill="var(--gold)"/>`+
+    `<path d="M17 34h14" stroke="var(--gold-lo)" stroke-width="1.4" stroke-linecap="round"/>`,
+  crest_snake:
+    `<circle cx="24" cy="24" r="18" fill="#0D2E25"/>`+
+    `<path d="M24 33a9 9 0 119-9 6.4 6.4 0 11-6.4 6.4" fill="none" stroke="var(--gold)" stroke-width="2.6" stroke-linecap="round"/>`+
+    `<path d="M26.6 30.4a3.6 3.6 0 103.6-3.6" fill="none" stroke="var(--gold-lo)" stroke-width="2.2" stroke-linecap="round"/>`+
+    `<circle cx="30.6" cy="26.4" r="1.5" fill="var(--gold-hi)"/>`,
+  crest_raven:
+    `<circle cx="24" cy="24" r="18" fill="#0C0C0F"/>`+
+    `<path d="M14 30c0-7 5-12 11.5-12 3 0 5.5 1 7.5 2.8l-4 2.2 6 1.2-2.6 2.6c.4 5.6-4.4 10.2-10.4 10.2-4 0-8-2.4-8-7z" fill="#1A1A20" stroke="var(--gold-lo)" stroke-width="1.1"/>`+
+    `<circle cx="27" cy="24" r="1.6" fill="var(--gold-hi)"/>`,
+  crest_diamond:
+    `<circle cx="24" cy="24" r="18" fill="#0E1726"/>`+
+    `<path d="M24 11l11 8.6L24 37 13 19.6z" fill="none" stroke="var(--gold)" stroke-width="1.8"/>`+
+    `<path d="M13 19.6h22M24 11l-5 8.6L24 37l5-17.4z" fill="none" stroke="var(--gold-lo)" stroke-width="1"/>`,
+  crest_card_fan:
+    `<circle cx="24" cy="24" r="18" fill="#171114"/>`+
+    `<g fill="#F0E5CE" stroke="var(--gold)" stroke-width="1.1">`+
+    `<rect x="20" y="17" width="8" height="13" rx="1.6" transform="rotate(-28 24 30)"/>`+
+    `<rect x="20" y="17" width="8" height="13" rx="1.6" transform="rotate(-14 24 30)"/>`+
+    `<rect x="20" y="17" width="8" height="13" rx="1.6"/>`+
+    `<rect x="20" y="17" width="8" height="13" rx="1.6" transform="rotate(14 24 30)"/>`+
+    `<rect x="20" y="17" width="8" height="13" rx="1.6" transform="rotate(28 24 30)"/></g>`,
+  crest_eye:
+    `<circle cx="24" cy="24" r="18" fill="#0D2A22"/>`+
+    `<path d="M10 24c5-6.6 9.6-9.4 14-9.4S33 17.4 38 24c-5 6.6-9.6 9.4-14 9.4S15 30.6 10 24z" fill="none" stroke="var(--gold)" stroke-width="1.8"/>`+
+    `<circle cx="24" cy="24" r="5.4" fill="none" stroke="var(--gold-lo)" stroke-width="1.4"/>`+
+    `<circle cx="24" cy="24" r="2.2" fill="var(--gold-hi)"/>`,
+  crest_dealer_button:
+    `<circle cx="24" cy="24" r="18" fill="#F0E5CE"/>`+
+    `<circle cx="24" cy="24" r="18" fill="none" stroke="var(--gold)" stroke-width="3" stroke-dasharray="5 4"/>`+
+    `<circle cx="24" cy="24" r="12.5" fill="none" stroke="#191613" stroke-width="1.2"/>`+
+    `<text x="24" y="24.5" text-anchor="middle" dominant-baseline="central" font-family="'Playfair Display',serif" font-size="15" font-weight="700" fill="#191613">D</text>`,
+};
+function crestHTML(id){
+  const art=CREST_ART[id];
+  if(!art) return '';
+  return `<svg viewBox="0 0 48 48" role="img" aria-hidden="true">${art}${CREST_RIM}</svg>`;
+}
+
+/* ── RANK COSMETICS ──
+   Eight sets, one per tier, each = avatar frame + nameplate + table
+   badge. Unlocked purely by reaching the tier and never revoked (the
+   server reads PEAK mmr), so unlike every other cosmetic there is no
+   "locked forever" state — only "not yet".
+
+   `material` is the sheet's own colour-theme name and drives the CSS
+   fallback below; `slug` is the stable rank key (bronze..legend), NOT
+   the display name, so the tier rename can't reach any of this.
+
+   ART LOADING. The exported emblem art isn't in the repo yet, so each
+   piece renders its CSS treatment first and layers the image on top when
+   the file exists. `rankArtMissing` remembers a 404 per (slug,piece) for
+   the session, so a missing asset costs exactly one failed request
+   rather than one per render — and the moment the files are dropped into
+   public/ranks/ they simply start appearing, with no code change. */
+// The eight materials themselves are pure CSS, selected by
+// [data-material] — see the RANK COSMETICS block in <style>. Keeping the
+// colours there rather than here means they take part in the normal
+// token/theme cascade instead of being re-implemented in JS.
+const RANK_SETS=[
+  {id:'rank_bronze',      slug:'bronze',      tier:'Novice',       material:'paper'},
+  {id:'rank_silver',      slug:'silver',      tier:'Apprentice',   material:'ink'},
+  {id:'rank_gold',        slug:'gold',        tier:'Player',       material:'velvet'},
+  {id:'rank_platinum',    slug:'platinum',    tier:'Gambler',      material:'brass'},
+  {id:'rank_diamond',     slug:'diamond',     tier:'Ace',          material:'gold'},
+  {id:'rank_master',      slug:'master',      tier:'Master',       material:'royal'},
+  {id:'rank_grandmaster', slug:'grandmaster', tier:'Grand Master', material:'obsidian'},
+  {id:'rank_legend',      slug:'legend',      tier:'Legend',       material:'diamond'},
+];
+const RANK_SET_BY_ID={};
+for(const r of RANK_SETS) RANK_SET_BY_ID[r.id]=r;
+
+const rankArtMissing={};
+function rankArtSrc(slug,piece){ return `/ranks/${slug}/${piece}.webp`; }
+// Renders nothing once a piece is known missing, so the fallback CSS
+// underneath is what shows. onerror fires once and records it.
+function rankArtImg(slug,piece,cls){
+  const key=slug+'/'+piece;
+  if(rankArtMissing[key]) return '';
+  return `<img class="rank-art ${cls||''}" src="${rankArtSrc(slug,piece)}" alt="" aria-hidden="true"`+
+         ` loading="lazy" onerror="rankArtFailed('${slug}','${piece}',this)"/>`;
+}
+function rankArtFailed(slug,piece,el){
+  rankArtMissing[slug+'/'+piece]=true;
+  if(el&&el.remove) el.remove();
+}
+// material is what the CSS keys off; everything below degrades to a
+// perfectly usable treatment with no art at all.
+function rankMaterialOf(setId){
+  const s=RANK_SET_BY_ID[setId];
+  return s?s.material:null;
+}
+function rankNameplateHTML(setId,extraCls){
+  const s=RANK_SET_BY_ID[setId];
+  if(!s) return '';
+  return `<span class="rank-plate ${extraCls||''}" data-material="${s.material}">`
+    +rankArtImg(s.slug,'plate','plate')
+    +`<span class="rp-text">${esc(s.tier)}</span></span>`;
+}
+// The table badge's fallback is the EXISTING rank medallion SVG rather
+// than a CSS shape — public/badges already has 22 of them, they're the
+// same rank at the same moment, and it means the table looks finished
+// today instead of waiting on an export.
+// `size` is OPTIONAL and normally omitted: an inline custom property
+// beats any stylesheet rule, so hard-coding --rb here made the
+// context-specific overrides (.tcap, .seat-name) silently inert — the
+// same inline-style trap the .exit-row margin and the max-width:440px
+// wraps already document. Callers that don't care let CSS decide.
+function rankBadgeHTML(material,slug,size){
+  if(!material) return '';
+  const s=RANK_SETS.find(r=>r.material===material);
+  const sl=slug||(s&&s.slug);
+  return `<span class="rank-tbadge" data-material="${material}"${size?` style="--rb:${size}px"`:''}>`
+    +(sl?rankArtImg(sl,'badge','tbadge'):'')+`</span>`;
+}
+
+/* ── state ──
+   One object, replaced wholesale by every profileCosmeticsOk. null means
+   "guest, or not loaded yet", which every render path treats as the gate
+   state rather than as an error. */
+let cosState=null;
+let cosTab='theme';
+let cosPending=false;      // a request is in flight (drives the loading line)
+let unlockQueue=[];        // achievements waiting to be celebrated, one at a time
+
+function requestCosmetics(){
+  if(!account||!accountToken) return;
+  cosPending=true;
+  socket.emit('getProfileCosmetics',{token:accountToken});
+}
+
+function switchCosTab(tab){
+  cosTab=tab;
+  document.querySelectorAll('#s-personal .cos-tab').forEach(b=>
+    b.classList.toggle('active',b.dataset.cos===tab));
+  document.querySelectorAll('#s-personal .cos-panel').forEach(p=>
+    p.classList.toggle('active',p.id==='cos-panel-'+tab));
+}
+
+// Locked items are rendered, not hidden: seeing what a scene looks like
+// and what earns it is the whole point of a collection screen. The lock
+// state is carried by a glyph and a text line as well as the dimming,
+// per the brief's "never colour alone".
+function cosItemHTML(kind,item,thumbHTML,equippedId){
+  const equipped=item.id===equippedId;
+  const cls=['cos-item','deco-box',item.unlocked?'':'locked',equipped?'equipped':''].join(' ');
+  const flag=equipped?'✓':(item.unlocked?'':'🔒');
+  // The "none" entry (empty id) is a choice, not an unlockable — it takes
+  // no status line, since "Unlocked" under "No crest" reads as nonsense.
+  // rankTierName comes from the server (it owns RANK_TABLE), so the
+  // requirement reads "Reach Gambler" without the client keeping its own
+  // copy of the rank names — the same rule that keeps visible rank
+  // server-derived everywhere else.
+  const req=item.id===''
+    ? (equipped?`<span class="cos-status">Equipped</span>`:'')
+    : item.unlocked
+      ? `<span class="cos-status">${equipped?'Equipped':'Unlocked'}</span>`
+      : `<div class="cos-req">${esc(item.rankTier?`Reach ${item.rankTierName||item.rankTier}`:(item.unlockName||'Locked'))}</div>`;
+  const click=item.unlocked?` onclick="equipCosmetic('${kind}','${item.id}')"`:'';
+  // Scene thumbnails carry .scene-art + data-scene, which is the SAME
+  // pair the full-screen #scene-layer uses — every stop in those rules is
+  // a percentage precisely so one definition can serve a 52px preview and
+  // a 900px table background with nothing duplicated.
+  const thumbCls='cos-thumb'+(kind==='crest'?' crest':'')+(kind==='scene'?' scene-art':'')
+                +(kind==='rankSet'?' rankset':'');
+  const thumbAttr=kind==='scene'?` data-scene="${item.id}"`
+                 :(kind==='rankSet'&&item.material?` data-material="${item.material}"`:'');
+  return `<button class="${cls}" type="button"${click}>
+    <span class="${thumbCls}"${thumbAttr}>${thumbHTML}</span>
+    ${flag?`<span class="cos-flag">${flag}</span>`:''}
+    <span class="cos-body"><span class="cos-name">${esc(item.name)}</span>${req}</span>
+  </button>`;
+}
+
+// The card-front thumbnail is built from the same tokens the real card
+// face uses, so the preview can't drift from the thing it previews.
+function cardFrontThumb(id){
+  const royal=id==='cardfront_royal_court';
+  const k=royal?'royal':'classic';
+  return `<span class="cf-preview">
+    <span class="cf-mini ${k}">A&#9824;</span>
+    <span class="cf-mini ${k} r">Q&#9829;</span>
+    <span class="cf-mini ${k}">K&#9827;</span>
+  </span>`;
+}
+
+function lockedCount(list){ return list.filter(c=>!c.unlocked).length; }
+// The panel heading carries the exact locked count in words; the tab
+// strip only has room for a dot. See .cos-tab .cos-tab-n in <style>.
+function secLabel(name,list){
+  const n=lockedCount(list);
+  return `<div class="sec-label">${name}${n?`<span class="sec-count">${n} locked</span>`:''}</div>`;
+}
+
+function renderCosmeticPanels(){
+  const gate=`<div class="cos-empty">Log in to collect backgrounds, card designs, crests and titles.</div>`;
+  const panels={scene:$('cos-panel-scene'),cards:$('cos-panel-cards'),
+                crest:$('cos-panel-crest'),title:$('cos-panel-title'),
+                rank:$('cos-panel-rank')};
+  for(const k in panels) if(!panels[k]) return;
+  if(!cosState){
+    const msg=cosPending?`<div class="cos-empty">Loading your collection…</div>`:gate;
+    for(const k in panels){ if(panels[k]) panels[k].innerHTML=msg; }
+    ['scene','cards','crest','title'].forEach(k=>{ const n=$('cos-n-'+k); if(n) n.textContent=''; });
+    return;
+  }
+  const {catalog,equipped}=cosState;
+
+  // Each panel carries the full section name the one-word tab can't, and
+  // the locked count its 4px dot can't — see the tab strip's comment in
+  // the markup.
+  panels.scene.innerHTML=
+    secLabel('Backgrounds',catalog.scenes)+
+    `<div class="cos-grid">${catalog.scenes.map(s=>
+      cosItemHTML('scene',s,'',equipped.scene)).join('')}</div>`+
+    `<p class="pick-hint">Backgrounds appear behind the table while you play.</p>`;
+
+  panels.cards.innerHTML=
+    secLabel('Card fronts',catalog.cardFronts)+
+    `<div class="cos-grid wide">${catalog.cardFronts.map(c=>
+      cosItemHTML('cardFront',c,cardFrontThumb(c.id),equipped.cardFront)).join('')}</div>`+
+    `<p class="pick-hint">Card designs are yours alone &mdash; other players see their own.</p>`;
+
+  // Crests and titles both allow "none": an unequipped crest is simply
+  // nothing shown, which is a real choice, unlike a missing background.
+  panels.crest.innerHTML=
+    secLabel('Player crests',catalog.crests)+
+    `<div class="cos-grid">`+
+    cosItemHTML('crest',{id:'',name:'No crest',unlocked:true},'',equipped.crest||'')+
+    catalog.crests.map(c=>cosItemHTML('crest',c,crestHTML(c.id),equipped.crest||'')).join('')+
+    `</div>`+
+    `<p class="pick-hint">Your crest sits on your avatar and is earned by achievements.</p>`;
+
+  panels.title.innerHTML=
+    secLabel('Player titles',catalog.titles)+
+    `<div class="title-list">`+
+    titleOptHTML({id:'',name:'No title',unlocked:true},equipped.title||'')+
+    catalog.titles.map(t=>titleOptHTML(t,equipped.title||'')).join('')+
+    `</div>`+
+    `<p class="pick-hint">Shown under your name here and in the lobby.</p>`;
+
+  // Rank sets are the one category with no "locked forever" state — you
+  // haven't reached the tier YET. So the requirement line reads "Reach
+  // Gambler" rather than naming an achievement, and the count in the
+  // section label is deliberately phrased the same as the others.
+  panels.rank.innerHTML=
+    secLabel('Rank cosmetics',catalog.rankSets)+
+    `<div class="cos-grid wide">`+
+    catalog.rankSets.map(r=>cosItemHTML('rankSet',r,
+      `<span class="rank-tbadge"></span>`+rankNameplateHTML(r.id),
+      equipped.rankSet||'')).join('')+
+    `</div>`+
+    `<p class="pick-hint">Earned automatically by reaching a rank &mdash; never purchasable, and never taken away if your rank later drops.</p>`;
+
+  const dot=list=>{
+    const n=lockedCount(list);
+    return {text:n?'•':'',label:n?`${n} still locked`:''};
+  };
+  [['cos-n-scene',catalog.scenes],['cos-n-cards',catalog.cardFronts],
+   ['cos-n-crest',catalog.crests],['cos-n-title',catalog.titles],
+   ['cos-n-rank',catalog.rankSets]].forEach(([id,list])=>{
+    const el=$(id),d=dot(list);
+    el.textContent=d.text;
+    // The dot is decoration; the count it stands for is announced here
+    // and written out in the panel's section label.
+    if(d.label) el.setAttribute('aria-label',d.label); else el.removeAttribute('aria-label');
+  });
+}
+
+function titleOptHTML(t,equippedId){
+  const equipped=t.id===equippedId;
+  const cls=['title-opt',t.unlocked?'':'locked',equipped?'equipped':''].join(' ');
+  const click=t.unlocked?` onclick="equipCosmetic('title','${t.id}')"`:'';
+  const req=t.unlocked
+    ? (equipped?'<span class="to-req">Equipped</span>':'')
+    : `<span class="to-req">${esc(t.rankTier?`Reach ${t.rankTierName||t.rankTier}`:(t.unlockName||'Locked'))}</span>`;
+  return `<button class="${cls}" type="button"${click}>
+    <span class="to-mark">${equipped?'✓':(t.unlocked?'':'🔒')}</span>
+    <span class="to-name">${esc(t.name)}</span>${req}
+  </button>`;
+}
+
+// Optimistic for the two cosmetics that change what's on screen (scene,
+// card front) so the choice feels instant; the server's reply is what
+// actually persists it and is free to disagree, at which point the next
+// render corrects the picker. Crest and title have nothing to preview
+// until the response lands, so they just wait.
+function equipCosmetic(kind,id){
+  if(!account||!cosState) return;
+  SFX.play('click');
+  if(kind==='scene'){ applyScene(id); cosState.equipped.scene=id; }
+  if(kind==='cardFront'){ applyCardFront(id); cosState.equipped.cardFront=id; }
+  if(kind==='crest'){ cosState.equipped.crest=id||null; }
+  if(kind==='title'){ cosState.equipped.title=id||null; }
+  if(kind==='rankSet'){ cosState.equipped.rankSet=id||null; }
+  renderCosmeticPanels();
+  renderHeroCosmetics();
+  const payload={token:accountToken};
+  payload[kind]=id;
+  socket.emit('saveCosmetics',payload);
+}
+
+function renderAchievements(){
+  const list=$('ach-list'),gate=$('ach-guest-gate'),loading=$('ach-loading');
+  if(!list) return;
+  gate.style.display=account?'none':'block';
+  loading.style.display=(account&&!cosState)?'block':'none';
+  if(!account||!cosState){ list.innerHTML=''; return; }
+  list.innerHTML=cosState.achievements.map(a=>{
+    const pct=Math.round(100*Math.min(1,a.progress/a.threshold));
+    return `<div class="ach-row${a.unlocked?' done':''}">
+      <div class="ach-crest crest-art">${crestHTML(a.crest)}</div>
+      <div class="ach-info">
+        <div class="ach-name">${esc(a.name)}</div>
+        <div class="ach-desc">${esc(a.desc)}</div>
+        ${a.unlocked?'':`<div class="ach-bar"><i style="width:${pct}%"></i></div>`}
+      </div>
+      <div class="ach-prog">${a.unlocked?'Unlocked':`${a.progress}/${a.threshold}`}</div>
+    </div>`;
+  }).join('');
+}
+
+// The hero's title line and crest badge. Both read the equipped set, so
+// they show the same thing another player sees in the lobby.
+function renderHeroCosmetics(){
+  const t=$('pv-title'),c=$('pv-crest');
+  if(!t||!c) return;
+  const eq=cosState?cosState.equipped:null;
+  const titleName=eq&&eq.title
+    ? ((cosState.catalog.titles.find(x=>x.id===eq.title)||{}).name||'')
+    : '';
+  t.textContent=account?titleName:'';
+  const crestId=account&&eq?eq.crest:null;
+  c.innerHTML=crestId?crestHTML(crestId):'';
+  c.classList.toggle('on',!!crestId);
+
+  // Rank set: the frame is applied to the EXISTING avatar well (border +
+  // glow only, no geometry), and the nameplate sits between the name and
+  // the title. data-material is removed rather than blanked when there's
+  // no set, so the [data-material] defaults can't leak onto a guest.
+  const av=$('pv-avatar'),plate=$('pv-plate');
+  const setId=account&&eq?eq.rankSet:null;
+  const mat=setId?rankMaterialOf(setId):null;
+  if(av){
+    av.classList.toggle('rank-framed',!!mat);
+    if(mat) av.setAttribute('data-material',mat); else av.removeAttribute('data-material');
+  }
+  if(plate){
+    plate.innerHTML=setId?rankNameplateHTML(setId):'';
+    plate.style.display=setId?'block':'none';
+  }
+}
+
+/* ── unlock celebration ──
+   Queued and shown one at a time: finishing a game can complete two
+   achievements at once, and stacking two banners on top of each other
+   would make both unreadable. Marked seen server-side as soon as the
+   queue is handed over, not per banner — if the app is closed halfway
+   through the queue the remaining ones are simply not re-celebrated,
+   which is the right failure direction for a purely decorative event. */
+function showUnlockPop(ach){
+  const pop=$('unlock-pop');
+  if(!pop) return;
+  $('unlock-crest').innerHTML=crestHTML(ach.crest);
+  $('unlock-name').textContent=ach.name;
+  $('unlock-sub').textContent='Crest and title unlocked';
+  pop.classList.add('show');
+  SFX.play('gameWin');
+  clearTimeout(pop._t);
+  pop._t=setTimeout(()=>{
+    pop.classList.remove('show');
+    setTimeout(drainUnlockQueue,600);
+  },3600);
+}
+function drainUnlockQueue(){
+  const next=unlockQueue.shift();
+  if(next) showUnlockPop(next);
+}
+
+socket.on('profileCosmeticsOk',d=>{
+  cosPending=false;
+  cosState={achievements:d.achievements,catalog:d.catalog,equipped:d.equipped};
+  // The server's equipped set is authoritative and overwrites the
+  // localStorage cache — including correcting it downward if a cosmetic
+  // stopped being unlocked (a renamed ID, a retuned threshold).
+  applyScene(cosState.equipped.scene);
+  applyCardFront(cosState.equipped.cardFront);
+  renderCosmeticPanels();
+  renderAchievements();
+  renderHeroCosmetics();
+  if(d.fresh&&d.fresh.length){
+    const fresh=cosState.achievements.filter(a=>d.fresh.includes(a.id));
+    socket.emit('markAchievementsSeen',{token:accountToken,ids:d.fresh});
+    unlockQueue=unlockQueue.concat(fresh);
+    if(!$('unlock-pop').classList.contains('show')) drainUnlockQueue();
+  }
+});
+socket.on('profileCosmeticsError',d=>{
+  cosPending=false;
+  // Deliberately quiet: cosmetics are decoration, and an error toast on a
+  // screen whose primary job (name, avatar, login) still works would be
+  // noise. The pickers fall back to their gate/loading copy.
+  renderCosmeticPanels();
+  renderAchievements();
+  if(d&&d.msg) console.warn('cosmetics:',d.msg);
+});
 function savePersonal(){
   const n=$('pv-name').value.trim().slice(0,16);
   if(!n){ toast('err-personal','Pick a nickname first.'); $('pv-name').focus(); return; }
@@ -3870,12 +5415,28 @@ function renderAccountUI(){
   $('acct-chip-text').textContent=account?account.username:'Guest';
   $('acct-chip-action').textContent=account?'Log out':'Log in';
   $('acct-form').style.display='none';
+
+  // Guests can't customize name/avatar — see the acct-guest-gate comment
+  // in the markup. Existing local guest profiles still play under their
+  // old name (identity() is untouched), they just can't edit it here.
+  const loggedIn=!!account;
+  $('acct-guest-gate').style.display=loggedIn?'none':'block';
+  $('acct-identity-editor').style.display=loggedIn?'block':'none';
+  $('acct-save-row').style.display=loggedIn?'block':'none';
+  $('pv-name').readOnly=!loggedIn;
+  $('pv-name').placeholder=loggedIn?'Your name':'Log in to set a name';
 }
 function handleAcctChip(){
   if(account) doLogout();
   else openAuthForm('login');
 }
 function openAuthForm(mode){
+  // #acct-form lives inside the Profile panel, but this can now be
+  // triggered from anywhere on the account screen (the hero's name/
+  // avatar redirect guests here regardless of which tab is open) — force
+  // Profile active first or the form would sit display:block inside a
+  // display:none panel.
+  switchAccountTab('profile');
   $('acct-form').style.display='block';
   switchAuthTab(mode);
   $('auth-username').value='';
@@ -3905,8 +5466,161 @@ function doLogout(){
   account=null;
   saveAccountToken('');
   accountToken='';
+  // Unlocks belong to the account, so they leave with it — dropping both
+  // the loaded catalog and the cached look, rather than leaving the
+  // previous player's scene and card front painted for the next one.
+  cosState=null;
+  unlockQueue=[];
+  resetCosmeticLook();
   updateMenuProfileUI();
   renderAccountUI();
+  renderCosmeticPanels();
+  renderAchievements();
+  renderHeroCosmetics();
+  friendsList=[]; friendsLoadedOnce=false;
+  renderLobbyFriendPicker();
+}
+
+/* ══════════ FRIENDS ══════════
+   Friend codes, not username search — every account gets a permanent
+   shareable code (db.getOrCreateFriendCode), add a friend by entering
+   one, no public directory to search or moderate. Presence is pure
+   in-memory on the server (accountSockets); this client just reflects
+   whatever friendsOk/friendPresence/friendAdded say, it never polls. */
+let friendsList=[];          // [{id,nickname,avatar,online}], My Account's own copy
+let friendsLoadedOnce=false; // gates the one-time lobby fetch — My Account's own goPersonal() flow always refetches on tab entry regardless
+let lobbyInviteEligible=false;
+
+function renderFriendsGate(){
+  const loggedIn=!!account;
+  $('friends-guest-gate').style.display=loggedIn?'none':'block';
+  $('friends-content').style.display=loggedIn?'block':'none';
+  if(loggedIn){
+    friendsLoadedOnce=true;
+    socket.emit('getFriendCode',{token:accountToken});
+    socket.emit('getFriends',{token:accountToken});
+  }
+}
+function copyFriendCode(){
+  const code=$('friend-code').textContent;
+  if(!code||code==='······') return;
+  const done=()=>{ $('friend-code-hint').textContent='Copied!';
+    setTimeout(()=>$('friend-code-hint').textContent='Tap to copy',1800); };
+  navigator.clipboard.writeText(code).then(done).catch(done);
+}
+function submitAddFriend(){
+  const c=$('add-friend-code').value.trim().toUpperCase();
+  if(!c) return;
+  socket.emit('addFriendByCode',{token:accountToken,code:c});
+  $('add-friend-code').value='';
+}
+function confirmRemoveFriend(id,btn){
+  armConfirm(btn,'Tap again to remove',()=>socket.emit('removeFriend',{token:accountToken,friendId:id}));
+}
+function friendRowHTML(f,opts){
+  opts=opts||{};
+  const avatar=avatarHTML(f.avatar,f.nickname);
+  const canInvite=opts.invite&&f.online;
+  return `<div class="friend-row">
+    <span class="friend-avatar">${avatar}<span class="friend-dot${f.online?' on':''}"></span></span>
+    <span class="friend-info">
+      <div class="friend-name">${esc(f.nickname)}</div>
+      ${opts.showStatus!==false?`<div class="friend-status">${f.online?'Online':'Offline'}</div>`:''}
+    </span>
+    <span class="friend-actions">
+      ${canInvite?`<button class="friend-btn invite" onclick="inviteFriendToRoom(${f.id},this)">Invite</button>`:''}
+      ${opts.remove!==false?`<button class="friend-btn" onclick="confirmRemoveFriend(${f.id},this)">Remove</button>`:''}
+    </span>
+  </div>`;
+}
+function renderFriendsList(){
+  const el=$('friends-list'); if(!el) return;
+  if(!friendsList.length){
+    el.innerHTML='';
+    $('friends-empty').style.display='block';
+    return;
+  }
+  $('friends-empty').style.display='none';
+  el.innerHTML=friendsList.map(f=>friendRowHTML(f,{invite:lobbyInviteEligible&&!!room})).join('');
+}
+function inviteFriendToRoom(id,btn){
+  if(!room) return;
+  socket.emit('inviteFriend',{token:accountToken,friendId:id,code:room});
+  btn.disabled=true; btn.textContent='Sent';
+  setTimeout(()=>{ btn.disabled=false; btn.textContent='Invite'; },2500);
+}
+function toggleLobbyFriendPicker(){
+  const panel=$('l-friend-picker');
+  const opening=panel.style.display!=='block';
+  panel.style.display=opening?'block':'none';
+  panel.classList.toggle('open',opening);
+  if(opening) renderLobbyFriendPicker();
+}
+function renderLobbyFriendPicker(){
+  const btn=$('l-invite-btn'); if(!btn) return;
+  const online=friendsList.filter(f=>f.online);
+  btn.style.display=(lobbyInviteEligible&&online.length)?'block':'none';
+  if(!lobbyInviteEligible) $('l-friend-picker').style.display='none';
+  const panel=$('l-friend-picker');
+  if(!panel.classList.contains('open')) return;
+  panel.innerHTML=online.map(f=>friendRowHTML(f,{invite:true,remove:false,showStatus:false})).join('');
+}
+
+socket.on('friendCodeOk',d=>{
+  if(!$('s-personal').classList.contains('active')) return;
+  $('friend-code').textContent=d.code;
+});
+socket.on('friendsOk',d=>{
+  friendsList=d.friends||[];
+  if($('s-personal').classList.contains('active')) renderFriendsList();
+  renderLobbyFriendPicker();
+});
+socket.on('friendsError',d=>{
+  if($('s-personal').classList.contains('active')&&$('acct-panel-friends').classList.contains('active')){
+    toast('err-friends',d.msg);
+  }else{
+    toast('err-lobby',d.msg);
+  }
+});
+socket.on('friendAdded',d=>{
+  if(friendsList.some(f=>f.id===d.id)) return;
+  friendsList=[...friendsList,d].sort((a,b)=>a.nickname.localeCompare(b.nickname));
+  if($('s-personal').classList.contains('active')) renderFriendsList();
+  renderLobbyFriendPicker();
+});
+socket.on('friendPresence',d=>{
+  const f=friendsList.find(x=>x.id===d.id);
+  if(!f) return;
+  f.online=d.online;
+  if($('s-personal').classList.contains('active')) renderFriendsList();
+  renderLobbyFriendPicker();
+});
+
+/* Invite banner — a plain sibling of every screen (see the markup near
+   #app's closing tag), so it can float above whichever one is active.
+   Only ever shown when not already in a room: this app tracks one
+   room/me/host triple at a time, and interrupting an active game with a
+   foreign invite would mean juggling two — simplest and safest is to
+   just drop the invite silently in that case. */
+let pendingInvite=null;
+socket.on('friendInvite',d=>{
+  if(room) return;
+  pendingInvite=d;
+  $('fi-avatar').textContent=d.fromAvatar||'👤';
+  $('fi-text').textContent=`${d.fromName} invited you to play`;
+  $('friend-invite').style.display='flex';
+});
+function dismissFriendInvite(){
+  pendingInvite=null;
+  $('friend-invite').style.display='none';
+}
+function acceptFriendInvite(){
+  if(!pendingInvite) return;
+  const code=pendingInvite.code;
+  dismissFriendInvite();
+  const id=identity();
+  if(!id.name){ goPersonal(); return; }
+  socket.emit('joinRoom',{code,name:id.name,avatar:id.avatar||'',accountToken:account?accountToken:''});
 }
 
 /* ══════════ STATISTICS ══════════ */
@@ -3996,10 +5710,20 @@ socket.on('joined',d=>{
 /* ══════════ RANKED ══════════ */
 let rankedQueued=false;
 let lastRankedResult=null;
+// Keyed on rank.slug, NOT rank.tier: the tier is the display name and is
+// now "Grand Master" (with a space) at the top end, which was never a
+// valid filename or class name. The slug is the original bronze..legend
+// key, so all 22 public/badges/*.svg and all eight .tag.<slug> rules
+// keep working untouched through the rename. The fallback keeps an old
+// cached client (one that predates the server sending `slug`) rendering
+// rather than showing broken images.
+function rankSlug(rank){
+  return (rank&&rank.slug)||(rank&&rank.tier?rank.tier.toLowerCase().replace(/\s+/g,''):'');
+}
 function badgeSrc(rank){
   if(!rank) return '';
-  const file=rank.division?`${rank.tier.toLowerCase()}-${rank.division}`:rank.tier.toLowerCase();
-  return `/badges/${file}.svg`;
+  const s=rankSlug(rank);
+  return `/badges/${rank.division?`${s}-${rank.division}`:s}.svg`;
 }
 function badgeImg(rank,size){
   if(!rank) return '';
@@ -4075,7 +5799,7 @@ function renderRankedResult(){
         <p>MMR ${sign}${d.mmrChange} &middot; now ${d.mmr}</p>`;
   }else{
     h+=`<div class="empty-icon">${badgeImg(d.rank,56)}</div>
-        <h3><span class="tag ${d.rank.tier.toLowerCase()}">${esc(d.rank.label)}</span></h3>
+        <h3><span class="tag ${rankSlug(d.rank)}">${esc(d.rank.label)}</span></h3>
         <p>MMR ${sign}${d.mmrChange} &middot; now ${d.mmr}</p>`;
   }
   h+='</div>';
@@ -4103,7 +5827,7 @@ socket.on('leaderboardOk',d=>{
     const mine=account&&r.accountId===account.id;
     return `<tr class="${mine?'me':''}">
       <td>${i+1}</td>
-      <td>${r.avatar||''} ${esc(r.nickname)}</td>
+      <td><span class="lb-av">${avatarHTML(r.avatar,r.nickname)}</span> ${esc(r.nickname)}</td>
       <td>${badge}${esc(leaderboardRowLabel(r))}</td>
       <td>${r.mmr}</td>
     </tr>`;
@@ -4141,6 +5865,12 @@ socket.on('authOk',d=>{
   // Now that an account is attached, re-ask: the connect-time request went
   // out as a guest and so couldn't tell us whether TODAY is already played.
   socket.emit('getDailyStatus',{accountToken});
+  // Same reasoning for the collection, plus one more: this is what makes
+  // the equipped scene and card front follow the account onto a new
+  // device, where the localStorage cache initCosmeticLook() paints from
+  // holds nothing but the defaults. Fires on silent session resume too,
+  // so it lands well before the player reaches a table.
+  requestCosmetics();
   if(lastAuthAction==='login'||lastAuthAction==='signup'){
     renderAccountUI();
     draftAvatar=account.avatar||'';
@@ -4400,11 +6130,12 @@ function renderLobby(G){
   for(let i=0;i<4;i++){
     const p=G.players[i];
     const dot=p.isAI?'bot':p.connected?'on':'';
-    const avatarContent=p.isAI?'🤖':(p.avatar?esc(p.avatar):esc(initial(p.name)));
+    const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
     h+=`<div class="slot">
       <span class="avatar sm">${avatarContent}</span>
       <span class="dot ${dot}"></span>
-      <span class="nm">${esc(p.name)}</span>
+      <span class="who"><span class="nm">${esc(p.name)}</span>${
+        p.title?`<span class="ttl">${esc(p.title)}</span>`:''}</span>
       ${i===me?'<span class="tag you">you</span>':''}
       ${p.isAI?'<span class="tag bot">AI</span>':''}
       ${host&&i>0&&!p.connected||host&&i>0&&p.isAI
@@ -4421,6 +6152,13 @@ function renderLobby(G){
   $('l-start').style.display=host?'block':'none';
   $('l-start').disabled=!ready;
   $('l-wait').style.display=host?'none':'block';
+
+  lobbyInviteEligible=!G.ranked&&!G.daily&&!!account;
+  if(lobbyInviteEligible&&!friendsLoadedOnce){
+    friendsLoadedOnce=true;
+    socket.emit('getFriends',{token:accountToken});
+  }
+  renderLobbyFriendPicker();
 }
 
 /* ══════════ DRAW ══════════ */
@@ -5157,10 +6895,17 @@ function renderFinal(G){
     $('f-body').style.display='block';
     let h='<div class="podium">';
     rows.forEach((p,n)=>{
+      // End screen is the third place the reference sheet calls for rank
+      // cosmetics. The podium has room for the full nameplate, unlike
+      // the table, so it gets one rather than just the badge.
+      const plate=p.rankMaterial
+        ? rankNameplateHTML((RANK_SETS.find(r=>r.material===p.rankMaterial)||{}).id,'sm')
+        : '';
       h+=`<div class="pod ${n===0?'win':''}">
         ${n===0?'<div class="crown">winner</div>':''}
         <div class="n">${p.score}</div>
         <div class="who">${esc(p.name)}${p.i===me?' (you)':''}${p.isAI?' · AI':''}</div>
+        ${plate?`<div class="pod-plate">${plate}</div>`:''}
       </div>`;
     });
     h+='</div>'+sheetHTML(G);
@@ -5852,6 +7597,12 @@ function tutorialPartBNext(){
   // paint); this run is what marks the active swatch and syncs the
   // theme-color meta, now that the menu markup exists.
   initTableTheme();
+  // Same first-paint reasoning as the theme, one step later: nothing is
+  // visible on the menu, so this can wait for the boot IIFE rather than
+  // needing its own inline <head> script. The server's authoritative
+  // equipped set arrives on the first getProfileCosmetics and overwrites
+  // whatever the cache said.
+  initCosmeticLook();
   renderRoundsSeg();
   // Paints from the localStorage cache immediately; the server corrects it
   // on the first getDailyStatus (goDaily, or the reconnect handler below).

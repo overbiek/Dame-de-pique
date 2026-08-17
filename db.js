@@ -174,6 +174,87 @@ async function ensureSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+
+  // ── Friends ──
+  // A permanent, shareable code per account rather than username search —
+  // no public directory to search or moderate, add a friend by entering
+  // a code someone gave you directly. Nullable + a partial unique index
+  // (not UNIQUE on the column) so existing accounts from before this
+  // shipped don't collide on NULL while they wait to be assigned one
+  // lazily on next visit to the Friends tab (getOrCreateFriendCode).
+  await pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS friend_code TEXT;`);
+  await pool.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS accounts_friend_code_idx
+       ON accounts(friend_code) WHERE friend_code IS NOT NULL;`
+  );
+  // Friendship is symmetric, stored as both directions rather than one
+  // canonical row — doubles the storage (trivial at this scale) in
+  // exchange for every query being a plain "WHERE account_id = $1", no
+  // OR-of-both-columns anywhere.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS friendships (
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      friend_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (account_id, friend_id)
+    );
+  `);
+
+  // ── Achievements ──
+  // A THIRD, mode-agnostic counter table, deliberately not new columns on
+  // `stats` or `ranked_stats`. Those two are strictly separated pipelines
+  // (casual writes never touch ranked and vice versa), and an achievement
+  // like "win 25 games" is meant to count every game you play in any
+  // mode — folding it into either table would either break that
+  // separation or need the same counter kept in two places and summed at
+  // read time. Nothing in here is displayed as a statistic; it exists
+  // only to be compared against ACHIEVEMENTS' thresholds in server.js.
+  //
+  // Deliberately NOT stored here: a "peak MMR" counter. `ranked_stats`
+  // already tracks mmr_highest, and the brief for this system is explicit
+  // that rank must never be computed or duplicated a second time — the
+  // High Roller achievement reads that column directly (see
+  // getAchievementStats' LEFT JOIN).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS achievement_stats (
+      account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+      games_completed INTEGER NOT NULL DEFAULT 0,
+      games_completed_full INTEGER NOT NULL DEFAULT 0,
+      games_won INTEGER NOT NULL DEFAULT 0,
+      games_won_positive INTEGER NOT NULL DEFAULT 0,
+      ranked_games_won INTEGER NOT NULL DEFAULT 0,
+      queens_taken INTEGER NOT NULL DEFAULT 0,
+      moons_total INTEGER NOT NULL DEFAULT 0,
+      four_suit_games INTEGER NOT NULL DEFAULT 0,
+      dealer_rounds INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  // ── Equipped cosmetics ──
+  // One row per account holding only what's CURRENTLY equipped. What's
+  // *unlocked* is never stored: it's always re-derived from
+  // achievement_stats against the thresholds in server.js, so retuning a
+  // threshold can't leave stale unlock rows behind, and there's no way
+  // for the two to disagree. The columns are plain TEXT holding cosmetic
+  // IDs from server.js's COSMETICS registry; an ID that no longer exists
+  // (or is no longer unlocked) is filtered out on read rather than
+  // migrated, so removing a cosmetic is safe.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS player_cosmetics (
+      account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+      scene TEXT,
+      card_front TEXT,
+      crest TEXT,
+      title TEXT,
+      seen_achievements TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  // Added after the table first shipped. NULL is meaningful here rather
+  // than a missing value: it means "follow my rank automatically", which
+  // is what filterEquipped resolves to the highest unlocked set.
+  await pool.query(`ALTER TABLE player_cosmetics ADD COLUMN IF NOT EXISTS rank_set TEXT;`);
 }
 
 function toPublic(row) {
@@ -226,6 +307,87 @@ async function updateProfile(accountId, { nickname, avatar }) {
     [accountId, nickname, avatar]
   );
   return rows[0];
+}
+
+// ── Friends ────────────────────────────────────────────────────
+// No confusing chars — same alphabet makeCode() uses for room codes in
+// server.js, kept independent here since db.js has no access to that
+// module's helpers and shouldn't need it for one constant.
+const FRIEND_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function randomFriendCode() {
+  let out = '';
+  for (let i = 0; i < 6; i++) out += FRIEND_CODE_ALPHABET[Math.floor(Math.random() * FRIEND_CODE_ALPHABET.length)];
+  return out;
+}
+
+// Lazy assignment rather than at signup: every account gets one the first
+// time it's actually needed (visiting the Friends tab), which also means
+// accounts created before this shipped pick one up automatically instead
+// of needing a migration pass. The UPDATE ... WHERE friend_code IS NULL
+// is the real safety net against a concurrent double-assignment (two tabs
+// open at once); the retry loop only exists for the astronomically rare
+// case of the random code itself colliding with someone else's.
+async function getOrCreateFriendCode(accountId) {
+  const { rows } = await pool.query(`SELECT friend_code FROM accounts WHERE id = $1`, [accountId]);
+  if (rows[0] && rows[0].friend_code) return rows[0].friend_code;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const code = randomFriendCode();
+    try {
+      const { rows: updated } = await pool.query(
+        `UPDATE accounts SET friend_code = $2 WHERE id = $1 AND friend_code IS NULL RETURNING friend_code`,
+        [accountId, code]
+      );
+      if (updated[0]) return updated[0].friend_code;
+      const { rows: recheck } = await pool.query(`SELECT friend_code FROM accounts WHERE id = $1`, [accountId]);
+      if (recheck[0] && recheck[0].friend_code) return recheck[0].friend_code;
+    } catch (e) {
+      if (e.code !== '23505') throw e; // unique_violation on the code itself — try another
+    }
+  }
+  throw new Error('Could not generate a unique friend code');
+}
+
+async function findAccountByFriendCode(code) {
+  const { rows } = await pool.query(
+    `SELECT * FROM accounts WHERE friend_code = $1`,
+    [String(code || '').trim().toUpperCase()]
+  );
+  return rows[0] || null;
+}
+
+async function addFriend(accountId, friendId) {
+  if (accountId === friendId) return;
+  await pool.query(
+    `INSERT INTO friendships (account_id, friend_id) VALUES ($1,$2),($2,$1)
+     ON CONFLICT DO NOTHING`,
+    [accountId, friendId]
+  );
+}
+
+async function removeFriend(accountId, friendId) {
+  await pool.query(
+    `DELETE FROM friendships WHERE (account_id = $1 AND friend_id = $2) OR (account_id = $2 AND friend_id = $1)`,
+    [accountId, friendId]
+  );
+}
+
+async function areFriends(accountId, friendId) {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM friendships WHERE account_id = $1 AND friend_id = $2`,
+    [accountId, friendId]
+  );
+  return rows.length > 0;
+}
+
+async function getFriends(accountId) {
+  const { rows } = await pool.query(
+    `SELECT a.id, a.nickname, a.avatar
+     FROM friendships f JOIN accounts a ON a.id = f.friend_id
+     WHERE f.account_id = $1
+     ORDER BY a.nickname ASC`,
+    [accountId]
+  );
+  return rows.map(r => ({ id: r.id, nickname: r.nickname, avatar: r.avatar }));
 }
 
 // ── Stats ──────────────────────────────────────────────────────
@@ -608,10 +770,155 @@ async function getRankedStats(accountId) {
   };
 }
 
+// ── Achievements ───────────────────────────────────────────────
+// Same atomic-upsert discipline as every other write in this file, so two
+// games finishing at the same instant for the same account can't lose an
+// increment. Every one of these is called through server.js's trackStat(),
+// which retries — that's why they must stay purely additive and
+// order-independent.
+
+// One call per finished game, taking every per-game flag at once rather
+// than one query per counter — a game end already fans out to the casual
+// or ranked writer, and this adds exactly one more round-trip instead of
+// six.
+async function recordAchievementGame(accountId, {
+  completed = 0, completedFull = 0, won = 0, wonPositive = 0,
+  rankedWon = 0, moons = 0, fourSuit = 0,
+} = {}) {
+  await pool.query(
+    `INSERT INTO achievement_stats (
+       account_id, games_completed, games_completed_full, games_won,
+       games_won_positive, ranked_games_won, moons_total, four_suit_games
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     ON CONFLICT (account_id) DO UPDATE SET
+       games_completed = achievement_stats.games_completed + $2,
+       games_completed_full = achievement_stats.games_completed_full + $3,
+       games_won = achievement_stats.games_won + $4,
+       games_won_positive = achievement_stats.games_won_positive + $5,
+       ranked_games_won = achievement_stats.ranked_games_won + $6,
+       moons_total = achievement_stats.moons_total + $7,
+       four_suit_games = achievement_stats.four_suit_games + $8,
+       updated_at = now()`,
+    [accountId, completed, completedFull, won, wonPositive, rankedWon, moons, fourSuit]
+  );
+}
+
+// Counted across every mode, unlike stats.queen_spades_taken /
+// ranked_stats.queen_spades_taken which are deliberately mode-split.
+async function recordAchievementQueen(accountId) {
+  await pool.query(
+    `INSERT INTO achievement_stats (account_id, queens_taken) VALUES ($1, 1)
+     ON CONFLICT (account_id) DO UPDATE SET
+       queens_taken = achievement_stats.queens_taken + 1, updated_at = now()`,
+    [accountId]
+  );
+}
+
+async function recordDealerRound(accountId) {
+  await pool.query(
+    `INSERT INTO achievement_stats (account_id, dealer_rounds) VALUES ($1, 1)
+     ON CONFLICT (account_id) DO UPDATE SET
+       dealer_rounds = achievement_stats.dealer_rounds + 1, updated_at = now()`,
+    [accountId]
+  );
+}
+
+// mmrPeak comes straight off ranked_stats rather than being mirrored into
+// achievement_stats — see the table comment in ensureSchema.
+async function getAchievementStats(accountId) {
+  const { rows } = await pool.query(
+    `SELECT a.*, r.mmr_highest
+     FROM (SELECT $1::int AS account_id) k
+     LEFT JOIN achievement_stats a ON a.account_id = k.account_id
+     LEFT JOIN ranked_stats r ON r.account_id = k.account_id`,
+    [accountId]
+  );
+  const s = rows[0] || {};
+  return {
+    gamesCompleted: s.games_completed || 0,
+    gamesCompletedFull: s.games_completed_full || 0,
+    gamesWon: s.games_won || 0,
+    gamesWonPositive: s.games_won_positive || 0,
+    rankedGamesWon: s.ranked_games_won || 0,
+    queensTaken: s.queens_taken || 0,
+    moonsTotal: s.moons_total || 0,
+    fourSuitGames: s.four_suit_games || 0,
+    dealerRounds: s.dealer_rounds || 0,
+    mmrPeak: s.mmr_highest || 0,
+  };
+}
+
+// ── Equipped cosmetics ─────────────────────────────────────────
+// seen_achievements is a comma-joined ID list, not a jsonb array or its
+// own table: it's a write-once-per-unlock marker whose only job is to
+// stop the unlock celebration firing twice, so it never needs to be
+// queried by element.
+async function getCosmetics(accountId) {
+  const { rows } = await pool.query(
+    `SELECT scene, card_front, crest, title, rank_set, seen_achievements
+     FROM player_cosmetics WHERE account_id = $1`,
+    [accountId]
+  );
+  const c = rows[0];
+  return {
+    scene: (c && c.scene) || null,
+    cardFront: (c && c.card_front) || null,
+    crest: (c && c.crest) || null,
+    title: (c && c.title) || null,
+    rankSet: (c && c.rank_set) || null,
+    seen: c && c.seen_achievements ? c.seen_achievements.split(',').filter(Boolean) : [],
+  };
+}
+
+// COALESCE against the incoming value being NULL would make "unequip"
+// impossible, so an explicit empty string is the unequip signal and is
+// stored as NULL. The caller (server.js) has already validated every ID
+// against what the account has actually unlocked.
+async function saveCosmetics(accountId, { scene, cardFront, crest, title, rankSet }) {
+  const norm = v => (v === undefined ? undefined : (v || null));
+  const s = norm(scene), cf = norm(cardFront), cr = norm(crest), t = norm(title), rs = norm(rankSet);
+  await pool.query(
+    `INSERT INTO player_cosmetics (account_id, scene, card_front, crest, title, rank_set)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (account_id) DO UPDATE SET
+       scene = CASE WHEN $7 THEN $2 ELSE player_cosmetics.scene END,
+       card_front = CASE WHEN $8 THEN $3 ELSE player_cosmetics.card_front END,
+       crest = CASE WHEN $9 THEN $4 ELSE player_cosmetics.crest END,
+       title = CASE WHEN $10 THEN $5 ELSE player_cosmetics.title END,
+       rank_set = CASE WHEN $11 THEN $6 ELSE player_cosmetics.rank_set END,
+       updated_at = now()`,
+    [accountId, s ?? null, cf ?? null, cr ?? null, t ?? null, rs ?? null,
+     s !== undefined, cf !== undefined, cr !== undefined, t !== undefined, rs !== undefined]
+  );
+  return getCosmetics(accountId);
+}
+
+// Adds IDs to the "already celebrated" set. Union rather than replace, so
+// two tabs open at once can't clobber each other's markers.
+async function markAchievementsSeen(accountId, ids) {
+  if (!ids || !ids.length) return;
+  const joined = ids.join(',');
+  await pool.query(
+    `INSERT INTO player_cosmetics (account_id, seen_achievements) VALUES ($1, $2)
+     ON CONFLICT (account_id) DO UPDATE SET
+       seen_achievements = (
+         SELECT string_agg(DISTINCT x, ',')
+         FROM unnest(string_to_array(
+           COALESCE(NULLIF(player_cosmetics.seen_achievements, ''), $2) || ',' || $2, ','
+         )) AS x
+         WHERE x <> ''
+       ),
+       updated_at = now()`,
+    [accountId, joined]
+  );
+}
+
 module.exports = {
   pool, ensureSchema, toPublic,
   createAccount, findAccountByUsername, findAccountById,
   createSession, findAccountByToken, deleteSession, updateProfile,
+  getOrCreateFriendCode, findAccountByFriendCode, addFriend, removeFriend, areFriends, getFriends,
   recordGameStarted, recordTrick, recordRound, recordGameFinished, recordQueenTaken, getStats,
   recordBlitzGameStarted, recordBlitzGameFinished,
   recordDailyScore, getDailyScore, bumpDailyStreak, getDailyStreak,
@@ -619,4 +926,6 @@ module.exports = {
   getOrCreateRankedProfile, applyRankedMmr, getLeaderboard, getRankForAccount,
   recordRankedGameStarted, recordRankedTrick, recordRankedRound,
   recordRankedQueenTaken, recordRankedGameFinished, getRankedStats,
+  recordAchievementGame, recordAchievementQueen, recordDealerRound, getAchievementStats,
+  getCosmetics, saveCosmetics, markAchievementsSeen,
 };

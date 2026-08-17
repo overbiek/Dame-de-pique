@@ -20,6 +20,35 @@ contract checked against `tutorialCommitPlay`'s handling of it, every
 checked on the whole file) rather than by running it. Treat the first
 real on-device run as the actual first test, not a formality.
 
+**Achievements & cosmetics (own section below) is the newest addition
+and is in a BETTER position than the rest: its client half has actually
+been run.** No Node was available there either, so `server.js`/`db.js`
+remain statically-verified only — but `public/index.html` was served by
+a `python -m http.server` against a copy with the one `socket.io`
+`<script src>` swapped for a stub, and driven with a payload shaped like
+`loadPlayerCosmetics`'s. That exercised, on real rendered geometry: all
+five customization sub-tabs at 375px and in landscape, equipping and the
+locked-item no-op, the guest gates, logout reset, the 12 achievement
+rows, the scene layer's z-order and hit-testing behind a real hand of
+cards, the Royal Court card skin, titles on the lobby rows, and
+contrast across all four themes. **What is still unexercised is every
+line of SQL and every socket handler** — the same "first real run is the
+actual first test" caveat as below applies to those.
+Two traps worth knowing if you repeat that setup, both of which read as
+product bugs and are not:
+1. The Browser pane doesn't composite when it isn't displayed, so **CSS
+   transitions never advance and `getComputedStyle` returns each
+   transition's frozen START value** (an element stuck at `opacity:0`, a
+   colour that ignores the current theme). Inject
+   `*,*::before,*::after{transition:none!important;animation:none!important}`
+   before measuring anything.
+2. For the same reason **`loading="lazy"` images never load** — nothing
+   is ever "in viewport" for the intersection observer, so they sit at
+   `naturalWidth 0` forever and look broken. Set `loading='eager'` on
+   them before asserting anything about image loading.
+Layout measurement (`getBoundingClientRect`, `scrollWidth`) is unaffected
+by either and is trustworthy as-is.
+
 **Blitz and Daily Challenge (their own sections below) are in the same
 position — implemented, never executed.** No Node runtime was available
 in the environment that built them either. What *was* verified
@@ -1325,11 +1354,237 @@ before pushing.
   deliberately doesn't touch the `ddp.dailyLastCompleted` cache, and
   `authOk` re-requests the status once the account is live.
 
+## Achievements & cosmetics (crests, titles, scenes, card fronts)
+- **One registry, in `server.js`, and it is the only authority.**
+  `ACHIEVEMENTS` (12 rows) and `COSMETICS` (scenes / cardFronts / crests
+  / titles) define everything; `evaluateAchievements` is the single
+  evaluation point, and `saveCosmetics` re-validates every incoming ID
+  against a freshly evaluated unlock set. The client carries a parallel
+  table of **presentation only** (crest SVG art, scene CSS, display
+  strings) keyed by the same IDs — it never decides what's unlocked, so
+  a crafted socket message can't equip something unearned.
+- **Unlock state is NEVER stored.** It's always re-derived from
+  `achievement_stats` against the thresholds in the registry. So
+  retuning a threshold takes effect immediately for everyone, and the
+  two can't drift apart — the deliberate cost is that lowering a
+  threshold retroactively grants, and raising one retroactively revokes.
+  Only what's *equipped* is persisted (`player_cosmetics`), and an ID
+  that's no longer unlocked is filtered out on read (`filterEquipped`)
+  rather than migrated, so removing a cosmetic is safe.
+- **`achievement_stats` is a THIRD, mode-agnostic counter table** — not
+  new columns on `stats`/`ranked_stats`. Those two are strictly
+  separated pipelines (see Accounts & stats); "win 25 games" is meant to
+  count every mode, so folding it into either would break that
+  separation or need the counter kept twice and summed at read time.
+  Nothing in it is displayed as a statistic.
+  Peak MMR is the exception and is deliberately NOT mirrored here:
+  `ranked_stats.mmr_highest` already has it and `getAchievementStats`
+  LEFT JOINs it, because rank must never be computed a second time.
+- Write points, all through `trackStat` like every other stat write:
+  `resolveTrick` (queen taken — outside the casual/ranked branch AND
+  outside its `!G.daily` guard, since taking the queen in the Daily
+  Challenge is still taking the queen), `dealRound` (dealer rounds, once
+  per hand actually dealt, so a 16-round game counts 16 and a Blitz 4),
+  and `recordGameFinishedForAll` (one `recordAchievementGame` call
+  carrying every per-game flag at once rather than six round trips).
+- `recordGameFinishedForAll(G, natural)` gained a second argument.
+  `finishEarly` passes `false`, the natural round-exhaustion path passes
+  `true` — the only difference that matters, and only to The Silent
+  Dealer. A win is the highest final score, and a **tie counts as a win
+  for everyone tied**: the game has no tiebreak rule, so inventing one
+  just to deny an achievement would be worse than being generous.
+- `p.suitsWon` is a GAME-scoped accumulator on the player object (Four-
+  Suit Master). `p.tricks` can't serve — `dealRound` clears it every
+  hand, so by the final round it only describes that hand. Reset in
+  `startDraw` when `round === 1`.
+- **Scenes and card fronts are one attribute on `<html>` and everything
+  else is CSS.** No render function is aware either exists, which is
+  what keeps the hand-tuned `--cw`/`--overlap`, hit-testing and drag
+  code untouched. `cardHTML()` is **not modified**: the Royal Court skin
+  keys entirely off the `data-r`/`data-s` attributes it already emits.
+- **The Royal Court frame lives on `.card::before`, not in
+  `box-shadow`** — `.card.tap:active`, `.card.sel`, `.card.dragging` and
+  `.card.received` all replace `box-shadow` outright, so a frame drawn
+  there would vanish exactly when a card is picked up. `::after` is left
+  alone; `.card.received` owns it.
+- **Scenes are pure CSS gradient compositions, no image assets**, and
+  that's a decision rather than a stopgap: eight full-bleed backgrounds
+  would dwarf everything else this PWA pre-caches, and gradients need no
+  art direction per viewport. **One definition serves both the
+  full-screen `#scene-layer` and the 52px picker thumbnail** because
+  every stop is a percentage — both carry `.scene-art` + `data-scene`,
+  nothing is duplicated per size. A shared `.scene-art::after` central
+  scrim guarantees the "keep the middle quiet" rule so an individual
+  scene can't break card readability however busy its own layers are.
+- `#scene-layer` is outside `#app` and BEHIND it (z-index 0 vs 1), plus
+  `pointer-events:none` — structurally incapable of covering a card or
+  a control. Verified by hit-testing the table centre and a card centre
+  with a scene equipped. It's revealed only on the pass/play screens
+  (`html.scene-on`, set by `show()` via `updateSceneLayer`): every other
+  screen's text was contrast-tuned against the plain felt.
+- `ddp.scene`/`ddp.cardFront` in localStorage are a **cache of what the
+  server last said is equipped**, not a source of truth — purely so the
+  right scene and card face are painted on the first frame (same
+  anti-flash reasoning as the theme's inline `<head>` script). Every
+  server response overwrites it; `doLogout` clears it.
+- **Crests are inline SVG**, built from `var(--gold*)` so they follow the
+  active theme — a raster crest would be stuck on whichever palette it
+  was drawn in. Suit glyphs inside them are `<text>`, not emoji, for the
+  reason the menu tiles document: emoji ignore `fill`.
+- **`.cos-tab` is a THIRD tab family on `#s-personal` and none of the
+  three may be merged**: `.acct-toptab` (Profile/Achievements/Friends),
+  `.acct-tab` (login/signup), `.cos-tab` (Theme/Scenes/Cards/Crests/
+  Titles, nested inside the Profile panel).
+- **The `.cos-tabs` strip is five equal columns (`flex:1 1 0`), not
+  content-sized.** Content-sized measured 405px against the 328px
+  available in the account panel at 375px and pushed the last two tabs
+  off a strip with no scroll affordance. Equal columns make the fit
+  independent of label length and of whether a locked-count badge is
+  showing. Labels are one word each and the full section name lives in
+  each panel's own `.sec-label`; the locked *count* lives there too,
+  because a padlock-plus-number badge measured wider than the space left
+  beside the label and forced an ellipsis. The tab keeps only a 4px dot.
+- **Clair needed a correction, measured not guessed** — and the active
+  tab was the worst offender, i.e. selecting a tab made its label
+  *harder* to read than its neighbours:
+  `.cos-tab.active` 10.90/12.13/**2.12**/13.63 →  5.28;
+  `.cos-req` 3.38/3.42/**2.33**/3.38 → 4.95;
+  `.sec-count` and idle `.cos-tab` 3.40/3.43/**2.54**/3.39 → 6.17
+  (Bordeaux/Émeraude/**Clair**/Marquee). Same failure and same fix as
+  the existing `.acct-tab.active` correction — brass on a pale ground.
+  Lives at the END of the stylesheet with the other Clair blocks:
+  `.cos-tab.active` is a genuine 0,2,0-vs-0,2,0 tie only source order
+  settles.
+- **Titles are sent through `publicState`** (`p.title`), resolved ONCE at
+  join time via `lookupTitle` — re-reading per broadcast would put a DB
+  round trip in the hot path of every card played. In `joinRoom` the
+  lookup happens **before** the seat-taken re-check, not after: every
+  await is a window another socket can claim the slot in, and that check
+  is what closes it.
+- Shown in the My Account hero (under the name) and on the lobby seat
+  rows. Deliberately **not** on the pass/play table: that vertical
+  budget is spent, and a title line under `.tcap` would break it.
+- Guests: everything is gated. No unlocks, no equipping, defaults only —
+  "played today" style reasoning, an unlock is a fact about an *account*.
+  The Table theme tab still works for them, unchanged.
+- Adding an achievement = a counter in `db.getAchievementStats` + a row
+  in `ACHIEVEMENTS` + crest art in `CREST_ART`. The crest, the title it
+  grants, the Achievements tab entry and any cosmetic it gates all fall
+  out of that. `scratchpad/check2.py`-style cross-file checking is worth
+  redoing if you touch the registries — a mismatch between the server
+  registry and the client art tables fails **silently** (blank
+  thumbnail, dead scene, unequippable item).
+
+## Rank tiers were RENAMED — `slug` is the key, `tier` is the label
+- The eight tiers now display as **Novice / Apprentice / Player /
+  Gambler / Ace / Master / Grand Master / Legend** (was Bronze / Silver /
+  Gold / Platinum / Diamond / Master / Grandmaster / Legend).
+- **The MMR thresholds are untouched.** This is a rename, not a
+  re-tuning — nobody's rank moved, only what it's called.
+- `RANK_TABLE` rows gained a **`slug`**, and the slug is the ORIGINAL
+  bronze..legend key. That split is the whole trick: `rankForMmr` returns
+  both, and everything mechanical keys off the slug —
+  - `public/badges/*.svg`: all 22 filenames unchanged
+  - `.tag.bronze` … `.tag.legend`: all eight CSS rules unchanged
+  - `tierReached`, `RANK_COSMETICS`, and every `rankTier:` field
+  — while only display strings use `tier`. **"Grand Master" contains a
+  space**, so it could never have been a filename or a class name; if you
+  ever key anything off the display name it will silently break at the
+  top of the ladder.
+- Client-side, `rankSlug(rank)` is the single accessor, with a fallback
+  to the old lowercased-tier derivation so a stale cached client that
+  predates the server sending `slug` still renders instead of showing
+  broken badge images.
+- The trap this actually sprang during implementation: `COSMETICS.titles`
+  still carried capitalised `rankTier:'Silver'` values after
+  `tierReached` moved to slugs, which would have locked **every rank
+  title forever** — silently, since a locked cosmetic looks identical to
+  one you haven't earned. Cross-file registry checking caught it; keep
+  doing that when touching either side.
+
+## Rank cosmetics (8 sets) and portrait avatars (20)
+- **Eight rank sets, one per TIER, not per rank state.** The reference
+  sheet defines eight; divisions within a tier share a look. Each set is
+  avatar frame + nameplate + table badge, in a fixed *material* (paper,
+  ink, velvet, brass, gold, royal, obsidian, diamond).
+- Unlocked purely by reaching the tier, and **never revoked** — the check
+  reads PEAK mmr (`ranked_stats.mmr_highest`), so a losing streak can't
+  take a set away. Not purchasable.
+- **The equipped rank set defaults to the HIGHEST unlocked**, not to a
+  fixed entry: it's the one automatic cosmetic, so someone who never
+  opens the picker still wears what they earned, and is re-dressed the
+  moment they rank up. An explicit lower choice still wins
+  (`filterEquipped` checks the stored value first).
+- **Materials are deliberately NOT themed** per felt palette, unlike
+  everything else. A rank is the same rank whatever table you're at, and
+  the sheet specifies them as fixed materials — same reasoning that
+  leaves card backs and `--ok`/`--warn` alone.
+- Nameplate ink is measured against BOTH ends of its gradient, not the
+  midpoint. Worst-case contrast: paper 7.03, ink 7.20, velvet 7.34,
+  royal 7.60, obsidian 8.60 — but brass 2.90, gold 3.21 and diamond 2.26
+  each failed at one end. Solved (not nudged) by walking the offending
+  stop toward black/white until the worse end cleared 4.5: brass 4.64,
+  gold 4.56, diamond 4.63. The five that passed are untouched.
+- **The emblem art is not in the repo yet.** Each piece renders its CSS
+  treatment and layers `public/ranks/<slug>/{frame,plate,badge}.webp` on
+  top *if the file exists*. `rankArtMissing` records a 404 per
+  (slug, piece) for the session, so a missing asset costs exactly one
+  failed request rather than one per render, and the moment the files are
+  dropped in they appear with no code change. Verified: all 8 plate
+  images 404, are removed, the CSS plates stay intact, and a re-render
+  emits zero `<img>`.
+- The table badge's fallback is the EXISTING `public/badges/*.svg`
+  medallion — same rank, same moment, already on disk.
+- **`rankBadgeHTML`'s `size` argument is optional and normally omitted.**
+  It writes an inline `--rb`, and an inline custom property beats any
+  stylesheet rule — passing a size made the `.tcap`/`.seat-name`
+  overrides silently inert. Same inline-style trap as `.exit-row`'s
+  margin and the `max-width:440px` wraps.
+- **The table badge must cost ZERO vertical budget.** At 11px it grew
+  each `.tcap` line box 12px→14px — three captions, 6px off a budget the
+  `--ch` formula treats as spent. It still fitted (measured at 915×412
+  and at the tightest documented 667×375, nothing clipped), but
+  `.tcap .rank-tbadge` now sizes it to 9px with `vertical-align:middle`
+  so it rides inside the existing 11.52px line box. Captions measure 12px
+  again. **`scrollHeight === clientHeight` is NOT proof of fit on the
+  table screens** — they're `overflow:hidden`, so overflow clips
+  silently; compare `.mid`'s rect against `.table`'s instead.
+- **20 portrait avatars, 5 collections of 4** (the sheet's own count —
+  the earlier brief said 30). They are stored in the SAME
+  `accounts.avatar` column the emoji avatars use, not in
+  `player_cosmetics`: an avatar is identity, it already travels through
+  `publicState` and every leaderboard query, and a second home would mean
+  two sources of truth for what a player looks like.
+- **`sanitizeAvatar` allow-lists the 20 ids BEFORE its 8-char slice** —
+  the slice exists to bound arbitrary emoji input and would otherwise
+  mangle `royal_king` into `royal_ki`.
+- Portrait avatars carry **no unlock condition**, deliberately: the sheet
+  states one for the rank cosmetics and pointedly not for these, and the
+  emoji avatars beside them have always been free. They need an account
+  only because editing your identity already did.
+- `avatarHTML(v, name, lazy)` is the single place an avatar value becomes
+  markup. **`lazy` is opt-in and only the picker uses it** — the table
+  rebuilds its seats' innerHTML on every `gameState` (every card played),
+  so deferring those images re-runs the intersection check each rebuild
+  and risks the avatar popping mid-trick, to save nothing.
+- Art was cut from the reference sheet (`scratchpad/crop.py`) at 160×160
+  with a supersampled circular alpha mask, 20 files / 158 KB total. They
+  are **not** in `sw.js`'s `ASSETS` — the fetch handler runtime-caches
+  them, so no `CACHE` bump is needed and installs don't pull 158 KB up
+  front. Higher-res replacements can be dropped over the same filenames.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across
   two match lengths would fragment a ranked population that isn't large
   enough yet)
+- **The rank emblem artwork** (8 sets × frame/nameplate/table badge).
+  The system is fully wired and shipping on its CSS treatment; drop
+  exported files at `public/ranks/<slug>/{frame,plate,badge}.webp` and
+  they appear with no code change. See the Rank cosmetics section for
+  the slugs and the one-404-per-piece loading contract.
+- The other four card-front collections (Noir, Emerald, Occult, Grand
+  Hotel) — the brief explicitly scopes this to Royal Court only.
 
 ## Sound effects (public/sfx.js + public/sounds/*.ogg)
 - Self-contained module, own global `SFX` object (`SFX.play(name)`,

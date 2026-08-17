@@ -882,9 +882,10 @@ function samplesFor(numCandidates, trickNum) {
 // A thin hard-constraint layer applied only to the live decision (not the
 // rollout policy) — the few rules that should never be left to
 // probabilistic judgment: a free Ace on trick 1, never chasing with a
-// heart that isn't safe yet, and never leading or overtaking with
-// A♠/K♠ while the queen is still unaccounted for, unless it's provably
-// safe to do so. Only ever narrows the candidate list, and only when a
+// heart that isn't safe yet, never leading or overtaking with A♠/K♠
+// while the queen is still unaccounted for unless it's provably safe,
+// and never voluntarily winning a hearts trick when a losing heart is
+// available. Only ever narrows the candidate list, and only when a
 // legal alternative actually remains — a genuinely forced move is
 // always left untouched.
 function applyHardRules(G, pi, legal) {
@@ -939,6 +940,31 @@ function applyHardRules(G, pi, legal) {
       const topSpades = legal.filter(c => c.suit === '♠' && (c.rank === 'A' || c.rank === 'K'));
       if (topSpades.length && topSpades.length < legal.length) {
         return legal.filter(c => !topSpades.includes(c));
+      }
+    }
+  }
+
+  // Never voluntarily win a hearts trick — every heart we capture is
+  // points against us, so if we can follow with a heart that loses,
+  // never spend one that wins instead, even when Monte Carlo's sampling
+  // occasionally gets noisy enough to make the ace look survivable.
+  // Exempt whenever anyone's on moon pace this round (ourselves, going
+  // for +60 ourselves, or an opponent, where deliberately taking a dirty
+  // trick can be the one move that breaks their run) — that judgment
+  // call is left to Monte Carlo/heuristic on purpose. Deliberately
+  // broader than the spade guard above, which only exempts *our own*
+  // moon pace (`!== pi`, not `=== -1`): a queen capture only helps
+  // whoever wins it, so it's never worth handing to an opponent, but a
+  // hearts capture can be the correct defensive play against someone
+  // else's run, matching heuristicChoose's own oppMoonPace handling.
+  if (led === '♥' && moonPaceOwner(G) === -1) {
+    const heartsHeld = legal.filter(c => c.suit === '♥');
+    const highHeartInTrick = [...trick].filter(t => t.card.suit === '♥')
+      .sort((a, b) => RV[b.card.rank] - RV[a.card.rank])[0];
+    if (heartsHeld.length && highHeartInTrick) {
+      const winners = heartsHeld.filter(c => RV[c.rank] > RV[highHeartInTrick.card.rank]);
+      if (winners.length && winners.length < heartsHeld.length) {
+        return legal.filter(c => !winners.includes(c));
       }
     }
   }

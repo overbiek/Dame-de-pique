@@ -81,11 +81,21 @@ before pushing.
   lead hearts>5 unless every lower heart is already played; never lead
   or overtake spades with A/K while Q♠ is still unaccounted for (not
   held, not captured) unless it's the closing card of a trick that
-  provably can't contain her; always lead a held A♦/A♣ on trick 1.
-  `heuristicChoose`'s leading branch mirrors the same "don't lead
-  A♠/K♠ while she's still out there" restriction independently, since
-  it's also used as the Monte Carlo rollout policy and as the
-  exception-fallback for the live decision — both bypass
+  provably can't contain her — exempted only when *this AI* is the
+  moon-pace owner (`moonPaceOwner(G) !== pi`), since capturing her for
+  an opponent's benefit is never the point; never voluntarily win a
+  hearts trick with a heart that beats the board if a losing heart is
+  also legal (Monte Carlo's sampling can occasionally get noisy enough
+  late in a round to make a needless capture look survivable — this
+  removes it as an option entirely) — exempted more broadly, whenever
+  *anyone* is on moon pace (`moonPaceOwner(G) === -1` is the only
+  active case), because deliberately taking a dirty trick can be the
+  one move that breaks an opponent's run, mirroring `heuristicChoose`'s
+  own `oppMoonPace` handling for hearts specifically; always lead a
+  held A♦/A♣ on trick 1. `heuristicChoose`'s leading branch mirrors the
+  same "don't lead A♠/K♠ while she's still out there" restriction
+  independently, since it's also used as the Monte Carlo rollout policy
+  and as the exception-fallback for the live decision — both bypass
   `applyHardRules` entirely
 - `aiSelectPass` — its own hard filter, `neverPass`: never pass
   clubs≤J, hearts≤5, or spades≤J (the low/mid spades are the guards

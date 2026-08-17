@@ -1167,14 +1167,26 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   border:1px solid rgba(var(--ddp-brass-rgb),.28);
 }
 .profile-hero .avatar-preview{width:74px;height:74px;font-size:2.05rem}
-.hero-name-input{
+/* Selectors are input.hero-name-input, not the bare class, and that is
+   load-bearing: the generic form rule near the top of this stylesheet is
+   `input[type=text]` (0,1,1) and sets the `font` SHORTHAND plus padding,
+   border and background. A bare `.hero-name-input` (0,1,0) loses that tie
+   outright — the whole rule was inert, and the hero name rendered as an
+   ordinary boxed 1rem DM Sans form field rather than the 1.4rem Playfair
+   display name it was written to be. Qualifying with the element type
+   ties the specificity at (0,1,1) and this block is ~700 lines later, so
+   source order settles it. Same family of trap as .theme-swatch-btn
+   .theme-card and the tabular-figures block. The :focus and ::placeholder
+   variants need the same treatment for the same reason (their generic
+   counterparts carry the extra pseudo too). */
+input.hero-name-input{
   margin-top:11px;width:100%;max-width:220px;text-align:center;
-  font-family:'Playfair Display',serif;font-weight:600;font-size:1.4rem;color:var(--cream);
+  font:600 1.4rem 'Playfair Display',serif;color:var(--cream);
   background:transparent;border:none;border-bottom:1.5px solid transparent;border-radius:0;
   padding:2px 4px;outline:none;
 }
-.hero-name-input:focus{border-bottom-color:rgba(var(--ddp-brass-rgb),.5)}
-.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-weight:400}
+input.hero-name-input:focus{border-bottom-color:rgba(var(--ddp-brass-rgb),.5);background:transparent}
+input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-weight:400}
 .profile-hero .acct-chip{flex:0 0 auto;width:auto;margin-top:9px;padding:6px 13px;border-radius:999px}
 
 /* ── rank medallion ── */
@@ -1406,12 +1418,35 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
    same constant-space rule the .mystrip badge follows, so equipping or
    clearing a title can't make the hero card change height and shove the
    panel beside it. */
-.hero-plate{margin-top:9px}
+/* ── the hero nameplate ──
+   The plaque is a LAYER BEHIND the live name and title rather than a
+   label of its own — the reference sheet's explicit display contract
+   (nameplate-art behind nameplate-content). Which is why the name input
+   and the title line moved INSIDE this element: they are the dynamic text
+   the plaque is a backdrop for.
+   It's therefore always in the DOM, dressed or not. With no rank set
+   equipped (a guest, or an account that has never played ranked) it
+   carries no data-material, every decorative layer stays display:none,
+   and what's left is exactly the bare name + title that was here before.
+   The margin steps up when it IS dressed, to make room for the emblem
+   straddling the top edge — a change that can only happen by playing a
+   ranked game, never while this screen is open, so there's nothing for it
+   to jump against. */
+.hero-plate{margin-top:9px;width:100%;max-width:250px}
+.hero-plate[data-material]{margin-top:20px}
+.hero-plate .hero-name-input{margin-top:0}
+.rank-plate[data-material] .hero-name-input{color:var(--rm-ink)}
+.rank-plate[data-material] .hero-name-input::placeholder{color:var(--rm-ink);opacity:.5}
+.rank-plate[data-material] .hero-name-input:focus{border-bottom-color:var(--rm-orn)}
 .hero-title{
   margin-top:3px;min-height:1.05rem;
   font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
   color:var(--gold-lo);
 }
+/* On a plaque the title is the plate's own ink, dropped back so the name
+   still leads — --gold-lo is tuned against the felt, not against eight
+   un-themed materials, and on paper/gold it all but disappeared. */
+.rank-plate[data-material] .hero-title{color:var(--rm-ink);opacity:.78}
 .hero-title:empty::after{content:'\00a0'}
 .hero-crest{
   position:absolute;right:-4px;bottom:-4px;width:28px;height:28px;
@@ -1485,55 +1520,240 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
    sheet specifies them as fixed materials (paper, ink, velvet, brass,
    gold, royal, obsidian, diamond) — the same reasoning that leaves card
    backs and --ok/--warn un-themed. */
+/* SIX tokens per material, not four, and the split matters. The plate's
+   INTERIOR (--rm-hi -> --rm-lo) and the frame METAL (--rm-edge /
+   --rm-metal-hi) are independent in the reference sheet: six of the eight
+   tiers are a dark interior inside a bright metal frame, so a single
+   "material colour" can't drive both. The table badge and the avatar ring
+   deliberately read from the METAL rather than the interior — a dark
+   interior would have turned six of the eight badges into a near-black
+   dot on the felt, which is the one place a rank marker has to stay
+   legible at 9px. --rm-orn is the ornament ink (emblem, corner pieces,
+   inner hairline); it follows the metal except where the sheet names a
+   different stone (obsidian's violet crystal, Legend's ice blue). */
 [data-material]{
-  --rm-lo:#3A3226; --rm-hi:#EFE4C8; --rm-ink:#231C13; --rm-edge:#C9B892;
+  --rm-lo:#2A241B; --rm-hi:#4A4031; --rm-ink:#EFE4C8;
+  --rm-edge:#C9B892; --rm-metal-hi:#EFE0BC; --rm-orn:#C9B892;
 }
 /* The nameplate prints --rm-ink over a --rm-hi -> --rm-lo gradient, so
    the text has to clear AA against BOTH ends, not just the midpoint.
-   Measured worst-case contrast of ink vs the two stops:
-     paper 7.03  ink 7.20  velvet 7.34  royal 7.60  obsidian 8.60
-     brass 2.90  gold 3.21  diamond 2.26      <- the three that failed
-   Those three each failed at one end only (brass' ink is light and its
-   hi stop was too pale; gold's and diamond's inks are dark and their lo
-   stops were too deep). Solved for, not nudged: the offending stop was
-   walked toward black/white until the worse end cleared 4.5, which lands
-   brass 4.64, gold 4.56, diamond 4.63. The five that already passed are
-   untouched. */
-[data-material="paper"]   {--rm-lo:#CFC0A0;--rm-hi:#F3E9CF;--rm-ink:#3A3226;--rm-edge:#B9A57E}
-[data-material="ink"]     {--rm-lo:#1B1E24;--rm-hi:#454B57;--rm-ink:#E6E9EF;--rm-edge:#6E7686}
-[data-material="velvet"]  {--rm-lo:#3E1020;--rm-hi:#7E2439;--rm-ink:#F3DCE1;--rm-edge:#A8425A}
-[data-material="brass"]   {--rm-lo:#5C441C;--rm-hi:#806534;--rm-ink:#F6EBD5;--rm-edge:#C8A25C}
-[data-material="gold"]    {--rm-lo:#9F8547;--rm-hi:#E2BC5C;--rm-ink:#2A1F06;--rm-edge:#F0D48A}
-[data-material="royal"]   {--rm-lo:#141C4A;--rm-hi:#33418C;--rm-ink:#E4E8FF;--rm-edge:#6070C4}
-[data-material="obsidian"]{--rm-lo:#221232;--rm-hi:#4E2C74;--rm-ink:#EDE0FA;--rm-edge:#8A5FBE}
-[data-material="diamond"] {--rm-lo:#6D8D9F;--rm-hi:#9FD4EC;--rm-ink:#0C2230;--rm-edge:#CFEBF8}
+   Measured (see the ink/hi and ink/lo columns below), every one clears
+   with room to spare rather than being nudged over the line:
+     paper 8.88/6.93   ink 8.30/12.12  velvet 7.75/13.48  brass 6.97/13.28
+     gold 11.86/14.43  royal 9.89/15.82 obsidian 10.50/14.11 diamond 8.40/13.90
+   Paper is the only one where the FRAME is the weak reading rather than
+   the text: an antique-gold frame on parchment measures 2.57/2.01, which
+   is inherent to the sheet's own "muted antique-gold ink, no glow" brief
+   for Novice. Its structure is carried by the darker ornament ink
+   (#7A6238, 4.3/3.4) and by the themed outer ring every plate gets, not
+   by the frame colour alone. */
+[data-material="paper"]   {--rm-lo:#E0CDA8;--rm-hi:#F2E8D2;--rm-ink:#4A3B25;
+                           --rm-edge:#A98E5C;--rm-metal-hi:#E8D3A4;--rm-orn:#7A6238}
+[data-material="ink"]     {--rm-lo:#151617;--rm-hi:#33343A;--rm-ink:#D8D3C6;
+                           --rm-edge:#B7AE9D;--rm-metal-hi:#E2DCCC;--rm-orn:#C5A15A}
+[data-material="velvet"]  {--rm-lo:#2E0F16;--rm-hi:#7A2033;--rm-ink:#F2DFC4;
+                           --rm-edge:#C49E58;--rm-metal-hi:#E5C88E;--rm-orn:#C49E58}
+[data-material="brass"]   {--rm-lo:#1C1710;--rm-hi:#5B4221;--rm-ink:#F0DDAE;
+                           --rm-edge:#C79A46;--rm-metal-hi:#E7C77C;--rm-orn:#D0AA5A}
+[data-material="gold"]    {--rm-lo:#0D0C0B;--rm-hi:#23211E;--rm-ink:#F0DCA8;
+                           --rm-edge:#C9A45C;--rm-metal-hi:#E2C77D;--rm-orn:#E2C77D}
+[data-material="royal"]   {--rm-lo:#0C1226;--rm-hi:#22366B;--rm-ink:#E8ECFF;
+                           --rm-edge:#C9A45C;--rm-metal-hi:#E5C878;--rm-orn:#E5C878}
+[data-material="obsidian"]{--rm-lo:#0A0A0D;--rm-hi:#2A2635;--rm-ink:#DCD8E4;
+                           --rm-edge:#A9A6AE;--rm-metal-hi:#DDDAE2;--rm-orn:#8E6BB8}
+[data-material="diamond"] {--rm-lo:#0C1E25;--rm-hi:#1E4553;--rm-ink:#DCEAF0;
+                           --rm-edge:#C9D7DB;--rm-metal-hi:#EAF3F7;--rm-orn:#A8CFE0}
 
 /* the exported art, whenever it exists, sits over the CSS treatment */
 .rank-art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+/* An exported plate is a whole plaque, so the six CSS layers below switch
+   off rather than showing through around it (see rankArtLoaded). It keeps
+   the plate's own metallic border and outer ring, which are what seat it
+   against whichever theme is active — art can't be themed. Source should
+   be authored at roughly the plate's own rendered proportion (~2.2:1 at
+   hero size); object-fit:contain letterboxes anything much wider. */
+.rank-art.plate{z-index:0}
 
-/* ── nameplate: a horizontal badge under the name ── */
+/* ══ nameplate: the Deco plaque ══
+   The sheet's geometry, built in six layers so ONE definition serves a
+   26px picker thumbnail, a podium row and the account hero at 3x that
+   size: metallic border (the element itself), material-textured interior
+   (.rp-grain), inner hairline frame (.rp-frame), mirrored side corner
+   pieces (.rp-side x2), an ornamental top-centre emblem straddling the
+   top edge (.rp-em) and a small lower-centre ornament (.rp-foot). Every
+   layer is sized off --rp-* custom properties, so the three variants
+   below re-declare four numbers rather than re-stating any rule.
+
+   Progression is communicated through material, palette, ornament and
+   emblem — never through the silhouette, which is identical across all
+   eight. That's the sheet's own rule and it's what makes the eight read
+   as one set.
+
+   Deliberately NOT clip-path'd into chamfered corners, tempting as that
+   is for Deco: the top emblem and the bottom ornament both straddle the
+   plate's edge on purpose, and a clip-path on the host would cut both
+   of them off flush. The chamfer is drawn by .rp-frame's corner cuts
+   instead. */
 .rank-plate{
+  --rp-h:20px;      /* emblem box */
+  --rp-side-w:9px;  /* side ornament */
+  --rp-foot:7px;    /* bottom lozenge */
+  --rp-pad:18px;    /* horizontal room for the side ornaments to live in */
   position:relative;display:inline-flex;align-items:center;justify-content:center;
-  min-width:104px;padding:4px 16px;border-radius:5px;
+  padding:5px var(--rp-pad);
+}
+/* Scoped to [data-material] rather than the bare class: the account hero
+   uses this element as the always-present wrapper for the name and title
+   (see .hero-plate), and a player with no rank set yet must get a plain
+   name, not an undressed frame. No attribute, no plaque. */
+.rank-plate[data-material]{
+  min-width:104px;border-radius:4px;
   background:linear-gradient(180deg,var(--rm-hi),var(--rm-lo));
-  border:1px solid var(--rm-edge);
-  box-shadow:0 1px 5px rgba(var(--ddp-scrim-rgb),.4),inset 0 1px 0 rgba(255,255,255,.18);
+  border:2px solid var(--rm-edge);
+  /* the metal's own top-lit sheen, then the themed outer ring — the ring
+     is what separates a pale plate (paper) from a pale felt (Clair),
+     since the materials themselves are deliberately un-themed */
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),
+             inset 0 -1px 0 rgba(0,0,0,.30),
+             0 2px 9px rgba(var(--ddp-scrim-rgb),.45),
+             0 0 0 1px rgba(var(--ddp-scrim-rgb),.32);
 }
-/* the clipped corners that make it read as Deco rather than as a button */
-.rank-plate::before,.rank-plate::after{
-  content:'';position:absolute;top:2px;bottom:2px;width:5px;
-  border-top:1px solid var(--rm-edge);border-bottom:1px solid var(--rm-edge);
+/* every decorative layer is inert to pointers and invisible without a set */
+.rp-grain,.rp-frame,.rp-side,.rp-em,.rp-foot{display:none;pointer-events:none}
+.rank-plate[data-material] .rp-grain,
+.rank-plate[data-material] .rp-frame,
+.rank-plate[data-material] .rp-side,
+.rank-plate[data-material] .rp-em,
+.rank-plate[data-material] .rp-foot{display:block}
+/* MUST come after that group, not up beside .rank-art: both are (0,3,0),
+   so source order is the only thing that decides which wins. */
+.rank-plate.has-art .rp-grain,.rank-plate.has-art .rp-frame,
+.rank-plate.has-art .rp-side,.rank-plate.has-art .rp-em,
+.rank-plate.has-art .rp-foot{display:none}
+
+/* material-textured interior */
+.rp-grain{position:absolute;inset:0;border-radius:inherit;overflow:hidden;z-index:0}
+[data-material="paper"] .rp-grain{
+  background:repeating-linear-gradient(118deg,rgba(90,74,50,.055) 0 1px,transparent 1px 3px),
+             radial-gradient(120% 90% at 50% 0,rgba(255,255,255,.5),transparent 70%);
 }
-.rank-plate::before{left:3px;border-left:1px solid var(--rm-edge)}
-.rank-plate::after{right:3px;border-right:1px solid var(--rm-edge)}
+[data-material="ink"] .rp-grain{
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 3px);
+}
+[data-material="velvet"] .rp-grain{
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.045) 0 2px,transparent 2px 5px),
+             radial-gradient(90% 120% at 50% 0,rgba(255,255,255,.14),transparent 68%);
+}
+[data-material="brass"] .rp-grain{
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.06) 0 1px,transparent 1px 4px);
+}
+[data-material="gold"] .rp-grain{
+  background:linear-gradient(112deg,transparent 28%,rgba(226,199,125,.13) 47%,transparent 64%);
+}
+[data-material="royal"] .rp-grain{
+  background:radial-gradient(80% 130% at 50% 6%,rgba(255,255,255,.16),transparent 62%);
+}
+[data-material="obsidian"] .rp-grain{
+  background:repeating-linear-gradient(58deg,rgba(255,255,255,.05) 0 6px,transparent 6px 13px);
+}
+[data-material="diamond"] .rp-grain{
+  background:repeating-linear-gradient(56deg,rgba(220,234,240,.07) 0 5px,transparent 5px 11px),
+             repeating-linear-gradient(-56deg,rgba(220,234,240,.05) 0 5px,transparent 5px 11px);
+}
+/* Legend alone gets a shimmer, and only a restrained slow one — the
+   sheet grants it to this tier and pointedly to no other. Lives on
+   .rp-grain's ::after so it needs no seventh layer. */
+[data-material="diamond"] .rp-grain::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(104deg,transparent 38%,rgba(232,244,249,.30) 50%,transparent 62%);
+  transform:translateX(-65%);
+  animation:rp-shimmer 6s ease-in-out infinite;
+}
+@keyframes rp-shimmer{0%,100%{transform:translateX(-65%)}55%{transform:translateX(65%)}}
+@media (prefers-reduced-motion:reduce){
+  [data-material="diamond"] .rp-grain::after{animation:none;opacity:.35}
+}
+
+/* inner hairline frame + the chamfered Deco corners */
+.rp-frame{
+  position:absolute;inset:3px;z-index:0;
+  border:1px solid var(--rm-orn);opacity:.5;
+}
+/* The chamfer: one 1px bar per top corner, rotated 45 degrees about its
+   own centre. Deliberately a plain bar with plain top/left rather than a
+   bordered box with a post-rotate translate — a translate applied AFTER a
+   rotate moves along the rotated axes, which makes the landing position
+   almost impossible to reason about and is not something you can eyeball
+   in a pane that isn't compositing. This version's rect is arithmetic. */
+.rp-frame::before,.rp-frame::after{
+  content:'';position:absolute;top:2px;width:9px;height:1px;
+  background:var(--rm-orn);
+}
+.rp-frame::before{left:-3px;transform:rotate(45deg)}
+.rp-frame::after{right:-3px;transform:rotate(-45deg)}
+
+/* mirrored side corner pieces — the SAME markup and the same SVG both
+   sides, the right one flipped in CSS, which is what "mirrored" means
+   here and what keeps it to one art definition per material */
+.rp-side{
+  position:absolute;top:50%;width:var(--rp-side-w);height:62%;z-index:1;
+  color:var(--rm-orn);opacity:.9;
+}
+.rp-side svg{width:100%;height:100%;display:block;fill:currentColor}
+.rp-side.l{left:4px;transform:translateY(-50%)}
+.rp-side.r{right:4px;transform:translateY(-50%) scaleX(-1)}
+
+/* top-centre emblem — straddles the frame, which is what makes it read
+   as an applied ornament rather than a printed icon */
+.rp-em{
+  position:absolute;left:50%;top:calc(var(--rp-h) * -0.42);
+  width:var(--rp-h);height:var(--rp-h);transform:translateX(-50%);z-index:2;
+  color:var(--rm-orn);
+  filter:drop-shadow(0 1px 2px rgba(var(--ddp-scrim-rgb),.65));
+}
+.rp-em svg{width:100%;height:100%;display:block;fill:currentColor}
+
+/* small lower-centre ornament: a lozenge on the bottom edge */
+.rp-foot{
+  position:absolute;left:50%;bottom:calc(var(--rp-foot) / -2);
+  width:var(--rp-foot);height:var(--rp-foot);
+  transform:translateX(-50%) rotate(45deg);z-index:2;
+  background:var(--rm-orn);
+  box-shadow:0 0 0 1px rgba(var(--ddp-scrim-rgb),.45);
+}
+
 .rp-text{
   position:relative;z-index:1;
   font-family:'Playfair Display',serif;font-size:.78rem;font-weight:600;
   letter-spacing:.09em;text-transform:uppercase;color:var(--rm-ink);
   white-space:nowrap;
 }
-.rank-plate.sm{min-width:0;padding:2px 10px}
+
+/* ── the three sizes ── */
+.rank-plate.sm{--rp-h:14px;--rp-side-w:6px;--rp-foot:5px;--rp-pad:12px;padding:3px var(--rp-pad)}
+.rank-plate[data-material].sm{min-width:0}
 .rank-plate.sm .rp-text{font-size:.62rem;letter-spacing:.07em}
+.rank-plate.sm .rp-frame{inset:2px}
+/* lg: the account hero, where the plaque is a layer BEHIND live text
+   (the editable name input and the title line) rather than a label of
+   its own — the sheet's own display contract. */
+.rank-plate.lg{--rp-h:26px;--rp-side-w:11px;--rp-foot:9px;--rp-pad:22px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:11px var(--rp-pad) 9px;
+}
+.rank-plate.lg .rp-frame{inset:4px}
+/* Undressed (the hero's no-rank-set state) the element is a bare wrapper
+   for the name and title, so it must not keep the plaque's padding — 22px
+   a side is real width in the 148px hero column. Placed after .lg
+   deliberately: both are (0,2,0), so source order is what settles it. */
+.rank-plate:not([data-material]){padding:0}
+/* The dressing wrapper must cost nothing: it holds only absolutely
+   positioned layers, and being a flex item it would otherwise contribute
+   an empty line box to the column's height. Deliberately left
+   position:static so those layers still resolve against .rank-plate. */
+.nameplate-art{display:block;height:0;line-height:0}
+.nameplate-content{position:relative;z-index:1;width:100%;display:flex;
+  flex-direction:column;align-items:center;min-width:0}
 
 /* ── avatar frame: a material ring, not a new box ──
    Applied to the EXISTING avatar well via a data-material attribute, so
@@ -1545,14 +1765,16 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 }
 .profile-hero .avatar-preview.rank-framed{border-width:3px}
 
-/* ── table badge ── */
+/* ── table badge ──
+   Reads the METAL, not the interior: see the token note above. */
 .rank-tbadge{
   position:relative;display:inline-block;flex:0 0 auto;
   width:var(--rb,14px);height:var(--rb,14px);border-radius:50%;
-  background:radial-gradient(circle at 38% 32%,var(--rm-hi),var(--rm-lo) 78%);
+  background:radial-gradient(circle at 38% 32%,var(--rm-metal-hi),var(--rm-edge) 72%,var(--rm-lo) 100%);
   border:1px solid var(--rm-edge);
   vertical-align:-2px;
 }
+
 /* On the landscape table captions the badge must cost ZERO height. At
    11px with vertical-align:-2px it grew each .tcap's line box from 12px
    to 14px — three captions, so 6px off a vertical budget the --ch
@@ -1565,15 +1787,44 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 /* Same reasoning for the portrait seat name, which has its own row. */
 .seat-name .rank-tbadge{--rb:10px;vertical-align:middle;margin-right:2px}
 
-/* ── the picker's own preview ── */
+/* ── the picker's own preview ──
+   The thumb is tinted by the tier's METAL rather than filled with its
+   interior gradient: six of the eight interiors are near-black now, so
+   using them here would have given the strip six identical dark cells
+   with the plaque invisible against its own backing. The metal wash is
+   what makes paper/ink/velvet/brass/gold/royal/obsidian/diamond
+   distinguishable at a glance, and the plaque sitting ON it is what the
+   player is actually choosing. */
 .cos-thumb.rankset{
-  display:flex;align-items:center;justify-content:center;gap:6px;padding:6px;
-  background:linear-gradient(160deg,var(--rm-hi),var(--rm-lo));
+  display:flex;align-items:center;justify-content:center;gap:7px;padding:6px;
+  background:radial-gradient(120% 140% at 50% 0,rgba(var(--ddp-gloss-rgb),.05),transparent 70%),
+             linear-gradient(160deg,color-mix(in srgb,var(--rm-edge) 22%,transparent),
+                             rgba(var(--ddp-scrim-rgb),.34));
 }
 .cos-thumb.rankset .rank-tbadge{--rb:22px}
-.cos-thumb.rankset .rank-plate{min-width:0;padding:2px 8px}
-.cos-thumb.rankset .rp-text{font-size:.55rem}
-.pod-plate{margin-top:5px}
+/* Fixed size and NO text in the thumbnail. The sheet is explicit that the
+   eight share one silhouette and that names are never baked into the
+   artwork — sized to content the eight previews came out between 68px
+   ("Ace") and 111px ("Grand Master") wide, which made the set look like
+   eight different objects rather than eight finishes of the same one. The
+   tier name is already the card's own .cos-name directly underneath, so
+   nothing is lost by dropping it from the plate itself. */
+.cos-thumb.rankset .rank-plate{min-width:0;width:100px;height:34px}
+.cos-thumb.rankset .rp-text{display:none}
+/* Cosmetic state, per the sheet: hover lifts the metal, the equipped item
+   takes the app's existing brass selection treatment (.cos-item.equipped
+   already rings the card) plus a restrained glow on the plate itself. The
+   locked look is the UI's job — .cos-item.locked .cos-thumb dims the
+   whole thumbnail — so no rule here ever touches the artwork. */
+.cos-item:not(.locked):hover .rank-plate[data-material]{filter:brightness(1.1) saturate(1.05)}
+.cos-item.equipped .rank-plate[data-material]{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),
+             inset 0 -1px 0 rgba(0,0,0,.30),
+             0 2px 9px rgba(var(--ddp-scrim-rgb),.45),
+             0 0 0 1px rgba(var(--ddp-brass-rgb),.55),
+             0 0 12px rgba(var(--ddp-brass-rgb),.35);
+}
+.pod-plate{margin-top:7px}
 
 /* ══════════════════════════════════════════════════════════════
    SCENES — cosmetic table backgrounds
@@ -2561,22 +2812,70 @@ html.landscape-mode #s-daily>.center-wrap>#err-daily{grid-column:1;grid-row:5}
 html.landscape-mode #s-daily .daily-score{font-size:1.9rem}
 html.landscape-mode #s-daily .daily-hero{padding:10px 8px 8px}
 
-/* ── My Account: landscape-only additions ──
-   .backlink still lands in the outer rail via the generic chrome
-   selector above, same as every other screen. .acct-layout is the only
-   OTHER direct child of .center-wrap, so the generic "everything else"
-   rule already parks it in column 2, full height, scrollable, with the
-   standard divider — that part needs no override at all.
-   The hero-left/tabs-right split itself is now the general, width-based
-   .acct-wrap rule (near .acct-tabbar in <style>) rather than landscape-
-   only, so only two genuinely orientation-specific things are left
-   here: position:sticky on the hero only means anything because this
-   column scrolls internally in landscape (see the generic rail rule
-   above) — plain portrait/wide-window scroll has no such container to
-   stick against, so it stays scoped to landscape; and keeping the theme
-   cards from stretching too tall on a short landscape viewport. */
-html.landscape-mode #s-personal .profile-hero{margin:0;position:sticky;top:0}
+/* ── My Account: the one rail screen with NO rail ──
+   Every other screen here is header-chrome-in-a-narrow-rail plus one wide
+   body panel. This screen's own content is already a two-column split
+   (hero card | tabs + panel), so nesting that inside the shared rail
+   layout spent a 238px column on nothing but the ‹ Menu button and then
+   squeezed both real columns into what was left: measured at 915x412 the
+   hero got 220px and the tab panel 352px, with a 238x370 hole beside
+   them. Worse, at a larger Android font scale the hero's own content
+   (the account chip's username, the 1.4rem name) exceeded its 220px and
+   .acct-layout — overflow-y:auto, which computes overflow-x to auto too —
+   grew a horizontal scrollbar and clipped the theme cards and the
+   Friends tab off the right edge.
+   So the outer grid collapses to a single column here: the ‹ Menu button
+   keeps row 1 to itself and .acct-layout takes the whole width below it,
+   which puts the hero hard against the left edge under Menu and hands the
+   reclaimed 258px to the panel (352 -> ~610px). That's what gets the
+   theme cards into one row and the tab strip comfortably inside its
+   column, and it's why the divider between the two halves moves onto
+   .acct-main rather than sitting between the vanished rail and the rest.
+   The two halves scroll INDEPENDENTLY, which is also what retires the
+   sticky hero: it was sticky against .acct-layout's scroll, and with each
+   column owning its own overflow there's nothing left for it to stick
+   to. */
+html.landscape-mode #s-personal>.center-wrap{
+  grid-template-columns:1fr;
+  grid-template-rows:auto 1fr;
+  column-gap:0;
+}
+html.landscape-mode #s-personal>.center-wrap>.screen-header{
+  grid-column:1;grid-row:1;margin-bottom:6px;
+}
+html.landscape-mode #s-personal>.center-wrap>.acct-layout{
+  grid-column:1;grid-row:2;
+  /* the generic rail rule put an indent, a divider and the scroll on this
+     element; all three now belong to the columns inside it */
+  padding-left:0;border-left:0;overflow:hidden;min-height:0;
+  height:100%;align-items:stretch;
+  /* declared here as well as in the width-based .acct-wrap rule: every
+     real landscape phone clears its 560px breakpoint, but this layout
+     shouldn't silently depend on that being true */
+  display:grid;
+  grid-template-columns:minmax(148px,204px) 1fr;
+  column-gap:0;
+}
+html.landscape-mode #s-personal .profile-hero{
+  margin:0;position:static;min-height:0;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  /* justify-content is deliberately absent — a scrollable box that
+     centres its content makes the top unreachable once it overflows,
+     the same trap the body-panel rule above documents */
+  padding:10px 12px;
+}
+html.landscape-mode #s-personal .acct-main{
+  min-height:0;height:100%;
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding-left:18px;border-left:1px solid rgba(var(--ddp-brass-rgb),.28);
+}
 html.landscape-mode #s-personal .tc-swatch{height:40px}
+/* The hero is the narrowest column in the app and its chip carries a full
+   username. .profile-hero .acct-chip is width:auto/flex:0 0 auto, so its
+   intrinsic width won over the column and was what actually overflowed at
+   larger font scales — the ellipsis on .acct-chip-text can only do its
+   job once the pill is allowed to be narrower than its content. */
+html.landscape-mode #s-personal .profile-hero .acct-chip{max-width:100%}
 
 /* ── Game-flow screens: lobby, seat draw / dealer cut, round summary,
    final standings ──
@@ -2974,6 +3273,35 @@ html.landscape-mode #tutorial-callout{
 [data-theme="clair"] .title-opt .to-req,
 [data-theme="clair"] .sec-count,
 [data-theme="clair"] .cos-tab{color:rgba(var(--ddp-ink-rgb),.72)}
+
+/* Rank nameplate on Clair: the OUTER RING, not the plate.
+   The eight materials are deliberately un-themed (a rank is the same rank
+   whatever table you're at), so the correction has to come from the one
+   part of the plaque that already is themed — the outer ring, which is
+   built from --ddp-scrim-rgb precisely so it can adapt.
+   Measured, frame metal vs the hero card the plate sits on:
+     bordeaux 5.1-11.8  emeraude 5.1-10.8  marquee 5.9-12.4  Clair 1.2-2.6
+   On the three dark themes the plate's own interior and frame carry the
+   separation. On Clair they can't: the card is near-white, so a bright
+   metal frame has almost nothing to read against, and Novice is the worst
+   case of all — its parchment interior measures 1.01 against that card,
+   i.e. the whole plaque very nearly disappears.
+   Solved rather than nudged: the ring's alpha was walked up until it
+   cleared 4.5 on BOTH sides of the join, which lands at .62 — 4.32
+   against the hero card and 4.36 against the parchment interior (from
+   1.95/1.97 at the shared .32). It's the warm ink at 62%, not black, so
+   it reads as an engraved edge rather than an outline.
+   END of the stylesheet for the usual reason: it restates the whole
+   box-shadow list, and [data-theme="clair"] .rank-plate[data-material]
+   (0,3,0) does beat the base rule outright — but keeping every Clair
+   correction in one place is what stops the next one being written
+   somewhere source order silently defeats it. */
+[data-theme="clair"] .rank-plate[data-material]{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),
+             inset 0 -1px 0 rgba(0,0,0,.30),
+             0 2px 9px rgba(var(--ddp-scrim-rgb),.30),
+             0 0 0 1px rgba(var(--ddp-scrim-rgb),.62);
+}
 </style>
 </head>
 <body>
@@ -3544,20 +3872,25 @@ html.landscape-mode #tutorial-callout{
           <div class="avatar-preview" id="pv-avatar" onclick="toggleAvatarPicker()">👤</div>
           <div class="hero-crest crest-art" id="pv-crest"></div>
         </div>
-        <input type="text" id="pv-name" class="hero-name-input" placeholder="Your name"
-               maxlength="16" autocomplete="nickname" oninput="updateAvatarPreview()"
-               onfocus="if(!account){this.blur();openAuthForm('signup');}"/>
-        <!-- Rank nameplate, then the player title, directly under the
-             name. The plate is display:none when no rank set is equipped
-             (a guest, or an account that has never played ranked) rather
-             than reserving space — unlike .hero-title, which DOES
-             reserve its line, because a title is toggled from the picker
-             on this very screen and the hero must not resize under the
-             player's finger while they browse. A rank set can only
-             change by playing a ranked game, never while this screen is
-             open, so it has nothing to jump against. -->
-        <div class="hero-plate" id="pv-plate" style="display:none"></div>
-        <div class="hero-title" id="pv-title"></div>
+        <!-- RANK NAMEPLATE — a decorative layer BEHIND the live name and
+             title, which is why both live inside it (see .hero-plate in
+             <style> for the whole contract). #pv-plate-art is the only
+             part renderHeroCosmetics() rewrites; the input is never
+             touched by it, so the plaque can change without the field
+             losing focus or its value. Undressed (no data-material) this
+             renders as the plain name + title it always was. -->
+        <div class="hero-plate rank-plate lg" id="pv-plate">
+          <span class="nameplate-art" id="pv-plate-art"></span>
+          <span class="nameplate-content">
+            <input type="text" id="pv-name" class="hero-name-input" placeholder="Your name"
+                   maxlength="16" autocomplete="nickname" oninput="updateAvatarPreview()"
+                   onfocus="if(!account){this.blur();openAuthForm('signup');}"/>
+            <!-- reserves its line even when empty, so equipping or
+                 clearing a title can't resize the hero under the
+                 player's finger while they browse the picker -->
+            <div class="hero-title" id="pv-title"></div>
+          </span>
+        </div>
         <button class="acct-chip" id="acct-chip" onclick="handleAcctChip()">
           <span class="acct-chip-icon" id="acct-chip-icon">👤</span>
           <span class="acct-chip-text" id="acct-chip-text">Guest</span>
@@ -5091,18 +5424,123 @@ function crestHTML(id){
 // [data-material] — see the RANK COSMETICS block in <style>. Keeping the
 // colours there rather than here means they take part in the normal
 // token/theme cascade instead of being re-implemented in JS.
+// `emblem` mirrors RANK_COSMETICS' own field name in server.js and is the
+// key into RANK_EMBLEM_ART below. It's duplicated here rather than read
+// off the catalog because the podium renders plaques from publicState,
+// which carries only `rankMaterial` — no catalog is in scope there.
 const RANK_SETS=[
-  {id:'rank_bronze',      slug:'bronze',      tier:'Novice',       material:'paper'},
-  {id:'rank_silver',      slug:'silver',      tier:'Apprentice',   material:'ink'},
-  {id:'rank_gold',        slug:'gold',        tier:'Player',       material:'velvet'},
-  {id:'rank_platinum',    slug:'platinum',    tier:'Gambler',      material:'brass'},
-  {id:'rank_diamond',     slug:'diamond',     tier:'Ace',          material:'gold'},
-  {id:'rank_master',      slug:'master',      tier:'Master',       material:'royal'},
-  {id:'rank_grandmaster', slug:'grandmaster', tier:'Grand Master', material:'obsidian'},
-  {id:'rank_legend',      slug:'legend',      tier:'Legend',       material:'diamond'},
+  {id:'rank_bronze',      slug:'bronze',      tier:'Novice',       material:'paper',    emblem:'shield'},
+  {id:'rank_silver',      slug:'silver',      tier:'Apprentice',   material:'ink',      emblem:'pen'},
+  {id:'rank_gold',        slug:'gold',        tier:'Player',       material:'velvet',   emblem:'fleur'},
+  {id:'rank_platinum',    slug:'platinum',    tier:'Gambler',      material:'brass',    emblem:'chip'},
+  {id:'rank_diamond',     slug:'diamond',     tier:'Ace',          material:'gold',     emblem:'spade'},
+  {id:'rank_master',      slug:'master',      tier:'Master',       material:'royal',    emblem:'crown'},
+  {id:'rank_grandmaster', slug:'grandmaster', tier:'Grand Master', material:'obsidian', emblem:'shard'},
+  {id:'rank_legend',      slug:'legend',      tier:'Legend',       material:'diamond',  emblem:'diamond'},
 ];
 const RANK_SET_BY_ID={};
 for(const r of RANK_SETS) RANK_SET_BY_ID[r.id]=r;
+
+/* ── plaque ornament art ──
+   Inline SVG, same reasoning as the crests: flat Deco geometry that has
+   to stay crisp from a 14px thumbnail emblem to 26px on the account hero,
+   zero requests, and it inherits `currentColor` so it takes the tier's
+   own --rm-orn instead of being frozen into whatever palette a raster was
+   drawn in. Every path is authored inside a 24x24 box.
+
+   One emblem per tier, matching the reference sheet's description of each
+   plate's centrepiece — a geometric diamond for Novice's paper, an ink
+   drop for Apprentice, a fleur-de-lis for Player's velvet, a chip for
+   Gambler's brass, the ace of spades for Ace, a crown for Master, a
+   violet crystal shard for Grand Master, a brilliant-cut stone for
+   Legend. Highlight strokes read from var(--rm-hi), the interior's own
+   top stop, so a facet line is always lighter than the metal it cuts. */
+const RANK_EMBLEM_ART={
+  shield:
+    `<path d="M12 2.2 21.4 12 12 21.8 2.6 12Z" fill="none" stroke="currentColor" stroke-width="1.7"/>`+
+    `<path d="M12 7.2 16.8 12 12 16.8 7.2 12Z"/>`,
+  pen:
+    `<path d="M12 2.4c3.4 4.7 5.7 7.5 5.7 10.7a5.7 5.7 0 1 1-11.4 0c0-3.2 2.3-6 5.7-10.7Z"/>`+
+    `<path d="M9.6 13.6a2.4 2.4 0 0 0 2.4 2.4" fill="none" stroke="var(--rm-hi)" stroke-width="1.2" opacity=".65"/>`,
+  fleur:
+    `<path d="M12 2.2c1.8 2.1 1.8 4.5 0 6.9-1.8-2.4-1.8-4.8 0-6.9Z"/>`+
+    `<path d="M11 9.7c-1.7-1.7-3.6-2.3-5.2-1.2-1.9 1.3-1.5 4.2.8 5.5 1.4.8 2.9.7 4.4-.2Z"/>`+
+    `<path d="M13 9.7c1.7-1.7 3.6-2.3 5.2-1.2 1.9 1.3 1.5 4.2-.8 5.5-1.4.8-2.9.7-4.4-.2Z"/>`+
+    `<rect x="8.2" y="13.9" width="7.6" height="1.9" rx=".6"/>`+
+    `<path d="M11.1 16h1.8v5.6h-1.8Z"/>`,
+  chip:
+    `<circle cx="12" cy="12" r="8.9" fill="none" stroke="currentColor" stroke-width="1.9"/>`+
+    `<circle cx="12" cy="12" r="4.2"/>`+
+    `<path d="M12 1.4v4.2M12 18.4v4.2M1.4 12h4.2M18.4 12h4.2" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>`,
+  spade:
+    `<path d="M12 2.3S4.4 8.1 4.4 13a4.2 4.2 0 0 0 6.5 3.5c-.3 2.1-1.1 3.6-2.4 4.4h7c-1.3-.8-2.1-2.3-2.4-4.4A4.2 4.2 0 0 0 19.6 13c0-4.9-7.6-10.7-7.6-10.7Z"/>`,
+  crown:
+    `<path d="M3.4 17.4 5 8.1l4 4 3-6.1 3 6.1 4-4 1.6 9.3Z"/>`+
+    `<rect x="3.1" y="18.5" width="17.8" height="2.5" rx=".9"/>`+
+    `<circle cx="4.9" cy="6.5" r="1.3"/><circle cx="12" cy="4.3" r="1.5"/><circle cx="19.1" cy="6.5" r="1.3"/>`,
+  shard:
+    `<path d="M12 1.8 18.7 9.5 12 22.2 5.3 9.5Z"/>`+
+    `<path d="M12 1.8v20.4M5.3 9.5h13.4" fill="none" stroke="var(--rm-hi)" stroke-width="1.1" opacity=".7"/>`,
+  diamond:
+    `<path d="M7.4 3.4h9.2L20 9.3H4Z"/>`+
+    `<path d="M4 9.3h16L12 21.7Z" opacity=".88"/>`+
+    `<path d="M4 9.3 12 21.7 20 9.3M8.5 9.3 12 3.4l3.5 5.9" fill="none" stroke="var(--rm-hi)" stroke-width=".9" opacity=".7"/>`,
+};
+
+/* The mirrored side pieces. Authored in a 12x40 box (tall and narrow, the
+   shape of the slot they sit in) and drawn once per material — the RIGHT
+   copy is the same SVG flipped by CSS (.rp-side.r), which is what makes
+   them a mirrored pair rather than two pieces of art to keep in sync. */
+const RANK_ORN_ART={
+  // folded-paper corner
+  paper:`<path d="M0 0h12L0 13Z" opacity=".55"/><path d="M0 13 12 0" fill="none" stroke="currentColor" stroke-width="1"/>`+
+        `<path d="M0 40h12L0 27Z" opacity=".55"/><path d="M0 27 12 40" fill="none" stroke="currentColor" stroke-width="1"/>`,
+  // engraved rules
+  ink:`<rect y="6" width="12" height="1.4"/><rect y="10" width="9" height="1.1" opacity=".7"/>`+
+      `<rect y="28.6" width="9" height="1.1" opacity=".7"/><rect y="32.6" width="12" height="1.4"/>`,
+  // geometric corner jewels
+  velvet:`<path d="M6 3 11 8 6 13 1 8Z"/><path d="M6 27 11 32 6 37 1 32Z"/>`+
+         `<rect x="5.4" y="15" width="1.2" height="10" opacity=".6"/>`,
+  // circular brass ornaments
+  brass:`<circle cx="6" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="7" r="1.6"/>`+
+        `<circle cx="6" cy="33" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="33" r="1.6"/>`,
+  // laurel leaves
+  gold:`<path d="M6 2c4 2 5 5 3 8-3-1-4-4-3-8Z"/><path d="M6 20c4 2 5 5 3 8-3-1-4-4-3-8Z"/>`+
+       `<path d="M6 11c4 2 5 5 3 8-3-1-4-4-3-8Z" opacity=".8"/>`+
+       `<rect x="5.3" y="2" width="1.4" height="36" opacity=".45"/>`,
+  royal:`<path d="M6 1c4.4 2.2 5.5 5.5 3.2 8.8C6 8.6 4.9 5.3 6 1Z"/>`+
+        `<path d="M6 12c4.4 2.2 5.5 5.5 3.2 8.8C6 19.6 4.9 16.3 6 12Z"/>`+
+        `<path d="M6 23c4.4 2.2 5.5 5.5 3.2 8.8C6 30.6 4.9 27.3 6 23Z"/>`+
+        `<rect x="5.2" y="1" width="1.6" height="38" opacity=".5"/>`,
+  // angular crystal corners
+  obsidian:`<path d="M0 2 12 6 0 15Z"/><path d="M0 38 12 34 0 25Z"/>`+
+           `<path d="M0 15 12 6M0 25 12 34" fill="none" stroke="var(--rm-hi)" stroke-width=".9" opacity=".55"/>`,
+  // faceted ornaments
+  diamond:`<path d="M6 2 11 7.5 6 13 1 7.5Z"/><path d="M6 27 11 32.5 6 38 1 32.5Z"/>`+
+          `<path d="M1 7.5h10M1 32.5h10" fill="none" stroke="var(--rm-hi)" stroke-width=".8" opacity=".7"/>`,
+};
+function rankEmblemSVG(emblem){
+  const art=RANK_EMBLEM_ART[emblem];
+  return art?`<svg viewBox="0 0 24 24" aria-hidden="true">${art}</svg>`:'';
+}
+function rankOrnSVG(material){
+  const art=RANK_ORN_ART[material];
+  return art?`<svg viewBox="0 0 12 40" aria-hidden="true">${art}</svg>`:'';
+}
+/* The plaque's six decorative layers, shared by every place a nameplate
+   appears. Kept separate from rankNameplateHTML because the account hero
+   needs the DRESSING ONLY — its text content is a live <input> and a
+   title line that must survive being re-dressed (see #pv-plate-art). */
+function rankPlateDressHTML(setId){
+  const s=RANK_SET_BY_ID[setId];
+  if(!s) return '';
+  return rankArtImg(s.slug,'plate','plate')
+    +`<span class="rp-grain"></span><span class="rp-frame"></span>`
+    +`<span class="rp-side l">${rankOrnSVG(s.material)}</span>`
+    +`<span class="rp-side r">${rankOrnSVG(s.material)}</span>`
+    +`<span class="rp-em">${rankEmblemSVG(s.emblem)}</span>`
+    +`<span class="rp-foot"></span>`;
+}
 
 const rankArtMissing={};
 function rankArtSrc(slug,piece){ return `/ranks/${slug}/${piece}.webp`; }
@@ -5112,11 +5550,21 @@ function rankArtImg(slug,piece,cls){
   const key=slug+'/'+piece;
   if(rankArtMissing[key]) return '';
   return `<img class="rank-art ${cls||''}" src="${rankArtSrc(slug,piece)}" alt="" aria-hidden="true"`+
-         ` loading="lazy" onerror="rankArtFailed('${slug}','${piece}',this)"/>`;
+         ` loading="lazy" onload="rankArtLoaded(this)" onerror="rankArtFailed('${slug}','${piece}',this)"/>`;
 }
 function rankArtFailed(slug,piece,el){
   rankArtMissing[slug+'/'+piece]=true;
   if(el&&el.remove) el.remove();
+}
+// An exported plate is a COMPLETE plaque, so the CSS one has to get out of
+// its way rather than show through around it. A single z-index can't do
+// that (.rp-em/.rp-foot sit above .rp-text on purpose, so nothing can be
+// above them and below the text at once), hence a class that switches the
+// six CSS layers off. No-op for the badge piece, which isn't inside a
+// .rank-plate and whose art simply covers its own radial gradient.
+function rankArtLoaded(el){
+  const p=el.closest&&el.closest('.rank-plate');
+  if(p) p.classList.add('has-art');
 }
 // material is what the CSS keys off; everything below degrades to a
 // perfectly usable treatment with no art at all.
@@ -5127,8 +5575,8 @@ function rankMaterialOf(setId){
 function rankNameplateHTML(setId,extraCls){
   const s=RANK_SET_BY_ID[setId];
   if(!s) return '';
-  return `<span class="rank-plate ${extraCls||''}" data-material="${s.material}">`
-    +rankArtImg(s.slug,'plate','plate')
+  return `<span class="rank-plate ${extraCls||''}" data-material="${s.material}" data-emblem="${s.emblem}">`
+    +rankPlateDressHTML(setId)
     +`<span class="rp-text">${esc(s.tier)}</span></span>`;
 }
 // The table badge's fallback is the EXISTING rank medallion SVG rather
@@ -5369,19 +5817,32 @@ function renderHeroCosmetics(){
   c.classList.toggle('on',!!crestId);
 
   // Rank set: the frame is applied to the EXISTING avatar well (border +
-  // glow only, no geometry), and the nameplate sits between the name and
-  // the title. data-material is removed rather than blanked when there's
-  // no set, so the [data-material] defaults can't leak onto a guest.
-  const av=$('pv-avatar'),plate=$('pv-plate');
+  // glow only, no geometry), and the nameplate is the plaque BEHIND the
+  // name and title. data-material is removed rather than blanked when
+  // there's no set, so the [data-material] defaults can't leak onto a
+  // guest — and on the plate that attribute is the whole gate: without it
+  // every decorative layer stays display:none and what shows is the plain
+  // name + title (see .hero-plate in <style>).
+  const av=$('pv-avatar'),plate=$('pv-plate'),art=$('pv-plate-art');
   const setId=account&&eq?eq.rankSet:null;
+  const set=setId?RANK_SET_BY_ID[setId]:null;
   const mat=setId?rankMaterialOf(setId):null;
   if(av){
     av.classList.toggle('rank-framed',!!mat);
     if(mat) av.setAttribute('data-material',mat); else av.removeAttribute('data-material');
   }
   if(plate){
-    plate.innerHTML=setId?rankNameplateHTML(setId):'';
-    plate.style.display=setId?'block':'none';
+    if(mat){
+      plate.setAttribute('data-material',mat);
+      plate.setAttribute('data-emblem',set.emblem);
+    }else{
+      plate.removeAttribute('data-material');
+      plate.removeAttribute('data-emblem');
+    }
+    // Only the decoration is rewritten — #pv-name is a sibling of this
+    // node, not a child, so re-dressing the plaque can never clear the
+    // field or drop focus out of it mid-edit.
+    if(art) art.innerHTML=setId?rankPlateDressHTML(setId):'';
   }
 }
 

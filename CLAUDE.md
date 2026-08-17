@@ -262,10 +262,11 @@ before pushing.
   mistake:
   1. **Table screens** (pass/play) — bespoke, see the `--cw`/`--ch`
      furniture above.
-  2. **Rail screens** (casual, ranked, rank, statistics, My Account,
-     Daily Challenge) — narrow left rail of header chrome, body in
-     column 2. Daily Challenge takes these rules and then overrides the
-     column split to 50/50; see its own section.
+  2. **Rail screens** (casual, ranked, rank, statistics) — narrow left
+     rail of header chrome, body in column 2. Two screens take these
+     rules and then override the column split: Daily Challenge to 50/50,
+     and My Account to a single full-width column with **no rail at
+     all** — see each one's own section.
   3. **Game-flow screens** (lobby, seat draw / dealer cut, round
      summary, final) — a single wide centred column, *opted out* of the
      rail layout. Their content is wide and sequential (a row of drawn
@@ -302,11 +303,50 @@ before pushing.
   the generic chrome selector, and `.acct-layout` — the only *other*
   direct child of `.center-wrap` — already gets column 2, full height,
   scrollable, from the generic "everything else" rule. `#s-personal`'s
-  own landscape block only adds what's specific to it: making
-  `.acct-layout` itself a nested grid (hero rail | tab bar + panel), and
-  `position:sticky` on `.profile-hero` so it stays put while the panel
-  scrolls under it. The sticky works because it resolves against
-  `.acct-layout`'s own scroll (set by the generic rule), not the page's.
+  own landscape block then adds what's specific to it: the hero/panel
+  split below, and the theme cards' shorter swatch on a short viewport.
+- **In landscape My Account has NO rail — it's the one rail screen that
+  opts out of the rail itself**, and that's a deliberate correction, not
+  an oversight. Its content is *already* a two-column split (hero card |
+  tabs + panel), so nesting that inside the shared rail spent a 238px
+  column on nothing but the ‹ Menu button and squeezed both real columns
+  into what was left. Measured at 915×412: hero 220px, panel 352px, and a
+  238×370 hole beside them. Worse, at a larger Android font scale the
+  hero's own content (the account chip's username, the 1.4rem name)
+  exceeded its 220px, and `.acct-layout` — `overflow-y:auto`, which
+  **computes `overflow-x` to `auto` too** — grew a horizontal scrollbar
+  and clipped the theme cards and the Friends tab off the right edge.
+  That's the reported "doesn't fit in one screen" bug and its actual
+  cause.
+  So the outer grid collapses to a single column: `.screen-header` keeps
+  row 1, `.acct-layout` takes the full width of row 2. The hero lands hard
+  against the left edge under Menu and the panel gets the reclaimed 258px
+  (352 → 687px at 915×412), which is what puts the four theme cards in one
+  row (150px of height → 70px) and the five-tab customization strip
+  comfortably inside its column. Verified at 915×412 and 667×375, at
+  16/18/20px root font, on every tab: zero horizontal overflow anywhere.
+- Three consequences of that, all load-bearing:
+  - The **divider moves onto `.acct-main`**. The generic rail rule put the
+    indent, the border and the scroll on `.acct-layout`; with no rail
+    there, all three belong to the columns inside it.
+  - **The two halves scroll independently**, which is what retired the
+    hero's `position:sticky` — it was sticky against `.acct-layout`'s
+    scroll, and with each column owning its own overflow there is nothing
+    left for it to stick to. The hero is `overflow-y:auto` and
+    deliberately **not** `justify-content:center`: a scrollable box that
+    centres its content makes the top unreachable once it overflows, the
+    same trap the shared body-panel rule documents.
+  - `.profile-hero .acct-chip` needs `max-width:100%`. It's
+    `flex:0 0 auto;width:auto`, so its intrinsic width (a full username)
+    won over the column and was what actually overflowed — the ellipsis
+    on `.acct-chip-text` can only work once the pill is allowed to be
+    narrower than its content.
+- **The hero's name and title now live INSIDE the rank nameplate**
+  (`#pv-plate`, which is also `.rank-plate.lg`) rather than beside it —
+  the plaque is a decorative layer behind dynamic player text, per the
+  rank-cosmetics sheet. It is therefore always in the DOM; with no rank
+  set equipped it carries no `data-material` and renders as exactly the
+  bare name + title it was before. See the Rank cosmetics section.
 - **The Profile/Achievements/Friends tabs are `.acct-toptab`/
   `.acct-panel`, deliberately distinct from `.acct-tabs`/`.acct-tab`**,
   which is the *login/signup* pair inside the Profile panel's
@@ -1519,12 +1559,90 @@ before pushing.
   everything else. A rank is the same rank whatever table you're at, and
   the sheet specifies them as fixed materials — same reasoning that
   leaves card backs and `--ok`/`--warn` alone.
+- **SIX tokens per material, not four, and the split is the whole design.**
+  The plate's INTERIOR (`--rm-hi`→`--rm-lo`) and the frame METAL
+  (`--rm-edge`/`--rm-metal-hi`) are independent, because in the sheet six
+  of the eight tiers are a dark interior inside a bright metal frame — one
+  "material colour" can't drive both. `--rm-ink` is text on the interior;
+  `--rm-orn` is the ornament ink (emblem, corner pieces, inner hairline),
+  which follows the metal except where the sheet names a different stone
+  (obsidian's violet crystal, Legend's ice blue).
+  **The table badge and the avatar ring read the METAL, not the
+  interior** — deliberately. Keying them off the interior turned six of
+  the eight badges into a near-black dot on the felt, and 9px on a
+  `.tcap` is the one place a rank marker has to stay legible.
 - Nameplate ink is measured against BOTH ends of its gradient, not the
-  midpoint. Worst-case contrast: paper 7.03, ink 7.20, velvet 7.34,
-  royal 7.60, obsidian 8.60 — but brass 2.90, gold 3.21 and diamond 2.26
-  each failed at one end. Solved (not nudged) by walking the offending
-  stop toward black/white until the worse end cleared 4.5: brass 4.64,
-  gold 4.56, diamond 4.63. The five that passed are untouched.
+  midpoint, and after the palettes were retuned to the sheet's own colours
+  every one clears with room to spare rather than being nudged over the
+  line: paper 8.88/6.93, ink 8.30/12.12, velvet 7.75/13.48, brass
+  6.97/13.28, gold 11.86/14.43, royal 9.89/15.82, obsidian 10.50/14.11,
+  diamond 8.40/13.90.
+- **The nameplate is a Deco plaque in SIX layers, and one definition
+  serves all three sizes.** Metallic border (the element), textured
+  interior (`.rp-grain`), inner hairline + chamfered corners
+  (`.rp-frame`), mirrored side corner pieces (`.rp-side` ×2 — the same
+  SVG both sides, the right one flipped in CSS, which is what makes them
+  a mirrored pair rather than two pieces of art to keep in sync), a
+  top-centre emblem straddling the top edge (`.rp-em`) and a lower-centre
+  lozenge (`.rp-foot`). Sizes are four `--rp-*` numbers, so `.sm` / base
+  / `.lg` re-declare those and restate no rule.
+  **Deliberately NOT `clip-path`'d into chamfered corners**, tempting as
+  that is: the emblem and the foot both straddle the plate's edge on
+  purpose and a clip-path on the host cuts both off flush. The chamfer is
+  drawn by `.rp-frame`'s corner cuts instead.
+  Progression is material / palette / ornament / emblem only — the
+  silhouette is identical across all eight, which is the sheet's rule and
+  what makes them read as one set.
+- **`[data-material]` on the plate is the whole gate.** Without the
+  attribute every decorative layer stays `display:none` and the padding
+  drops to 0, so the same element is either a plaque or a bare wrapper.
+  That's what lets the account hero keep it in the DOM permanently.
+- **`rankPlateDressHTML` (decoration) is separate from
+  `rankNameplateHTML` (decoration + tier text) because the hero needs
+  the dressing only** — its content is a live `<input>` plus the title
+  line, per the sheet's "decorative layer behind dynamic player text".
+  `renderHeroCosmetics` rewrites `#pv-plate-art`, never `#pv-plate`, so
+  re-dressing the plaque can't clear the name field or drop focus out of
+  it mid-edit (verified: typed value and focus both survive an equip).
+- The picker thumbnail plates are a **fixed 100×34 with the tier text
+  hidden**. Sized to content the eight came out 68px ("Ace") to 111px
+  ("Grand Master") wide and looked like eight different objects; the tier
+  name is already the card's own `.cos-name` directly beneath. The thumb's
+  own backing is a wash of `--rm-edge` (the metal), not the interior
+  gradient — six near-black interiors gave six identical dark cells with
+  the plaque invisible against its own backing.
+- **Legend alone gets a shimmer, and only a restrained slow one** — the
+  sheet grants it to that tier and pointedly to no other. It lives on
+  `.rp-grain::after`, so it needs no seventh layer, and it has a
+  `prefers-reduced-motion` off-switch.
+- **Clair needed a correction and it's on the RING, not the plate.** The
+  materials are un-themed, so the only adaptable part is the outer ring
+  (built from `--ddp-scrim-rgb` for exactly this reason). Frame metal vs
+  the hero card it sits on measures bordeaux 5.1–11.8, émeraude 5.1–10.8,
+  marquee 5.9–12.4 — and Clair 1.2–2.6, with Novice the worst case of all
+  at 1.01 for its parchment interior, i.e. the whole plaque very nearly
+  disappears. The ring's alpha was walked up until it cleared 4.5 on BOTH
+  sides of the join: `.62` gives 4.32 vs the card and 4.36 vs the
+  parchment (from 1.95/1.97 at the shared `.32`). Warm ink at 62%, not
+  black, so it reads as an engraved edge.
+- **`input.hero-name-input`, not the bare class — this rule was inert for
+  its whole life.** The generic form rule is `input[type=text]` (0,1,1)
+  and sets the `font` SHORTHAND plus padding/border/background; a bare
+  `.hero-name-input` (0,1,0) lost that tie outright, so the hero name
+  rendered as an ordinary boxed 1rem DM Sans field instead of the 1.4rem
+  Playfair display name it was written to be. Qualifying with the element
+  type ties at (0,1,1) and this block is ~700 lines later, so source order
+  settles it. `:focus` and `::placeholder` need the same treatment (their
+  generic counterparts carry the extra pseudo too). Same family as
+  `.theme-swatch-btn`/`.theme-card` and the tabular-figures block.
+- **The brief's own asset IDs and paths were NOT adopted**
+  (`rank_nameplate_novice`, `public/assets/cosmetics/rank/nameplates/`).
+  The registry already ships `rank_<slug>` with art at
+  `public/ranks/<slug>/plate.webp`, that ID is what's persisted in
+  `player_cosmetics.rank_set`, and its own "extend the existing
+  persistence mechanism" instruction is the one that governs. `rankSet`
+  IS the brief's `rankNameplate`. **`server.js` and `db.js` are untouched
+  by this** — the whole feature was already wired server-side.
 - **The emblem art is not in the repo yet.** Each piece renders its CSS
   treatment and layers `public/ranks/<slug>/{frame,plate,badge}.webp` on
   top *if the file exists*. `rankArtMissing` records a 404 per
@@ -1578,11 +1696,19 @@ before pushing.
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across
   two match lengths would fragment a ranked population that isn't large
   enough yet)
-- **The rank emblem artwork — nameplate and table badge only.** The
-  system is fully wired and shipping on its CSS treatment for those two
-  pieces; drop exported files at `public/ranks/<slug>/{plate,badge}.webp`
-  and they appear with no code change. See the Rank cosmetics section
-  for the slugs and the one-404-per-piece loading contract.
+- **The rank emblem artwork — nameplate and table badge only, and this is
+  now a genuine "nice to have" rather than a gap.** The nameplates have
+  been built out to the reference sheet's full geometry in CSS + inline
+  SVG (six layers, per-tier emblem and mirrored corner pieces — see the
+  Rank cosmetics section), so an exported 1000×250 plate would be a
+  refinement of something already finished, not the thing that makes it
+  work. The loading contract is unchanged: drop files at
+  `public/ranks/<slug>/{plate,badge}.webp` and they layer over the CSS
+  treatment with no code change, one 404 per piece per session.
+  Note the exported art lands `object-fit:contain` on top of the CSS
+  plaque, which still draws underneath it — if a plate image is ever
+  supplied it should be authored to cover the whole plaque, or the CSS
+  emblem and corner pieces will show through around it.
   **Correction to that section's own file-path note:** it names a third
   piece, `frame.webp`, but no `rankArtImg(slug,'frame',…)` call exists
   anywhere — `.rank-framed` is CSS-only (a border/glow ring on the

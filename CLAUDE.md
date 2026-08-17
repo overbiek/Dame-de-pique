@@ -91,11 +91,19 @@ before pushing.
   *anyone* is on moon pace (`moonPaceOwner(G) === -1` is the only
   active case), because deliberately taking a dirty trick can be the
   one move that breaks an opponent's run, mirroring `heuristicChoose`'s
-  own `oppMoonPace` handling for hearts specifically; always lead a
-  held A♦/A♣ on trick 1. `heuristicChoose`'s leading branch mirrors the
-  same "don't lead A♠/K♠ while she's still out there" restriction
-  independently, since it's also used as the Monte Carlo rollout policy
-  and as the exception-fallback for the live decision — both bypass
+  own `oppMoonPace` handling for hearts specifically; never *lead* the
+  queen herself unless we're the sole moon-pace owner AND hold both
+  A♠/K♠ (so nothing beats her — she comes straight back to us, which is
+  the point when chasing +60); on a genuinely free void discard (we
+  hold none of the led suit, so whatever we play can never win this
+  trick), always play the queen or a heart over a safe card — permanent,
+  zero-risk downside removal, skipped only if it would hand the trick's
+  win to an uncontested moon-pace opponent, same `feedsPace` idea
+  `heuristicChoose` already used; always lead a held A♦/A♣ on trick 1.
+  `heuristicChoose`'s leading branch mirrors the same "don't lead
+  A♠/K♠, don't lead the queen" restrictions independently, since it's
+  also used as the Monte Carlo rollout policy and as the
+  exception-fallback for the live decision — both bypass
   `applyHardRules` entirely
 - `aiSelectPass` — its own hard filter, `neverPass`: never pass
   clubs≤J, hearts≤5, or spades≤J (the low/mid spades are the guards

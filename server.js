@@ -882,12 +882,13 @@ function samplesFor(numCandidates, trickNum) {
 // A thin hard-constraint layer applied only to the live decision (not the
 // rollout policy) — the few rules that should never be left to
 // probabilistic judgment: a free Ace on trick 1, never chasing with a
-// heart that isn't safe yet, never leading or overtaking with A♠/K♠
-// while the queen is still unaccounted for unless it's provably safe,
-// and never voluntarily winning a hearts trick when a losing heart is
-// available. Only ever narrows the candidate list, and only when a
-// legal alternative actually remains — a genuinely forced move is
-// always left untouched.
+// heart that isn't safe yet, never leading or overtaking with A♠/K♠ or
+// leading the queen herself while she's still unaccounted for unless
+// it's provably safe, never voluntarily winning a hearts trick when a
+// losing heart is available, and always dumping the queen/a heart
+// instead of a safe card on a genuinely free void discard. Only ever
+// narrows the candidate list, and only when a legal alternative
+// actually remains — a genuinely forced move is always left untouched.
 function applyHardRules(G, pi, legal) {
   const trick = G.currentTrick;
 
@@ -919,6 +920,22 @@ function applyHardRules(G, pi, legal) {
           pool = pool.filter(c => !topSpadeLeads.includes(c));
         }
       }
+    }
+
+    // Never lead the queen herself unless it's provably safe: we're the
+    // sole moon-pace owner AND also hold both A♠/K♠, so nothing in
+    // anyone else's hand can beat her — she wins the trick and comes
+    // straight back to us, which is the point when chasing +60.
+    // Otherwise leading her is a coin flip on whoever else is still
+    // holding spades; Monte Carlo can and does get this wrong on a thin
+    // sample (this mirrors heuristicChoose's own amMoonPace+haveTopTwo
+    // exception exactly, so both paths agree on when it's safe).
+    const qsLead = pool.find(c => c.suit === '♠' && c.rank === 'Q');
+    if (qsLead && pool.length > 1) {
+      const spadesHeld = G.players[pi].hand.filter(c => c.suit === '♠');
+      const haveTopTwo = spadesHeld.some(c => c.rank === 'A') && spadesHeld.some(c => c.rank === 'K');
+      const safeToLeadQueen = moonPaceOwner(G) === pi && haveTopTwo;
+      if (!safeToLeadQueen) pool = pool.filter(c => c !== qsLead);
     }
 
     return pool;
@@ -965,6 +982,29 @@ function applyHardRules(G, pi, legal) {
       const winners = heartsHeld.filter(c => RV[c.rank] > RV[highHeartInTrick.card.rank]);
       if (winners.length && winners.length < heartsHeld.length) {
         return legal.filter(c => !winners.includes(c));
+      }
+    }
+  }
+
+  // Void in the led suit: a genuinely free discard — whatever we play
+  // here can never win this trick (only cards of the led suit can), so
+  // dumping the queen or a heart we're holding costs nothing right now
+  // and permanently removes the risk of being forced to give it up
+  // later into a trick we DO win. Skip if we're on moon pace ourselves
+  // (protect them instead — Monte Carlo already handles that correctly
+  // given how large the EV swing is) or if dumping now would hand this
+  // exact trick's win to whoever's already on an uncontested moon pace.
+  const isVoidInLed = trick.length > 0 && !legal.some(c => c.suit === led);
+  if (isVoidInLed && moonPaceOwner(G) !== pi) {
+    const moonOwner = moonPaceOwner(G);
+    const iAmLast = trick.length === 3;
+    const highSoFar = [...trick].filter(t => t.card.suit === led)
+      .sort((a, b) => RV[b.card.rank] - RV[a.card.rank])[0];
+    const feedsPace = moonOwner !== -1 && iAmLast && highSoFar && highSoFar.player === moonOwner;
+    if (!feedsPace) {
+      const dangerous = legal.filter(c => (c.suit === '♠' && c.rank === 'Q') || c.suit === '♥');
+      if (dangerous.length && dangerous.length < legal.length) {
+        return dangerous;
       }
     }
   }

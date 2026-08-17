@@ -1182,16 +1182,23 @@ const ACHIEVEMENTS = [
 // no free entry on purpose: an unequipped crest/title is simply nothing
 // shown, which is a valid state, whereas an unequipped scene would leave
 // the table with no background at all.
+// TEMPORARY: every scene's unlock is null (always-available) rather than
+// its real achievement gate below, so the 8 real photos that just landed
+// in public/scenes/ are actually choosable and previewable before the
+// coin-purchase system exists. Restore the commented-out `unlock` value
+// on each once purchasing (or the achievement grind) is the intended
+// gate again — `!c.unlock || done.has(c.unlock)` in cosmeticsFor is the
+// only place that reads this.
 const COSMETICS = {
   scenes: [
-    { id: 'scene_velvet_room',   name: 'The Velvet Room',  unlock: null },
-    { id: 'scene_rooftop',       name: 'The Rooftop',      unlock: 'ach_observer' },
-    { id: 'scene_grand_library', name: 'The Grand Library', unlock: 'ach_card_master' },
-    { id: 'scene_winter_casino', name: 'The Winter Casino', unlock: 'ach_the_house' },
-    { id: 'scene_moon_room',     name: 'The Moon Room',    unlock: 'ach_moon_chaser' },
-    { id: 'scene_garden',        name: 'The Garden',       unlock: 'ach_heartbreaker' },
-    { id: 'scene_train',         name: 'The Train',        unlock: 'ach_the_dealer' },
-    { id: 'scene_observatory',   name: 'The Observatory',  unlock: 'ach_high_roller' },
+    { id: 'scene_velvet_room',   name: 'The Velvet Room',  unlock: null }, // always free
+    { id: 'scene_rooftop',       name: 'The Rooftop',      unlock: null }, // was: 'ach_observer'
+    { id: 'scene_grand_library', name: 'The Grand Library', unlock: null }, // was: 'ach_card_master'
+    { id: 'scene_winter_casino', name: 'The Winter Casino', unlock: null }, // was: 'ach_the_house'
+    { id: 'scene_moon_room',     name: 'The Moon Room',    unlock: null }, // was: 'ach_moon_chaser'
+    { id: 'scene_garden',        name: 'The Garden',       unlock: null }, // was: 'ach_heartbreaker'
+    { id: 'scene_train',         name: 'The Train',        unlock: null }, // was: 'ach_the_dealer'
+    { id: 'scene_observatory',   name: 'The Observatory',  unlock: null }, // was: 'ach_high_roller'
   ],
   cardFronts: [
     { id: 'cardfront_standard',    name: 'Classic',     unlock: null },

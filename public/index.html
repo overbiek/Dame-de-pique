@@ -1578,11 +1578,17 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 /* ══════════════════════════════════════════════════════════════
    SCENES — cosmetic table backgrounds
    ══════════════════════════════════════════════════════════════
-   Pure CSS gradient compositions, no image assets. That's a deliberate
-   choice, not a stopgap: this is a phone PWA whose service worker
-   pre-caches its assets, and eight full-bleed photographic backgrounds
-   would dwarf everything else it ships. Gradients also scale to any
-   viewport with no art direction problem and cost nothing to load.
+   Pure CSS gradient compositions — the permanent fallback, not a
+   stopgap that image support replaced: eight full-bleed photographic
+   backgrounds would dwarf everything else this PWA installs with, so
+   they're deliberately NOT in sw.js's eager ASSETS list. A photo now
+   layers on top the moment public/scenes/<slug>.webp exists (see
+   sceneArtImg near SCENE_IDS, and .scene-art-img below) — runtime-
+   cached on first load like the 20 portrait avatars, same "art is a
+   pure upgrade, the CSS treatment ships and works today" contract as
+   the rank cosmetics. Gradients still scale to any viewport with no
+   art direction problem, which is exactly what makes them the right
+   permanent fallback rather than a placeholder to delete later.
 
    ONE definition serves two very different sizes — the full-screen
    #scene-layer and the 52px picker thumbnail — because every stop is a
@@ -1599,6 +1605,15 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   background:radial-gradient(58% 46% at 50% 52%,rgba(var(--ddp-scrim-rgb),.78) 0%,
              rgba(var(--ddp-scrim-rgb),.45) 45%,transparent 78%);
   z-index:2;
+}
+/* the exported photo, when public/scenes/<slug>.webp exists, sits between
+   the CSS gradient/texture (::before, z-index:auto) and the readability
+   scrim above (::after, z-index:2) — same layering intent as .rank-art,
+   photo is a pure upgrade over the permanent CSS fallback, never a
+   replacement for the scrim that protects card contrast. */
+.scene-art-img{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;object-position:center;z-index:1;pointer-events:none;
 }
 
 /* 4.1 The Velvet Room — bordeaux curtains, brass lamps, dark wood */
@@ -4152,12 +4167,41 @@ const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court'];
 // readable in devtools ("royal_court", not the full ID).
 const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court'};
 
+/* ── scene art loading ──
+   Exact mirror of the RANK COSMETICS art-loading contract below
+   (rankArtImg/rankArtMissing/rankArtFailed): the CSS gradient is the
+   permanent fallback, a photo layers on top the moment the file exists
+   at public/scenes/<slug>.webp, and a missing file costs exactly one
+   404 per scene for the session rather than one per render. Only ONE
+   piece per scene (not frame/plate/badge like rank sets), so no
+   per-slug subfolder — a flat file is enough. Not added to sw.js's
+   ASSETS: same reasoning as the 20 portrait avatars, runtime-cached on
+   first use rather than pulled into the install-time cache. */
+const sceneArtMissing={};
+function sceneArtSlug(id){ return id.replace(/^scene_/,''); }
+function sceneArtSrc(id){ return `/scenes/${sceneArtSlug(id)}.webp`; }
+function sceneArtImg(id){
+  if(sceneArtMissing[id]) return '';
+  return `<img class="scene-art-img" src="${sceneArtSrc(id)}" alt="" aria-hidden="true"`+
+         ` loading="lazy" onerror="sceneArtFailed('${id}',this)"/>`;
+}
+function sceneArtFailed(id,el){
+  sceneArtMissing[id]=true;
+  if(el&&el.remove) el.remove();
+}
+
 let equippedScene=DEFAULT_SCENE, equippedCardFront=DEFAULT_CARDFRONT;
 
 function applyScene(id,persist){
   equippedScene=SCENE_IDS.includes(id)?id:DEFAULT_SCENE;
   const el=$('scene-layer');
-  if(el) el.setAttribute('data-scene',equippedScene);
+  if(el){
+    el.setAttribute('data-scene',equippedScene);
+    // Pseudo-elements (::before/::after) aren't real children, so this
+    // can't clobber them — safe to just replace whatever real content
+    // (the previous scene's <img>, if any) was here.
+    el.innerHTML=sceneArtImg(equippedScene);
+  }
   if(persist!==false){ try{ localStorage.setItem(SCENE_KEY,equippedScene); }catch(e){} }
 }
 function applyCardFront(id,persist){
@@ -5202,7 +5246,7 @@ function renderCosmeticPanels(){
   panels.scene.innerHTML=
     secLabel('Backgrounds',catalog.scenes)+
     `<div class="cos-grid">${catalog.scenes.map(s=>
-      cosItemHTML('scene',s,'',equipped.scene)).join('')}</div>`+
+      cosItemHTML('scene',s,sceneArtImg(s.id),equipped.scene)).join('')}</div>`+
     `<p class="pick-hint">Backgrounds appear behind the table while you play.</p>`;
 
   panels.cards.innerHTML=

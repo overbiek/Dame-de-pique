@@ -1578,11 +1578,31 @@ before pushing.
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across
   two match lengths would fragment a ranked population that isn't large
   enough yet)
-- **The rank emblem artwork** (8 sets × frame/nameplate/table badge).
-  The system is fully wired and shipping on its CSS treatment; drop
-  exported files at `public/ranks/<slug>/{frame,plate,badge}.webp` and
-  they appear with no code change. See the Rank cosmetics section for
-  the slugs and the one-404-per-piece loading contract.
+- **The rank emblem artwork — nameplate and table badge only.** The
+  system is fully wired and shipping on its CSS treatment for those two
+  pieces; drop exported files at `public/ranks/<slug>/{plate,badge}.webp`
+  and they appear with no code change. See the Rank cosmetics section
+  for the slugs and the one-404-per-piece loading contract.
+  **Correction to that section's own file-path note:** it names a third
+  piece, `frame.webp`, but no `rankArtImg(slug,'frame',…)` call exists
+  anywhere — `.rank-framed` is CSS-only (a border/glow ring on the
+  existing avatar well), so dropping a frame image in would currently do
+  nothing. Wire a fourth `rankArtImg` call before shipping frame art.
+- **Scene backgrounds — now wired, same contract as the rank art
+  above.** Drop `public/scenes/<slug>.webp` (slug = the scene id with
+  its `scene_` prefix stripped, e.g. `velvet_room`) and it layers over
+  that scene's CSS gradient with no code change — `sceneArtImg`/
+  `sceneArtMissing` near `SCENE_IDS`, `.scene-art-img` in `<style>`.
+  Serves both the full-screen `#scene-layer` and the 52px picker
+  thumbnail from the same file via `object-fit:cover`, so source art
+  should be composed to survive both a tall-portrait/wide-landscape
+  full-bleed crop AND a short wide strip — a roughly square source
+  (~1200-1400px) with the important detail concentrated in the center
+  ~60-70% is the safest bet against all three crops. Keep the true
+  center calm regardless (cards render on top; the shared `::after`
+  scrim darkens it but doesn't replace good composition). Not added to
+  `sw.js`'s `ASSETS` — runtime-cached on first use, same as the 20
+  portrait avatars.
 - The other four card-front collections (Noir, Emerald, Occult, Grand
   Hotel) — the brief explicitly scopes this to Royal Court only.
 

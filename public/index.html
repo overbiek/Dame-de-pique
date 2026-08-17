@@ -783,9 +783,15 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .or::before,.or::after{content:'';flex:1;height:1px;background:var(--line)}
 .row{display:flex;gap:8px}
 .row .grow{flex:1;min-width:0}
-.backlink{display:inline-block;margin-bottom:18px}
+/* display:inline-block used to leave this centered inside .center-wrap's
+   text-align:center in portrait — Rank's backlink only ever looked right
+   because it happens to sit inside the flex .screen-header below, which
+   left-aligns it regardless. block + fit-content + margin-right:auto
+   pins it to the start the same way, independent of the parent's
+   text-align, in both portrait and the landscape rail. */
+.backlink{display:block;width:fit-content;margin:0 auto 18px 0}
 .screen-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-.screen-header .backlink{margin-bottom:0}
+.screen-header .backlink{margin:0}
 .info-circle-btn{
   flex-shrink:0;width:30px;height:30px;border-radius:50%;
   border:1px solid var(--line);background:rgba(var(--ddp-scrim-rgb),.25);color:var(--gold-hi);
@@ -3108,14 +3114,19 @@ html.landscape-mode #tutorial-callout{
 <!-- ═══ FINAL ═══ -->
 <section id="s-final" class="screen">
   <div class="center-wrap" style="padding-top:2vh;max-width:480px;text-align:left">
-    <h2>Final standings</h2>
+    <h2 id="f-title">Final standings</h2>
     <div id="f-body"></div>
     <div id="f-ranked" style="display:none"></div>
     <!-- Same slot pattern as #f-ranked: the podium and scoresheet above are
          mode-agnostic, so a Daily Challenge only needs its own result
-         block underneath rather than a whole separate screen. -->
+         block underneath rather than a whole separate screen. A Daily
+         Challenge is solo against three AI, so the 4-player podium/
+         scoresheet above it is hidden entirely (see renderFinal) rather
+         than showing a "standing" that doesn't mean anything — the real
+         comparison is the leaderboard back on #s-daily, not this table. -->
     <div id="f-daily" style="display:none"></div>
-    <button class="btn btn-ghost btn-block" style="margin-top:14px" onclick="newGame()">New game</button>
+    <button class="btn btn-ghost btn-block" id="f-newgame" style="margin-top:14px" onclick="newGame()">New game</button>
+    <button class="btn btn-ghost btn-block" id="f-daily-return" style="display:none;margin-top:14px" onclick="goDaily()">Back to Daily Challenge</button>
   </div>
 </section>
 
@@ -5128,21 +5139,37 @@ function renderSummary(G){
 let finalFxPlayed=false;
 function renderFinal(G){
   show('final');
+  const isDaily=!!G.daily;
   const rows=G.players.map((p,i)=>({...p,i})).sort((a,b)=>b.score-a.score);
-  let h='<div class="podium">';
-  rows.forEach((p,n)=>{
-    h+=`<div class="pod ${n===0?'win':''}">
-      ${n===0?'<div class="crown">winner</div>':''}
-      <div class="n">${p.score}</div>
-      <div class="who">${esc(p.name)}${p.i===me?' (you)':''}${p.isAI?' · AI':''}</div>
-    </div>`;
-  });
-  h+='</div>'+sheetHTML(G);
-  $('f-body').innerHTML=h;
+
+  // Daily is solo against three AI — a "final standings" podium against
+  // opponents who don't matter isn't the comparison that means anything
+  // here, so it's hidden entirely in favor of #f-daily's own score card
+  // (renderDailyResult) and a button straight back to the real
+  // comparison: the leaderboard on #s-daily.
+  $('f-title').style.display=isDaily?'none':'block';
+  $('f-newgame').style.display=isDaily?'none':'block';
+  $('f-daily-return').style.display=isDaily?'block':'none';
+  if(isDaily){
+    $('f-body').style.display='none';
+    $('f-body').innerHTML='';
+  }else{
+    $('f-body').style.display='block';
+    let h='<div class="podium">';
+    rows.forEach((p,n)=>{
+      h+=`<div class="pod ${n===0?'win':''}">
+        ${n===0?'<div class="crown">winner</div>':''}
+        <div class="n">${p.score}</div>
+        <div class="who">${esc(p.name)}${p.i===me?' (you)':''}${p.isAI?' · AI':''}</div>
+      </div>`;
+    });
+    h+='</div>'+sheetHTML(G);
+    $('f-body').innerHTML=h;
+  }
   // A non-daily game must never inherit the previous game's daily card.
   // (The dailyResult event can land either side of this render, so the
   // block is only ever cleared here, never populated.)
-  if(!G.daily) $('f-daily').style.display='none';
+  if(!isDaily) $('f-daily').style.display='none';
   clearSession();
 
   if(!finalFxPlayed){

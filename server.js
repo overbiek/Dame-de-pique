@@ -2614,14 +2614,14 @@ io.on('connection', (socket) => {
   // all are re-derived here, so a crafted message can't buy a crest, buy a
   // rank set, or set its own price.
   socket.on('buyCosmetic', async ({ token, itemId }) => {
-    if (!DB_ENABLED || !token) return socket.emit('shopError', { msg: 'Accounts aren't set up on this server yet.' });
+    if (!DB_ENABLED || !token) return socket.emit('shopError', { msg: "Accounts aren't set up on this server yet." });
     try {
       const account = await db.findAccountByToken(token);
       if (!account) return socket.emit('shopError', { msg: 'Your session expired — log in again.' });
       // Only the two purchasable categories are even searched, so an id
       // from any other category simply isn't found.
       const item = [...COSMETICS.scenes, ...COSMETICS.cardFronts].find(c => c.id === itemId);
-      if (!item || !item.price) return socket.emit('shopError', { msg: 'That item isn't for sale.' });
+      if (!item || !item.price) return socket.emit('shopError', { msg: "That item isn't for sale." });
       const res = await db.purchaseItem(account.id, item.id, item.price);
       if (!res.ok) {
         return socket.emit('shopError', {

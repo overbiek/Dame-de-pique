@@ -243,17 +243,34 @@ before pushing.
   pass-transition fx pattern it otherwise resembles. Rocket launches
   from the shooting player's actual seat position via `seatOf()`.
   Purely decorative/emoji-based (🌕/🚀), no new image assets.
-- **The game is landscape-only.** `manifest.json` is
+- **The game is landscape-only, and now ENFORCED.** `manifest.json` is
   `"orientation":"landscape"` and `applyOrientationLock()` requests a
   landscape lock on every screen. Both are best-effort — the lock works
   reliably only in an installed standalone Android Chrome PWA, and
   Android bakes the manifest orientation into the WebAPK at *install*
   time, so an already-installed copy must be reinstalled before it takes
-  effect.
+  effect. **A real player hit exactly that gap and could not reach the
+  game at all**, which is what `#rotate-gate` is for: a full-bleed
+  overlay shown by a bare `@media (orientation:portrait)` query.
+  - **CSS, not JS, deliberately.** A JS gate can fall out of sync with
+    the CSS that lays the app out, and this is the one thing that must
+    never be wrong. It is also correct on the very first frame, before
+    any script runs.
+  - `z-index:9500` clears `#splash` (9000), so a portrait cold start is
+    gated instead of showing the brand splash and then the gate.
+  - Unlike the splash it **does** take pointer events — blocking
+    interaction is the point. That costs nothing: the Web Audio unlock
+    rides the first `pointerdown` *after* the player rotates, by which
+    time the gate is gone.
+  - Verified: full-bleed at 412×915 and 320×568, all three hit-test
+    probes land inside the gate (nothing underneath is reachable), and
+    rotating back to landscape releases it and leaves the app
+    interactive.
 - **The portrait CSS is deliberately still there** and is not dead code.
-  It's the base layer the `html.landscape-mode` rules override, and it's
-  the fallback that renders when the orientation lock silently fails (a
-  plain browser tab, iOS, an OS-level rotation lock). That's also why
+  It's the base layer the `html.landscape-mode` rules override. It is no
+  longer reachable as a *fallback* on a phone, though — `#rotate-gate`
+  now covers portrait entirely — so treat it as the cascade's base layer
+  only, not as a layout anyone will see. That's also why
   `isLandscapeModeActive()` still gates on `matchMedia` rather than
   being forced to `true`: painting a wide, short layout into a tall,
   narrow viewport would clip it into uselessness. A verbatim copy of the
@@ -440,10 +457,15 @@ before pushing.
   667×375 (the smallest realistic landscape phone). If a seventh tile is
   ever added, re-measure — the budget is genuinely spent.
   Three things there are load-bearing:
-  - The tagline's grid row is the `1fr` one. That's what pushes the
-    utility group to the bottom of the rail — an `auto` margin can't,
-    because on a grid item auto margins only absorb space inside that
-    item's own area and don't move siblings.
+  - **Row 5 is the `1fr` one, not the tagline's row 3.** That's what
+    keeps the credits box tucked directly under the tagline while still
+    pushing the utility group to the foot of the rail — the same swap
+    `#casual-chip` needed on Casual Play. An `auto` margin can't do
+    either job, because on a grid item auto margins only absorb space
+    inside that item's own area and don't move siblings. Every rail
+    child now has an **explicit** `grid-row`, because the `1fr` spacer
+    sits mid-rail and auto-placement would drop whichever element came
+    next straight into it.
   - `.exit-row`'s `margin-top` needs `!important`: the menu markup
     carries an inline `style="margin-top:22px"`, which no normal
     stylesheet rule can beat, and this layout is deliberately CSS-only.
@@ -631,6 +653,34 @@ before pushing.
   the inner `.card` is invisible to sibling slots outside that
   context — same reason the pre-existing `.tap:active`/`.sel` z-index
   boosts already use the same `:has()` pattern on the parent slot.
+
+## Seat draw & dealer cut (`#s-draw`)
+- The last two screens still drawing their own ad-hoc card (a rounded box
+  with a `🂠` glyph and the rank stacked over the suit). They now render
+  as **real cards**: the same face gradient, edge and ink as the table,
+  and the *same blue back* opponents' cards use — so a draw card reads as
+  a card from this deck rather than a placeholder.
+- **The name is a caption UNDERNEATH (`.dcw`), not printed on the card
+  face.** That's what a real cut looks like, and it stops a long name
+  fighting the rank for the same space — the old `.dcn` was capped at
+  66px and ellipsised inside the card.
+- **One number drives the whole thing: `--dc`**, so every part (radius,
+  corner index, centre pip, inset hairline, caption width) scales
+  together. Sized `clamp(56px, min(16vw,11vh), 86px)` in portrait and
+  `clamp(48px,15vh,82px)` in landscape — **clamped against BOTH axes on
+  purpose**: landscape here is *short* rather than narrow (~375px tall on
+  the tightest phone), so a width-only clamp overflowed vertically.
+- The face-down card the player can still turn gets a pulsing brass ring
+  (`prefers-reduced-motion` off-switch); the winning cut gets a brass
+  ring plus a lift, so which card took it reads at a glance without the
+  note underneath.
+- **The dealer's card carries the physical `D` button** — reusing
+  `.dealer-badge` rather than inventing a second marker — and only once
+  the cut is settled (`drawRound === 2 && phase === 'drawDone'`). During
+  round 1 there is no dealer yet, and mid-cut it isn't known.
+- Verified at 915×412 and 667×375 at 16/18/20px root font, in all three
+  states (unrevealed / seats settled / dealer settled): no overflow on
+  any axis, and the Begin button and exit row stay on screen.
 
 ## Table themes (Bordeaux / Émeraude / Clair / Marquee)
 - Four swappable palettes, picked in **My Account** (`#s-personal`),

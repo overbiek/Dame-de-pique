@@ -1506,6 +1506,49 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 .unlock-pop .up-sub{font-size:.66rem;color:var(--muted);margin-top:1px}
 
 /* ══════════════════════════════════════════════════════════════
+   LANDSCAPE GATE — the app is landscape-only, enforced
+   ══════════════════════════════════════════════════════════════
+   manifest.json's "orientation":"landscape" and applyOrientationLock()
+   are both BEST-EFFORT: the lock only works in an installed standalone
+   Android PWA, Android bakes the manifest value into the WebAPK at
+   install time, and an OS-level rotation lock beats both. So a player
+   could — and did — end up staring at the portrait layout with no way to
+   reach the real game. This is the backstop that makes landscape-only
+   actually true rather than merely requested.
+
+   Pure CSS on the orientation media query on purpose. A JS gate can fall
+   out of sync with the CSS that lays the app out, and this is the one
+   thing that must never be wrong. It also means it is correct on the
+   very first frame, before any script runs.
+
+   z-index clears #splash (9000) so a portrait cold start is gated
+   instead of showing the brand splash and then the gate. Unlike the
+   splash this one DOES take pointer events — blocking interaction is the
+   point — which costs nothing, because the Web Audio unlock rides the
+   first pointerdown after the player rotates and the gate is gone. */
+#rotate-gate{
+  display:none;
+  position:fixed;inset:0;z-index:9500;
+  flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  padding:24px;text-align:center;
+  background:radial-gradient(120% 90% at 50% 18%,var(--felt-0),var(--ddp-bg) 78%);
+  color:var(--cream);
+}
+@media (orientation:portrait){ #rotate-gate{display:flex} }
+.rg-icon{width:74px;height:74px;color:var(--gold-hi)}
+.rg-icon svg{width:100%;height:100%;display:block;fill:none;
+  stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+/* the phone tips over, which says "rotate" faster than the copy does */
+.rg-icon svg .rg-phone{transform-origin:32px 32px;animation:rg-turn 2.8s ease-in-out infinite}
+@keyframes rg-turn{0%,32%{transform:rotate(0deg)}62%,100%{transform:rotate(-90deg)}}
+@media (prefers-reduced-motion:reduce){
+  .rg-icon svg .rg-phone{animation:none;transform:rotate(-90deg)}
+}
+.rg-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:600;color:var(--gold-hi)}
+.rg-sub{font-size:.86rem;color:var(--muted);max-width:34ch;line-height:1.55}
+.rg-hint{font-size:.72rem;color:var(--faint);max-width:34ch;line-height:1.5}
+
+/* ══════════════════════════════════════════════════════════════
    CREDITS — the chip mark and its surfaces
    ══════════════════════════════════════════════════════════════
    The chip is INLINE SVG built from the theme's own gold and felt
@@ -2282,24 +2325,80 @@ html[data-cardfront="royal_court"] .card[data-r="K"]:not(.back)::before{
 .mini-btn.on{background:rgba(108,182,255,.26);border-color:rgba(108,182,255,.55)}
 
 /* ══ Draw ══ */
-.drawrow{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:20px 0}
-.drawcard{
-  width:clamp(62px,17vw,78px);aspect-ratio:.72;border-radius:12px;
-  display:grid;place-items:center;text-align:center;
-  border:1.5px solid rgba(var(--ddp-brass-rgb),.30);background:rgba(var(--ddp-scrim-rgb),.24);
-  box-shadow:0 4px 12px rgba(var(--ddp-scrim-rgb),.3);transition:transform .18s,box-shadow .18s;
+/* ── seat draw / dealer cut ──
+   These two steps were the last screens still drawing their own ad-hoc
+   card: a rounded box with a 🂠 glyph and the rank stacked over the suit
+   in the middle. They now render as REAL cards — the same face gradient,
+   edge, ink and blue back the table uses — with the name as a caption
+   UNDERNEATH rather than printed on the card face, which is both what a
+   real cut looks like and what lets the name have room to breathe.
+
+   Sizing is driven by --dc, one number, clamped against BOTH axes:
+   landscape here is short rather than narrow (the whole screen is ~375px
+   tall on the tightest phone) so a width-only clamp overflowed vertically.
+   min() against vh is what keeps four cards plus caption inside it. */
+.drawrow{
+  display:flex;gap:clamp(8px,2.4vw,18px);justify-content:center;align-items:flex-start;
+  flex-wrap:wrap;margin:18px 0;
+  --dc:clamp(56px,min(16vw,11vh),86px);
 }
-.drawcard.tap{cursor:pointer;border-color:var(--gold);box-shadow:0 0 0 3px rgba(var(--ddp-brass-rgb),.16)}
-.drawcard.tap:active{transform:translateY(-5px)}
-.drawcard.flip{background:linear-gradient(158deg,var(--ddp-card-hi),var(--card-face));border-color:var(--card-edge);color:var(--ink)}
-.drawcard.win{border-color:var(--gold);border-width:2px;box-shadow:0 0 20px rgba(var(--ddp-brass-rgb),.35)}
-.dcr{font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700}
-.dcs{font-size:1.5rem;line-height:1}
-.dcn{font-size:.62rem;color:var(--faint);margin-top:3px;max-width:66px;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap}
-/* sits ON a card face, so it reads off the ink colour of the card, not
-   the felt's muted colour */
-.drawcard.flip .dcn{color:rgba(var(--ddp-spade-rgb),.62)}
+.dcw{display:flex;flex-direction:column;align-items:center;gap:7px;position:relative}
+.drawcard{
+  position:relative;width:var(--dc);aspect-ratio:.7;border-radius:calc(var(--dc)*.11);
+  display:grid;place-items:center;text-align:center;
+  border:1px solid var(--card-edge);
+  box-shadow:0 5px 14px rgba(var(--ddp-scrim-rgb),.42);
+  transition:transform .2s cubic-bezier(.2,.9,.3,1.2),box-shadow .2s;
+  /* face down: the SAME blue back the table's opponents' cards use, so a
+     draw card reads as a card from this deck rather than a placeholder */
+  background:
+    repeating-linear-gradient(45deg,rgba(var(--ddp-gloss-rgb),.09) 0 3px,transparent 3px 6px),
+    linear-gradient(160deg,#1d5e8a,#123f5e);
+  border-color:#0d2f47;
+}
+/* the back's inset hairline, so it isn't a flat rectangle of blue */
+.drawcard::after{
+  content:'';position:absolute;inset:5px;border-radius:calc(var(--dc)*.07);
+  border:1px solid rgba(var(--ddp-gloss-rgb),.20);pointer-events:none;
+}
+.drawcard.tap{cursor:pointer}
+.drawcard.tap::before{
+  content:'';position:absolute;inset:-4px;border-radius:calc(var(--dc)*.15);
+  border:2px solid var(--gold);opacity:.9;
+  animation:dc-pulse 1.6s ease-in-out infinite;
+}
+@keyframes dc-pulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.03)}}
+@media (prefers-reduced-motion:reduce){ .drawcard.tap::before{animation:none;opacity:.9} }
+.drawcard.tap:active{transform:translateY(-6px) scale(1.03)}
+/* face up: a real card face, corner index + big centre pip */
+.drawcard.flip{
+  background:linear-gradient(158deg,var(--ddp-card-hi),var(--card-face) 55%,var(--ddp-card-lo));
+  border-color:var(--card-edge);color:var(--ink);
+}
+.drawcard.flip::after{border-color:rgba(var(--ddp-spade-rgb),.10)}
+.dc-ix{
+  position:absolute;top:calc(var(--dc)*.06);left:calc(var(--dc)*.08);
+  font-family:'Playfair Display',serif;font-weight:700;line-height:.95;
+  font-size:calc(var(--dc)*.20);text-align:left;
+}
+.dc-ix i{display:block;font-style:normal;font-size:calc(var(--dc)*.17)}
+.dc-pip{font-size:calc(var(--dc)*.42);line-height:1}
+/* the winning cut: brass ring plus a lift, so it reads at a glance which
+   card took it without needing the note underneath */
+.drawcard.win{
+  border-color:var(--gold);
+  box-shadow:0 0 0 2px var(--gold),0 0 22px rgba(var(--ddp-brass-rgb),.45),
+             0 8px 20px rgba(var(--ddp-scrim-rgb),.45);
+  transform:translateY(-5px);
+}
+.dcn{
+  font-size:clamp(.58rem,1.6vh,.72rem);color:var(--muted);text-align:center;
+  max-width:calc(var(--dc) + 14px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.dcw.is-win .dcn{color:var(--gold-hi);font-weight:600}
+/* the dealer's card carries the physical D button, same as the table's
+   avatars — reusing .dealer-badge rather than inventing a second marker */
+.dcw .dealer-badge{right:-6px;bottom:auto;top:-6px;width:22px;height:22px;font-size:.68rem}
 
 /* ══ Tables / scores ══ */
 .scores{width:100%;border-collapse:collapse;font-size:.9rem;margin:.6rem 0}
@@ -2679,21 +2778,35 @@ html.landscape-mode #s-menu .menu-wrap{
   /* narrower than it was: six tiles in two columns need the width more
      than the rail does, and the rail only holds three stacked buttons */
   grid-template-columns:minmax(158px,232px) 1fr;
-  /* the tagline's row is the flexible one, so the utility group is
-     pushed to the foot of the rail. An `auto` margin can't do this: on a
-     grid item it only absorbs space inside that item's own area, it
-     doesn't move siblings. Trailing rows are harmless when #err-menu or
-     #install are display:none (they aren't grid items at all then). */
-  grid-template-rows:auto auto 1fr auto auto auto;
+  /* Row 5 is the flexible one, NOT the tagline's row 3 — that's what
+     keeps the credits box tucked directly under the tagline while still
+     pushing the utility group to the foot of the rail. Exactly the swap
+     #casual-chip needed on the Casual Play screen for the same reason.
+     An `auto` margin can't do this: on a grid item it only absorbs space
+     inside that item's own area, it doesn't move siblings. Trailing rows
+     are harmless when #err-menu or #install are display:none (they
+     aren't grid items at all then). */
+  grid-template-rows:auto auto auto auto 1fr auto auto auto;
   column-gap:22px;
   text-align:left;
 }
 html.landscape-mode #s-menu .menu-crest,
 html.landscape-mode #s-menu .menu-wrap>h1,
 html.landscape-mode #s-menu .tagline,
+html.landscape-mode #s-menu #menu-credits,
 html.landscape-mode #s-menu .exit-row,
 html.landscape-mode #s-menu #err-menu,
 html.landscape-mode #s-menu #install{grid-column:1}
+/* Explicit rows rather than auto-placement, because the 1fr spacer sits
+   between the identity block and the utilities and auto-flow would put
+   whichever element came next straight into it. */
+html.landscape-mode #s-menu .menu-crest{grid-row:1}
+html.landscape-mode #s-menu .menu-wrap>h1{grid-row:2}
+html.landscape-mode #s-menu .tagline{grid-row:3}
+html.landscape-mode #s-menu #menu-credits{grid-row:4;margin-top:12px}
+html.landscape-mode #s-menu .exit-row{grid-row:6}
+html.landscape-mode #s-menu #err-menu{grid-row:7}
+html.landscape-mode #s-menu #install{grid-row:8}
 
 html.landscape-mode #s-menu .menu-crest{margin-bottom:4px;font-size:.85rem}
 html.landscape-mode #s-menu .menu-wrap>h1{
@@ -3001,8 +3114,9 @@ html.landscape-mode #s-lobby #l-status{margin:8px 0 !important}
 
 /* seat draw / dealer cut: the card row is already horizontal, it just
    needs to be sized off the short axis so all four fit */
-html.landscape-mode #s-draw .drawrow{margin:10px 0;gap:8px}
-html.landscape-mode #s-draw .drawcard{width:clamp(52px,13vh,74px)}
+/* landscape is SHORT, not narrow — the binding constraint flips, so the
+   card is sized off viewport height here and the row's margin collapses */
+html.landscape-mode #s-draw .drawrow{margin:8px 0;--dc:clamp(48px,15vh,82px)}
 html.landscape-mode #s-draw #d-note{margin:8px 0}
 
 /* summary / final: the score sheet is the tall part, so it keeps its own
@@ -3381,6 +3495,26 @@ html.landscape-mode #tutorial-callout{
 </style>
 </head>
 <body>
+
+<!-- Landscape gate. Outside #app, like the splash, and shown purely by
+     an (orientation:portrait) media query — see the LANDSCAPE GATE block
+     in <style> for why this is CSS rather than JS. -->
+<div id="rotate-gate" role="alertdialog" aria-live="polite" aria-label="Rotate your device">
+  <div class="rg-icon" aria-hidden="true">
+    <svg viewBox="0 0 64 64">
+      <g class="rg-phone">
+        <rect x="21" y="8" width="22" height="48" rx="4"/>
+        <line x1="28" y1="13" x2="36" y2="13"/>
+        <circle cx="32" cy="50" r="1.6"/>
+      </g>
+      <path d="M10 40a22 22 0 0 0 8 10"/><path d="M14 50l4 1 1-4"/>
+      <path d="M54 40a22 22 0 0 1-8 10"/><path d="M50 50l-4 1-1-4"/>
+    </svg>
+  </div>
+  <div class="rg-title">Turn your phone sideways</div>
+  <p class="rg-sub">Dame de Pique is played in landscape &mdash; thirteen cards need the width.</p>
+  <p class="rg-hint">Still not rotating? Check that your phone&rsquo;s screen-rotation lock is switched off in the quick settings.</p>
+</div>
 
 <!-- Brand splash. There was no boot/loading state before this — the app
      ships #s-menu already .active and paints straight to the menu — so
@@ -6978,23 +7112,35 @@ function renderDraw(G){
     ? 'Everyone draws a card to settle into their seats around the table.'
     : 'Highest card deals first.';
 
+  // Each seat is a card plus a caption UNDERNEATH it (.dcw), rather than
+  // the name printed on the card face — that's what a real cut looks
+  // like, and it stops a long name fighting the rank for the same space.
+  // Face-down uses the table's own blue back; face-up is a real card
+  // face with a corner index and a centre pip, both sized off --dc so
+  // one number drives the whole thing at any viewport.
   let h='';
   for(let i=0;i<4;i++){
     const p=G.players[i], up=G.drawRevealed[i], c=G.drawCards[i];
     const mine=i===me && !up && G.phase==='draw';
+    const isWin=winnerIdx===i && up;
+    // The D button only appears once the cut is actually settled — during
+    // round 1 (seats) there is no dealer yet, and mid-cut it isn't known.
+    const isDealer=G.drawRound===2 && G.phase==='drawDone' && G.dealer===i;
+    let card;
     if(up&&c){
-      h+=`<div class="drawcard flip ${winnerIdx===i?'win':''}">
-        <div>
-          <div class="dcr" style="color:${RED.has(c.suit)?'var(--red)':'var(--ink)'}">${c.rank}</div>
-          <div class="dcs" style="color:${RED.has(c.suit)?'var(--red)':'var(--ink)'}">${c.suit}</div>
-          <div class="dcn">${esc(p.name)}</div>
-        </div>
+      const col=RED.has(c.suit)?'var(--red)':'var(--ink)';
+      card=`<div class="drawcard flip ${isWin?'win':''}" style="color:${col}">
+        <span class="dc-ix">${c.rank}<i>${c.suit}</i></span>
+        <span class="dc-pip">${c.suit}</span>
       </div>`;
     }else{
-      h+=`<div class="drawcard ${mine?'tap':''}" ${mine?'onclick="revealDrawClick()"':''}>
-        <div><div style="font-size:1.5rem">🂠</div><div class="dcn">${esc(p.name)}</div></div>
-      </div>`;
+      card=`<div class="drawcard ${mine?'tap':''}"${mine?' onclick="revealDrawClick()"':''}
+             ${mine?'role="button" tabindex="0" aria-label="Reveal your card"':''}></div>`;
     }
+    h+=`<div class="dcw${isWin?' is-win':''}">
+      ${card}${isDealer?'<span class="dealer-badge on">D</span>':''}
+      <span class="dcn">${esc(p.name)}${i===me?' &middot; you':''}</span>
+    </div>`;
   }
   $('d-row').innerHTML=h;
 

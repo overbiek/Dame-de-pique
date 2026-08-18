@@ -2797,65 +2797,115 @@ html.landscape-mode .ros.mine .ros-nm{text-decoration:underline;text-underline-o
    ~14px of chrome is height the rail wants. Scoped to .has-roster so the
    pass screen, which keeps its note as the only thing under the panel,
    is left exactly as it was. */
-/* ══ the roster rail, reused on the round summary ══════════════════════
-   #s-summary is in LANDSCAPE_SCREENS, so every `html.landscape-mode
-   .ros*` rule above already applies there. Only what genuinely differs
-   is restated: the summary has ~640px of width against the rail's 240,
-   so the plate steps up from .xs to .sm and the avatar with it. */
-html.landscape-mode .roster-sum{gap:6px;margin:.6rem 0}
-html.landscape-mode .ros-sum{gap:8px}
-html.landscape-mode .ros-sum .ros-av{
-  width:32px;height:32px;font-size:.95rem;margin-right:-17px;
+/* ══ round-summary scoresheet ═════════════════════════════════════════
+   Each player's ROW is their whole scoresheet: identity on the left, one
+   narrow column per round running across, total on the right. That
+   replaced a standings panel stacked ON TOP of a separate rounds-as-rows
+   table, which listed the same numbers twice under truncated names and
+   was what stopped the screen fitting in one view.
+
+   ONE grid, not four rows — that's what keeps every player's round 7
+   in the same column, and it means the horizontal scroll is a single
+   element rather than four that would have to be kept in sync.
+
+   Width budget at 915x412 (~716px of .center-wrap): 210 identity + 72
+   total leaves ~434 for the strip, so 8 rounds get ~54px each and 12 get
+   ~36px — both fit outright. 16 would need ~27px, below the 34px floor,
+   so that one case scrolls. Identity and total are sticky, so the name
+   and the total never leave the screen when it does. */
+/* The moon explainer only appears on a round somebody shot it, and at
+   667x375 its default 12px margins + 13px padding pushed the screen 28px
+   past one viewport — a scrollbar appearing exactly when the most
+   exciting thing in the game just happened. Trimmed only here: it keeps
+   its full styling everywhere else, and the text is unchanged. */
+html.landscape-mode #s-summary .note.gold{
+  margin:6px 0;padding:7px 12px;font-size:.82rem;line-height:1.35;
 }
-/* Capped, not free-growing. Left to flex:1 the plaque stretched to 478px
-   on a 627px row and stopped reading as a plaque at all — it became a
-   long bar with the name marooned at one end. 320px keeps its proportions
-   close to the rail's 228 and pushes the score cluster to the right edge,
-   which is where the eye wants it. */
-html.landscape-mode .ros-sum .ros-plate{flex:0 1 320px;padding-left:26px}
-/* Push the cluster to the right edge. The moon glyph is conditional, so
-   whichever element actually comes first after the plate takes the auto
-   margin — the sibling selector only matches when there's no moon. */
-html.landscape-mode .ros-sum .sum-moon,
-html.landscape-mode .ros-sum .ros-plate+.sum-delta{margin-left:auto}
-html.landscape-mode .ros-sum .ros-nm{font-size:.76rem}
-html.landscape-mode .ros-sum .ros-ti{font-size:.58rem}
-/* The score cluster. OUTSIDE the plate on purpose — see
-   summaryStandingsHTML for the measured reason. Tabular figures for the
-   usual reason: these sit in a right-aligned cluster, so a proportional
-   9 -> 10 would shift everything beside it. */
-html.landscape-mode .ros-sum .sum-delta,
-html.landscape-mode .ros-sum .sum-total,
-html.landscape-mode .ros-sum .sum-place{
-  flex:0 0 auto;text-align:right;
+html.landscape-mode .sumwrap{
+  overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+  margin:.6rem 0;padding:6px 0;
+  border:1px solid var(--line);border-radius:var(--r);
+  /* opaque, because the sticky columns have to paint over the scrolling
+     cells — a translucent wash would let them show through */
+  background:var(--felt-2);
+}
+html.landscape-mode .sumgrid{
+  display:grid;
+  grid-template-columns:210px repeat(var(--rn),minmax(34px,1fr)) 72px;
+  align-items:center;row-gap:5px;min-width:min-content;
+}
+/* the two frozen columns */
+html.landscape-mode .sg-id,html.landscape-mode .sg-tot{
+  position:sticky;z-index:3;background:var(--felt-2);
+}
+html.landscape-mode .sg-id{left:0;padding-right:8px}
+html.landscape-mode .sg-tot{
+  right:0;display:flex;align-items:baseline;justify-content:flex-end;
+  gap:5px;padding:0 8px 0 4px;
+}
+/* a round column */
+html.landscape-mode .sg-c{
+  text-align:center;padding:2px 3px;line-height:1.15;
   font-family:var(--font-num);font-variant-numeric:tabular-nums;
 }
-html.landscape-mode .ros-sum .sum-delta{
-  font-size:.72rem;min-width:3.2em;color:var(--muted);
+html.landscape-mode .sg-c b{
+  display:block;font-size:.66rem;font-weight:600;color:var(--cream);
 }
-html.landscape-mode .ros-sum .sum-delta.up{color:var(--ddp-pos)}
-html.landscape-mode .ros-sum .sum-delta.down{color:var(--ddp-neg)}
-/* The headline. "In the +" is not an arbitrary threshold in this game:
-   every round is exactly zero-sum (13 tricks x +10 = 130, all hearts
-   -104, the queen -26), and the moon replaces it with +60/-20/-20/-20,
-   which is also zero. So the four totals always sum to zero and a
-   positive total means precisely "beating the table average". */
-html.landscape-mode .ros-sum .sum-total{
-  font-size:1.05rem;font-weight:700;min-width:2.6em;color:var(--cream);
+/* Inherits the cell's OWN colour and knocks it back rather than taking
+   --faint, whose .42 alpha measured 3.42:1 on Bordeaux and 2.31:1 on
+   Clair — under AA for real information. Inheriting also means a moon
+   cell's running total stays gold and every theme is right for free. */
+html.landscape-mode .sg-c small{
+  display:block;font-size:.54rem;opacity:.72;
 }
-html.landscape-mode .ros-sum .sum-total.up{color:var(--ddp-pos)}
-html.landscape-mode .ros-sum .sum-total.down{color:var(--ddp-neg)}
+html.landscape-mode .sg-c.ahead{color:rgba(var(--ddp-ink-rgb),.20);font-size:.6rem}
+html.landscape-mode .sg-c.moon b{color:var(--gold-hi)}
+/* the round the player just finished */
+html.landscape-mode .sg-c.now,html.landscape-mode .sg-r.now{
+  background:rgba(var(--ddp-brass-rgb),.12);border-radius:4px;
+}
+/* a round somebody shot the moon in — the whole COLUMN, since the
+   shooter's gold cell alone is invisible unless you know where to look */
+html.landscape-mode .sg-c.moonc,html.landscape-mode .sg-r.moonc{
+  background:rgba(var(--ddp-brass-rgb),.07);
+}
+html.landscape-mode .sg-c.now.moonc,html.landscape-mode .sg-r.now.moonc{
+  background:rgba(var(--ddp-brass-rgb),.16);
+}
+/* header strip */
+html.landscape-mode .sg-h{
+  font-size:.56rem;color:var(--muted);text-align:center;
+  letter-spacing:.05em;padding:2px;text-transform:uppercase;
+}
+html.landscape-mode .sg-r i{
+  font-style:normal;margin-left:2px;font-size:.92em;
+  color:var(--gold);opacity:.8;
+}
+/* THE SCORE SITS OUTSIDE THE PLAQUE, and that is load-bearing.
+   --ddp-pos/neg are THEMED; the plate materials deliberately are NOT (a
+   rank is the same rank at every table). Two independently-varying
+   systems, so an accent can never be safe on a plate interior —
+   measured, #7FE0B4 on paper is 1.02:1, and Clair's dark accents fail on
+   seven of the eight materials. In the total column they sit on the
+   panel, where .seat-score.up/.down already proves them.
+   "In the +" is not arbitrary either: every round is exactly zero-sum
+   (13 tricks x +10 = 130, all hearts -104, the queen -26; the moon
+   replaces it with +60/-20/-20/-20, also zero), so the four totals
+   always sum to zero and positive means "beating the table average". */
+html.landscape-mode .sg-tot .sum-total{
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:1rem;font-weight:700;color:var(--cream);
+}
+html.landscape-mode .sg-tot .sum-total.up{color:var(--ddp-pos)}
+html.landscape-mode .sg-tot .sum-total.down{color:var(--ddp-neg)}
 /* --muted, not --faint: the placement is information, and --faint's .42
    alpha measured 2.54:1 on Clair. */
-html.landscape-mode .ros-sum .sum-place{
-  font-size:.6rem;min-width:2.2em;color:var(--muted);letter-spacing:.04em;
+html.landscape-mode .sg-tot .sum-place{
+  font-family:var(--font-num);font-size:.55rem;color:var(--muted);
 }
-html.landscape-mode .ros-sum .sum-moon{flex:0 0 auto;font-size:.9rem;line-height:1}
-/* "mine" keeps the rail's own underline rather than a gold placement.
-   Tinting it --gold-hi measured 2.12:1 on Clair — brass on a pale felt,
-   the failure this file documents over and over. The underline carries
-   no colour and so can't have the problem. */
-html.landscape-mode .ros-sum.mine .ros-nm{
+/* "mine" keeps the rail's underline rather than a gold tint: --gold-hi
+   there measured 2.12:1 on Clair, brass on a pale felt. */
+html.landscape-mode .sg-id.mine .ros-nm{
   text-decoration:underline;text-underline-offset:2px;
 }
 
@@ -3718,6 +3768,18 @@ html.landscape-mode #tutorial-callout{
              0 2px 9px rgba(var(--ddp-scrim-rgb),.30),
              0 0 0 1px rgba(var(--ddp-scrim-rgb),.62);
 }
+
+/* The moon cell's figure on the round-summary scoresheet. Both golds fail
+   on Clair's panel (rgb 241,234,219): --gold-hi 1.98:1, --gold 2.86:1 —
+   brass on a pale ground, the same failure the tags and .btn.danger above
+   are correcting. #7A5A18 is the deep amber that still reads as gold and
+   measures 5.33:1.
+   Note the selector qualifies HTML with both the attribute and the class:
+   the base rule is `html.landscape-mode .sg-c.moon b` at (0,3,2), so a
+   plain [data-theme="clair"] .sg-c.moon b would be (0,2,2) and LOSE no
+   matter where it sits. This is (0,4,2) and wins outright — it doesn't
+   depend on source order at all, unlike its neighbours here. */
+html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
 </style>
 </head>
 <body>
@@ -8071,26 +8133,36 @@ function summaryStandingsHTML(G){
     place[e.i]=(n>0&&order[n-1].s===e.s)?place[order[n-1].i]:n+1;
   });
   const ORD=['1st','2nd','3rd','4th'];
-  // This round's swing, read from the history row the server just wrote
-  // rather than from live score minus roundBefore — history is the record
-  // of exactly this round and can't be affected by when roundBefore is
-  // next reset.
-  const rec=(G.history||[]).find(x=>x.round===G.round);
-  const rows=ROSTER_ORDER.map(pos=>{
+  const total=G.totalRounds;
+  const hist={};
+  (G.history||[]).forEach(h=>hist[h.round]=h);
+  const sign=v=>v>0?'up':v<0?'down':'flat';
+
+  // ── header: an empty identity cell, one cell per round, then Total ──
+  let cells='<div class="sg-id sg-h"></div>';
+  for(let r=1;r<=total;r++){
+    const e=hist[r];
+    const letter=(G.passLetters&&G.passLetters[r-1])||'';
+    const cls=['sg-r','sg-h',r===G.round?'now':'',
+               (e&&e.moon>=0)?'moonc':''].filter(Boolean).join(' ');
+    cells+=`<div class="${cls}"${r===G.round?' id="sg-now"':''}>`
+      +`${r}<i>${letter}</i></div>`;
+  }
+  cells+='<div class="sg-tot sg-h">Total</div>';
+
+  // ── one row per player, in FIXED seat order ──
+  ROSTER_ORDER.forEach(pos=>{
     const i=byPos[pos], p=G.players[i];
     const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
     const set=mat?RANK_SETS.find(r=>r.material===mat):null;
     const title=p.isAI?AI_TITLE:(p.title||'');
-    const d=(rec&&typeof rec.deltas[i]==='number')?rec.deltas[i]:roundOf(G,i);
-    const moon=G.moonShooter===i;
-    const cls=[i===me?'mine':'',moon?'moon':''].filter(Boolean).join(' ');
-    const sign=v=>v>0?'up':v<0?'down':'flat';
-    return `<div class="ros ros-sum ${cls}">`
+    const mine=i===me;
+    cells+=`<div class="sg-id ros${mine?' mine':''}">`
       +`<span class="ros-av avatar${mat?' rank-framed':''}"`
         +`${mat?` data-material="${mat}"`:''}>`
         +(p.isAI?'🤖':avatarHTML(p.avatar,p.name))
       +`</span>`
-      +`<span class="rank-plate sm ros-plate"`
+      +`<span class="rank-plate xs ros-plate"`
         +`${set?` data-material="${set.material}" data-emblem="${set.emblem}"`:''}>`
         +(set?rankPlateDressHTML(set.id):'')
         +`<span class="ros-txt">`
@@ -8098,13 +8170,30 @@ function summaryStandingsHTML(G){
           +(title?`<span class="ros-ti">${esc(title)}</span>`:'')
         +`</span>`
       +`</span>`
-      +(moon?`<span class="sum-moon" title="Shot the moon">🌕</span>`:'')
-      +`<span class="sum-delta ${sign(d)}">${d>0?'+':''}${d}</span>`
+    +`</div>`;
+    for(let r=1;r<=total;r++){
+      const e=hist[r];
+      if(!e){ cells+='<div class="sg-c ahead">·</div>'; continue; }
+      const v=e.deltas[i];
+      // The running total after this round. history[].totals has ALWAYS
+      // been broadcast and was simply never read — the delta alone said
+      // what a round cost but never where it left you, which is the whole
+      // point of reading back through a scoresheet. Guarded so a client on
+      // an older server's state degrades to the delta rather than throwing.
+      const t=(e.totals&&typeof e.totals[i]==='number')?e.totals[i]:null;
+      const cls=['sg-c',r===G.round?'now':'',
+                 e.moon===i?'moon':'',(e.moon>=0)?'moonc':''].filter(Boolean).join(' ');
+      cells+=`<div class="${cls}"><b>${v>0?'+':''}${v}</b>`
+        +(t===null?'':`<small>${t}</small>`)+'</div>';
+    }
+    cells+=`<div class="sg-tot${mine?' mine':''}">`
       +`<span class="sum-total ${sign(p.score)}">${p.score}</span>`
       +`<span class="sum-place">${ORD[place[i]-1]}</span>`
-    +`</div>`;
-  }).join('');
-  return `<div class="roster roster-sum">${rows}</div>`;
+    +'</div>';
+  });
+
+  return `<div class="sumwrap"><div class="sumgrid" style="--rn:${total}">`
+    +cells+'</div></div>';
 }
 
 function sheetHTML(G){
@@ -8151,6 +8240,17 @@ function sheetHTML(G){
     +'<b>K</b> keep. Gold marks a shot moon.</p>';
   return h;
 }
+// Bring the current round's column into view inside the round strip.
+// Only bites when the strip actually overflows — 8 and 12 rounds fit
+// outright, 16 is the case that scrolls.
+function scrollSummaryToNow(){
+  const el=$('sg-now');
+  if(!el) return;
+  const wrap=el.closest&&el.closest('.sumwrap');
+  if(!wrap) return;
+  const r=el.getBoundingClientRect(), w=wrap.getBoundingClientRect();
+  wrap.scrollLeft+=(r.left-w.left)-(w.width-r.width)/2;
+}
 function scrollSheet(){
   const el=$('sheet-now');
   if(!el) return;
@@ -8181,10 +8281,14 @@ function renderSummary(G){
       +`The round scores <b>+60</b> for ${mine?'you':'them'} and <b>&minus;20</b> for everyone else `
       +`&mdash; tricks won this round don't count.</div>`;
   }
+  // The standings grid IS the scoresheet now — each player's row carries
+  // their whole round-by-round history, so the separate sheetHTML table
+  // below it was re-listing the same numbers under truncated names. That
+  // table is what stopped the screen fitting in one view.
+  // sheetHTML itself stays: #s-final still uses it.
   h+=summaryStandingsHTML(G);
-  h+=sheetHTML(G);
   $('r-body').innerHTML=h;
-  scrollSheet();
+  scrollSummaryToNow();
 
   const ready=G.roundReady||[];
   const iAmReady=!!ready[me];

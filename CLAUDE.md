@@ -243,48 +243,25 @@ before pushing.
   pass-transition fx pattern it otherwise resembles. Rocket launches
   from the shooting player's actual seat position via `seatOf()`.
   Purely decorative/emoji-based (🌕/🚀), no new image assets.
-- **The game is landscape-only, and now ENFORCED.** `manifest.json` is
+- **The game is landscape-first**, but NOT hard-enforced — a forced
+  `#rotate-gate` overlay was tried and then deliberately reverted: it
+  blocked a real player whose phone couldn't rotate into landscape at
+  all, locking them out of the app entirely. `manifest.json` is
   `"orientation":"landscape"` and `applyOrientationLock()` requests a
-  landscape lock on every screen. Both are best-effort — the lock works
-  reliably only in an installed standalone Android Chrome PWA, and
-  Android bakes the manifest orientation into the WebAPK at *install*
-  time, so an already-installed copy must be reinstalled before it takes
-  effect. **A real player hit exactly that gap and could not reach the
-  game at all**, which is what `#rotate-gate` is for: a full-bleed
-  overlay shown by a bare `@media (orientation:portrait)` query.
-  - **CSS, not JS, deliberately.** A JS gate can fall out of sync with
-    the CSS that lays the app out, and this is the one thing that must
-    never be wrong. It is also correct on the very first frame, before
-    any script runs.
-  - **Touch devices only**: the query is `(orientation:portrait) and
-    (pointer:coarse)`. `pointer` tests the PRIMARY input, so a desktop
-    browser in a tall window is left alone and a touchscreen laptop
-    driven by a mouse still reports `fine`. Deliberately **not**
-    `any-pointer:coarse`, which would match any desktop that merely has
-    a touchscreen attached.
-  - `z-index:9500` clears `#splash` (9000), so a portrait cold start is
-    gated instead of showing the brand splash and then the gate.
-  - Unlike the splash it **does** take pointer events — blocking
-    interaction is the point. That costs nothing: the Web Audio unlock
-    rides the first `pointerdown` *after* the player rotates, by which
-    time the gate is gone.
-  - Verified across all three cases: touch + portrait (375×812,
-    `maxTouchPoints` 5) gates; desktop + portrait window (900×1200,
-    `maxTouchPoints` 0, `pointer:fine`) does **not**, and the app stays
-    reachable; touch + landscape (667×375) — the real play case — does
-    not. Also full-bleed at 412×915 and 320×568 with all three hit-test
-    probes landing inside the gate, and rotating back releases it.
-- **The portrait CSS is deliberately still there** and is not dead code.
-  It's the base layer the `html.landscape-mode` rules override. It is no
-  longer reachable as a *fallback* on a phone, though — `#rotate-gate`
-  now covers portrait entirely — so treat it as the cascade's base layer
-  only, not as a layout anyone will see. That's also why
-  `isLandscapeModeActive()` still gates on `matchMedia` rather than
-  being forced to `true`: painting a wide, short layout into a tall,
-  narrow viewport would clip it into uselessness. A verbatim copy of the
-  last portrait-usable build is kept at
-  `backup/index-portrait-reference.html` (see that folder's README);
-  it's outside `public/` so it is neither served nor cached.
+  landscape lock on every screen, both best-effort (the lock only works
+  reliably in an installed standalone Android Chrome PWA), and portrait
+  remains reachable as the fallback everywhere the lock doesn't take.
+- **The portrait CSS is NOT dead code — it's a real, live fallback**,
+  not just the base layer under `html.landscape-mode`. Any device that
+  can't or won't rotate lands here, so it has to stay genuinely usable,
+  not merely present in the cascade. `isLandscapeModeActive()` gates on
+  `matchMedia` rather than being forced to `true` for exactly this
+  reason: painting a wide, short layout into a tall, narrow viewport
+  would clip it into uselessness. A verbatim copy of the last
+  portrait-usable build is kept at `backup/index-portrait-reference.html`
+  (see that folder's README) as a reference point if the live portrait
+  CSS ever drifts; it's outside `public/` so it is neither served nor
+  cached.
 - `applyOrientationLock()` and `updateLandscapeMode()` are both called
   once at startup as well as from `show()` — `show()` never runs for the
   first screen, since `#s-menu` ships `active` and `currentScreenId`

@@ -1506,54 +1506,6 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 .unlock-pop .up-sub{font-size:.66rem;color:var(--muted);margin-top:1px}
 
 /* ══════════════════════════════════════════════════════════════
-   LANDSCAPE GATE — the app is landscape-only, enforced
-   ══════════════════════════════════════════════════════════════
-   manifest.json's "orientation":"landscape" and applyOrientationLock()
-   are both BEST-EFFORT: the lock only works in an installed standalone
-   Android PWA, Android bakes the manifest value into the WebAPK at
-   install time, and an OS-level rotation lock beats both. So a player
-   could — and did — end up staring at the portrait layout with no way to
-   reach the real game. This is the backstop that makes landscape-only
-   actually true rather than merely requested.
-
-   Pure CSS on the orientation media query on purpose. A JS gate can fall
-   out of sync with the CSS that lays the app out, and this is the one
-   thing that must never be wrong. It also means it is correct on the
-   very first frame, before any script runs.
-
-   z-index clears #splash (9000) so a portrait cold start is gated
-   instead of showing the brand splash and then the gate. Unlike the
-   splash this one DOES take pointer events — blocking interaction is the
-   point — which costs nothing, because the Web Audio unlock rides the
-   first pointerdown after the player rotates and the gate is gone. */
-#rotate-gate{
-  display:none;
-  position:fixed;inset:0;z-index:9500;
-  flex-direction:column;align-items:center;justify-content:center;gap:16px;
-  padding:24px;text-align:center;
-  background:radial-gradient(120% 90% at 50% 18%,var(--felt-0),var(--ddp-bg) 78%);
-  color:var(--cream);
-}
-/* Touch devices only. `pointer:coarse` tests the PRIMARY input, so a
-   desktop browser in a tall window is left alone, and a touchscreen
-   laptop being driven by a mouse still reports `fine` and isn't gated
-   either. Deliberately NOT `any-pointer:coarse`, which would match any
-   desktop that merely HAS a touchscreen attached. */
-@media (orientation:portrait) and (pointer:coarse){ #rotate-gate{display:flex} }
-.rg-icon{width:74px;height:74px;color:var(--gold-hi)}
-.rg-icon svg{width:100%;height:100%;display:block;fill:none;
-  stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-/* the phone tips over, which says "rotate" faster than the copy does */
-.rg-icon svg .rg-phone{transform-origin:32px 32px;animation:rg-turn 2.8s ease-in-out infinite}
-@keyframes rg-turn{0%,32%{transform:rotate(0deg)}62%,100%{transform:rotate(-90deg)}}
-@media (prefers-reduced-motion:reduce){
-  .rg-icon svg .rg-phone{animation:none;transform:rotate(-90deg)}
-}
-.rg-title{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:600;color:var(--gold-hi)}
-.rg-sub{font-size:.86rem;color:var(--muted);max-width:34ch;line-height:1.55}
-.rg-hint{font-size:.72rem;color:var(--faint);max-width:34ch;line-height:1.5}
-
-/* ══════════════════════════════════════════════════════════════
    CREDITS — the chip mark and its surfaces
    ══════════════════════════════════════════════════════════════
    The chip is INLINE SVG built from the theme's own gold and felt
@@ -3500,26 +3452,6 @@ html.landscape-mode #tutorial-callout{
 </style>
 </head>
 <body>
-
-<!-- Landscape gate. Outside #app, like the splash, and shown purely by
-     an (orientation:portrait) media query — see the LANDSCAPE GATE block
-     in <style> for why this is CSS rather than JS. -->
-<div id="rotate-gate" role="alertdialog" aria-live="polite" aria-label="Rotate your device">
-  <div class="rg-icon" aria-hidden="true">
-    <svg viewBox="0 0 64 64">
-      <g class="rg-phone">
-        <rect x="21" y="8" width="22" height="48" rx="4"/>
-        <line x1="28" y1="13" x2="36" y2="13"/>
-        <circle cx="32" cy="50" r="1.6"/>
-      </g>
-      <path d="M10 40a22 22 0 0 0 8 10"/><path d="M14 50l4 1 1-4"/>
-      <path d="M54 40a22 22 0 0 1-8 10"/><path d="M50 50l-4 1-1-4"/>
-    </svg>
-  </div>
-  <div class="rg-title">Turn your phone sideways</div>
-  <p class="rg-sub">Dame de Pique is played in landscape &mdash; thirteen cards need the width.</p>
-  <p class="rg-hint">Still not rotating? Check that your phone&rsquo;s screen-rotation lock is switched off in the quick settings.</p>
-</div>
 
 <!-- Brand splash. There was no boot/loading state before this — the app
      ships #s-menu already .active and paints straight to the menu — so

@@ -2799,6 +2799,31 @@ html.landscape-mode .ros.mine .ros-nm{text-decoration:underline;text-underline-o
    is left exactly as it was. */
 html.landscape-mode .rt-stack.has-roster .tbl-note{
   padding:1px 6px;background:none;border-color:transparent;
+  justify-content:flex-start;
+}
+/* THE NOTE MUST BE EXACTLY TWO LINES, ALWAYS. It is the roster's only
+   movable neighbour, so anything that changes its height moves the entire
+   rail — and it changed constantly:
+     - .nt-sub is empty most of the time (the server clears lastTrickMsg
+       in three places, so the banner appears when a trick resolves and
+       vanishes the moment the next one starts) — the rail jumped up a
+       line every single trick;
+     - .nt-main WRAPS on a long name ("Waiting for Bartholomew
+       Winterbottom III" measures 2 lines, taking the note to 49.8px) —
+       which would have shoved the rail down instead.
+   Reserving a computed min-height on the parent fixed only the first and
+   left 1.6px of drift, so each line reserves ITSELF instead: 1.2em is
+   exactly its own line-height, and nowrap makes wrapping impossible. The
+   result is deterministic rather than arithmetic — no constant to keep in
+   sync with the font sizes.
+   Clamping the prompt costs nothing here: a truncated "Waiting for
+   Bartholom…" is fully legible in the rail directly underneath, which now
+   lists every player by name. Same "reserve constant space" rule as
+   .mystrip's turn badge. */
+html.landscape-mode .rt-stack.has-roster .tbl-note .nt-main,
+html.landscape-mode .rt-stack.has-roster .tbl-note .nt-sub{
+  width:100%;min-height:1.2em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 html.landscape-mode #s-pass .banner,html.landscape-mode #s-play .banner,
 html.landscape-mode #s-pass .prompt,html.landscape-mode #s-play .prompt{display:none}
@@ -7357,10 +7382,17 @@ function syncLandscapeNote(tableId,promptId,bannerId){
   main.className='nt-main'+(pr&&pr.classList.contains('wait')?' wait':'');
   const subText=bn?bn.textContent:'';
   sub.textContent=subText;
-  sub.style.display=subText?'':'none';
+  // `pinned` (below) also keeps the empty sub in flow, so its reserved
+  // line survives — see the .has-roster note rules for why that matters.
+  const pinned=!!(box.closest&&box.closest('.rt-stack.has-roster'));
+  sub.style.display=(subText||pinned)?'':'none';
   // nothing to say — drop the whole box rather than leave an empty
-  // bordered panel hanging under the info panel
-  box.style.display=(mainText||subText)?'':'none';
+  // bordered panel hanging under the info panel.
+  // EXCEPT when the roster hangs below it: collapsing the box there moves
+  // the whole rail, which is exactly what its reserved min-height is
+  // there to prevent. Unboxed on that screen anyway (see .has-roster), so
+  // an empty note is invisible rather than an empty bordered panel.
+  box.style.display=(mainText||subText||pinned)?'':'none';
 }
 // The pass screen's confirm button and auto-pass countdown sit under the
 // hand in portrait; in landscape they belong at the bottom of the

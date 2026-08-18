@@ -719,7 +719,7 @@ before pushing.
 - **Measured budget** at 915×412 and 667×375, at 16/18/20px root font, on
   all four themes, with bare/dressed/disconnected/all-AI/absurd-name
   fixtures: rows uniform at 28px (33.2px at 20px root), roster 136px,
-  **43.8px of clearance above the hand in the worst case**, zero
+  **26px of clearance above the hand in the worst case** (667x375 at 20px root), zero
   horizontal or vertical overflow, zero plate overflow past the stack,
   ellipsis engaging on a long name. Re-measure if `.corner-rt`,
   `.tbl-note` or the hand's height ever change.
@@ -732,6 +732,30 @@ before pushing.
   off). Two stacked bordered cards read as clutter, and the chrome is
   height the rail wants. Scoped to that class so the pass screen, where
   the note is the only thing under the panel, is left exactly as it was.
+- **THE NOTE ABOVE IT MUST BE EXACTLY TWO LINES, ALWAYS.** It is the
+  rail's only movable neighbour, so anything changing its height moves
+  the whole rail — and it changed constantly in both directions:
+  `.nt-sub` is empty most of the time (the server clears `lastTrickMsg`
+  in three places, so the banner appears when a trick resolves and
+  vanishes when the next starts — the rail jumped up a line *every
+  trick*), and `.nt-main` **wraps on a long name** ("Waiting for
+  Bartholomew Winterbottom III" is 2 lines, taking the note to 49.8px),
+  which shoved it down instead.
+  Fixed by making each line reserve **itself** — `min-height:1.2em`
+  (exactly its own line-height) plus `nowrap`+ellipsis so wrapping is
+  impossible — rather than by computing a min-height for the parent. A
+  parent min-height was tried first and left 1.6px of drift, because the
+  rendered line boxes don't match `font-size × line-height` arithmetic.
+  **Don't reintroduce a computed constant here**; the per-line reserve is
+  deterministic and needs nothing kept in sync with the font sizes.
+  `syncLandscapeNote` also stops collapsing the empty sub (and the whole
+  box) when `pinned` — i.e. when it sits in a `.has-roster` stack — since
+  an inline `display:none` would defeat the reserve. Verified across nine
+  note states × 2 viewports × 3 root font sizes: roster top varies by
+  0.02px, which is sub-pixel rounding.
+  Clamping the prompt costs nothing: a truncated "Waiting for
+  Bartholom…" is fully legible in the rail directly beneath, which now
+  lists every player by name.
 
 ## Seat draw & dealer cut (`#s-draw`)
 - The last two screens still drawing their own ad-hoc card (a rounded box

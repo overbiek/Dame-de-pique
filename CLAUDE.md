@@ -757,6 +757,75 @@ before pushing.
   Bartholom…" is fully legible in the rail directly beneath, which now
   lists every player by name.
 
+## Round summary — standings panel + the running-total sheet
+- **The rail's component, reused verbatim.** `summaryStandingsHTML` emits
+  the same `.ros` / `.ros-av` / `.ros-plate` / `.ros-txt` structure as the
+  roster rail, so the two screens speak one visual language. It works
+  because the base rules are `html.landscape-mode .ros*` and **`summary`
+  is in `LANDSCAPE_SCREENS`** — they already applied there. Only what
+  genuinely differs is restated under `.ros-sum`: the plate steps `.xs` →
+  `.sm` and the avatar 26 → 32px, because this screen has ~640px of width
+  against the rail's 240.
+- **Fixed seat order (`ROSTER_ORDER`), never sorted by standing.** The
+  rail already trained that order, and rows that reorder every round are
+  the same "don't let it move" problem the note's reserved lines exist to
+  prevent. Placement is a `1st/2nd/3rd/4th` marker instead — standard
+  competition ranking, so a tie shares a placement, matching
+  `computeGameCredits`' payout rule.
+- **The plate is capped at `flex:0 1 320px`, not free-growing.** Left to
+  `flex:1` it stretched to 478px on a 627px row and stopped reading as a
+  plaque — it became a long bar with the name marooned at one end.
+- **THE SCORE CLUSTER SITS OUTSIDE THE PLATE, AND THIS IS THE LOAD-BEARING
+  DECISION.** `--ddp-pos`/`--ddp-neg` are **themed**; the plate materials
+  are deliberately **un-themed** (a rank is the same rank at every table).
+  Two independently-varying systems, so an accent can never be safe on a
+  plate interior. Measured: `#7FE0B4` on paper is **1.02:1** — and paper
+  is the plate every AI seat wears — while Clair's dark accents fail on
+  **seven of the eight** materials, worst 1.47:1. Outside the plate they
+  sit on the felt, the surface they were designed and Clair-corrected for,
+  where `.seat-score.up/.down` already proves them. Verified in place:
+  8.79 / 8.34 / 4.75 / 9.16 (bordeaux/émeraude/clair/marquee).
+- **"In the +" is not an arbitrary threshold.** Every round is exactly
+  zero-sum — 13 tricks × +10 = 130, all hearts −104, the queen −26 — and
+  the moon replaces it with +60/−20/−20/−20, also zero. So the four
+  totals always sum to zero and a positive total means precisely "beating
+  the table average". Confirmed in the rendered output, not just on paper.
+- **`history[].totals` was always broadcast and never read.** The sheet
+  showed only deltas, so a bad round told you what it cost but never where
+  it left you. Each cell is now the round's swing over the running total —
+  zero server change. Guarded (`typeof === 'number'`) so a client on an
+  older server's state degrades to the delta alone rather than throwing.
+  `history[].dir` is still unused; the client re-derives the letter from
+  `G.passLetters`.
+- **`.sheet td small` inherits the cell's colour at `opacity:.72` rather
+  than taking `--faint`.** `--faint` is a `.42` alpha and measured 3.42:1
+  on Bordeaux and 2.31:1 on Clair — under AA for what is real information,
+  not chrome. Inheriting also means a moon cell's running total stays gold
+  and every theme is right for free. Verified 8.10 / 7.94 / 5.07 / 8.40.
+- **A shot moon marks the whole ROW** (`tr.moonrow` — a brass wash plus an
+  inset edge on the round number), not just the shooter's gold cell, which
+  was invisible unless you already knew where to look. `.now` deliberately
+  wins where both apply, so "this round" stays the stronger signal.
+- **`scrollSheet()` scrolls ONLY `.sheet-wrap`, computed from
+  `getBoundingClientRect`.** It used `scrollIntoView({block:'center'})`,
+  which walks **every** scrollable ancestor — and once the standings panel
+  went in above the sheet that included `.center-wrap`, scrolling the
+  panel clean off the top of the screen, i.e. hiding the first thing the
+  summary is meant to show. Measured rather than `offsetTop`, since a
+  `<tr>`'s `offsetParent` is unreliable and `.sheet-wrap` isn't positioned.
+- `sheetHTML` is shared with `#s-final`, so the running totals and the
+  moon row appear there too — verified: 4 pods, 16 rows, 64 running
+  totals, no overflow. The standings panel is summary-only; the final
+  screen has its own podium.
+- **A `.mine` row is marked by the rail's underline, not a gold
+  placement.** `--gold-hi` there measured 2.12:1 on Clair — brass on a
+  pale felt, the failure this file documents repeatedly. An underline
+  carries no colour and so can't have the problem.
+- Verified at 915×412 and 667×375, 16/18/20px root font, all four themes,
+  across round 1 / round 7 / round 16 / moon-this-round / all-AI-plus-bare-
+  human / long-names: rows uniform, cluster right-aligned, panel visible
+  without scrolling, zero overflow on either axis.
+
 ## Seat draw & dealer cut (`#s-draw`)
 - The last two screens still drawing their own ad-hoc card (a rounded box
   with a `🂠` glyph and the rank stacked over the suit). They now render

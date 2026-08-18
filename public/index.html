@@ -2797,6 +2797,68 @@ html.landscape-mode .ros.mine .ros-nm{text-decoration:underline;text-underline-o
    ~14px of chrome is height the rail wants. Scoped to .has-roster so the
    pass screen, which keeps its note as the only thing under the panel,
    is left exactly as it was. */
+/* ══ the roster rail, reused on the round summary ══════════════════════
+   #s-summary is in LANDSCAPE_SCREENS, so every `html.landscape-mode
+   .ros*` rule above already applies there. Only what genuinely differs
+   is restated: the summary has ~640px of width against the rail's 240,
+   so the plate steps up from .xs to .sm and the avatar with it. */
+html.landscape-mode .roster-sum{gap:6px;margin:.6rem 0}
+html.landscape-mode .ros-sum{gap:8px}
+html.landscape-mode .ros-sum .ros-av{
+  width:32px;height:32px;font-size:.95rem;margin-right:-17px;
+}
+/* Capped, not free-growing. Left to flex:1 the plaque stretched to 478px
+   on a 627px row and stopped reading as a plaque at all — it became a
+   long bar with the name marooned at one end. 320px keeps its proportions
+   close to the rail's 228 and pushes the score cluster to the right edge,
+   which is where the eye wants it. */
+html.landscape-mode .ros-sum .ros-plate{flex:0 1 320px;padding-left:26px}
+/* Push the cluster to the right edge. The moon glyph is conditional, so
+   whichever element actually comes first after the plate takes the auto
+   margin — the sibling selector only matches when there's no moon. */
+html.landscape-mode .ros-sum .sum-moon,
+html.landscape-mode .ros-sum .ros-plate+.sum-delta{margin-left:auto}
+html.landscape-mode .ros-sum .ros-nm{font-size:.76rem}
+html.landscape-mode .ros-sum .ros-ti{font-size:.58rem}
+/* The score cluster. OUTSIDE the plate on purpose — see
+   summaryStandingsHTML for the measured reason. Tabular figures for the
+   usual reason: these sit in a right-aligned cluster, so a proportional
+   9 -> 10 would shift everything beside it. */
+html.landscape-mode .ros-sum .sum-delta,
+html.landscape-mode .ros-sum .sum-total,
+html.landscape-mode .ros-sum .sum-place{
+  flex:0 0 auto;text-align:right;
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;
+}
+html.landscape-mode .ros-sum .sum-delta{
+  font-size:.72rem;min-width:3.2em;color:var(--muted);
+}
+html.landscape-mode .ros-sum .sum-delta.up{color:var(--ddp-pos)}
+html.landscape-mode .ros-sum .sum-delta.down{color:var(--ddp-neg)}
+/* The headline. "In the +" is not an arbitrary threshold in this game:
+   every round is exactly zero-sum (13 tricks x +10 = 130, all hearts
+   -104, the queen -26), and the moon replaces it with +60/-20/-20/-20,
+   which is also zero. So the four totals always sum to zero and a
+   positive total means precisely "beating the table average". */
+html.landscape-mode .ros-sum .sum-total{
+  font-size:1.05rem;font-weight:700;min-width:2.6em;color:var(--cream);
+}
+html.landscape-mode .ros-sum .sum-total.up{color:var(--ddp-pos)}
+html.landscape-mode .ros-sum .sum-total.down{color:var(--ddp-neg)}
+/* --muted, not --faint: the placement is information, and --faint's .42
+   alpha measured 2.54:1 on Clair. */
+html.landscape-mode .ros-sum .sum-place{
+  font-size:.6rem;min-width:2.2em;color:var(--muted);letter-spacing:.04em;
+}
+html.landscape-mode .ros-sum .sum-moon{flex:0 0 auto;font-size:.9rem;line-height:1}
+/* "mine" keeps the rail's own underline rather than a gold placement.
+   Tinting it --gold-hi measured 2.12:1 on Clair — brass on a pale felt,
+   the failure this file documents over and over. The underline carries
+   no colour and so can't have the problem. */
+html.landscape-mode .ros-sum.mine .ros-nm{
+  text-decoration:underline;text-underline-offset:2px;
+}
+
 html.landscape-mode .rt-stack.has-roster .tbl-note{
   padding:1px 6px;background:none;border-color:transparent;
   justify-content:flex-start;
@@ -3252,6 +3314,39 @@ html.landscape-mode #s-draw #d-note{margin:8px 0}
 
 /* summary / final: the score sheet is the tall part, so it keeps its own
    scroll and everything around it tightens up */
+/* Each cell now carries the round's swing over the running total after
+   it — the delta alone said what a round cost but never where it left
+   you, which is the whole point of scrolling back through a sheet. The
+   running figure comes from history[].totals, which was always on the
+   wire and simply never read. */
+.sheet td b{display:block;font-weight:600;line-height:1.15}
+/* Inherits the cell's OWN colour and knocks it back, rather than taking
+   --faint. Two reasons: --faint is a .42 alpha and measured 3.42:1 on
+   Bordeaux and 2.31:1 on Clair — under AA for what is real information,
+   not chrome — while the cell's cream at .72 gives 7.60 and 4.87. And
+   inheriting means a moon cell's running total stays gold and every
+   theme is right for free, with no token to keep in sync.
+   The size step does the de-emphasis; the opacity only softens it. */
+.sheet td small{
+  display:block;font-size:.66em;line-height:1.15;opacity:.72;
+  font-variant-numeric:tabular-nums;
+}
+/* A shot moon is the single most consequential thing that can happen in
+   a round, so it marks the whole ROW, not just the shooter's cell — the
+   gold cell alone was invisible unless you already knew where to look.
+   The brass edge on the round number is what you catch while scrolling. */
+.sheet tr.moonrow td,.sheet tr.moonrow th.rd{
+  background:rgba(var(--ddp-brass-rgb),.07);
+}
+.sheet tr.moonrow th.rd{
+  box-shadow:inset 3px 0 0 var(--gold);
+}
+/* .now already tints the current round; keep it winning where both apply
+   so "this round" stays the stronger signal of the two. */
+.sheet tr.now.moonrow td,.sheet tr.now.moonrow th.rd{
+  background:rgba(var(--ddp-brass-rgb),.14);
+}
+
 html.landscape-mode #s-summary .sheet-wrap,
 html.landscape-mode #s-final .sheet-wrap{max-height:40vh;margin:.4rem 0}
 html.landscape-mode #s-final .podium{grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
@@ -7943,6 +8038,75 @@ function shortName(n){
   const s=String(n).trim();
   return s.length>8 ? s.slice(0,7)+'…' : s;
 }
+/* ══ round-summary standings ══
+   The four players as plaque rows, exactly the roster rail's component
+   (.ros / .ros-av / .ros-plate / .ros-txt) so the two screens speak one
+   visual language — the base rules are `html.landscape-mode .ros*` and
+   `summary` is in LANDSCAPE_SCREENS, so they apply here unchanged. Only
+   the size and the score cluster differ, via .ros-sum.
+
+   Fixed seat order (ROSTER_ORDER — top, left, right, you), never sorted
+   by standing: the rail already trained that order, and a panel whose
+   rows reorder every round is the same "don't let it move" problem the
+   note's reserved lines exist to prevent. Placement is shown as a marker
+   instead.
+
+   THE SCORE CLUSTER IS DELIBERATELY OUTSIDE THE PLATE. --ddp-pos/neg are
+   THEMED; the plate materials are deliberately NOT (a rank is the same
+   rank at every table). Two independently-varying systems, so an accent
+   on a plate interior can never be safe — measured: #7FE0B4 on paper is
+   1.02:1, and Clair's dark accents fail on seven of the eight materials,
+   worst 1.47:1. Outside the plate they sit on the felt, which is the
+   surface they were designed and Clair-corrected for and where
+   .seat-score.up/.down already proves them. */
+function summaryStandingsHTML(G){
+  const byPos={};
+  for(let i=0;i<4;i++) byPos[seatOf(i)]=i;
+  // Standard competition ranking — equal scores share a placement, the
+  // same rule computeGameCredits' payout already uses, since the game
+  // has no tiebreak and inventing one here would contradict it.
+  const order=G.players.map((p,i)=>({s:p.score,i})).sort((a,b)=>b.s-a.s);
+  const place={};
+  order.forEach((e,n)=>{
+    place[e.i]=(n>0&&order[n-1].s===e.s)?place[order[n-1].i]:n+1;
+  });
+  const ORD=['1st','2nd','3rd','4th'];
+  // This round's swing, read from the history row the server just wrote
+  // rather than from live score minus roundBefore — history is the record
+  // of exactly this round and can't be affected by when roundBefore is
+  // next reset.
+  const rec=(G.history||[]).find(x=>x.round===G.round);
+  const rows=ROSTER_ORDER.map(pos=>{
+    const i=byPos[pos], p=G.players[i];
+    const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
+    const set=mat?RANK_SETS.find(r=>r.material===mat):null;
+    const title=p.isAI?AI_TITLE:(p.title||'');
+    const d=(rec&&typeof rec.deltas[i]==='number')?rec.deltas[i]:roundOf(G,i);
+    const moon=G.moonShooter===i;
+    const cls=[i===me?'mine':'',moon?'moon':''].filter(Boolean).join(' ');
+    const sign=v=>v>0?'up':v<0?'down':'flat';
+    return `<div class="ros ros-sum ${cls}">`
+      +`<span class="ros-av avatar${mat?' rank-framed':''}"`
+        +`${mat?` data-material="${mat}"`:''}>`
+        +(p.isAI?'🤖':avatarHTML(p.avatar,p.name))
+      +`</span>`
+      +`<span class="rank-plate sm ros-plate"`
+        +`${set?` data-material="${set.material}" data-emblem="${set.emblem}"`:''}>`
+        +(set?rankPlateDressHTML(set.id):'')
+        +`<span class="ros-txt">`
+          +`<span class="ros-nm">${esc(p.name)}</span>`
+          +(title?`<span class="ros-ti">${esc(title)}</span>`:'')
+        +`</span>`
+      +`</span>`
+      +(moon?`<span class="sum-moon" title="Shot the moon">🌕</span>`:'')
+      +`<span class="sum-delta ${sign(d)}">${d>0?'+':''}${d}</span>`
+      +`<span class="sum-total ${sign(p.score)}">${p.score}</span>`
+      +`<span class="sum-place">${ORD[place[i]-1]}</span>`
+    +`</div>`;
+  }).join('');
+  return `<div class="roster roster-sum">${rows}</div>`;
+}
+
 function sheetHTML(G){
   const total=G.totalRounds;
   const hist={};
@@ -7957,13 +8121,21 @@ function sheetHTML(G){
   for(let r=1;r<=total;r++){
     const e=hist[r];
     const letter=(G.passLetters&&G.passLetters[r-1])||'';
-    const cls=e?(r===G.round?'now':''):'ahead';
+    const cls=[e?(r===G.round?'now':''):'ahead',
+               (e&&e.moon>=0)?'moonrow':''].filter(Boolean).join(' ');
     h+=`<tr class="${cls}"${r===G.round?' id="sheet-now"':''}>
           <th class="rd">${r}<i>${letter}</i></th>`;
     for(let i=0;i<4;i++){
       if(!e){ h+='<td>·</td>'; continue; }
       const v=e.deltas[i];
-      h+=`<td class="${e.moon===i?'moon':''}">${v>0?'+':''}${v}</td>`;
+      // The running total after this round. history[].totals has ALWAYS
+      // been broadcast and was simply never read — the sheet showed only
+      // deltas, so a bad round told you what it cost but not where it
+      // left you. Guarded anyway: a client that reconnects into an older
+      // server's state degrades to the delta alone rather than throwing.
+      const t=(e.totals&&typeof e.totals[i]==='number')?e.totals[i]:null;
+      h+=`<td class="${e.moon===i?'moon':''}"><b>${v>0?'+':''}${v}</b>`
+        +(t===null?'':`<small>${t}</small>`)+`</td>`;
     }
     h+='</tr>';
   }
@@ -7974,13 +8146,24 @@ function sheetHTML(G){
     h+=`<td class="${p.score===best?'top':''}">${p.score}</td>`;
   });
   h+='</tr></tfoot></table></div>';
-  h+='<p class="legend"><b>L</b> pass left · <b>R</b> right · <b>O</b> over · <b>K</b> keep. '
-    +'Gold marks a shot moon.</p>';
+  h+='<p class="legend">Large figure is that round’s score, small figure the '
+    +'running total. <b>L</b> pass left · <b>R</b> right · <b>O</b> over · '
+    +'<b>K</b> keep. Gold marks a shot moon.</p>';
   return h;
 }
 function scrollSheet(){
   const el=$('sheet-now');
-  if(el&&el.scrollIntoView) el.scrollIntoView({block:'center'});
+  if(!el) return;
+  const wrap=el.closest&&el.closest('.sheet-wrap');
+  if(!wrap){ if(el.scrollIntoView) el.scrollIntoView({block:'center'}); return; }
+  // Scroll ONLY the sheet's own box. scrollIntoView() walks EVERY
+  // scrollable ancestor, and once the standings panel went in above the
+  // sheet that included .center-wrap — which scrolled the panel clean off
+  // the top of the screen, i.e. hid the first thing the summary is meant
+  // to show. Measured rather than using offsetTop, since a <tr>'s
+  // offsetParent is unreliable and .sheet-wrap isn't positioned.
+  const r=el.getBoundingClientRect(), w=wrap.getBoundingClientRect();
+  wrap.scrollTop+=(r.top-w.top)-(w.height-r.height)/2;
 }
 
 function confirmRoundClick(){
@@ -7998,6 +8181,7 @@ function renderSummary(G){
       +`The round scores <b>+60</b> for ${mine?'you':'them'} and <b>&minus;20</b> for everyone else `
       +`&mdash; tricks won this round don't count.</div>`;
   }
+  h+=summaryStandingsHTML(G);
   h+=sheetHTML(G);
   $('r-body').innerHTML=h;
   scrollSheet();

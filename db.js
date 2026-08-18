@@ -29,6 +29,16 @@ pool.on('error', err => {
   console.error('Unexpected Postgres pool error:', err.message);
 });
 
+// New ranked players start in the MIDDLE of Novice, not at the old
+// Player/Gold boundary. RANK_TABLE (server.js) has Novice spanning 0-499
+// across its three divisions (0 / 167 / 334) with Apprentice starting at
+// 500, so the tier's mid-point is 250 — which lands in Novice II either
+// way you read "middle of Novice" (the tier's own midpoint, or its middle
+// division). Placement games are worth DOUBLE (see applyRankedMmr), which
+// is what gets a genuinely skilled new player out of Novice quickly
+// rather than grinding up from the bottom at the normal per-game rate.
+const RANKED_STARTING_MMR = 250;
+
 async function ensureSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS accounts (
@@ -107,10 +117,10 @@ async function ensureSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ranked_stats (
       account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
-      mmr INTEGER NOT NULL DEFAULT 1000,
+      mmr INTEGER NOT NULL DEFAULT ${RANKED_STARTING_MMR},
       placement_games_played INTEGER NOT NULL DEFAULT 0,
-      mmr_highest INTEGER NOT NULL DEFAULT 1000,
-      mmr_lowest INTEGER NOT NULL DEFAULT 1000,
+      mmr_highest INTEGER NOT NULL DEFAULT ${RANKED_STARTING_MMR},
+      mmr_lowest INTEGER NOT NULL DEFAULT ${RANKED_STARTING_MMR},
       games_played INTEGER NOT NULL DEFAULT 0,
       games_finished INTEGER NOT NULL DEFAULT 0,
       points_total INTEGER NOT NULL DEFAULT 0,
@@ -678,26 +688,49 @@ async function getOrCreateRankedProfile(accountId) {
   );
   const s = rows[0];
   return {
-    mmr: s ? s.mmr : 1000,
+    mmr: s ? s.mmr : RANKED_STARTING_MMR,
     placementGamesPlayed: s ? s.placement_games_played : 0,
   };
 }
 
+// Placement games (the first 5) apply DOUBLE the MMR delta, so a new
+// player's first handful of results move them roughly to where they
+// belong instead of the normal per-game rate crawling them there over
+// dozens of games. Whether THIS game is still a placement game is read
+// from placement_games_played as it stood BEFORE this game — `FOR UPDATE`
+// locks that row for the duration of the transaction, so two ranked
+// results finishing for the same account at once can't both read the
+// pre-increment count and both apply double.
 async function applyRankedMmr(accountId, mmrDelta) {
-  const { rows } = await pool.query(
-    `INSERT INTO ranked_stats (account_id, mmr, placement_games_played, mmr_highest, mmr_lowest)
-     VALUES ($1, GREATEST(0, 1000 + $2), 1, GREATEST(0, 1000 + $2), GREATEST(0, 1000 + $2))
-     ON CONFLICT (account_id) DO UPDATE SET
-       mmr = GREATEST(0, ranked_stats.mmr + $2),
-       placement_games_played = LEAST(5, ranked_stats.placement_games_played + 1),
-       mmr_highest = GREATEST(ranked_stats.mmr_highest, GREATEST(0, ranked_stats.mmr + $2)),
-       mmr_lowest = LEAST(ranked_stats.mmr_lowest, GREATEST(0, ranked_stats.mmr + $2)),
-       updated_at = now()
-     RETURNING mmr, placement_games_played`,
-    [accountId, mmrDelta]
-  );
-  const s = rows[0];
-  return { mmr: s.mmr, placementGamesPlayed: s.placement_games_played };
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: existing } = await client.query(
+      `SELECT placement_games_played FROM ranked_stats WHERE account_id = $1 FOR UPDATE`,
+      [accountId]
+    );
+    // No row yet means this is this account's very first ranked result,
+    // which is definitionally a placement game.
+    const wasPlacement = existing.length ? existing[0].placement_games_played < 5 : true;
+    const appliedDelta = mmrDelta * (wasPlacement ? 2 : 1);
+    const { rows } = await client.query(
+      `INSERT INTO ranked_stats (account_id, mmr, placement_games_played, mmr_highest, mmr_lowest)
+       VALUES ($1, GREATEST(0, $3 + $2), 1, GREATEST(0, $3 + $2), GREATEST(0, $3 + $2))
+       ON CONFLICT (account_id) DO UPDATE SET
+         mmr = GREATEST(0, ranked_stats.mmr + $2),
+         placement_games_played = LEAST(5, ranked_stats.placement_games_played + 1),
+         mmr_highest = GREATEST(ranked_stats.mmr_highest, GREATEST(0, ranked_stats.mmr + $2)),
+         mmr_lowest = LEAST(ranked_stats.mmr_lowest, GREATEST(0, ranked_stats.mmr + $2)),
+         updated_at = now()
+       RETURNING mmr, placement_games_played`,
+      [accountId, appliedDelta, RANKED_STARTING_MMR]
+    );
+    await client.query('COMMIT');
+    return { mmr: rows[0].mmr, placementGamesPlayed: rows[0].placement_games_played };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw e;
+  } finally { client.release(); }
 }
 
 async function getLeaderboard(limit = 50) {

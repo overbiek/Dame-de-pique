@@ -979,16 +979,40 @@ before pushing.
   it
 
 ## Ranked Multiplayer (needs DATABASE_URL, same as accounts/stats)
-- Hidden `mmr` (starts 1000) + `placement_games_played` (first 5 ranked
-  games) live in `ranked_stats`, not `stats` — `stats.mmr`/
-  `stats.placement_games_played` are legacy columns from before ranked had
-  its own table, left in place unused rather than dropped, and
-  one-time-backfilled into `ranked_stats` on schema init (`ensureSchema`)
-  so any MMR already earned under the old combined scheme isn't lost.
+- Hidden `mmr` (starts at `RANKED_STARTING_MMR` = **250**, `db.js`) +
+  `placement_games_played` (first 5 ranked games) live in `ranked_stats`,
+  not `stats` — `stats.mmr`/`stats.placement_games_played` are legacy
+  columns from before ranked had its own table, left in place unused
+  rather than dropped, and one-time-backfilled into `ranked_stats` on
+  schema init (`ensureSchema`) so any MMR already earned under the old
+  combined scheme isn't lost. The backfill's own `WHERE mmr <> 1000`
+  check is intentionally untouched — that `1000` is the OLD system's
+  default, testing "did this account ever earn a non-default MMR under
+  the legacy scheme", and has nothing to do with where a NEW account
+  starts today.
   Visible rank is always derived from `mmr` via `rankForMmr`/`RANK_TABLE`
   in `server.js` — never stored separately, never computed client-side
   (the client only renders whatever `tier`/`division`/`label` the server
   sends, e.g. in `rankedProfileOk`/`rankedResult`/`leaderboardOk`)
+- **250 is the middle of Novice, chosen deliberately over the old 1000
+  (Player/Gold).** `RANK_TABLE` has Novice spanning 0-499 across its
+  three divisions (0 / 167 / 334) with Apprentice starting at 500, so
+  250 is both the tier's own midpoint and lands inside Novice II —
+  correct under either reading of "the middle of Novice". A brand-new
+  account is meant to visibly start at the bottom of the ladder now,
+  not already in the middle tier.
+- **Placement games (the first 5) apply DOUBLE the MMR delta** —
+  `applyRankedMmr` (`db.js`) multiplies `computeMmrChanges`' output by 2
+  before applying it, for exactly as long as `placement_games_played < 5`
+  when the game started. This is what gets a genuinely skilled new
+  player up near their real rank quickly from the 250 starting point,
+  instead of crawling there one normal-rate game at a time. Whether a
+  given result counts as a placement game is read from the row's
+  placement count from BEFORE that game (`SELECT ... FOR UPDATE` inside
+  a transaction, so two results finishing for the same account back to
+  back can't both read the pre-increment count and both double). An
+  account with no `ranked_stats` row at all is treated as mid-placement
+  by definition, so its very first ranked result is doubled too.
 - `computeMmrChanges` is intentionally isolated (pure, single function) so
   the formula can later become Elo-style
   (`K × (normalizedScore - expectedPerformance)`) without touching

@@ -175,6 +175,49 @@ async function ensureSchema() {
     );
   `);
 
+  // ── Credits ──────────────────────────────────────────────────
+  // A SECOND progression track, deliberately parallel to MMR: credits
+  // measure engagement, never skill, and nothing here may ever be read
+  // by matchmaking or rank derivation.
+  await pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS credit_balance INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS lifetime_credits_earned INTEGER NOT NULL DEFAULT 0;`);
+  // Gates ALL casual credit earning to once a day (not just AI games).
+  await pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS last_casual_credit_date DATE;`);
+  // Which game claimed the day. Without this the claim is atomic but NOT
+  // idempotent: a grant that fails after the claim succeeds would, on
+  // trackStat's retry, find the day already taken and silently pay
+  // nothing. Storing the reference lets the same game re-claim while a
+  // different game on the same day is still refused.
+  await pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS last_casual_credit_ref TEXT;`);
+  // The ledger. UNIQUE (account_id, type, reference_id) is what makes a
+  // grant SAFE TO RETRY: trackStat re-runs a failed write up to 3 times,
+  // and without that constraint a partial failure would pay twice. Every
+  // grant is ON CONFLICT DO NOTHING and only moves the balance when a row
+  // was actually inserted — same reasoning as recordDailyScore.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS credit_transactions (
+      id SERIAL PRIMARY KEY,
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      amount INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      reference_id TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (account_id, type, reference_id)
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_credit_tx_account ON credit_transactions (account_id, created_at DESC);`);
+  // Bought cosmetics. This is the ONE piece of cosmetic state that is
+  // stored rather than derived — see the note on getPurchases below.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS player_purchases (
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      item_id TEXT NOT NULL,
+      price_paid INTEGER NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (account_id, item_id)
+    );
+  `);
+
   // ── Friends ──
   // A permanent, shareable code per account rather than username search —
   // no public directory to search or moderate, add a friend by entering
@@ -914,6 +957,104 @@ async function markAchievementsSeen(accountId, ids) {
   );
 }
 
+// ── Credits ──────────────────────────────────────────────────────
+// Every grant goes through here. Returns the new balance, or null when
+// the grant was a duplicate (the ledger's UNIQUE constraint caught a
+// retry) so the caller can tell "paid" from "already paid".
+// referenceId must be stable for a given payable event — a game's
+// code+startedAt, a daily's date — which is exactly what makes the
+// retry safe.
+async function grantCredits(accountId, amount, type, referenceId) {
+  if (!accountId || !amount) return null;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const ins = await client.query(
+      `INSERT INTO credit_transactions (account_id, amount, type, reference_id)
+       VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING id`,
+      [accountId, amount, type, String(referenceId)]
+    );
+    if (!ins.rows.length) { await client.query('ROLLBACK'); return null; }
+    const { rows } = await client.query(
+      `UPDATE accounts SET credit_balance = credit_balance + $2,
+              lifetime_credits_earned = lifetime_credits_earned + GREATEST($2,0)
+       WHERE id = $1 RETURNING credit_balance, lifetime_credits_earned`,
+      [accountId, amount]
+    );
+    await client.query('COMMIT');
+    return { balance: rows[0].credit_balance, lifetime: rows[0].lifetime_credits_earned };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw e;
+  } finally { client.release(); }
+}
+
+async function getCredits(accountId) {
+  const { rows } = await pool.query(
+    `SELECT credit_balance, lifetime_credits_earned FROM accounts WHERE id = $1`, [accountId]);
+  if (!rows.length) return { balance: 0, lifetime: 0 };
+  return { balance: rows[0].credit_balance, lifetime: rows[0].lifetime_credits_earned };
+}
+
+// Claims TODAY's single casual credit slot for one specific game.
+// The conditional WHERE makes it atomic, so two casual games finishing at
+// the same instant can't both be paid; matching on the stored reference
+// makes it idempotent, so trackStat retrying the SAME game still gets its
+// payout. Returns true if this game holds today's slot.
+async function claimCasualCreditDay(accountId, date, referenceId) {
+  const { rowCount } = await pool.query(
+    `UPDATE accounts SET last_casual_credit_date = $2::date, last_casual_credit_ref = $3
+     WHERE id = $1 AND (last_casual_credit_date IS NULL
+                     OR last_casual_credit_date <> $2::date
+                     OR last_casual_credit_ref = $3)`,
+    [accountId, date, String(referenceId)]
+  );
+  return rowCount > 0;
+}
+
+// Buys an item. Balance can never go negative: the guard is in the WHERE,
+// so an over-spend updates no row instead of writing a negative balance.
+// Returns {ok, balance} or {ok:false, reason}.
+async function purchaseItem(accountId, itemId, price) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const owned = await client.query(
+      `INSERT INTO player_purchases (account_id, item_id, price_paid)
+       VALUES ($1,$2,$3) ON CONFLICT DO NOTHING RETURNING item_id`,
+      [accountId, itemId, price]
+    );
+    if (!owned.rows.length) { await client.query('ROLLBACK'); return { ok: false, reason: 'owned' }; }
+    const paid = await client.query(
+      `UPDATE accounts SET credit_balance = credit_balance - $2
+       WHERE id = $1 AND credit_balance >= $2 RETURNING credit_balance`,
+      [accountId, price]
+    );
+    if (!paid.rows.length) { await client.query('ROLLBACK'); return { ok: false, reason: 'funds' }; }
+    await client.query(
+      `INSERT INTO credit_transactions (account_id, amount, type, reference_id)
+       VALUES ($1,$2,'spend',$3) ON CONFLICT DO NOTHING`,
+      [accountId, -price, itemId]
+    );
+    await client.query('COMMIT');
+    return { ok: true, balance: paid.rows[0].credit_balance };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw e;
+  } finally { client.release(); }
+}
+
+// The one piece of cosmetic availability that is STORED rather than
+// re-derived. Everything else (achievement crests, titles, rank sets) is
+// still computed fresh from achievement_stats every time, so retuning a
+// threshold still takes effect immediately for everyone — a bought item
+// simply ORs into that result and can never be revoked by a retune.
+async function getPurchases(accountId) {
+  const { rows } = await pool.query(
+    `SELECT item_id FROM player_purchases WHERE account_id = $1`, [accountId]);
+  return rows.map(r => r.item_id);
+}
+
 module.exports = {
   pool, ensureSchema, toPublic,
   createAccount, findAccountByUsername, findAccountById,
@@ -928,4 +1069,5 @@ module.exports = {
   recordRankedQueenTaken, recordRankedGameFinished, getRankedStats,
   recordAchievementGame, recordAchievementQueen, recordDealerRound, getAchievementStats,
   getCosmetics, saveCosmetics, markAchievementsSeen,
+  grantCredits, getCredits, claimCasualCreditDay, purchaseItem, getPurchases,
 };

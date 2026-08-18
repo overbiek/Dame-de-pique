@@ -79,7 +79,15 @@ before pushing.
 - Shooting the moon (all hearts + Q♠ in one round) replaces that round's
   score entirely: shooter +60, everyone else -20
 - Round count is **per room** (`G.roundsTotal`), not a global constant —
-  see the Blitz section. `DEFAULT_ROUNDS` is 16 and every call site that
+  see the Blitz section. **Ranked is now a fixed 8 rounds**
+  (`RANKED_ROUNDS`, passed by `formRankedMatch`); it no longer inherits
+  `DEFAULT_ROUNDS` like every other call site. Casual keeps the full
+  4/8/12/16 picker.
+  Consequence, accepted deliberately rather than migrated:
+  `ranked_stats`' best/worst-**game** and average columns now mix
+  pre-change 16-round totals with 8-round ones, the same incomparability
+  that gave Blitz its own columns. Per-round and per-trick records are
+  unaffected — a round is 13 tricks in every mode. `DEFAULT_ROUNDS` is 16 and every call site that
   doesn't ask for a length gets it. Pass cycle Left→Right→Across→Keep
   (rounds 4/8/12/16 = Keep, no passing, in a 16-round game)
 - The opening card of trick 1 each round can't be a heart or Q♠
@@ -1691,6 +1699,116 @@ before pushing.
   them, so no `CACHE` bump is needed and installs don't pull 158 KB up
   front. Higher-res replacements can be dropped over the same filenames.
 
+## Credits — the second progression track
+- **Parallel to MMR and never touching it.** Credits measure engagement,
+  rank measures skill. Nothing in the credit system is read by
+  matchmaking or by rank derivation, and nothing purchasable confers a
+  gameplay advantage — those are the spec's first two non-goals and they
+  are what the "crests and rank sets are not for sale" rule below
+  protects.
+- `computeGameCredits(placeIndex, totalScore, roundsPlayed, moons)` in
+  `server.js` is the whole formula:
+  `round(placementBase × clamp(1 + 0.02 × totalScore/roundsPlayed, 0.75, 1.25))
+  + 10 × moons`, placement base 50/40/32/24.
+  **Dividing by `roundsPlayed` is what makes it length-agnostic** — the
+  same average pays 55 at 4, 8, 12 and 16 rounds, so Blitz needed no
+  separate calibration. Verified against all six of the spec's worked
+  examples (63/53/44/31/20/18), exact matches.
+- `placementIndexes` is **standard competition ranking** — equal scores
+  share a placement, so a tie for first pays both players the 1st-place
+  base. Same generosity rule the win achievement already uses: the game
+  has no tiebreak, so inventing one purely to pay someone less would be
+  worse.
+- **Ranked is uncapped; casual pays at most one game a day**, whoever the
+  opponents are (not AI-only, as an earlier draft had it). That asymmetry
+  is the entire point — ranked volume is the only route to credits at
+  speed, which is the lever meant to pull players there.
+- **Only a naturally finished game pays.** `recordGameFinishedForAll`'s
+  `natural` argument is already false for the early-end vote, and that is
+  exactly the case that must not pay — otherwise four players could vote
+  out of a game one round in and farm it.
+- **Every grant is idempotent, because `trackStat` retries.**
+  `credit_transactions` carries `UNIQUE (account_id, type, reference_id)`
+  and every grant is `ON CONFLICT DO NOTHING`, only moving the balance
+  when a row was actually inserted. The reference is `code-startedAt` for
+  a game (room codes alone get reused, so the code can't identify a game)
+  and the date for a daily.
+  **The casual day-claim had to become idempotent too, and this is subtle:**
+  `claimCasualCreditDay` stores WHICH game claimed the day
+  (`last_casual_credit_ref`). Without that the claim is atomic but not
+  retry-safe — a grant that failed *after* the claim succeeded would, on
+  the retry, find the day already taken and silently pay nothing.
+- Daily: `5 + round(max(0, score) × 0.2)`, flat floor for showing up plus
+  a multiplier on a positive finish only. Deliberately simpler than the
+  multiplayer formula — one attempt a day, no placement, nothing to clamp
+  against. **Calibration confirmed from the ruleset**, not guessed: a
+  daily is one round, so a typical positive finish is +20..+30 → +4..+6
+  bonus, exactly the spec's intended band; a moon (+60) tops out near +12.
+- **Guests earn nothing anywhere**, and the daily payload zeroes `credits`
+  for them rather than showing a figure that was never banked.
+
+## The Shop and the ownership model
+- **Purchasing is the ONE piece of cosmetic availability that is stored.**
+  Everything else is still re-derived from `achievement_stats` on every
+  call, so retuning a threshold still takes effect immediately for
+  everyone. An item is available if it is achievement-unlocked **OR**
+  purchased — `cosmeticsFor` ORs the two — which means a bought item can
+  never be revoked by a retune, and the derived half keeps the property
+  the achievements section documents.
+- `player_purchases` is keyed `(account_id, item_id)`. `purchaseItem`
+  inserts the row first and takes payment second, both inside one
+  transaction: the balance guard lives in the `WHERE` (`credit_balance >=
+  price`), so an over-spend updates no row instead of writing a negative
+  balance.
+- **Only scenes and card fronts are purchasable, and that's a rule, not a
+  scoping accident.** Crests are 1:1 with achievements — a crest IS the
+  visible proof of one, so a bought crest would be a lie. Rank sets are
+  earned by reaching a tier and are documented as never purchasable;
+  selling them would also make credits look like they touch rank.
+  Neither carries a `price`, `buyCosmetic` only searches the two
+  purchasable arrays, and `renderShop` renders only priced items — so the
+  exclusion holds in three independent places.
+- **The client never sends a price.** `buyCosmetic` emits an item id; the
+  server re-derives the price and the funds check from its own registry,
+  exactly like the unlock re-validation `saveCosmetics` already does.
+- **The scenes' real achievement gates are back.** They were temporarily
+  `unlock: null` so the photos were previewable before the shop existed
+  (see `dedf411`'s own note). They now have both a gate and a price, so
+  every one is reachable two ways. **Consequence to expect on deploy:** a
+  scene someone equipped while it was temporarily free, but hasn't
+  earned or bought, is dropped back to the default by `filterEquipped` —
+  which is that function working as designed, not a bug.
+- Prices are `CREDIT_PRICES` (common 600 / rare 2000 / epic 5000 /
+  legendary 12000). Only common and rare are used so far; epic and
+  legendary exist for the avatar frames and VFX that phase P1/P2.
+
+## The credit chip (`creditChipSVG`)
+- **Inline SVG built from `var(--gold*)` and `var(--felt-0)`**, for the
+  reason the crests already document: a raster chip would be stuck on
+  whichever palette it was drawn in, and the reference art is the Marquee
+  palette specifically. From tokens it stays gold-on-emerald there and
+  re-tints on Bordeaux, Émeraude and Clair.
+- **ONE definition serves every size** — the 38px menu box, the 15px
+  balance line, the 13px price tag — because the only input is `--cc`.
+  The reference's crowned-queen profile is far too fine to survive 13px,
+  so the centre resolves to a crowned spade: the same mark at any size.
+- **Each instance gets a unique gradient id (`cc-metal-N`).** A gradient
+  is referenced by fragment id, so emitting the same id from every chip
+  meant duplicate DOM ids with every `url(#…)` on the page resolving to
+  whichever chip was first. It renders correctly right up until that chip
+  is re-rendered away — and the shop rebuilds its cards on every payload —
+  at which point every other chip silently loses its metal.
+- **The menu credits box lives in the identity RAIL, not the tile grid.**
+  That's what keeps it clear of the landscape 2×3 tile budget this file
+  warns is fully spent: the tiles are column 2, the box is column 1 under
+  the tagline. Verified at 667×375 and 915×412 at 16/18/20px root font —
+  zero overflow, last tile bottom unchanged at 361 of 375. It does eat
+  some of the tagline row's `1fr` slack, so re-measure if anything else
+  is ever added to that rail.
+- Hidden entirely for guests, toggled from `updateMenuProfileUI` — the
+  one function every login and logout path already calls, so visibility
+  never has to be maintained from three places.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across
@@ -1731,6 +1849,13 @@ before pushing.
   portrait avatars.
 - The other four card-front collections (Noir, Emerald, Occult, Grand
   Hotel) — the brief explicitly scopes this to Royal Court only.
+- **Credit economy, deferred pieces.** Achievement credits (P1), Quick
+  Match / Custom Game split (P1), avatar frames and the epic/legendary
+  price tiers they'd fill (P1/P2), campaign unlocks (P2). Cut entirely
+  from this phase per the spec: gifting, Weekly Tournament, and Cash
+  Stakes (whose full design is preserved in the spec's appendix —
+  `accounts.lifetime_credits_earned` is already recorded and ready to
+  resume its mode-unlock role if it returns).
 
 ## Sound effects (public/sfx.js + public/sounds/*.ogg)
 - Self-contained module, own global `SFX` object (`SFX.play(name)`,

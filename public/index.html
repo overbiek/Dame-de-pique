@@ -1506,6 +1506,82 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 .unlock-pop .up-sub{font-size:.66rem;color:var(--muted);margin-top:1px}
 
 /* ══════════════════════════════════════════════════════════════
+   CREDITS — the chip mark and its surfaces
+   ══════════════════════════════════════════════════════════════
+   The chip is INLINE SVG built from the theme's own gold and felt
+   tokens, for exactly the reason the crests document: a raster chip
+   would be stuck on whichever palette it was drawn in, and the
+   reference art is the Marquee palette specifically. Rendered from
+   tokens it stays gold-on-emerald there and re-tints correctly on
+   Bordeaux, Émeraude and Clair.
+   ONE definition serves every size — the 64px menu box, the 26px pill
+   and the 15px inline mark — because the viewBox scales and the only
+   size input is --cc. The queen's profile in the reference is far too
+   fine to survive 15px, so the centre resolves to a crowned spade,
+   which is the same mark read at any size. */
+.credit-chip{
+  display:inline-block;flex:0 0 auto;
+  width:var(--cc,26px);height:var(--cc,26px);vertical-align:middle;
+  filter:drop-shadow(0 1px 2px rgba(var(--ddp-scrim-rgb),.5));
+}
+.credit-chip svg{width:100%;height:100%;display:block}
+
+/* the menu box: chip | balance + label, tapping opens the Shop */
+.credit-box{
+  display:flex;align-items:center;gap:11px;width:100%;
+  padding:10px 13px;border-radius:14px;
+  background:linear-gradient(160deg,rgba(var(--ddp-brass-rgb),.13),rgba(var(--ddp-gloss-rgb),.02));
+  border:1px solid rgba(var(--ddp-brass-rgb),.34);
+  font:inherit;color:inherit;text-align:left;cursor:pointer;appearance:none;
+  transition:border-color .16s,background .16s;
+}
+.credit-box:hover{border-color:rgba(var(--ddp-brass-rgb),.55);background:rgba(var(--ddp-brass-rgb),.17)}
+.credit-box:active{transform:scale(.985)}
+.credit-box .cb-figure{
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:1.15rem;font-weight:600;color:var(--gold-hi);line-height:1.1;
+}
+.credit-box .cb-label{
+  font-size:.58rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--muted);margin-top:2px;
+}
+.credit-box .cb-plus{
+  margin-left:auto;flex:0 0 auto;width:24px;height:24px;border-radius:50%;
+  display:grid;place-items:center;font-size:.95rem;line-height:1;
+  background:linear-gradient(160deg,var(--gold-hi),var(--gold-lo));
+  color:var(--ddp-on-brass);
+}
+/* the compact pill, for anywhere a balance rides beside other chrome */
+.credit-pill{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 12px 5px 6px;border-radius:999px;
+  background:rgba(var(--ddp-scrim-rgb),.30);border:1px solid rgba(var(--ddp-brass-rgb),.34);
+}
+.credit-pill .cp-n{
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:.86rem;font-weight:600;color:var(--gold-hi);
+}
+/* a price tag inside a shop card */
+.cos-price{
+  display:inline-flex;align-items:center;gap:5px;margin-top:4px;
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:.66rem;font-weight:600;color:var(--gold-hi);
+}
+.cos-price.short{color:var(--muted)}
+.cos-buy{
+  margin-top:6px;width:100%;padding:6px 8px;border-radius:9px;
+  border:1px solid rgba(var(--ddp-brass-rgb),.5);
+  background:rgba(var(--ddp-brass-rgb),.14);color:var(--gold-hi);
+  font:700 .64rem 'DM Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;
+  cursor:pointer;appearance:none;
+}
+.cos-buy:disabled{opacity:.45;cursor:default}
+.cos-owned{
+  font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--gold-lo);margin-top:4px;display:block;
+}
+
+/* ══════════════════════════════════════════════════════════════
    RANK COSMETICS — 8 materials
    ══════════════════════════════════════════════════════════════
    Frame (a ring on the avatar), nameplate (a badge under the name) and
@@ -3538,6 +3614,22 @@ html.landscape-mode #tutorial-callout{
     <h1>Dame de Pique</h1>
     <p class="tagline">Count your hearts, count your cards.</p>
 
+    <!-- Credits box. Sits in the identity column under the title, which
+         in landscape is the RAIL, not the tile grid — so it costs nothing
+         against the 2x3 tile budget CLAUDE.md warns is fully spent. It
+         does consume some of the tagline row's 1fr slack; re-measure the
+         rail at 667x375 if anything else is ever added here.
+         Hidden for guests: credits are a fact about an account. -->
+    <button class="credit-box deco-box" id="menu-credits" onclick="goShop()"
+            style="display:none" aria-label="Your credits — open the Shop">
+      <span class="credit-chip" style="--cc:38px" id="menu-credit-chip"></span>
+      <span>
+        <span class="cb-figure" id="menu-credit-n">0</span>
+        <span class="cb-label">Credits</span>
+      </span>
+      <span class="cb-plus" aria-hidden="true">+</span>
+    </button>
+
     <div class="menu-tiles">
       <button class="tile primary" onclick="goCasual()">
         <div class="tile-icon">♠︎</div>
@@ -4075,6 +4167,34 @@ html.landscape-mode #tutorial-callout{
 </section>
 
 <!-- ═══ STATISTICS ═══ -->
+<!-- ═══ SHOP ═══
+     A rail screen: header chrome left, one scrolling body panel right,
+     so it needs no landscape rules of its own beyond joining
+     LANDSCAPE_SCREENS. Ships with the two purchasable categories the
+     server actually prices (scenes, card fronts); crests, titles and
+     rank sets are deliberately not for sale and never appear here. -->
+<section id="s-shop" class="screen">
+  <div class="center-wrap" style="max-width:520px">
+    <div class="screen-header">
+      <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    </div>
+    <h2>Shop</h2>
+    <p class="tagline" id="shop-balance-line">Spend credits on backgrounds and card designs.</p>
+
+    <div id="shop-content">
+      <div class="empty-state" id="shop-guest-gate" style="display:none">
+        <div class="empty-icon">🔒</div>
+        <h3>Log in to earn and spend credits</h3>
+        <p>Credits are tied to your account, so they follow you everywhere.</p>
+        <button class="btn btn-primary btn-block" onclick="goPersonal()" style="margin-top:10px">Go to My Account</button>
+      </div>
+      <div id="shop-loading" class="cos-empty" style="display:none">Loading the shop…</div>
+      <div id="shop-panels"></div>
+      <div id="err-shop" class="note bad" style="display:none"></div>
+    </div>
+  </div>
+</section>
+
 <section id="s-stats" class="screen">
   <div class="center-wrap" style="max-width:440px">
     <div class="screen-header">
@@ -4705,7 +4825,7 @@ function show(id){
 // documents that the coverage is complete — if a screen is ever added
 // without a landscape layout, leaving it out of here is the escape
 // hatch.
-const LANDSCAPE_SCREENS=new Set(['menu','landing','daily','ranked','rank','stats','personal',
+const LANDSCAPE_SCREENS=new Set(['menu','landing','daily','ranked','rank','stats','personal','shop',
                                  'lobby','draw','summary','final','pass','play']);
 // Best-effort only. screen.orientation.lock() reliably works only in an
 // installed/standalone Android Chrome PWA; it's silently unavailable in
@@ -5151,6 +5271,9 @@ socket.on('dailyError',d=>{
 
 let lastDailyResult=null;
 socket.on('dailyResult',d=>{
+  // Credits are banked server-side from the server's own copy of the
+  // score (see submitDailyResult); this only reports what was paid.
+  if(d.credits) requestCredits();
   lastDailyResult=d;
   // A guest's attempt isn't banked anywhere, so they're free to play again
   // — don't mark the tile as done for them.
@@ -5198,6 +5321,10 @@ function updateMenuProfileUI(){
   $('menu-personal-sub').textContent=id.name
     ? `Playing as ${id.name}`
     : 'Choose your nickname & avatar';
+  // The credits box lives or dies with the account, and this is the one
+  // function every login/logout path already calls — so its visibility
+  // never has to be toggled from three places.
+  setCreditBalance(creditBalance);
 }
 /* The picker is now sectioned — five portrait collections plus the
    original emoji set — so #avatar-grid became a plain block container
@@ -5596,6 +5723,154 @@ function rankBadgeHTML(material,slug,size){
     +(sl?rankArtImg(sl,'badge','tbadge'):'')+`</span>`;
 }
 
+
+/* ══ CREDITS (client side) ══
+   Presentation only, exactly like the cosmetics above: server.js owns the
+   formula, the prices and the balance. This file renders a number it was
+   handed and sends an item id back — it never computes a price, and a
+   crafted client can't buy anything the server hasn't priced.
+
+   The chip is authored in a 64x64 box and built from var(--gold*) /
+   var(--felt-0), so it follows the active theme rather than being frozen
+   into the reference art's emerald-and-brass. The reference's crowned
+   queen profile is far too fine to survive the 13px inline size, so the
+   centre resolves to a crowned spade — the same mark at every size, which
+   is what lets ONE definition serve the 38px menu box and the 13px price
+   tag. Same reasoning the crests already document. */
+let ccSeq=0;
+function creditChipSVG(){
+  // Unique per instance: see the note above about duplicate fragment ids.
+  const gid='cc-metal-'+(++ccSeq);
+  return `<svg viewBox="0 0 64 64" role="img" aria-hidden="true">
+    <defs>
+      <linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="var(--gold-hi)"/>
+        <stop offset="1" stop-color="var(--gold-lo)"/>
+      </linearGradient>
+    </defs>
+    <circle cx="32" cy="32" r="31" fill="url(#${gid})"/>
+    <circle cx="32" cy="32" r="26.5" fill="var(--felt-0)"/>
+    <g fill="url(#${gid})">
+      <path d="M25.5 1.6h13v9h-13Z"/><path d="M25.5 53.4h13v9h-13Z"/>
+      <path d="M1.6 25.5h9v13h-9Z"/><path d="M53.4 25.5h9v13h-9Z"/>
+    </g>
+    <g fill="url(#${gid})" transform="rotate(45 32 32)">
+      <path d="M27.5 3.6h9v7h-9Z"/><path d="M27.5 53.4h9v7h-9Z"/>
+      <path d="M3.6 27.5h7v9h-7Z"/><path d="M53.4 27.5h7v9h-7Z"/>
+    </g>
+    <circle cx="32" cy="32" r="21.5" fill="none" stroke="url(#${gid})" stroke-width="2.2"/>
+    <circle cx="32" cy="32" r="18.5" fill="var(--felt-0)"/>
+    <g fill="url(#${gid})">
+      <path d="M25.6 20.2 27 15.7l2.9 2.6L32 14l2.1 4.3 2.9-2.6 1.4 4.5Z"/>
+      <path d="M25.4 21.1h13.2v1.9H25.4Z"/>
+      <path d="M32 24.4s-6.5 5.3-6.5 9.4a3.65 3.65 0 0 0 5.6 3.1c-.3 1.8-1 3.1-2.1 3.8h6a5.6 5.6 0 0 1-2.1-3.8 3.65 3.65 0 0 0 5.6-3.1c0-4.1-6.5-9.4-6.5-9.4Z"/>
+      <path d="M22.4 43.6c3.3-1.9 6.4-2.5 9.6-1.7v1.8c-2.9-.7-5.7 0-8.6 1.9Z" opacity=".85"/>
+      <path d="M41.6 43.6c-3.3-1.9-6.4-2.5-9.6-1.7v1.8c2.9-.7 5.7 0 8.6 1.9Z" opacity=".85"/>
+    </g>
+  </svg>`;
+}
+function creditChipHTML(px){
+  return `<span class="credit-chip"${px?` style="--cc:${px}px"`:''}>${creditChipSVG()}</span>`;
+}
+const fmtCredits=n=>Number(n||0).toLocaleString('en-US');
+
+// The balance is a CACHE of what the server last said — same contract as
+// the scene/cardFront localStorage cache: it exists so the menu box can
+// paint a number immediately, and every server response overwrites it. It
+// is NEVER the basis for whether a purchase is allowed; buyCosmetic sends
+// an id and the server re-derives the price and the funds check.
+let creditBalance=0;
+function setCreditBalance(n){
+  creditBalance=Number(n)||0;
+  const fig=$('menu-credit-n');
+  if(fig) fig.textContent=fmtCredits(creditBalance);
+  // Guests never see the box at all — credits are a fact about an account,
+  // the same reasoning that keeps the Daily "played today" dot off them.
+  const box=$('menu-credits');
+  if(box) box.style.display=account?'flex':'none';
+  const chip=$('menu-credit-chip');
+  if(chip&&!chip.firstChild) chip.innerHTML=creditChipSVG();
+  const line=$('shop-balance-line');
+  if(line){
+    line.innerHTML=account
+      ? `Balance: ${creditChipHTML(15)} <b class="cp-n">${fmtCredits(creditBalance)}</b>`
+      : 'Spend credits on backgrounds and card designs.';
+  }
+}
+function requestCredits(){
+  if(!accountToken){ setCreditBalance(0); return; }
+  socket.emit('getCredits',{token:accountToken});
+}
+socket.on('creditsOk',d=>{ setCreditBalance(d.guest?0:d.balance); });
+
+function goShop(){
+  show('shop');
+  $('shop-guest-gate').style.display=account?'none':'block';
+  $('shop-loading').style.display=(account&&!cosState)?'block':'none';
+  $('err-shop').style.display='none';
+  renderShop();
+  if(account&&!cosState) requestCosmetics();
+}
+
+// Renders only what the SERVER priced. An item with no price never appears,
+// which is what keeps crests, titles and rank sets out of the shop without
+// this function needing to know why they're excluded.
+function renderShop(){
+  const wrap=$('shop-panels');
+  if(!wrap) return;
+  if(!account||!cosState){ wrap.innerHTML=''; return; }
+  const cat=cosState.catalog;
+  let h='';
+  for(const [label,list,kind] of [['Backgrounds',cat.scenes,'scene'],
+                                  ['Card designs',cat.cardFronts,'cardFront']]){
+    const forSale=list.filter(c=>c.price);
+    if(!forSale.length) continue;
+    h+=`<div class="sec-label">${label}</div><div class="cos-grid">`
+      +forSale.map(c=>shopItemHTML(kind,c)).join('')+`</div>`;
+  }
+  h+=`<p class="pick-hint">Earned items stay free &mdash; buying is just the second route to the same thing. Equip anything you own from My Account.</p>`;
+  wrap.innerHTML=h;
+}
+
+function shopItemHTML(kind,item){
+  // "owned" means bought; "unlocked" also covers earning it by achievement.
+  // Something earned the hard way reads as earned rather than for sale, so
+  // nobody is invited to pay for what they already have.
+  const earned=item.unlocked&&!item.owned;
+  const have=item.owned||earned;
+  const afford=creditBalance>=item.price;
+  const thumb=kind==='scene'
+    ? `<span class="cos-thumb scene-art" data-scene="${item.id}">${sceneArtImg(item.id)}</span>`
+    : `<span class="cos-thumb">${cardFrontThumb(item.id)}</span>`;
+  const foot=have
+    ? `<span class="cos-owned">${item.owned?'Purchased':'Earned'}</span>`
+    : `<span class="cos-price${afford?'':' short'}">${creditChipHTML(13)}${fmtCredits(item.price)}</span>`
+      +`<button class="cos-buy"${afford?'':' disabled'} onclick="buyCosmetic('${item.id}')">`
+      +`${afford?'Buy':'Not enough'}</button>`;
+  return `<div class="cos-item deco-box${have?' equipped':''}">
+    ${thumb}
+    <span class="cos-body"><span class="cos-name">${esc(item.name)}</span>${foot}</span>
+  </div>`;
+}
+
+function buyCosmetic(itemId){
+  if(!account||!accountToken) return;
+  SFX.play('click');
+  socket.emit('buyCosmetic',{token:accountToken,itemId});
+}
+socket.on('shopOk',d=>{
+  setCreditBalance(d.balance);
+  const el=$('err-shop');
+  if(el) el.style.display='none';
+  SFX.play('gameWin');
+});
+socket.on('shopError',d=>{
+  const el=$('err-shop');
+  if(!el) return;
+  el.textContent=d.msg;
+  el.style.display='block';
+});
+
 /* ── state ──
    One object, replaced wholesale by every profileCosmeticsOk. null means
    "guest, or not loaded yet", which every render path treats as the gate
@@ -5637,7 +5912,12 @@ function cosItemHTML(kind,item,thumbHTML,equippedId){
     ? (equipped?`<span class="cos-status">Equipped</span>`:'')
     : item.unlocked
       ? `<span class="cos-status">${equipped?'Equipped':'Unlocked'}</span>`
-      : `<div class="cos-req">${esc(item.rankTier?`Reach ${item.rankTierName||item.rankTier}`:(item.unlockName||'Locked'))}</div>`;
+      : `<div class="cos-req">${esc(item.rankTier?`Reach ${item.rankTierName||item.rankTier}`:(item.unlockName||'Locked'))}</div>`
+        // A priced item has a second route, so the requirement line says so
+        // rather than reading as a dead end. The shop is where it's bought;
+        // this is only the signpost.
+        + (item.price&&!item.unlocked
+            ? `<div class="cos-price">${creditChipHTML(12)}${fmtCredits(item.price)} in the Shop</div>` : '');
   const click=item.unlocked?` onclick="equipCosmetic('${kind}','${item.id}')"`:'';
   // Scene thumbnails carry .scene-art + data-scene, which is the SAME
   // pair the full-screen #scene-layer uses — every stop in those rules is
@@ -5880,9 +6160,13 @@ socket.on('profileCosmeticsOk',d=>{
   // stopped being unlocked (a renamed ID, a retuned threshold).
   applyScene(cosState.equipped.scene);
   applyCardFront(cosState.equipped.cardFront);
+  if(d.credits) setCreditBalance(d.credits.balance);
   renderCosmeticPanels();
   renderAchievements();
   renderHeroCosmetics();
+  renderShop();
+  const shopLoad=$('shop-loading');
+  if(shopLoad) shopLoad.style.display='none';
   if(d.fresh&&d.fresh.length){
     const fresh=cosState.achievements.filter(a=>d.fresh.includes(a.id));
     socket.emit('markAchievementsSeen',{token:accountToken,ids:d.fresh});
@@ -5977,11 +6261,16 @@ function doLogout(){
   cosState=null;
   unlockQueue=[];
   resetCosmeticLook();
+  // A balance belongs to the account too — leaving the previous player's
+  // figure on the menu would be the same class of leak as leaving their
+  // scene painted.
+  creditBalance=0;
   updateMenuProfileUI();
   renderAccountUI();
   renderCosmeticPanels();
   renderAchievements();
   renderHeroCosmetics();
+  renderShop();
   friendsList=[]; friendsLoadedOnce=false;
   renderLobbyFriendPicker();
 }

@@ -1182,27 +1182,33 @@ const ACHIEVEMENTS = [
 // no free entry on purpose: an unequipped crest/title is simply nothing
 // shown, which is a valid state, whereas an unequipped scene would leave
 // the table with no background at all.
-// TEMPORARY: every scene's unlock is null (always-available) rather than
-// its real achievement gate below, so the 8 real photos that just landed
-// in public/scenes/ are actually choosable and previewable before the
-// coin-purchase system exists. Restore the commented-out `unlock` value
-// on each once purchasing (or the achievement grind) is the intended
-// gate again — `!c.unlock || done.has(c.unlock)` in cosmeticsFor is the
-// only place that reads this.
+// The real achievement gates are back (they were temporarily nulled so the
+// scene photos were previewable before the shop existed), and each priced
+// item now has a SECOND route: buy it. An item is available if it is
+// achievement-unlocked OR purchased — see cosmeticsFor. That split is what
+// keeps every threshold retunable, since only the purchase is stored.
+//
+// Only scenes and card fronts are purchasable, deliberately. Crests are
+// 1:1 with achievements — a crest IS the visible proof of one, so a bought
+// crest would be a lie. Rank sets are earned by reaching a tier and are
+// documented as never purchasable; selling them would also make credits
+// look like they touch rank, which is this spec's own first non-goal.
+// Neither carries a price, and buyCosmetic hard-rejects both.
+const CREDIT_PRICES = { common: 600, rare: 2000, epic: 5000, legendary: 12000 };
 const COSMETICS = {
   scenes: [
-    { id: 'scene_velvet_room',   name: 'The Velvet Room',  unlock: null }, // always free
-    { id: 'scene_rooftop',       name: 'The Rooftop',      unlock: null }, // was: 'ach_observer'
-    { id: 'scene_grand_library', name: 'The Grand Library', unlock: null }, // was: 'ach_card_master'
-    { id: 'scene_winter_casino', name: 'The Winter Casino', unlock: null }, // was: 'ach_the_house'
-    { id: 'scene_moon_room',     name: 'The Moon Room',    unlock: null }, // was: 'ach_moon_chaser'
-    { id: 'scene_garden',        name: 'The Garden',       unlock: null }, // was: 'ach_heartbreaker'
-    { id: 'scene_train',         name: 'The Train',        unlock: null }, // was: 'ach_the_dealer'
-    { id: 'scene_observatory',   name: 'The Observatory',  unlock: null }, // was: 'ach_high_roller'
+    { id: 'scene_velvet_room',   name: 'The Velvet Room',  unlock: null },
+    { id: 'scene_rooftop',       name: 'The Rooftop',      unlock: 'ach_observer',     price: CREDIT_PRICES.rare },
+    { id: 'scene_grand_library', name: 'The Grand Library', unlock: 'ach_card_master', price: CREDIT_PRICES.rare },
+    { id: 'scene_winter_casino', name: 'The Winter Casino', unlock: 'ach_the_house',   price: CREDIT_PRICES.rare },
+    { id: 'scene_moon_room',     name: 'The Moon Room',    unlock: 'ach_moon_chaser',  price: CREDIT_PRICES.rare },
+    { id: 'scene_garden',        name: 'The Garden',       unlock: 'ach_heartbreaker', price: CREDIT_PRICES.rare },
+    { id: 'scene_train',         name: 'The Train',        unlock: 'ach_the_dealer',   price: CREDIT_PRICES.rare },
+    { id: 'scene_observatory',   name: 'The Observatory',  unlock: 'ach_high_roller',  price: CREDIT_PRICES.rare },
   ],
   cardFronts: [
     { id: 'cardfront_standard',    name: 'Classic',     unlock: null },
-    { id: 'cardfront_royal_court', name: 'Royal Court', unlock: 'ach_queen_hunter' },
+    { id: 'cardfront_royal_court', name: 'Royal Court', unlock: 'ach_queen_hunter', price: CREDIT_PRICES.common },
   ],
   // Crests are 1:1 with achievements by design (the brief's whole point:
   // a crest IS the visible proof of an achievement), so they're derived
@@ -1330,8 +1336,9 @@ function evaluateAchievements(stats) {
   });
 }
 
-function cosmeticsFor(achievements, stats) {
+function cosmeticsFor(achievements, stats, purchases) {
   const done = new Set(achievements.filter(a => a.unlocked).map(a => a.id));
+  const bought = new Set(purchases || []);
   // rankTierName is sent alongside the slug so the client can say
   // "Reach Gambler" without carrying its own copy of RANK_TABLE — the
   // rule that visible rank is server-derived applies here too.
@@ -1343,8 +1350,14 @@ function cosmeticsFor(achievements, stats) {
     rankTierName: c.rankTier ? tierName(c.rankTier) : null,
     material: c.material || null,
     emblem: c.emblem || null,
+    price: c.price || null,
+    owned: bought.has(c.id),
+    // Earned OR bought. The earned half is still re-derived from
+    // achievement_stats on every call, so retuning a threshold takes effect
+    // immediately for everyone; the bought half is the only stored piece,
+    // and it can never be revoked by a retune.
     unlocked: c.rankTier ? tierReached(stats.mmrPeak, c.rankTier)
-            : (!c.unlock || done.has(c.unlock)),
+            : (!c.unlock || done.has(c.unlock) || bought.has(c.id)),
   }));
   return {
     scenes: mark(COSMETICS.scenes),
@@ -1384,12 +1397,14 @@ function filterEquipped(equipped, catalog) {
 async function loadPlayerCosmetics(accountId) {
   const stats = await db.getAchievementStats(accountId);
   const achievements = evaluateAchievements(stats);
-  const catalog = cosmeticsFor(achievements, stats);
+  const purchases = await db.getPurchases(accountId);
+  const catalog = cosmeticsFor(achievements, stats, purchases);
   const stored = await db.getCosmetics(accountId);
   const equipped = filterEquipped(stored, catalog);
   const seen = new Set(stored.seen);
   const fresh = achievements.filter(a => a.unlocked && !seen.has(a.id)).map(a => a.id);
-  return { stats, achievements, catalog, equipped, fresh };
+  const credits = await db.getCredits(accountId);
+  return { stats, achievements, catalog, equipped, fresh, credits };
 }
 
 // The display string for a seat, or null. Guests and accounts with no
@@ -1439,6 +1454,11 @@ function createRoom(hostName, hostAvatar, hostAccountId, opts) {
   const code = makeCode();
   rooms[code] = {
     code,
+    // Room codes are short and get reused after a room closes, so the code
+    // ALONE can't identify a payable game. code+startedAt can, and that is
+    // what credit_transactions' UNIQUE (account_id,type,reference_id) keys
+    // off to make a retried grant a no-op instead of a double payment.
+    startedAt: Date.now(),
     phase: 'lobby',
     ranked: false,
     roundsTotal: sanitizeRoundsTotal(o.roundsTotal),
@@ -1540,12 +1560,15 @@ function submitDailyResult(G) {
   const tricksWon = p.tricks.length / 4;
   const shotMoon = G.moonShooter === 0;
   const socketId = p.socketId;
-  const payload = { date: G.dailyDate, score, tricksWon, shotMoon, streak: null, position: null, entries: null };
+  const payload = { date: G.dailyDate, score, tricksWon, shotMoon, streak: null, position: null, entries: null,
+                    credits: DAILY_CREDIT_FLOOR + Math.round(Math.max(0, score) * DAILY_CREDIT_PER_POINT) };
 
   if (!DB_ENABLED || !p.accountId) {
     // Guests still get their score and the day's deal; they just don't
     // appear on the leaderboard and don't carry a streak.
-    if (socketId) io.to(socketId).emit('dailyResult', { ...payload, guest: true });
+    // Guests earn nothing anywhere in this system, so the credit figure is
+    // zeroed rather than shown-but-not-banked.
+    if (socketId) io.to(socketId).emit('dailyResult', { ...payload, credits: 0, guest: true });
     return;
   }
 
@@ -1554,6 +1577,13 @@ function submitDailyResult(G) {
   trackStat(async () => {
     await db.recordDailyScore(p.accountId, G.dailyDate, score, tricksWon, shotMoon);
     const streak = await db.bumpDailyStreak(p.accountId, G.dailyDate);
+    // Flat floor for showing up, plus a straight multiplier on a positive
+    // finish only. Deliberately simpler than the multiplayer formula: this
+    // is one attempt a day, not a placement, so there is nothing to clamp
+    // against. Keyed on the date, so the whole block stays safe to retry.
+    const dailyCredits = DAILY_CREDIT_FLOOR
+      + Math.round(Math.max(0, score) * DAILY_CREDIT_PER_POINT);
+    await db.grantCredits(p.accountId, dailyCredits, 'daily_reward', G.dailyDate);
     const standing = await db.getDailyStanding(p.accountId, G.dailyDate);
     if (socketId) {
       io.to(socketId).emit('dailyResult', {
@@ -1567,8 +1597,20 @@ function submitDailyResult(G) {
 }
 
 // ── Ranked matchmaking ────────────────────────────────────────────
+// Ranked is a FIXED 8 rounds — it no longer inherits DEFAULT_ROUNDS (16)
+// the way every other createRoom call site does. Casual keeps the full
+// 4/8/12/16 picker; ranked deliberately has one length so every ladder
+// game is the same shape.
+// Note for stats: recordRankedGameFinished's best/worst-game and average
+// columns now mix pre-change 16-round totals with 8-round ones. That is
+// the same incomparability that gave Blitz its own columns; it was a
+// deliberate call not to split or migrate ranked's, so treat ranked
+// per-GAME aggregates from before this change as not comparable. Per-round
+// and per-trick records are unaffected — a round is 13 tricks in any mode.
+const RANKED_ROUNDS = 8;
 function formRankedMatch(group) {
-  const G = createRoom(group[0].name, group[0].avatar, group[0].accountId);
+  const G = createRoom(group[0].name, group[0].avatar, group[0].accountId,
+                       { roundsTotal: RANKED_ROUNDS });
   G.ranked = true;
   for (let i = 0; i < 4; i++) {
     const p = group[i];
@@ -1732,6 +1774,54 @@ function applyRankedResult(G) {
 // `natural` distinguishes a game that played out its full round count
 // from one cut short by the end-early vote — the only difference that
 // matters to The Silent Dealer, and the reason finishEarly passes false.
+// ── Credits ──────────────────────────────────────────────────────
+// A second progression track, parallel to MMR and deliberately never
+// touching it: credits measure engagement, never skill, and nothing here
+// is read by matchmaking or by rank derivation.
+const CREDIT_PLACEMENT = [50, 40, 32, 24];   // 1st..4th
+const CREDIT_MOON_BONUS = 10;                // per moon this player fired
+const DAILY_CREDIT_FLOOR = 5;                // just for completing
+const DAILY_CREDIT_PER_POINT = 0.2;          // positive finishes only
+
+// credits = round(placementBase * x) + 10 * moons, where x scales with
+// how well the game was played rather than just where it finished:
+//   x = clamp(1 + 0.02 * (totalScore / roundsPlayed), 0.75, 1.25)
+// Dividing by roundsPlayed is what makes this length-agnostic, so a
+// 4-round Blitz and a 16-round casual game pay comparably for comparable
+// play — no per-length calibration needed.
+function computeGameCredits(placeIndex, totalScore, roundsPlayed, moons) {
+  const avgRoundScore = roundsPlayed > 0 ? totalScore / roundsPlayed : 0;
+  const x = Math.min(1.25, Math.max(0.75, 1 + 0.02 * avgRoundScore));
+  const base = CREDIT_PLACEMENT[Math.min(3, Math.max(0, placeIndex))];
+  return Math.round(base * x) + CREDIT_MOON_BONUS * (moons || 0);
+}
+
+// Standard competition ranking: equal scores share a placement, so a tie
+// for first pays both players the 1st-place base. Same generosity rule
+// the win achievement already uses — the game has no tiebreak, so
+// inventing one purely to pay someone less would be worse.
+function placementIndexes(scores) {
+  const sorted = [...scores].sort((a, b) => b - a);
+  return scores.map(sc => sorted.indexOf(sc));
+}
+
+// Casual pays at most ONE game a day, whoever the opponents are; ranked is
+// uncapped and is the only mode where volume turns into credits. The claim
+// is atomic in SQL, so two casual games finishing together can't both pay.
+async function awardGameCredits(G, acctId, placeIndex, finalScore, moons) {
+  const amount = computeGameCredits(placeIndex, finalScore, G.round, moons);
+  if (amount <= 0) return;
+  const ref = `${G.code}-${G.startedAt}`;
+  if (!G.ranked) {
+    // Passing the ref keeps this idempotent under trackStat's retries —
+    // see claimCasualCreditDay. Without it a retried grant would be
+    // refused by the cap it set itself on the first attempt.
+    const claimed = await db.claimCasualCreditDay(acctId, dailyDateKey(), ref);
+    if (!claimed) return;               // another game already had today's casual payout
+  }
+  await db.grantCredits(acctId, amount, 'game_reward', ref);
+}
+
 function recordGameFinishedForAll(G, natural) {
   // The Daily Challenge finishes through its own pipeline
   // (submitDailyResult) — it must never touch casual or ranked stats.
@@ -1741,6 +1831,7 @@ function recordGameFinishedForAll(G, natural) {
   // game has no tiebreak rule, so inventing one here just to deny an
   // achievement would be worse than being generous.
   const topScore = Math.max(...G.players.map(p => p.score));
+  const places = placementIndexes(G.players.map(p => p.score));
   for (let i = 0; i < 4; i++) {
     const acctId = G.players[i].accountId;
     if (!acctId) continue;
@@ -1756,6 +1847,10 @@ function recordGameFinishedForAll(G, natural) {
       moons,
       fourSuit: won && (G.players[i].suitsWon || []).length === 4 ? 1 : 0,
     }));
+    // Credits: only a FINISHED game pays, in any mode. `natural` is false
+    // for an early-end vote, which is exactly the case that must not pay —
+    // otherwise four players could vote out of a game a round in and farm.
+    if (natural) trackStat(() => awardGameCredits(G, acctId, places[i], finalScore, moons));
     if (G.ranked) trackStat(() => db.recordRankedGameFinished(acctId, finalScore, moons));
     // A 4- or 8-round game's final score isn't comparable with a 16-round
     // one, so Blitz totals (best/worst game, average, win streak) get their
@@ -2456,8 +2551,8 @@ io.on('connection', (socket) => {
     try {
       const account = await db.findAccountByToken(token);
       if (!account) return socket.emit('profileCosmeticsError', { msg: 'Your session expired — log in again.' });
-      const { achievements, catalog, equipped, fresh } = await loadPlayerCosmetics(account.id);
-      socket.emit('profileCosmeticsOk', { achievements, catalog, equipped, fresh });
+      const { achievements, catalog, equipped, fresh, credits } = await loadPlayerCosmetics(account.id);
+      socket.emit('profileCosmeticsOk', { achievements, catalog, equipped, fresh, credits });
     } catch (e) {
       console.error('getProfileCosmetics error:', e.message);
       socket.emit('profileCosmeticsError', { msg: 'Could not load your collection. Try again.' });
@@ -2492,11 +2587,56 @@ io.on('connection', (socket) => {
       const after = await loadPlayerCosmetics(account.id);
       socket.emit('profileCosmeticsOk', {
         achievements: after.achievements, catalog: after.catalog,
-        equipped: after.equipped, fresh: after.fresh, saved: true,
+        equipped: after.equipped, fresh: after.fresh, credits: after.credits, saved: true,
       });
     } catch (e) {
       console.error('saveCosmetics error:', e.message);
       socket.emit('profileCosmeticsError', { msg: 'Could not save that. Try again.' });
+    }
+  });
+
+  // Balance on its own, for the main-menu box — much cheaper than the full
+  // cosmetics payload, which is what the account screen uses.
+  socket.on('getCredits', async ({ token }) => {
+    if (!DB_ENABLED || !token) return socket.emit('creditsOk', { balance: 0, lifetime: 0, guest: true });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('creditsOk', { balance: 0, lifetime: 0, guest: true });
+      socket.emit('creditsOk', await db.getCredits(account.id));
+    } catch (e) {
+      console.error('getCredits error:', e.message);
+    }
+  });
+
+  // The purchase. Price comes from THIS registry, never from the client —
+  // the client's catalog copy is presentation only, exactly like the unlock
+  // state it renders. Both the price and whether an item is purchasable at
+  // all are re-derived here, so a crafted message can't buy a crest, buy a
+  // rank set, or set its own price.
+  socket.on('buyCosmetic', async ({ token, itemId }) => {
+    if (!DB_ENABLED || !token) return socket.emit('shopError', { msg: 'Accounts aren't set up on this server yet.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('shopError', { msg: 'Your session expired — log in again.' });
+      // Only the two purchasable categories are even searched, so an id
+      // from any other category simply isn't found.
+      const item = [...COSMETICS.scenes, ...COSMETICS.cardFronts].find(c => c.id === itemId);
+      if (!item || !item.price) return socket.emit('shopError', { msg: 'That item isn't for sale.' });
+      const res = await db.purchaseItem(account.id, item.id, item.price);
+      if (!res.ok) {
+        return socket.emit('shopError', {
+          msg: res.reason === 'funds' ? 'Not enough credits yet.' : 'You already own that.',
+        });
+      }
+      const after = await loadPlayerCosmetics(account.id);
+      socket.emit('shopOk', { itemId: item.id, name: item.name, price: item.price, balance: res.balance });
+      socket.emit('profileCosmeticsOk', {
+        achievements: after.achievements, catalog: after.catalog,
+        equipped: after.equipped, fresh: after.fresh, credits: after.credits,
+      });
+    } catch (e) {
+      console.error('buyCosmetic error:', e.message);
+      socket.emit('shopError', { msg: 'Could not complete that purchase. Try again.' });
     }
   });
 

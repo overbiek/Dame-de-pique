@@ -1534,7 +1534,12 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
   background:radial-gradient(120% 90% at 50% 18%,var(--felt-0),var(--ddp-bg) 78%);
   color:var(--cream);
 }
-@media (orientation:portrait){ #rotate-gate{display:flex} }
+/* Touch devices only. `pointer:coarse` tests the PRIMARY input, so a
+   desktop browser in a tall window is left alone, and a touchscreen
+   laptop being driven by a mouse still reports `fine` and isn't gated
+   either. Deliberately NOT `any-pointer:coarse`, which would match any
+   desktop that merely HAS a touchscreen attached. */
+@media (orientation:portrait) and (pointer:coarse){ #rotate-gate{display:flex} }
 .rg-icon{width:74px;height:74px;color:var(--gold-hi)}
 .rg-icon svg{width:100%;height:100%;display:block;fill:none;
   stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}

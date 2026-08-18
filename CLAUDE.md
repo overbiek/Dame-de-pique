@@ -256,16 +256,24 @@ before pushing.
     the CSS that lays the app out, and this is the one thing that must
     never be wrong. It is also correct on the very first frame, before
     any script runs.
+  - **Touch devices only**: the query is `(orientation:portrait) and
+    (pointer:coarse)`. `pointer` tests the PRIMARY input, so a desktop
+    browser in a tall window is left alone and a touchscreen laptop
+    driven by a mouse still reports `fine`. Deliberately **not**
+    `any-pointer:coarse`, which would match any desktop that merely has
+    a touchscreen attached.
   - `z-index:9500` clears `#splash` (9000), so a portrait cold start is
     gated instead of showing the brand splash and then the gate.
   - Unlike the splash it **does** take pointer events — blocking
     interaction is the point. That costs nothing: the Web Audio unlock
     rides the first `pointerdown` *after* the player rotates, by which
     time the gate is gone.
-  - Verified: full-bleed at 412×915 and 320×568, all three hit-test
-    probes land inside the gate (nothing underneath is reachable), and
-    rotating back to landscape releases it and leaves the app
-    interactive.
+  - Verified across all three cases: touch + portrait (375×812,
+    `maxTouchPoints` 5) gates; desktop + portrait window (900×1200,
+    `maxTouchPoints` 0, `pointer:fine`) does **not**, and the app stays
+    reachable; touch + landscape (667×375) — the real play case — does
+    not. Also full-bleed at 412×915 and 320×568 with all three hit-test
+    probes landing inside the gate, and rotating back releases it.
 - **The portrait CSS is deliberately still there** and is not dead code.
   It's the base layer the `html.landscape-mode` rules override. It is no
   longer reachable as a *fallback* on a phone, though — `#rotate-gate`

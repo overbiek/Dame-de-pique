@@ -1805,11 +1805,24 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
   white-space:nowrap;
 }
 
-/* ── the three sizes ── */
+/* ── the four sizes ── */
 .rank-plate.sm{--rp-h:14px;--rp-side-w:6px;--rp-foot:5px;--rp-pad:12px;padding:3px var(--rp-pad)}
 .rank-plate[data-material].sm{min-width:0}
 .rank-plate.sm .rp-text{font-size:.62rem;letter-spacing:.07em}
 .rank-plate.sm .rp-frame{inset:2px}
+/* xs: the roster rail, where FOUR plaques have to stack inside the right
+   column's spare height. .sm occupies ~36px once the emblem's overhang
+   and the foot lozenge are counted, and 4x36 + 3 gaps missed the ~174px
+   available at 667x375 by a hair — the same single-digit-px margin the
+   --cw formula lives on. These numbers give ~28px a row instead, which
+   clears it with real slack rather than by three pixels.
+   Like .sm and .lg this sits BEFORE .rank-plate:not([data-material]) on
+   purpose: they tie at (0,2,0), so source order is what lets an
+   undressed plate still collapse its padding to 0. */
+.rank-plate.xs{--rp-h:11px;--rp-side-w:5px;--rp-foot:4px;--rp-pad:9px;padding:2px var(--rp-pad)}
+.rank-plate[data-material].xs{min-width:0}
+.rank-plate.xs .rp-text{font-size:.55rem;letter-spacing:.06em}
+.rank-plate.xs .rp-frame{inset:2px}
 /* lg: the account hero, where the plaque is a layer BEHIND live text
    (the editable name input and the title line) rather than a label of
    its own — the sheet's own display contract. */
@@ -2651,6 +2664,142 @@ html.landscape-mode .tbl-note{
 html.landscape-mode .tbl-note .nt-main{font-size:.82rem;color:var(--gold-hi);line-height:1.2}
 html.landscape-mode .tbl-note .nt-main.wait{color:var(--muted)}
 html.landscape-mode .tbl-note .nt-sub{font-size:.66rem;color:var(--cream);line-height:1.2;opacity:.85}
+
+/* ══ the roster rail ══════════════════════════════════════════════════
+   The four players' identity and score, stacked down the right column
+   under the info panel. THIS COSTS THE CARDS NOTHING, which is the whole
+   reason it can exist on a screen whose vertical budget this file
+   elsewhere describes as spent: .table already pads min(42vw,250px) on
+   the right so the trick cross never slides under .rt-stack, and only
+   ~107px of that reserved column's height was in use. Nothing in this
+   block may ever be allowed to grow .mid or .hand — the --cw/--ch
+   formulas are untouched by it and must stay that way.
+
+   PLAY SCREEN ONLY, and that's a design decision before it's a fit one.
+   The pass screen's stack also carries #p-go and #p-auto (moved there by
+   relocatePassChrome), leaving ~118px at 667x375 against the rail's
+   ~133 — but the better argument is that during passing no trick has
+   been played and no score has moved since the round summary the player
+   just confirmed through, so the rail has nothing to say. tableHTML only
+   emits it when opts.roster is set, which only renderPlay does.
+
+   Measured budget at the tightest documented landscape viewport
+   (667x375): the stack gets ~272px, of which .corner-rt takes 56, the
+   status note ~30 unboxed, and the gaps 12 — leaving ~174px. A row is
+   2px padding + 2px border a side plus a 1.3rem text block = ~28.6px, so
+   four rows plus three 8px gaps is ~138. ~36px of real slack. The
+   emblem/foot overhangs are absolutely positioned and cost no layout
+   height; only the gap has to clear them. Re-measure if any of that
+   furniture changes. */
+html.landscape-mode .roster{
+  display:flex;flex-direction:column;
+  /* 8px, not the stack's 6: the plaque's emblem straddles its TOP edge by
+     --rp-h * .42 (4.62px at xs) and the foot lozenge hangs below by
+     --rp-foot/2 (2px), so a gap under 6.62 has row N's foot colliding
+     with row N+1's emblem. 7 technically clears — by 0.38px, which is
+     exactly the kind of margin this file warns about elsewhere. 8 buys
+     real clearance for 3px total across the three gaps. */
+  gap:8px;
+  width:100%;min-height:0;
+}
+/* The plaque IS the row — the avatar straddles its left edge rather than
+   sitting beside it as a second object, which is what the rank sheet
+   means by the plate being "a decorative layer behind dynamic player
+   text", and what .rank-plate.lg already does on the account hero. */
+html.landscape-mode .ros{display:flex;align-items:center;min-height:0}
+html.landscape-mode .ros-plate{
+  flex:1 1 auto;min-width:0;
+  display:flex;align-items:center;gap:5px;
+  /* room for the avatar to overlap into, so the name never runs under it */
+  padding-left:20px;
+}
+/* An undressed plate (a human with no rank set equipped) collapses its
+   padding to 0 via .rank-plate:not([data-material]) — but the avatar
+   still overlaps, so the left inset has to survive that reset. The
+   transparent border is the "reserve constant space" rule again: a
+   dressed plate carries a 2px metal border a side, so without this an
+   undressed row measured 26px against its neighbours' 28 and the rail
+   went visibly ragged. Caught by rendering it, not by reading it. */
+html.landscape-mode .ros-plate:not([data-material]){
+  padding:2px 0 2px 20px;border:2px solid transparent;
+}
+html.landscape-mode .ros-av{
+  width:26px;height:26px;font-size:.78rem;flex:0 0 auto;
+  /* pulled INTO the plate; z-index clears the plate's own frame layers,
+     which sit at 1-2 */
+  margin-right:-14px;z-index:3;
+}
+html.landscape-mode .ros-av .dealer-badge{
+  width:13px;height:13px;font-size:.42rem;right:-2px;bottom:-2px;border-width:1.5px;
+}
+/* min-height reserves the title's line whether or not the player has one,
+   so a titled and an untitled row are the same height and the rail can't
+   go ragged. That's the "reserve constant space" rule this file already
+   applies to .mystrip's turn badge — .62rem + .5rem at line-height 1.15
+   is 1.288rem, rounded up. */
+html.landscape-mode .ros-txt{
+  position:relative;z-index:1;min-width:0;flex:1 1 auto;
+  display:flex;flex-direction:column;justify-content:center;
+  line-height:1.15;min-height:1.3rem;
+}
+html.landscape-mode .ros-nm{
+  font-size:.62rem;font-weight:600;color:var(--rm-ink,var(--cream));
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* .85, and the figure is measured rather than picked. --rm-ink is solved
+   against BOTH ends of its plate's gradient (see the ink-contrast note
+   above), and knocking it back with opacity spends that headroom: at .72
+   paper lands 3.68:1 — under AA, on the smallest type in the app, on the
+   plate every AI seat wears. .85 is the point the worst material still
+   clears (paper 4.92/5.94; every other material 5.5+). Hierarchy against
+   the name comes from the size step, not from fading it further. */
+html.landscape-mode .ros-ti{
+  font-size:.5rem;color:var(--rm-ink,var(--muted));opacity:.85;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* The score. Tabular figures for the reason the numeric-readouts block
+   documents: this sits at the right edge of a fixed-width column, so a
+   proportional 9 -> 10 would shove the name's ellipsis point sideways
+   between rounds. The small figure beside it is tricks won this round —
+   the one number here that DOES move mid-round. */
+html.landscape-mode .ros-sc{
+  position:relative;z-index:1;flex:0 0 auto;
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:.68rem;font-weight:600;color:var(--rm-ink,var(--gold-hi));
+  display:flex;align-items:baseline;gap:0;
+}
+/* The tricks figure needs a HARD separator, not just a size step. Caught
+   by rendering it: at a 3px gap in the same ink, a score of 42 beside 3
+   tricks reads as "423" — and -13 beside 0 as "-130". A hairline rule
+   plus real padding is what makes the two read as two numbers.
+   .85 opacity for the same measured reason as the title above: .62 lands
+   3.1:1 on paper. */
+html.landscape-mode .ros-sc small{
+  font-size:.52rem;opacity:.85;
+  margin-left:2px;padding-left:5px;
+  border-left:1px solid currentColor;
+}
+/* Whose turn it is, on the row rather than only at the trick slot. The
+   ring is drawn OUTSIDE the plate (an outline, not a border) so it can't
+   disturb the plaque's own six layers or its measured height. */
+html.landscape-mode .ros.turn .ros-plate{
+  outline:1.5px solid var(--gold);outline-offset:1px;
+}
+/* Only bites on an UNFRAMED avatar: .rank-framed sets border-color with
+   !important so the rank metal always wins, which is correct — the metal
+   is the point of the frame. The plate outline above is the turn signal
+   that every row gets either way. */
+html.landscape-mode .ros.turn .ros-av{border-color:var(--gold)}
+html.landscape-mode .ros.off{opacity:.45}
+html.landscape-mode .ros.mine .ros-nm{text-decoration:underline;text-underline-offset:2px}
+/* With the rail carrying the panel look, the status note above it drops
+   its own box — two stacked bordered cards read as clutter, and the
+   ~14px of chrome is height the rail wants. Scoped to .has-roster so the
+   pass screen, which keeps its note as the only thing under the panel,
+   is left exactly as it was. */
+html.landscape-mode .rt-stack.has-roster .tbl-note{
+  padding:1px 6px;background:none;border-color:transparent;
+}
 html.landscape-mode #s-pass .banner,html.landscape-mode #s-play .banner,
 html.landscape-mode #s-pass .prompt,html.landscape-mode #s-play .prompt{display:none}
 /* your own name/score now lives under your trick slot like everyone
@@ -5082,6 +5231,69 @@ function myStrip(G,elId,isMyTurn){
     +`<small>this round &middot; ${p.score} total</small></span>`;
 }
 
+/* ══ the roster rail ══
+   Identity and score for all four players, rendered into the right
+   column's spare height on the play screen. See the .roster CSS block
+   for why that column is free and why this is play-screen only.
+
+   Rows are ordered by POSITION — top, left, right, you — rather than by
+   seat index, so the rail mirrors the table's own geometry and the
+   row-to-seat mapping needs no colour coding or legend to read. */
+const ROSTER_ORDER=[2,1,3,0];   // seatOf() positions: top, left, right, bottom(me)
+/* Computers wear the humblest plate in the set. paper is the tier a human
+   holds at the BOTTOM of the ladder, so every dressed human plaque reads
+   as earned by contrast with it — and four undressed bare wrappers (the
+   common case in solo-vs-AI, where three seats are computers) looked
+   broken rather than aspirational.
+   Presentation only: the server sends AI seats no cosmetics at all and
+   has no idea this happens, which is what keeps this whole feature inside
+   public/index.html. */
+const AI_MATERIAL='paper';
+const AI_TITLE='I am a bot';
+function rosterRowHTML(G,i,active){
+  const p=G.players[i];
+  const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
+  const set=mat?RANK_SETS.find(r=>r.material===mat):null;
+  const title=p.isAI?AI_TITLE:(p.title||'');
+  const tw=typeof p.tricksWon==='number'?p.tricksWon:0;
+  // Frozen at the score before this round started, exactly like the seat
+  // blocks and the caption it replaces: the total moves BETWEEN rounds,
+  // never after a trick, so it can't churn while cards are still landing.
+  const total=(G.roundBefore&&typeof G.roundBefore[i]==='number')?G.roundBefore[i]:p.score;
+  const cls=[i===active?'turn':'',i===me?'mine':'',
+             (!p.connected&&!p.isAI)?'off':''].join(' ');
+  const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
+  // The plate carries no data-material when a human has no rank set
+  // equipped, which is the documented bare-wrapper state: every
+  // decorative layer stays display:none and it degrades to plain name +
+  // title. That's why the dressing is emitted conditionally too.
+  return `<div class="ros ${cls}">`
+    +`<span class="ros-av avatar${mat?' rank-framed':''}"`
+      +`${mat?` data-material="${mat}"`:''}>`
+      +avatarContent
+      +`<span class="dealer-badge${i===G.dealer?' on':''}">D</span>`
+    +`</span>`
+    +`<span class="rank-plate xs ros-plate"`
+      +`${set?` data-material="${set.material}" data-emblem="${set.emblem}"`:''}>`
+      +(set?rankPlateDressHTML(set.id):'')
+      +`<span class="ros-txt">`
+        +`<span class="ros-nm">${esc(p.name)}</span>`
+        +(title?`<span class="ros-ti">${esc(title)}</span>`:'')
+      +`</span>`
+      +`<span class="ros-sc">${total}<small>${tw}</small></span>`
+    +`</span>`
+  +`</div>`;
+}
+function rosterHTML(G){
+  const active=G.phase==='play'&&G.currentTrick.length<4
+    ? (G.trickLeader+G.currentTrick.length)%4 : -1;
+  const byPos={};
+  for(let i=0;i<4;i++) byPos[seatOf(i)]=i;
+  return `<div class="roster">`
+    +ROSTER_ORDER.map(pos=>rosterRowHTML(G,byPos[pos],active)).join('')
+    +`</div>`;
+}
+
 function tableHTML(G,opts){
   opts=opts||{};
   const byPos={};
@@ -5111,6 +5323,13 @@ function tableHTML(G,opts){
     const total=(G.roundBefore&&typeof G.roundBefore[i]==='number')?G.roundBefore[i]:p.score;
     const cls=[i===active?'turn':'',i===me?'mine':'',
                (!p.connected&&!p.isAI)?'off':''].join(' ');
+    // With the roster rail up (play screen), the badge, the score and the
+    // dealer button all live there instead and the caption reduces to the
+    // one job the rail can't do: telling you whose card is in that slot.
+    // The pass screen has no rail, so it keeps the full caption — dropping
+    // the score there would simply lose it.
+    if(opts.roster)
+      return `<div class="tcap ${cls}"><span class="nm">${esc(p.name)}</span></div>`;
     return `<div class="tcap ${cls}">`
       +(p.rankMaterial?rankBadgeHTML(p.rankMaterial):'')
       +`<span class="nm">${esc(p.name)}</span>`
@@ -5128,9 +5347,10 @@ function tableHTML(G,opts){
     // it without hard-coding that panel's height.
     return `
     <div class="corner corner-lt">${actions.lt||''}</div>
-    <div class="rt-stack">
+    <div class="rt-stack${opts.roster?' has-roster':''}">
       <div class="corner corner-rt">${actions.rt||''}</div>
       <div class="tbl-note"><div class="nt-main"></div><div class="nt-sub"></div></div>
+      ${opts.roster?rosterHTML(G):''}
     </div>
     <div class="mid">
       <div class="slot-t">${played(2)}${cap(2)}</div>
@@ -7479,7 +7699,20 @@ function renderPlay(G){
 
   const trickBtn=lastTrickBtnHTML(G,'g-lt-btn');
   const playInfo=roundBadgeHTML(G)+`<div class="tb-line">Trick <b>${Math.min(G.trickNum,13)}</b>/13</div>`;
-  $('g-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(playInfo,trickBtn)});
+  // roster:true is what puts the rail in the right column and reduces the
+  // trick-slot captions — play screen only, see the .roster CSS block.
+  //
+  // Suppressed during the tutorial, and not merely for tidiness: a
+  // side:'right' callout positions itself at the LIVE .rt-stack's bottom
+  // edge (tutorialCallout), which the rail pushes from ~115px to ~240px —
+  // straight onto the hand at 667x375. The tutorial's callouts and
+  // spotlights were traced against a layout with no rail, it teaches the
+  // game rather than the cosmetics, and per CLAUDE.md it has never been
+  // run on device, so silently moving its geometry is the last thing it
+  // needs. Reads the same ambient `tutorialActive` the six other
+  // interaction guards do.
+  $('g-table').innerHTML=tableHTML(G,{fan:true,roster:!tutorialActive,
+    actions:cornerActions(playInfo,trickBtn)});
   bindLastTrickButton($('g-lt-btn'));
   $('g-banner').textContent=bannerText;
 

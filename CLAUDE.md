@@ -639,6 +639,100 @@ before pushing.
   context — same reason the pre-existing `.tap:active`/`.sel` z-index
   boosts already use the same `:has()` pattern on the parent slot.
 
+## The roster rail (`.roster`, play screen, landscape)
+- **All four players' identity and score down the right column** — a
+  rank-framed avatar, the rank nameplate carrying name + title, the
+  round total and tricks won. It is the "show off your cosmetics during
+  play" surface, and it exists **without costing the cards a single
+  pixel**.
+- **That's possible because the right column was already reserved and
+  mostly empty.** `.table` pads `min(42vw,250px)` on the right so the
+  trick cross never slides under `.rt-stack`, and only ~107px of that
+  column's height was in use (`.corner-rt` + `.tbl-note`). The rail
+  fills the rest. **Verified, not assumed**: card width/height, hand
+  top, hand height and the leftmost/rightmost card edges are all
+  byte-identical to the pre-change build (61.16 × 85.63, hand top
+  314.4, leftmost 166.4, rightmost 748.8 at 915×412). Nothing in the
+  `.roster` block may ever be allowed to grow `.mid` or `.hand`.
+- **The plaque IS the row.** The avatar straddles the plate's left edge
+  (`margin-right:-14px`, `padding-left:20px` on the plate) rather than
+  sitting beside it, which is the rank sheet's own "decorative layer
+  behind dynamic player text" contract — the same thing `.rank-plate.lg`
+  does on the account hero. One object per player, not three.
+- **Rows are ordered by POSITION, not seat index** (`ROSTER_ORDER =
+  [2,1,3,0]` → top, left, right, you, via `seatOf()`), so the rail
+  mirrors the table's geometry and the row-to-seat mapping needs no
+  colour coding or legend.
+- **`.rank-plate.xs` is a fourth size** beside `.sm`/`.lg` — four
+  `--rp-*` numbers and no restated rules. `.sm` occupies ~36px once the
+  emblem overhang and foot lozenge are counted, and four of those missed
+  the available height by a hair. Like the other two it sits **before**
+  `.rank-plate:not([data-material])` in source order, which is what lets
+  an undressed plate still collapse its padding (they tie at 0,2,0).
+- **The score is `G.roundBefore[i]`, frozen** — it moves between rounds,
+  never after a trick, exactly like the seat blocks and the caption it
+  replaces. The small figure beside it is tricks-won, the one number
+  here that does move mid-round.
+- **The tricks figure needs a hard separator, and this was a real
+  rendered bug.** At a 3px gap in the same ink, a score of 42 beside 3
+  tricks reads as **"423"**, and −13 beside 0 as "−130". It carries a
+  `border-left` hairline plus padding for that reason. Static tracing
+  would never have caught it.
+- **AI seats wear `paper` + the title "I am a bot"**, set client-side in
+  `rosterRowHTML`. paper is the tier a human holds at the *bottom* of the
+  ladder, so every dressed human plaque reads as earned by contrast — and
+  in solo-vs-AI, where three seats are computers, four bare wrappers
+  looked broken rather than aspirational. **`server.js` and `db.js` are
+  untouched by this whole feature**; everything it renders was already in
+  `publicState` (`name`, `avatar`, `title`, `rankMaterial`, `roundBefore`,
+  `tricksWon`, `dealer`, `connected`).
+- **An undressed plate needs `border:2px solid transparent` AND matching
+  2px padding.** A dressed plate carries a 2px metal border a side; without
+  both, an undressed row measured 26px against its neighbours' 28 and the
+  rail went visibly ragged. `.ros-txt`'s `min-height:1.3rem` does the same
+  job for a player with no title. Both are the "reserve constant space"
+  rule this file already applies to `.mystrip`'s turn badge — and both
+  were caught by rendering, not by reading.
+- **`.tcap` reduces to name-only, but ONLY when the rail is up.** The
+  badge, score and dealer `D` move to the rail; the caption keeps the one
+  job the rail can't do — telling you whose card is in that slot. The
+  pass screen has no rail, so it keeps the full caption; dropping the
+  score there would simply lose it.
+- **Play screen only, and that's a design decision before it's a fit
+  one.** The pass screen's stack also carries `#p-go`/`#p-auto`
+  (`relocatePassChrome`), leaving ~118px against the rail's ~136 — but
+  the better argument is that during passing no trick has been played and
+  no score has moved since the round summary the player just confirmed
+  through. `tableHTML` emits it only when `opts.roster` is set, which only
+  `renderPlay` does.
+- **Suppressed during the tutorial**, and not for tidiness: a
+  `side:'right'` callout positions itself at the **live** `.rt-stack`
+  bottom edge, which the rail pushes from ~102px to ~236px — straight
+  onto the hand at 667×375. Verified both ways: `tutorialActive` true
+  restores the stack to 101.8 and the full 4-child captions.
+- **Contrast on the plate ink is measured, not picked.** `--rm-ink` is
+  already solved against both ends of its gradient, and knocking it back
+  with `opacity` spends that headroom: at `.72` paper lands **3.68:1** —
+  under AA, on the smallest type in the app, on the plate every AI seat
+  wears. `.85` is where the worst material still clears (paper 4.92/5.94,
+  every other material 5.5+). Both `.ros-ti` and `.ros-sc small` use it.
+- **Measured budget** at 915×412 and 667×375, at 16/18/20px root font, on
+  all four themes, with bare/dressed/disconnected/all-AI/absurd-name
+  fixtures: rows uniform at 28px (33.2px at 20px root), roster 136px,
+  **43.8px of clearance above the hand in the worst case**, zero
+  horizontal or vertical overflow, zero plate overflow past the stack,
+  ellipsis engaging on a long name. Re-measure if `.corner-rt`,
+  `.tbl-note` or the hand's height ever change.
+- `.ros.turn` rings the plate with an **`outline`, not a border**, so it
+  can't disturb the plaque's six layers or its measured height. The
+  companion `.ros-av` border-colour only bites on an unframed avatar —
+  `.rank-framed` sets border-colour with `!important` so the rank metal
+  always wins, which is correct.
+- **`.rt-stack.has-roster` unboxes `.tbl-note`** (background and border
+  off). Two stacked bordered cards read as clutter, and the chrome is
+  height the rail wants. Scoped to that class so the pass screen, where
+  the note is the only thing under the panel, is left exactly as it was.
+
 ## Seat draw & dealer cut (`#s-draw`)
 - The last two screens still drawing their own ad-hoc card (a rounded box
   with a `🂠` glyph and the rank stacked over the suit). They now render

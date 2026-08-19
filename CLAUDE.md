@@ -1773,7 +1773,7 @@ before pushing.
   visible pixelation at larger card sizes without pretending to add real
   detail that isn't there. `public/cardfronts/nocturne/`, 52 files,
   ~10KB each. Not in `sw.js`'s `ASSETS` — runtime-cached on first use,
-  same reasoning as scenes and the 20 portrait avatars.
+  same reasoning as scenes and the portrait avatars.
 - **The sheet also includes a card back, deliberately not wired in.**
   Card backs are shared table furniture, not a per-player cosmetic —
   Royal Court already established this (`.card:not(.back)` explicitly
@@ -2078,15 +2078,57 @@ before pushing.
   again. **`scrollHeight === clientHeight` is NOT proof of fit on the
   table screens** — they're `overflow:hidden`, so overflow clips
   silently; compare `.mid`'s rect against `.table`'s instead.
-- **20 portrait avatars, 5 collections of 4** (the sheet's own count —
-  the earlier brief said 30). They are stored in the SAME
-  `accounts.avatar` column the emoji avatars use, not in
-  `player_cosmetics`: an avatar is identity, it already travels through
-  `publicState` and every leaderboard query, and a second home would mean
-  two sources of truth for what a player looks like.
-- **`sanitizeAvatar` allow-lists the 20 ids BEFORE its 8-char slice** —
-  the slice exists to bound arbitrary emoji input and would otherwise
-  mangle `royal_king` into `royal_ki`.
+- **The original 5-collection, 20-avatar set (Royal Court, Noir Casino,
+  Emerald Society, Moonlit Occult, Grand Hotel) is GONE — replaced
+  wholesale, not deprecated gradually**, on the requester's own call
+  ("not happy with them in the end"). Their `public/avatars/` folders are
+  deleted, not just unlisted, and their ids are out of `AVATAR_IDS`
+  entirely. In their place: **one collection, "House Regulars", 7
+  avatars** (`public/avatars/house-regulars/`) — real photo-illustration
+  portraits rather than the original fantasy-roleplay art style. Stored
+  in the SAME `accounts.avatar` column the emoji avatars use, not in
+  `player_cosmetics`, for the same reason as before: an avatar is
+  identity, already travels through `publicState` and every leaderboard
+  query, and a second home would mean two sources of truth for what a
+  player looks like.
+- **Only 7, not 8.** An 8th source file ("the host", a wide open smile)
+  existed when this was scoped but was gone from disk by the time of
+  actual cropping — most likely evicted by OneDrive's on-demand sync in
+  the gap between being shown and being processed. Nothing references
+  it; it slots in as an 8th `AVATAR_COLLECTIONS` entry whenever the file
+  resurfaces.
+- **The source art is a 1254×1254 circular medallion with a BAKED-IN
+  gold ring and house crest, not a bare portrait** — unlike the original
+  20, which were plain face crops with no framing at all. That's not
+  cosmetic taste; it created a real conflict. Every avatar host in this
+  app already draws its OWN state-reactive ring (`.avatar`, `.avatar-opt`
+  — gold border on your turn, gold border when selected in the picker),
+  so a second, PERMANENT gold ring baked into the source would compete
+  with that and make the state changes hard to notice. Solved by
+  cropping inward before the mask, not after: an inset of 13.5% of the
+  source width clears the baked-in ring on every image (verified against
+  two differently-framed samples — a centred face and a tilted, laughing
+  one — before running the full batch), so what ships is the same bare
+  circular portrait the app's own ring treatment expects. Same 160×160,
+  same supersampled circular alpha mask, same `public/avatars/<dir>/`
+  layout as the set it replaced — the only thing that changed is which
+  pixels feed the mask.
+- **`sanitizeAvatar` doesn't just allow-list the current ids before its
+  8-char slice — it now also CLEARS a recognizable stale one instead of
+  mangling it.** Previously any string failing the allow-list fell
+  straight into `.slice(0,8)`, which existed to bound arbitrary emoji
+  input. That's fine for real emoji, but a stale portrait id like
+  `royal_king` (from a since-removed collection, no longer in
+  `AVATAR_IDS`) would silently mangle into `royal_ki` and get stored as
+  if that garbled text were a deliberate emoji-avatar choice. A
+  plain-ASCII-letters-and-underscores value is never real emoji, so that
+  shape is caught first and cleared to `null` instead — the SAME rule
+  now applied client-side in `avatarHTML`, which used to just print
+  raw text (`v ? esc(v) : ...`) whenever a value fell outside
+  `AVATAR_ART`, and would have literally displayed the string
+  `"royal_king"` in the UI for anyone whose account still had it stored.
+  Both fixes are independent of which specific ids get removed — they'll
+  hold the next time a collection is replaced too.
 - Portrait avatars carry **no unlock condition**, deliberately: the sheet
   states one for the rank cosmetics and pointedly not for these, and the
   emoji avatars beside them have always been free. They need an account
@@ -2096,11 +2138,8 @@ before pushing.
   rebuilds its seats' innerHTML on every `gameState` (every card played),
   so deferring those images re-runs the intersection check each rebuild
   and risks the avatar popping mid-trick, to save nothing.
-- Art was cut from the reference sheet (`scratchpad/crop.py`) at 160×160
-  with a supersampled circular alpha mask, 20 files / 158 KB total. They
-  are **not** in `sw.js`'s `ASSETS` — the fetch handler runtime-caches
-  them, so no `CACHE` bump is needed and installs don't pull 158 KB up
-  front. Higher-res replacements can be dropped over the same filenames.
+- Not in `sw.js`'s `ASSETS` — the fetch handler runtime-caches them, so
+  no `CACHE` bump is needed and installs don't pull the set up front.
 
 ## Credits — the second progression track
 - **Parallel to MMR and never touching it.** Credits measure engagement,

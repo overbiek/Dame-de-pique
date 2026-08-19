@@ -5239,22 +5239,15 @@ const AVATARS=['👑','🃏','🦊','🐺','🦁','🐯','🦅','🐉','🎩','�
    (sanitizeAvatar allow-lists these ids); this copy is presentation.
    The `dir`/file split keeps the id free of path detail, so the art can
    be reorganised on disk without touching a stored value. */
+// Replaced wholesale (not deprecated gradually) — see AVATAR_COLLECTIONS'
+// own comment in server.js for why, and for the one file that's missing
+// from this 7 (an 8th was scoped, gone from disk by crop time).
 const AVATAR_COLLECTIONS=[
-  {id:'royal_court',name:'Royal Court',dir:'royal-court',avatars:[
-    ['royal_king','The King','king'],['royal_queen','The Queen','queen'],
-    ['royal_duke','The Duke','duke'],['royal_duchess','The Duchess','duchess']]},
-  {id:'noir_casino',name:'Noir Casino',dir:'noir-casino',avatars:[
-    ['noir_gambler','The Gambler','gambler'],['noir_dealer','The Dealer','dealer'],
-    ['noir_femme_fatale','Femme Fatale','femme_fatale'],['noir_detective','The Detective','detective']]},
-  {id:'emerald_society',name:'Emerald Society',dir:'emerald-society',avatars:[
-    ['emerald_alchemist','The Alchemist','alchemist'],['emerald_serpent','The Serpent','serpent'],
-    ['emerald_mask','The Mask','mask'],['emerald_oracle','The Oracle','oracle']]},
-  {id:'moonlit_occult',name:'Moonlit Occult',dir:'moonlit-occult',avatars:[
-    ['occult_priestess','Moon Priestess','priestess'],['occult_astrologer','The Astrologer','astrologer'],
-    ['occult_raven','The Raven','raven'],['occult_magician','The Magician','magician']]},
-  {id:'grand_hotel',name:'Grand Hotel',dir:'grand-hotel',avatars:[
-    ['hotel_concierge','The Concierge','concierge'],['hotel_bellboy','The Bellboy','bellboy'],
-    ['hotel_heiress','The Heiress','heiress'],['hotel_traveler','The Traveler','traveler']]},
+  {id:'house_regulars',name:'House Regulars',dir:'house-regulars',avatars:[
+    ['regular_charmer','The Charmer','charmer'],['regular_sharp','The Sharp','sharp'],
+    ['regular_optimist','The Optimist','optimist'],['regular_jester','The Jester','jester'],
+    ['regular_scholar','The Scholar','scholar'],['regular_wildcard','The Wildcard','wildcard'],
+    ['regular_closer','The Closer','closer']]},
 ];
 const AVATAR_ART={};
 for(const c of AVATAR_COLLECTIONS)
@@ -5279,6 +5272,12 @@ function avatarHTML(v,name,lazy){
   const a=AVATAR_ART[v];
   if(a) return `<img class="av-img" src="${a.src}" alt="${esc(a.name)}"`+
                 ` loading="${lazy?'lazy':'eager'}" draggable="false"/>`;
+  // A stale portrait id (from a since-removed collection — see
+  // AVATAR_COLLECTIONS' own note) looks nothing like emoji: real emoji
+  // are never plain ASCII letters/underscores. Caught here so an account
+  // that still has one stored falls back to initials instead of literally
+  // printing e.g. "royal_king" as if it were the chosen avatar text.
+  if(v&&/^[a-z_]+$/.test(v)) return esc(initial(name||'?'));
   return v?esc(v):esc(initial(name||'?'));
 }
 // For the handful of sites that were assigning .textContent. Kept as its

@@ -1439,34 +1439,46 @@ const RANK_COSMETICS = [
 ];
 
 // ── Portrait avatars ────────────────────────────────────────────
-// 20 across 5 collections. Unlike scenes/crests these carry NO unlock
-// condition — the reference sheet states one for the rank cosmetics and
-// pointedly not for these, and the emoji avatars they sit beside have
-// always been free. They do still require an account, but only because
-// editing your identity already did (see the guest gate on the account
-// screen), not because of anything cosmetic.
+// Replaced wholesale: the original 5 fantasy-roleplay collections (20
+// avatars — Royal Court, Noir Casino, Emerald Society, Moonlit Occult,
+// Grand Hotel) were pulled entirely at the requester's own call ("not
+// happy with them in the end"), not deprecated gradually. Their art
+// files are deleted from public/avatars/, not just unlisted, and their
+// ids are gone from AVATAR_IDS — see sanitizeAvatar and the client's
+// avatarHTML for how an account that still has one of the old ids
+// stored degrades gracefully to initials instead of showing raw text.
 //
-// They are stored in `accounts.avatar`, the SAME column the emoji
-// avatars use, rather than in player_cosmetics — an avatar is identity,
-// it is already carried through publicState and every leaderboard query,
-// and giving it a second home would mean two sources of truth for what
-// a player looks like.
+// Like their predecessors, these carry NO unlock condition — the
+// reference sheet's unlock only ever applied to rank cosmetics, and the
+// emoji avatars beside them have always been free. Still require an
+// account, but only because editing your identity already did (the
+// guest gate on the account screen), not because of anything cosmetic.
+//
+// Stored in `accounts.avatar`, the SAME column the emoji avatars use,
+// rather than in player_cosmetics — an avatar is identity, already
+// carried through publicState and every leaderboard query, and a second
+// home would mean two sources of truth for what a player looks like.
+//
+// Source art for this set is real photo-illustration portraits (not
+// generated for this game specifically — see CLAUDE.md for the crop
+// contract: each was supplied as a 1254x1254 circular medallion with a
+// baked-in gold ring and house crest, cropped down to JUST the portrait
+// at a fixed inset that clears the ring on every image, since the app's
+// own state-reactive avatar border — gold on your turn, gold when
+// selected in the picker — would otherwise compete with a second,
+// permanent ring baked into the source).
+//
+// Only 7 shipped, not 8: an 8th source file ("the host", a big open
+// smile) existed when this was scoped but was gone from disk by the
+// time of actual cropping — most likely evicted by OneDrive's on-demand
+// sync between being shown and being processed. Nothing references it;
+// it can be added as an 8th entry here whenever the file resurfaces.
 const AVATAR_COLLECTIONS = [
-  { id: 'royal_court',     name: 'Royal Court',     dir: 'royal-court',
-    avatars: [['royal_king', 'The King', 'king'], ['royal_queen', 'The Queen', 'queen'],
-              ['royal_duke', 'The Duke', 'duke'], ['royal_duchess', 'The Duchess', 'duchess']] },
-  { id: 'noir_casino',     name: 'Noir Casino',     dir: 'noir-casino',
-    avatars: [['noir_gambler', 'The Gambler', 'gambler'], ['noir_dealer', 'The Dealer', 'dealer'],
-              ['noir_femme_fatale', 'Femme Fatale', 'femme_fatale'], ['noir_detective', 'The Detective', 'detective']] },
-  { id: 'emerald_society', name: 'Emerald Society', dir: 'emerald-society',
-    avatars: [['emerald_alchemist', 'The Alchemist', 'alchemist'], ['emerald_serpent', 'The Serpent', 'serpent'],
-              ['emerald_mask', 'The Mask', 'mask'], ['emerald_oracle', 'The Oracle', 'oracle']] },
-  { id: 'moonlit_occult',  name: 'Moonlit Occult',  dir: 'moonlit-occult',
-    avatars: [['occult_priestess', 'Moon Priestess', 'priestess'], ['occult_astrologer', 'The Astrologer', 'astrologer'],
-              ['occult_raven', 'The Raven', 'raven'], ['occult_magician', 'The Magician', 'magician']] },
-  { id: 'grand_hotel',     name: 'Grand Hotel',     dir: 'grand-hotel',
-    avatars: [['hotel_concierge', 'The Concierge', 'concierge'], ['hotel_bellboy', 'The Bellboy', 'bellboy'],
-              ['hotel_heiress', 'The Heiress', 'heiress'], ['hotel_traveler', 'The Traveler', 'traveler']] },
+  { id: 'house_regulars', name: 'House Regulars', dir: 'house-regulars',
+    avatars: [['regular_charmer', 'The Charmer', 'charmer'], ['regular_sharp', 'The Sharp', 'sharp'],
+              ['regular_optimist', 'The Optimist', 'optimist'], ['regular_jester', 'The Jester', 'jester'],
+              ['regular_scholar', 'The Scholar', 'scholar'], ['regular_wildcard', 'The Wildcard', 'wildcard'],
+              ['regular_closer', 'The Closer', 'closer']] },
 ];
 const AVATAR_IDS = new Set(
   AVATAR_COLLECTIONS.flatMap(c => c.avatars.map(a => a[0]))
@@ -1666,9 +1678,17 @@ function sanitizeAvatar(a) {
   const s = String(a || '').trim();
   // A portrait-avatar ID is a known constant, so it's passed through
   // whole. The 8-char slice below exists to bound arbitrary emoji input
-  // and would mangle these ("royal_king" -> "royal_ki"), which is why
-  // the allow-list check has to come first.
+  // and would mangle these ("regular_charmer" -> "regular_"), which is
+  // why the allow-list check has to come first.
   if (AVATAR_IDS.has(s)) return s;
+  // A snake_case value that ISN'T a currently-known id is a STALE
+  // portrait id (from a since-removed collection — see AVATAR_COLLECTIONS'
+  // own note above), not emoji/text input: real emoji are never plain
+  // ASCII letters and underscores. Clearing it outright is what lets the
+  // client's initials fallback take over cleanly next render, rather
+  // than leaving a mangled 8-char remnant ("royal_king" -> "royal_ki")
+  // sitting in the account forever.
+  if (/^[a-z_]+$/.test(s)) return null;
   return s.slice(0, 8) || null;
 }
 

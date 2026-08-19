@@ -2074,6 +2074,85 @@ before pushing.
   one function every login and logout path already calls, so visibility
   never has to be maintained from three places.
 
+## Achievement ladders (4 tiers) - NEVER EXECUTED, see the warning below
+- **20 achievements, each a LADDER of up to four rungs** rather than a
+  single threshold. `achievementLevel(a, value)` counts rungs cleared;
+  `evaluateAchievements` returns `{level, maxLevel, tiers, threshold,
+  progress}` and still sets `unlocked = level >= 1`, which is what lets
+  `cosmeticsFor`'s existing `a.unlocked` gating work completely unchanged.
+- **One crest per achievement, gaining a LEVEL 1-4.** The client writes
+  `data-level` on `.ach-crest`; art is keyed `(crest, level)` and rendered
+  only if present, the same "drop the files in later, no code change"
+  contract the rank plates (`public/ranks/<slug>/`) and scene art already
+  use. **The art does not exist yet** - the CSS/inline-SVG crest shows
+  through until it does. The title is granted at **level 1**.
+- **Every pre-existing achievement id is still here, on its original
+  stat.** `COSMETICS` gates the scenes, the Royal Court card front and all
+  twelve titles on those ids, and unlocks are re-derived on every read -
+  so dropping one would silently un-equip whatever a player was wearing.
+  Each old single threshold is now one rung of its ladder.
+- **Thresholds are calibrated, not picked.** Queens 1/10/100/1000 is about
+  250 games. Moons stop at **500** and ranked firsts at **750**: a moon
+  lands in roughly 2% of hands and the AI actively defends against one
+  (`oppMoonPace` / `moonPaceOwner`), so a 1000 rung would be ~3,000 games
+  - not extreme, unreachable. Don't "tidy" these to a uniform 1000.
+- **THREE REQUESTED ACHIEVEMENTS WERE IMPOSSIBLE AND ARE NOW HAND-LEVEL.**
+  Worth keeping written down, because they will be proposed again:
+  - **"+61 in one trick" cannot happen.** A trick scores +10 minus its own
+    penalties, so +10 is the ceiling - the ruleset section above already
+    warns about exactly this. It is now +61 in a **hand**, which means
+    out-scoring a moon (+60) by ordinary play. A hand's ceiling is about
+    +95 (take ten tricks while dodging the queen and the eleven highest
+    hearts), so it is hard but reachable.
+  - **"-60 in one trick" cannot happen.** The floor is -55: the queen
+    (-26) plus the three highest hearts (-39), plus the +10 for winning
+    it. As a hand it is fine - the floor there is about -88 (the queen
+    plus twelve hearts over the minimum four tricks; you cannot take
+    EVERY penalty card, because that is a moon).
+  - **"win all 13 tricks" is unobservable as stated.** `resolveTrick`
+    ends the hand the instant `checkMoon` succeeds, so the tricks after
+    that are never dealt - lock the moon at trick 11 and you finish with
+    11. It is measured as **every trick PLAYED**.
+    **This is NOT the same event as shooting the moon**, which is the
+    obvious wrong conclusion: you can take every heart and the queen while
+    opponents win the penalty-free tricks, so winning every trick is a
+    strict *subset* of a moon and much rarer.
+- **NOTHING BANKS UNTIL THE GAME FINISHES.** Queens taken and hands dealt
+  used to write straight to the DB from `resolveTrick` and `dealRound`, so
+  they could be farmed by abandoning game after game. They now accumulate
+  on the room (`achBuf(G)`, lazily created - rooms are in-memory, so there
+  is no migration) alongside slams, clean hands and best/worst hand, and
+  flush **once** from `recordGameFinishedForAll`.
+  **The queen has TWO write sites and they are easy to confuse** - this
+  bit during implementation: `db.recordQueenTaken` inside the
+  casual/ranked branch is a *casual statistic* and must keep writing
+  immediately; the achievement one is the separate call below that branch.
+  Buffering the wrong one silently breaks casual stats.
+- Counters are indexed by **seat**; the account is resolved once, at the
+  flush, so a seat that changes hands mid-game can't misattribute what its
+  previous occupant did.
+- `db.js` gained seven `achievement_stats` columns via
+  `ADD COLUMN IF NOT EXISTS`. Counters add; `best_*`/`worst_*` take
+  `GREATEST`/`LEAST`, which makes them records rather than totals **and**
+  idempotent under `trackStat`'s three retries.
+- **Secrets leak nothing.** `evaluateAchievements` blanks `name`, `desc`,
+  `tiers` and `threshold` server-side for an unearned secret rather than
+  trusting the client to hide them - the whole cosmetics payload goes over
+  the wire, so a crafted client would otherwise just read them out.
+  `cmp:'lte'` inverts the comparison for the two stats that move downward.
+- **THE WARNING.** No Node runtime was available in the environment that
+  built this, so **no SQL and no socket handler in this change has ever
+  been executed**. What *was* verified: a cross-file checker confirming
+  every achievement resolves a stat `getAchievementStats` actually
+  returns, tiers monotonic in the direction their `cmp` implies, `names[]`
+  matching `tiers[]`, every granted title declared, every `COSMETICS`
+  unlock pointing at a real id, every field passed to
+  `recordAchievementGame` accepted by it, and every `db.*` call exported;
+  plus the client rendered against a payload shaped like the new response
+  across tiered / locked / maxed / single-tier / both secret states.
+  **Run it against a throwaway Postgres before trusting the schema
+  migration or the flush path.**
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

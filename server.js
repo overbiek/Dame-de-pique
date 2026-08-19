@@ -1204,7 +1204,7 @@ const ACHIEVEMENTS = [
 
   { id: 'ach_silent_dealer',  stat: 'gamesCompletedFull', tiers: [1, 10, 50, 200],
     names: ['Stayed the Course', 'The Silent Dealer', 'Iron Resolve', 'Never Folds'],
-    desc: 'Finish a game without ending it early.',
+    desc: 'See a game through to the end in your own seat.',
     crest: 'crest_raven',           title: 'title_dealers_nemesis' },
 
   { id: 'ach_card_master',    stat: 'gamesCompleted',     tiers: [1, 25, 100, 500],
@@ -2064,10 +2064,30 @@ function recordGameFinishedForAll(G, natural) {
     const finalScore = G.players[i].score;
     const moons = (G.moonCounts && G.moonCounts[i]) || 0;
     const won = finalScore === topScore;
+    // NO ACHIEVEMENT COUNTS UNLESS THE GAME ACTUALLY FINISHED. `natural`
+    // is false only for the end-early vote, and that is exactly the case
+    // that must bank nothing: otherwise four players could vote out of a
+    // game one round in and farm queens, dealt hands, slams and clean
+    // hands off it. Everything here is buffered on the room all game (see
+    // achBuf), so skipping the write discards the whole lot.
+    //
+    // Gates ONLY this call - deliberately not a `continue`, which would
+    // also skip the credit grant and the casual/ranked/blitz stat writes
+    // below. Stats are not gated on purpose: a statistic about an
+    // abandoned game is still true, an achievement for it is not.
+    //
+    // Gating everything on `natural` would have made gamesCompleted
+    // identical to gamesCompletedFull, leaving The Silent Dealer measuring
+    // exactly what Card Master does. So completedFull now means something
+    // it can still uniquely mean: you were STILL IN YOUR OWN SEAT at the
+    // end. A player who disconnects or leaves keeps their accountId on the
+    // seat (isAI flips, accountId is deliberately not cleared - see
+    // scheduleRankedTakeover), so they still bank everything they
+    // personally did; they just don't get credit for seeing it through.
     const b = achBuf(G);
-    trackStat(() => db.recordAchievementGame(acctId, {
+    if (natural) trackStat(() => db.recordAchievementGame(acctId, {
       completed: 1,
-      completedFull: natural ? 1 : 0,
+      completedFull: G.players[i].isAI ? 0 : 1,
       won: won ? 1 : 0,
       wonPositive: won && finalScore > 0 ? 1 : 0,
       rankedWon: G.ranked && won ? 1 : 0,

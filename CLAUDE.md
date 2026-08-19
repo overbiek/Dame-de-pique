@@ -2255,6 +2255,20 @@ before pushing.
     obvious wrong conclusion: you can take every heart and the queen while
     opponents win the penalty-free tricks, so winning every trick is a
     strict *subset* of a moon and much rarer.
+- **NO ACHIEVEMENT COUNTS UNLESS THE GAME FINISHED NATURALLY.** The whole
+  `recordAchievementGame` call is gated on `recordGameFinishedForAll`'s
+  `natural` argument, which is false only for the end-early vote - so four
+  players can't vote out one round in and farm the lot. It gates ONLY that
+  call, deliberately not a `continue`: credits are gated separately just
+  below, and the casual/ranked/blitz stat writes are **not** gated at all,
+  because a statistic about an abandoned game is still true while an
+  achievement for it is not.
+  That would have made `gamesCompleted` identical to `gamesCompletedFull`,
+  leaving The Silent Dealer measuring exactly what Card Master does - so
+  `completedFull` now means **you were still in your own seat at the end**
+  (`!G.players[i].isAI`). A player who leaves or is taken over keeps their
+  `accountId` on the seat, so they still bank everything they personally
+  did; they just don't get credit for seeing it through.
 - **NOTHING BANKS UNTIL THE GAME FINISHES.** Queens taken and hands dealt
   used to write straight to the DB from `resolveTrick` and `dealRound`, so
   they could be farmed by abandoning game after game. They now accumulate

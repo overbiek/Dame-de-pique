@@ -2229,6 +2229,42 @@ html[data-cardfront="royal_court"] .card[data-r="K"]:not(.back)::before{
 }
 .cf-mini.royal.r,.cf-mini.classic.r{color:#8C2233}
 
+/* ══════════════════════════════════════════════════════════════
+   NOCTURNE DECK card front
+   ══════════════════════════════════════════════════════════════
+   Unlike Royal Court (a pure CSS re-skin of the existing glyph markup,
+   no images at all), this front needs REAL per-card art: 52 unique
+   illustrated faces, cropped from a reference sheet, cannot be
+   approximated in gradients. So this is the one card front where
+   cardHTML() emits something extra — see cardFrontArtImg() below — and
+   the art LAYERS OVER the existing card exactly like rank-set plates and
+   scene photos do: a permanent, always-correct fallback (the plain
+   .ix/.big rank+suit glyphs) underneath, real art on top the moment its
+   file loads, one 404 per (suit,rank) per session if it's ever missing.
+
+   Geometry is completely untouched — .card-art is absolutely positioned
+   to fill the EXISTING .card box (inset:0, border-radius:inherit,
+   pointer-events:none), so --cw/--overlap, the fan, drag/tap hit-testing
+   and nearestTapCard are exactly what they were. That is the same safety
+   rule Royal Court's own comment documents, just applied to an <img>
+   instead of a ::before gradient. */
+.card-art{
+  position:absolute;inset:0;width:100%;height:100%;
+  border-radius:inherit;object-fit:cover;pointer-events:none;
+}
+/* Once the real art has loaded, the plain glyph fallback underneath is
+   redundant (the art already draws its own corner rank+suit) and would
+   double up visually — hide it. Scoped to .has-art specifically, not to
+   the card-front attribute alone, so a card whose art 404s keeps its
+   glyphs exactly like every other front. */
+html[data-cardfront="nocturne"] .card.has-art .ix,
+html[data-cardfront="nocturne"] .card.has-art .big{display:none}
+/* The picker thumbnail's mini cards, same 24x34 box cf-mini already
+   uses for Classic/Royal Court — real crops here instead of CSS, since
+   there's no gradient that stands in for an illustrated portrait. */
+.cf-mini.nocturne{border-radius:4px;overflow:hidden;background:#0c0c0c}
+.cf-mini.nocturne img{width:100%;height:100%;object-fit:cover;display:block}
+
 /* ══ Lobby ══ */
 .codebox{
   background:rgba(var(--ddp-scrim-rgb),.24);border:1px solid rgba(var(--ddp-brass-rgb),.26);
@@ -2832,11 +2868,21 @@ html.landscape-mode #s-summary .note.gold{
 }
 .ach-pips em.on{background:var(--gold);border-color:var(--gold)}
 .ach-row.maxed .ach-prog{color:var(--gold-hi);font-weight:700}
-.ach-row.secret .ach-crest{
-  display:grid;place-items:center;
-  font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--faint);
+/* "Tier III of IV" spelled out beside the pips. The roman numeral on the
+   name and a part-filled bar both read as decoration on their own - on
+   device it was not apparent there was another rung at all, which is what
+   this line fixes. */
+.ach-meta{display:flex;align-items:center;gap:7px;margin:4px 0 2px}
+.ach-tier{
+  font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--gold);opacity:.9;
 }
-.ach-row.secret .ach-name,.ach-row.secret .ach-desc{opacity:.62;font-style:italic}
+.ach-row.maxed .ach-tier{color:var(--gold-hi)}
+.ach-prog{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.ach-prog small{
+  font-size:.56rem;color:var(--muted);white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
 
 html.landscape-mode .sumwrap{
   overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
@@ -5034,10 +5080,15 @@ const DEFAULT_SCENE='scene_velvet_room', DEFAULT_CARDFRONT='cardfront_standard';
 // listed here does NOT make something equippable; the server decides.
 const SCENE_IDS=['scene_velvet_room','scene_rooftop','scene_grand_library','scene_winter_casino',
                  'scene_moon_room','scene_garden','scene_train','scene_observatory'];
-const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court'];
+const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court','cardfront_nocturne'];
 // The tail of each ID is the CSS hook, so a data-cardfront value stays
 // readable in devtools ("royal_court", not the full ID).
-const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court'};
+const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court',cardfront_nocturne:'nocturne'};
+// Card fronts with REAL per-card art (as opposed to Royal Court/Classic,
+// which are pure CSS and need no image at all). cardHTML() only emits an
+// <img> when the equipped front is in this set — everyone else pays
+// nothing for this feature, not even an empty element.
+const CARDFRONT_ART_SETS={cardfront_nocturne:'nocturne'};
 
 /* ── scene art loading ──
    Exact mirror of the RANK COSMETICS art-loading contract below
@@ -5059,6 +5110,46 @@ function sceneArtImg(id){
 }
 function sceneArtFailed(id,el){
   sceneArtMissing[id]=true;
+  if(el&&el.remove) el.remove();
+}
+
+/* ── card front art loading ──
+   Same contract again, one more time, for the one card front (so far)
+   with real per-card art instead of a CSS re-skin. Unlike scenes/ranks,
+   which layer a photo UNDER nothing (or over a CSS treatment that keeps
+   working either way), a loaded card face makes the plain .ix/.big
+   glyphs underneath redundant — the art already draws its own corner
+   rank+suit — so this is the one place that ALSO needs an onload hook
+   (cardFrontArtLoaded) to hide them, mirroring rankArtLoaded/.has-art
+   exactly. Until it fires, or if the file 404s, the glyphs are simply
+   what's there — a card is never blank.
+   One file per (cardFront, suit, rank) — 52 per set — so the path
+   includes both, unlike scenes' single flat file. suit is stored as the
+   glyph in-game (♠♥♦♣); SUIT_ART_NAME is the one place that gets mapped
+   to the folder-friendly English name the files are actually named with. */
+const SUIT_ART_NAME={'♠':'spades','♥':'hearts','♦':'diamonds','♣':'clubs'};
+const cardFrontArtMissing={};
+function cardFrontArtSrc(slug,suit,rank){
+  return `/cardfronts/${slug}/${SUIT_ART_NAME[suit]}_${rank}.webp`;
+}
+// '' whenever the equipped front has no real art (Classic, Royal Court)
+// or this specific card's file already 404'd this session — cardHTML()
+// then simply has nothing extra to render, at zero cost to every other
+// front.
+function cardFrontArtImg(c){
+  const slug=CARDFRONT_ART_SETS[equippedCardFront];
+  if(!slug) return '';
+  const key=slug+'/'+SUIT_ART_NAME[c.suit]+'_'+c.rank;
+  if(cardFrontArtMissing[key]) return '';
+  return `<img class="card-art" src="${cardFrontArtSrc(slug,c.suit,c.rank)}" alt="" aria-hidden="true"`+
+         ` loading="lazy" onload="cardFrontArtLoaded(this)" onerror="cardFrontArtFailed('${key}',this)"/>`;
+}
+function cardFrontArtLoaded(el){
+  const card=el.closest&&el.closest('.card');
+  if(card) card.classList.add('has-art');
+}
+function cardFrontArtFailed(key,el){
+  cardFrontArtMissing[key]=true;
   if(el&&el.remove) el.remove();
 }
 
@@ -5302,7 +5393,11 @@ function toast(id,msg){ const e=$(id); if(!e)return; e.textContent=msg; e.style.
 
 function cardHTML(c,cls){
   const col=RED.has(c.suit)?'red':'blk';
+  // '' for every front except one with real art (see CARDFRONT_ART_SETS)
+  // — so this costs nothing, not even an extra DOM node, for Classic or
+  // Royal Court.
   return `<div class="card ${col} ${isPen(c)?'pen':''} ${cls||''}" data-r="${c.rank}" data-s="${c.suit}">
+    ${cardFrontArtImg(c)}
     <span class="ix">${c.rank}<small>${c.suit}</small></span>
     <span class="big">${c.suit}</span>
   </div>`;
@@ -6427,6 +6522,14 @@ function cosItemHTML(kind,item,thumbHTML,equippedId){
 // The card-front thumbnail is built from the same tokens the real card
 // face uses, so the preview can't drift from the thing it previews.
 function cardFrontThumb(id){
+  // Nocturne has real art, so its thumbnail is real crops, not glyphs —
+  // same "the picker reuses the real face" rule the comment above this
+  // block already states, just via <img> instead of CSS this time.
+  const slug=CARDFRONT_ART_SETS[id];
+  if(slug){
+    const mini=(suit,rank)=>`<span class="cf-mini nocturne"><img src="${cardFrontArtSrc(slug,suit,rank)}" alt="" loading="lazy"/></span>`;
+    return `<span class="cf-preview">${mini('♠','A')}${mini('♥','Q')}${mini('♣','K')}</span>`;
+  }
   const royal=id==='cardfront_royal_court';
   const k=royal?'royal':'classic';
   return `<span class="cf-preview">
@@ -6558,21 +6661,16 @@ function renderAchievements(){
   gate.style.display=account?'none':'block';
   loading.style.display=(account&&!cosState)?'block':'none';
   if(!account||!cosState){ list.innerHTML=''; return; }
-  list.innerHTML=cosState.achievements.map(a=>{
-    // A secret nobody has earned yet arrives with name, desc, tiers and
-    // threshold all null - the server blanks them rather than trusting the
-    // client to keep the secret. So this row is rendered entirely from
-    // what is NOT there.
-    if(a.hidden){
-      return `<div class="ach-row secret">
-        <div class="ach-crest crest-art">?</div>
-        <div class="ach-info">
-          <div class="ach-name">Secret achievement</div>
-          <div class="ach-desc">Earned by doing something you would rather not.</div>
-        </div>
-        <div class="ach-prog">&mdash;</div>
-      </div>`;
-    }
+  const ROMAN=['','I','II','III','IV'];
+  list.innerHTML=cosState.achievements.filter(a=>{
+    // An unearned secret is not listed AT ALL - not even as a "???" row,
+    // which would still announce how many there are. The server already
+    // blanks its name, desc and thresholds, so `hidden` is the signal;
+    // the `!a.name` fallback catches a stale cached client talking to a
+    // newer server, which is what rendered two rows literally called
+    // "null" on device.
+    return !a.hidden && a.name;
+  }).map(a=>{
     const lvl=a.level||0, max=a.maxLevel||1;
     const done=lvl>=max;
     // Progress runs toward the NEXT rung, not the top one, so the bar
@@ -6581,10 +6679,14 @@ function renderAchievements(){
     const prev=lvl>0&&a.tiers?a.tiers[lvl-1]:0;
     const span=Math.max(1,(a.threshold||1)-(done?0:prev));
     const pct=done?100:Math.round(100*Math.max(0,Math.min(1,(a.progress-prev)/span)));
-    // Roman numerals only where there is actually a ladder to climb; a
-    // one-rung achievement would look odd wearing a permanent "I".
-    const ROMAN=['','I','II','III','IV'];
-    const pip=max>1
+    // What the NEXT rung is called. Naming it is what makes "there is more
+    // to go" obvious - a roman numeral and a part-filled bar on their own
+    // read as decoration, which is exactly the feedback this fixes.
+    const nextName=(!done&&a.tiers&&max>1)?(a.nextName||''):'';
+    const tierLine=max>1
+      ? `<span class="ach-tier">Tier ${ROMAN[Math.max(1,lvl)]} of ${ROMAN[max]}</span>`
+      : '';
+    const pips=max>1
       ? `<span class="ach-pips">${[1,2,3,4].slice(0,max).map(n=>
           `<em class="${n<=lvl?'on':''}"></em>`).join('')}</span>`
       : '';
@@ -6593,10 +6695,13 @@ function renderAchievements(){
       <div class="ach-info">
         <div class="ach-name">${esc(a.name)}${max>1&&lvl>0?` <b>${ROMAN[lvl]}</b>`:''}</div>
         <div class="ach-desc">${esc(a.desc)}</div>
-        ${pip}
+        <div class="ach-meta">${pips}${tierLine}</div>
         ${done?'':`<div class="ach-bar"><i style="width:${pct}%"></i></div>`}
       </div>
-      <div class="ach-prog">${done?'Complete':`${a.progress}/${a.threshold}`}</div>
+      <div class="ach-prog">
+        <b>${done?'Complete':`${a.progress}/${a.threshold}`}</b>
+        ${done?'':`<small>${max>1?`next tier at ${a.threshold}`:'to unlock'}</small>`}
+      </div>
     </div>`;
   }).join('');
 }

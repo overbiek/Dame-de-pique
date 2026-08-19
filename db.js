@@ -284,6 +284,25 @@ async function ensureSchema() {
     );
   `);
 
+  // Added after achievement_stats first shipped. All seven are written
+  // ONLY from recordAchievementGame, i.e. only when a game actually
+  // finishes — the "achievements never bank from an abandoned game" rule.
+  // best_/worst_ default to 0 rather than NULL, which is safe for every
+  // threshold that reads them (>= +61 / >= +250 / <= -60 / <= -240): a
+  // player who has never gone positive keeps best_* at 0 and simply
+  // hasn't earned it.
+  for (const col of [
+    'slams INTEGER NOT NULL DEFAULT 0',
+    'clean_rounds INTEGER NOT NULL DEFAULT 0',
+    'queenless_games INTEGER NOT NULL DEFAULT 0',
+    'best_round INTEGER NOT NULL DEFAULT 0',
+    'worst_round INTEGER NOT NULL DEFAULT 0',
+    'best_game INTEGER NOT NULL DEFAULT 0',
+    'worst_game INTEGER NOT NULL DEFAULT 0',
+  ]) {
+    await pool.query(`ALTER TABLE achievement_stats ADD COLUMN IF NOT EXISTS ${col};`);
+  }
+
   // ── Equipped cosmetics ──
   // One row per account holding only what's CURRENTLY equipped. What's
   // *unlocked* is never stored: it's always re-derived from
@@ -860,13 +879,22 @@ async function getRankedStats(accountId) {
 async function recordAchievementGame(accountId, {
   completed = 0, completedFull = 0, won = 0, wonPositive = 0,
   rankedWon = 0, moons = 0, fourSuit = 0,
+  queens = 0, dealerRounds = 0, slams = 0, cleanRounds = 0, queenless = 0,
+  bestRound = 0, worstRound = 0, bestGame = 0, worstGame = 0,
 } = {}) {
+  // ONE call carrying every per-game figure rather than a round trip each.
+  // The counters add; the best/worst columns take GREATEST/LEAST so they
+  // are records rather than running totals, and so a retry (trackStat
+  // retries three times) is idempotent for them — re-applying the same
+  // record can never move it.
   await pool.query(
     `INSERT INTO achievement_stats (
        account_id, games_completed, games_completed_full, games_won,
-       games_won_positive, ranked_games_won, moons_total, four_suit_games
+       games_won_positive, ranked_games_won, moons_total, four_suit_games,
+       queens_taken, dealer_rounds, slams, clean_rounds, queenless_games,
+       best_round, worst_round, best_game, worst_game
      )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
      ON CONFLICT (account_id) DO UPDATE SET
        games_completed = achievement_stats.games_completed + $2,
        games_completed_full = achievement_stats.games_completed_full + $3,
@@ -875,8 +903,19 @@ async function recordAchievementGame(accountId, {
        ranked_games_won = achievement_stats.ranked_games_won + $6,
        moons_total = achievement_stats.moons_total + $7,
        four_suit_games = achievement_stats.four_suit_games + $8,
+       queens_taken = achievement_stats.queens_taken + $9,
+       dealer_rounds = achievement_stats.dealer_rounds + $10,
+       slams = achievement_stats.slams + $11,
+       clean_rounds = achievement_stats.clean_rounds + $12,
+       queenless_games = achievement_stats.queenless_games + $13,
+       best_round = GREATEST(achievement_stats.best_round, $14),
+       worst_round = LEAST(achievement_stats.worst_round, $15),
+       best_game = GREATEST(achievement_stats.best_game, $16),
+       worst_game = LEAST(achievement_stats.worst_game, $17),
        updated_at = now()`,
-    [accountId, completed, completedFull, won, wonPositive, rankedWon, moons, fourSuit]
+    [accountId, completed, completedFull, won, wonPositive, rankedWon, moons,
+     fourSuit, queens, dealerRounds, slams, cleanRounds, queenless,
+     bestRound, worstRound, bestGame, worstGame]
   );
 }
 
@@ -921,6 +960,13 @@ async function getAchievementStats(accountId) {
     moonsTotal: s.moons_total || 0,
     fourSuitGames: s.four_suit_games || 0,
     dealerRounds: s.dealer_rounds || 0,
+    slams: s.slams || 0,
+    cleanRounds: s.clean_rounds || 0,
+    queenlessGames: s.queenless_games || 0,
+    bestRound: s.best_round || 0,
+    worstRound: s.worst_round || 0,
+    bestGame: s.best_game || 0,
+    worstGame: s.worst_game || 0,
     mmrPeak: s.mmr_highest || 0,
   };
 }

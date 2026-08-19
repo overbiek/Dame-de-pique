@@ -1146,35 +1146,160 @@ function rankForMmr(mmr) {
 // means adding a counter there and a row here, nothing else — the crest,
 // the title it grants, the Achievements tab entry and the cosmetics it
 // gates all fall out of this table.
+// Each achievement is a LADDER of up to four tiers rather than a single
+// threshold. The crest is one art id that gains a LEVEL (1-4) as the
+// ladder is climbed - art is keyed (crest, level) and rendered only if
+// present, the same "drop the file in later, no code change" contract the
+// rank plates and scene art already use. The title is granted at level 1,
+// so early play already has something to wear and the top rung is the
+// brag rather than the entry fee.
+//
+// `cmp:'lte'` inverts the comparison for the two secret achievements,
+// whose stats move DOWNWARD (worst hand / worst game).
+// `secret:true` hides the name and description client-side until earned.
+//
+// Every id that existed before this change is still here, on its original
+// stat: COSMETICS gates the scenes, the Royal Court card front and all
+// twelve titles on these ids, and unlocks are re-derived on every read -
+// so dropping one would silently un-equip whatever a player was wearing.
+// Each old single threshold now appears as one rung of its ladder.
 const ACHIEVEMENTS = [
-  { id: 'ach_queen_hunter',   name: 'Queen Hunter',     desc: 'Take the Queen of Spades 25 times.',
-    stat: 'queensTaken',        threshold: 25,   crest: 'crest_queen_of_spades', title: 'title_queen_hunter' },
-  { id: 'ach_four_suit',      name: 'Four-Suit Master', desc: 'Win a game after taking tricks in all four suits — 10 times.',
-    stat: 'fourSuitGames',      threshold: 10,   crest: 'crest_four_suits',      title: 'title_four_suit_master' },
-  { id: 'ach_the_house',      name: 'The House',        desc: 'Win 25 complete games.',
-    stat: 'gamesWon',           threshold: 25,   crest: 'crest_crown',           title: 'title_the_house' },
-  { id: 'ach_moon_chaser',    name: 'Moon Chaser',      desc: 'Shoot the moon 5 times.',
-    stat: 'moonsTotal',         threshold: 5,    crest: 'crest_crescent',        title: 'title_moon_chaser' },
-  { id: 'ach_ace_collector',  name: 'Ace Collector',    desc: 'Win 10 games.',
-    stat: 'gamesWon',           threshold: 10,   crest: 'crest_ace',             title: 'title_ace_collector' },
-  { id: 'ach_heartbreaker',   name: 'Heartbreaker',     desc: 'Win 10 games with a positive final score.',
-    stat: 'gamesWonPositive',   threshold: 10,   crest: 'crest_rose',            title: 'title_heartbreaker' },
-  { id: 'ach_strategist',     name: 'The Strategist',   desc: 'Win 10 ranked games.',
-    stat: 'rankedGamesWon',     threshold: 10,   crest: 'crest_snake',           title: 'title_strategist' },
-  { id: 'ach_silent_dealer',  name: 'The Silent Dealer', desc: 'Finish 10 games without ending them early.',
-    stat: 'gamesCompletedFull', threshold: 10,   crest: 'crest_raven',           title: 'title_dealers_nemesis' },
-  { id: 'ach_high_roller',    name: 'High Roller',      desc: 'Reach 1400 MMR in ranked.',
-    stat: 'mmrPeak',            threshold: 1400, crest: 'crest_diamond',         title: 'title_high_roller' },
-  { id: 'ach_card_master',    name: 'Card Master',      desc: 'Complete 50 games.',
-    stat: 'gamesCompleted',     threshold: 50,   crest: 'crest_card_fan',        title: 'title_trick_taker' },
-  // The brief's own preferred fallback: this game has no "elimination"
-  // concept for its first suggested condition to hang off, so it uses the
-  // supported completed-games stat instead.
-  { id: 'ach_observer',       name: 'The Observer',     desc: 'Complete 25 games.',
-    stat: 'gamesCompleted',     threshold: 25,   crest: 'crest_eye',             title: 'title_clean_sweep' },
-  { id: 'ach_the_dealer',     name: 'The Dealer',       desc: 'Deal 25 rounds.',
-    stat: 'dealerRounds',       threshold: 25,   crest: 'crest_dealer_button',   title: 'title_blame_the_dealer' },
+  { id: 'ach_queen_hunter',   stat: 'queensTaken',        tiers: [1, 10, 100, 1000],
+    names: ['First Blood', 'Queen Hunter', 'Queen Collector', 'Queen of Queens'],
+    desc: 'Take the Queen of Spades.',
+    crest: 'crest_queen_of_spades', title: 'title_queen_hunter' },
+
+  // 500 rather than 1000: a moon lands in roughly 2% of hands and the AI
+  // actively defends against one (see oppMoonPace / moonPaceOwner), so a
+  // 1000 rung works out at ~3,000 games - not extreme, just unreachable.
+  { id: 'ach_moon_chaser',    stat: 'moonsTotal',         tiers: [1, 10, 50, 500],
+    names: ['Lunar Debut', 'Moon Chaser', 'Moonstruck', 'Lord of the Moon'],
+    desc: 'Shoot the moon.',
+    crest: 'crest_crescent',        title: 'title_moon_chaser' },
+
+  { id: 'ach_strategist',     stat: 'rankedGamesWon',     tiers: [1, 10, 100, 750],
+    names: ['Contender', 'The Strategist', 'Ranked Veteran', 'Grand Tactician'],
+    desc: 'Finish first in a ranked game.',
+    crest: 'crest_snake',           title: 'title_strategist' },
+
+  { id: 'ach_the_house',      stat: 'gamesWon',           tiers: [1, 10, 25, 100],
+    names: ['First Win', 'The House', 'House Rules', 'The Whole Casino'],
+    desc: 'Win a game.',
+    crest: 'crest_crown',           title: 'title_the_house' },
+
+  { id: 'ach_ace_collector',  stat: 'gamesWon',           tiers: [5, 25, 75, 250],
+    names: ['Ace Collector', 'Ace Hoarder', 'Ace Baron', 'Ace Sovereign'],
+    desc: 'Win games - the long road.',
+    crest: 'crest_ace',             title: 'title_ace_collector' },
+
+  { id: 'ach_heartbreaker',   stat: 'gamesWonPositive',   tiers: [1, 10, 50, 200],
+    names: ['Heartbreaker', 'Heartless', 'Heart of Stone', 'The Unmoved'],
+    desc: 'Win a game finishing on a positive score.',
+    crest: 'crest_rose',            title: 'title_heartbreaker' },
+
+  { id: 'ach_four_suit',      stat: 'fourSuitGames',      tiers: [1, 10, 50, 200],
+    names: ['All Four', 'Four-Suit Master', 'Suit Sovereign', 'Master of Suits'],
+    desc: 'Win a game after taking tricks in all four suits.',
+    crest: 'crest_four_suits',      title: 'title_four_suit_master' },
+
+  { id: 'ach_silent_dealer',  stat: 'gamesCompletedFull', tiers: [1, 10, 50, 200],
+    names: ['Stayed the Course', 'The Silent Dealer', 'Iron Resolve', 'Never Folds'],
+    desc: 'Finish a game without ending it early.',
+    crest: 'crest_raven',           title: 'title_dealers_nemesis' },
+
+  { id: 'ach_card_master',    stat: 'gamesCompleted',     tiers: [1, 25, 100, 500],
+    names: ['First Hand', 'Card Master', 'Table Regular', 'Living Legend'],
+    desc: 'Complete a game.',
+    crest: 'crest_card_fan',        title: 'title_trick_taker' },
+
+  { id: 'ach_observer',       stat: 'gamesCompleted',     tiers: [10, 50, 200, 750],
+    names: ['The Observer', 'The Watcher', 'The Archivist', 'The Chronicle'],
+    desc: 'Complete games - the patient road.',
+    crest: 'crest_eye',             title: 'title_clean_sweep' },
+
+  { id: 'ach_the_dealer',     stat: 'dealerRounds',       tiers: [1, 25, 100, 500],
+    names: ['Cut the Deck', 'The Dealer', 'House Dealer', 'Dealer Eternal'],
+    desc: 'Deal a hand.',
+    crest: 'crest_dealer_button',   title: 'title_blame_the_dealer' },
+
+  // -- rank ladders --
+  // Seven tiers are actually reachable (a new account starts mid-Novice),
+  // which does not split into 4+4 - so Ace is the top rung of the first
+  // ladder and the entry rung of the second. The thresholds are
+  // RANK_TABLE's own tier-entry MMRs, and they read mmrPeak, so a losing
+  // streak can never revoke one.
+  { id: 'ach_high_roller',    stat: 'mmrPeak',            tiers: [500, 1000, 1500, 2000],
+    names: ['Apprentice', 'Player', 'Gambler', 'Ace'],
+    desc: 'Reach a new rank in ranked play.',
+    crest: 'crest_diamond',         title: 'title_high_roller' },
+
+  { id: 'ach_the_ascent',     stat: 'mmrPeak',            tiers: [2000, 2500, 3000, 3500],
+    names: ['Ace', 'Master', 'Grand Master', 'Legend'],
+    desc: 'Climb the top half of the ladder.',
+    crest: 'crest_ascent',          title: 'title_the_ascent' },
+
+  // -- skill, not time --
+  // +61 in a single HAND, i.e. out-scoring a moon (+60) by ordinary play.
+  // NOT per trick: a trick scores +10 minus its own penalties, so it can
+  // never exceed +10 - see the ruleset note in CLAUDE.md. A hand's
+  // ceiling is about +95 (take ten tricks while dodging the queen and the
+  // eleven highest hearts), so this is hard but genuinely reachable.
+  { id: 'ach_beyond_moon',    stat: 'bestRound',          tiers: [61],
+    names: ['Beyond the Moon'],
+    desc: 'Score more in a single hand than shooting the moon would pay.',
+    crest: 'crest_sun',             title: 'title_beyond_moon' },
+
+  // Winning every trick in a hand. Necessarily a moon (you hold every
+  // penalty card), but a moon is NOT necessarily this - you can scoop
+  // every heart and the queen while opponents take the penalty-free
+  // tricks. So it is a strict subset and the rarest thing in the game.
+  // Measured as "every trick PLAYED", because resolveTrick ends the hand
+  // the moment the moon locks and the remaining tricks are never dealt.
+  { id: 'ach_the_slam',       stat: 'slams',              tiers: [1, 3, 10, 25],
+    names: ['The Slam', 'Double Slam', 'Slam Artist', 'Untouchable'],
+    desc: 'Win every trick in a hand.',
+    crest: 'crest_slam',            title: 'title_the_slam' },
+
+  { id: 'ach_ledger',         stat: 'bestGame',           tiers: [250],
+    names: ['The Ledger'],
+    desc: 'Finish a game on +250 or better.',
+    crest: 'crest_ledger',          title: 'title_the_ledger' },
+
+  { id: 'ach_clean_sheet',    stat: 'cleanRounds',        tiers: [1, 10, 50, 200],
+    names: ['Clean Sheet', 'Spotless', 'Immaculate', 'Without a Mark'],
+    desc: 'Finish a hand without taking a single penalty card.',
+    crest: 'crest_clean',           title: 'title_clean_sheet' },
+
+  { id: 'ach_queen_dodger',   stat: 'queenlessGames',     tiers: [1, 10, 50, 200],
+    names: ['Queen Dodger', 'Untouched', 'She Never Finds You', 'Ghost'],
+    desc: 'Complete a whole game without ever taking the Queen of Spades.',
+    crest: 'crest_veil',            title: 'title_queen_dodger' },
+
+  // -- secret --
+  // Hidden until earned, and both read a stat that moves DOWNWARD, hence
+  // cmp:'lte'. A hand's floor is about -88 (the queen plus twelve hearts
+  // across the minimum four tricks - you cannot take EVERY penalty card,
+  // because that is a moon), so -60 is reachable.
+  { id: 'ach_abyss',          stat: 'worstRound', cmp: 'lte', tiers: [-60], secret: true,
+    names: ['The Abyss'],
+    desc: 'Take -60 or worse in a single hand.',
+    crest: 'crest_abyss',           title: 'title_abyss' },
+
+  { id: 'ach_rock_bottom',    stat: 'worstGame',  cmp: 'lte', tiers: [-240], secret: true,
+    names: ['Rock Bottom'],
+    desc: 'Finish a game on -240 or worse.',
+    crest: 'crest_rock_bottom',     title: 'title_rock_bottom' },
 ];
+
+// How many rungs of `a` a value has cleared: 0 = locked, up to tiers.length.
+function achievementLevel(a, value) {
+  let lvl = 0;
+  for (const t of a.tiers) {
+    const hit = a.cmp === 'lte' ? value <= t : value >= t;
+    if (hit) lvl++;
+  }
+  return lvl;
+}
 
 // Scenes and card fronts. `unlock: null` means always available — every
 // category needs exactly one such entry so a brand-new account has
@@ -1214,7 +1339,9 @@ const COSMETICS = {
   // a crest IS the visible proof of an achievement), so they're derived
   // from ACHIEVEMENTS rather than listed twice and kept in sync by hand.
   get crests() {
-    return ACHIEVEMENTS.map(a => ({ id: a.crest, name: a.name, unlock: a.id }));
+    // Crests are 1:1 with achievements and always have been; the name now
+    // comes from the ladder's FIRST rung, which is the one that grants it.
+    return ACHIEVEMENTS.map(a => ({ id: a.crest, name: a.names[0], unlock: a.id }));
   },
   // Rank sets, derived from RANK_COSMETICS rather than listed twice.
   // `rankTier` is what marks them tier-unlocked in cosmeticsFor, the
@@ -1241,6 +1368,14 @@ const COSMETICS = {
     { id: 'title_trick_taker',       name: 'The Trick Taker',     unlock: 'ach_card_master' },
     { id: 'title_clean_sweep',       name: 'Clean Sweep',         unlock: 'ach_observer' },
     { id: 'title_blame_the_dealer',  name: 'Blame the Dealer',    unlock: 'ach_the_dealer' },
+    { id: 'title_the_ascent',        name: 'The Ascendant',       unlock: 'ach_the_ascent' },
+    { id: 'title_beyond_moon',       name: 'Beyond the Moon',     unlock: 'ach_beyond_moon' },
+    { id: 'title_the_slam',          name: 'The Slam',            unlock: 'ach_the_slam' },
+    { id: 'title_the_ledger',        name: 'The Ledger',          unlock: 'ach_ledger' },
+    { id: 'title_clean_sheet',       name: 'Clean Sheet',         unlock: 'ach_clean_sheet' },
+    { id: 'title_queen_dodger',      name: 'The Queen Dodger',    unlock: 'ach_queen_dodger' },
+    { id: 'title_abyss',             name: 'Out of the Abyss',    unlock: 'ach_abyss' },
+    { id: 'title_rock_bottom',       name: 'Rock Bottom',         unlock: 'ach_rock_bottom' },
     // rankTier is a SLUG, not a display name — tierReached compares
     // against RANK_TABLE's slug, so a capitalised tier name here would
     // silently never match and lock every rank title forever.
@@ -1324,14 +1459,80 @@ const AVATAR_IDS = new Set(
 // The single evaluation point. Everything downstream — the Achievements
 // tab, every cosmetic picker, and save-time validation — reads this one
 // result, so there is exactly one definition of "unlocked" in the app.
+// ── achievement buffering ───────────────────────────────────────
+// NOTHING banks until the game actually finishes. Queens taken and hands
+// dealt used to write straight to the DB from resolveTrick and dealRound,
+// which meant a player could farm them by abandoning game after game.
+// They now accumulate on the room and are flushed once, from
+// recordGameFinishedForAll - so an abandoned game contributes nothing at
+// all, which is the rule the whole set is meant to obey.
+//
+// Lazily created rather than added to createRoom: rooms are in-memory
+// only, so there is no migration to worry about, and this keeps the
+// feature out of the room constructor entirely.
+function achBuf(G) {
+  if (!G.ach) {
+    G.ach = {
+      queens: [0, 0, 0, 0],
+      dealt: [0, 0, 0, 0],
+      slams: [0, 0, 0, 0],
+      clean: [0, 0, 0, 0],
+      best: [0, 0, 0, 0],
+      worst: [0, 0, 0, 0],
+    };
+  }
+  return G.ach;
+}
+
+// Called once per hand, from endRound, with that hand's swing per player.
+function recordRoundAchievements(G, deltas) {
+  const b = achBuf(G);
+  // Tricks actually played this hand. Derived rather than read off
+  // G.trickNum because a moon ends the hand early (resolveTrick bails as
+  // soon as checkMoon succeeds), and "won every trick" has to mean every
+  // trick that was really dealt out.
+  const played = G.players.reduce((n, q) => n + q.tricks.length, 0) / 4;
+  for (let i = 0; i < 4; i++) {
+    const p = G.players[i];
+    const d = deltas[i];
+    if (d > b.best[i]) b.best[i] = d;
+    if (d < b.worst[i]) b.worst[i] = d;
+    const penalties = p.tricks.filter(
+      c => c.suit === '♥' || (c.suit === '♠' && c.rank === 'Q')
+    ).length;
+    if (penalties === 0) b.clean[i]++;
+    if (played > 0 && p.tricks.length / 4 === played) b.slams[i]++;
+  }
+}
+
 function evaluateAchievements(stats) {
   return ACHIEVEMENTS.map(a => {
     const value = stats[a.stat] || 0;
+    const level = achievementLevel(a, value);
+    const maxLevel = a.tiers.length;
+    // The rung still to climb; at full level it stays on the top rung so
+    // the client can render "1000 / 1000" rather than a blank.
+    const next = a.tiers[Math.min(level, maxLevel - 1)];
+    const unlocked = level >= 1;
+    // A secret that has not been earned yet leaks NOTHING - not its name,
+    // not its description, not the number to aim for. Blanking it here
+    // rather than in the client is what actually makes it secret: the
+    // whole cosmetics payload goes over the wire, so a crafted client
+    // would otherwise just read it out of the response.
+    const hide = a.secret && !unlocked;
     return {
-      id: a.id, name: a.name, desc: a.desc, crest: a.crest, title: a.title,
-      threshold: a.threshold,
-      progress: Math.min(value, a.threshold),
-      unlocked: value >= a.threshold,
+      id: a.id,
+      name: hide ? null : (a.names[Math.max(0, level - 1)] || a.names[0]),
+      desc: hide ? null : a.desc,
+      crest: a.crest, title: a.title,
+      secret: !!a.secret,
+      hidden: hide,
+      level, maxLevel,
+      tiers: hide ? null : a.tiers,
+      threshold: hide ? null : next,
+      progress: hide ? 0 : (a.cmp === 'lte' ? value : Math.min(value, next)),
+      value: hide ? 0 : value,
+      unlocked,
     };
   });
 }
@@ -1345,7 +1546,7 @@ function cosmeticsFor(achievements, stats, purchases) {
   const tierName = slug => (RANK_COSMETICS.find(r => r.slug === slug) || {}).tier || slug;
   const mark = list => list.map(c => ({
     id: c.id, name: c.name, unlock: c.unlock || null,
-    unlockName: c.unlock ? (ACHIEVEMENTS.find(a => a.id === c.unlock) || {}).name || null : null,
+    unlockName: c.unlock ? ((ACHIEVEMENTS.find(a => a.id === c.unlock) || {}).names || [])[0] || null : null,
     rankTier: c.rankTier || null,
     rankTierName: c.rankTier ? tierName(c.rankTier) : null,
     material: c.material || null,
@@ -1838,6 +2039,7 @@ function recordGameFinishedForAll(G, natural) {
     const finalScore = G.players[i].score;
     const moons = (G.moonCounts && G.moonCounts[i]) || 0;
     const won = finalScore === topScore;
+    const b = achBuf(G);
     trackStat(() => db.recordAchievementGame(acctId, {
       completed: 1,
       completedFull: natural ? 1 : 0,
@@ -1846,6 +2048,18 @@ function recordGameFinishedForAll(G, natural) {
       rankedWon: G.ranked && won ? 1 : 0,
       moons,
       fourSuit: won && (G.players[i].suitsWon || []).length === 4 ? 1 : 0,
+      // Buffered on the room all game and flushed here, so an abandoned
+      // game contributes nothing.
+      queens: b.queens[i],
+      dealerRounds: b.dealt[i],
+      slams: b.slams[i],
+      cleanRounds: b.clean[i],
+      // Never took her in ANY hand of a completed game.
+      queenless: b.queens[i] === 0 ? 1 : 0,
+      bestRound: b.best[i],
+      worstRound: b.worst[i],
+      bestGame: finalScore,
+      worstGame: finalScore,
     }));
     // Credits: only a FINISHED game pays, in any mode. `natural` is false
     // for an early-end vote, which is exactly the case that must not pay —
@@ -2039,7 +2253,9 @@ function dealRound(G) {
   // rather than per game — a 16-round game deals 16 hands and a Blitz
   // deals 4, which is exactly the difference the achievement is about.
   const dealer = G.players[G.dealer];
-  if (dealer && dealer.accountId) trackStat(() => db.recordDealerRound(dealer.accountId));
+  // Buffered, not written: see achBuf. Counts the seat, not the account,
+  // so a seat handed to the computer mid-game simply stops accruing.
+  if (dealer) achBuf(G).dealt[G.dealer]++;
 
   if (roundPassDir(G) === 'keep') { startTricks(G); return; }
 
@@ -2165,14 +2381,13 @@ function resolveTrick(G) {
       if (gotQueen) trackStat(() => db.recordQueenTaken(acctId));
     }
   }
-  // Achievement counters span every mode, so this write is deliberately
-  // OUTSIDE the casual/ranked branch above and outside its !G.daily
-  // guard: taking the queen in the Daily Challenge is still taking the
-  // queen. (Daily's own score pipeline is untouched — this table is not
-  // a statistic, see db.js.)
-  if (gotQueen && G.players[winner].accountId) {
-    trackStat(() => db.recordAchievementQueen(G.players[winner].accountId));
-  }
+  // Buffered on the room rather than written now - see achBuf. Still
+  // deliberately outside the casual/ranked branch and outside its
+  // !G.daily guard: taking the queen in the Daily Challenge is still
+  // taking the queen. It is indexed by SEAT; the account is resolved once,
+  // at the flush, so a seat that changes hands mid-game can't misattribute
+  // what the previous occupant did.
+  if (gotQueen) achBuf(G).queens[winner]++;
   G.lastTrickMsg = `${G.players[winner].name} wins trick ${G.trickNum} · +10${penPts !== 0 ? ' ' + penPts : ''}`;
   if (!G.playLog) G.playLog = [];
   G.playLog.push(G.currentTrick.map(t => ({ player: t.player, card: t.card })));
@@ -2232,6 +2447,10 @@ function endRound(G) {
       if (!G.moonCounts) G.moonCounts = [0, 0, 0, 0];
       G.moonCounts[moon]++;
     }
+    // Best/worst hand, clean hands and slams, all buffered until the game
+    // finishes. Inside the same double-call guard as the history row, so a
+    // repeated endRound can't count a hand twice.
+    recordRoundAchievements(G, deltas);
     // Per-round records are match-length-agnostic (a round is 13 tricks in
     // every mode), so Blitz rounds blend into the same bucket quite
     // correctly — only *game*-level totals need splitting out, below in

@@ -5080,15 +5080,15 @@ const DEFAULT_SCENE='scene_velvet_room', DEFAULT_CARDFRONT='cardfront_standard';
 // listed here does NOT make something equippable; the server decides.
 const SCENE_IDS=['scene_velvet_room','scene_rooftop','scene_grand_library','scene_winter_casino',
                  'scene_moon_room','scene_garden','scene_train','scene_observatory'];
-const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court','cardfront_nocturne'];
+const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court','cardfront_nocturne','cardfront_noir'];
 // The tail of each ID is the CSS hook, so a data-cardfront value stays
 // readable in devtools ("royal_court", not the full ID).
-const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court',cardfront_nocturne:'nocturne'};
+const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court',cardfront_nocturne:'nocturne',cardfront_noir:'noir'};
 // Card fronts with REAL per-card art (as opposed to Royal Court/Classic,
 // which are pure CSS and need no image at all). cardHTML() only emits an
 // <img> when the equipped front is in this set — everyone else pays
 // nothing for this feature, not even an empty element.
-const CARDFRONT_ART_SETS={cardfront_nocturne:'nocturne'};
+const CARDFRONT_ART_SETS={cardfront_nocturne:'nocturne',cardfront_noir:'noir'};
 
 /* ── scene art loading ──
    Exact mirror of the RANK COSMETICS art-loading contract below
@@ -6497,11 +6497,17 @@ function cosItemHTML(kind,item,thumbHTML,equippedId){
     ? (equipped?`<span class="cos-status">Equipped</span>`:'')
     : item.unlocked
       ? `<span class="cos-status">${equipped?'Equipped':'Unlocked'}</span>`
-      : `<div class="cos-req">${esc(item.rankTier?`Reach ${item.rankTierName||item.rankTier}`:(item.unlockName||'Locked'))}</div>`
-        // A priced item has a second route, so the requirement line says so
-        // rather than reading as a dead end. The shop is where it's bought;
-        // this is only the signpost.
-        + (item.price&&!item.unlocked
+      // A priced item with no unlockName at all (Noir Casino: no achievement
+      // route, purchase-only) reads as "Shop exclusive" rather than the
+      // generic "Locked", which would wrongly imply some non-purchase path
+      // exists to earn it.
+      : `<div class="cos-req">${esc(item.rankTier?`Reach ${item.rankTierName||item.rankTier}`
+          :(item.unlockName||(item.price?'Shop exclusive':'Locked')))}</div>`
+        // A priced item with an achievement route ALSO has a second one, so
+        // the requirement line says so rather than reading as a dead end —
+        // the shop is where it's bought, this is only the signpost. Skipped
+        // for a shop-exclusive item, since "Shop exclusive" already said it.
+        + (item.price&&!item.unlocked&&item.unlockName
             ? `<div class="cos-price">${creditChipHTML(12)}${fmtCredits(item.price)} in the Shop</div>` : '');
   const click=item.unlocked?` onclick="equipCosmetic('${kind}','${item.id}')"`:'';
   // Scene thumbnails carry .scene-art + data-scene, which is the SAME

@@ -1710,16 +1710,154 @@ before pushing.
   Suit Master). `p.tricks` can't serve — `dealRound` clears it every
   hand, so by the final round it only describes that hand. Reset in
   `startDraw` when `round === 1`.
-- **Scenes and card fronts are one attribute on `<html>` and everything
+- **Scenes and Royal Court are one attribute on `<html>` and everything
   else is CSS.** No render function is aware either exists, which is
   what keeps the hand-tuned `--cw`/`--overlap`, hit-testing and drag
-  code untouched. `cardHTML()` is **not modified**: the Royal Court skin
-  keys entirely off the `data-r`/`data-s` attributes it already emits.
+  code untouched. Royal Court's skin keys entirely off the `data-r`/
+  `data-s` attributes `cardHTML()` already emits. **Nocturne Deck (below)
+  is the one exception** — real per-card art can't be conjured from
+  attributes alone, so `cardHTML()` gained one additive line for it.
+  Geometry is still untouched either way; see Nocturne's own section for
+  how it stays that way.
 - **The Royal Court frame lives on `.card::before`, not in
   `box-shadow`** — `.card.tap:active`, `.card.sel`, `.card.dragging` and
   `.card.received` all replace `box-shadow` outright, so a frame drawn
   there would vanish exactly when a card is picked up. `::after` is left
   alone; `.card.received` owns it.
+
+## Nocturne Deck card front (real illustrated art, not CSS)
+- **The first card front with actual per-card artwork.** Royal Court is
+  a pure re-skin of the existing glyph markup; a 52-portrait illustrated
+  deck can't be approximated in gradients, so this one genuinely needed
+  `cardHTML()` to emit something extra — the one exception the note
+  above calls out. Everything else about it follows the SAME art-loading
+  contract already established for rank plates and scenes (permanent
+  fallback underneath, real art layers on top the moment its file
+  exists, one 404 per missing piece per session): `cardFrontArtImg(c)`
+  is the `rankArtImg`/`sceneArtImg` equivalent, keyed by
+  `CARDFRONT_ART_SETS[equippedCardFront]` so it costs nothing — not even
+  an extra DOM node — for every other front.
+- **`cardFrontArtLoaded`/`.has-art` is the one piece scenes/ranks didn't
+  need.** A loaded card face already draws its own corner rank+suit, so
+  leaving the plain `.ix`/`.big` glyphs visible underneath would double
+  up. `html[data-cardfront="nocturne"] .card.has-art .ix,.big
+  {display:none}` hides them once the image actually loads — mirroring
+  `rankArtLoaded`/`.has-art` exactly. Until then, or if the file 404s, a
+  card is never blank: the glyphs are simply what's there.
+- **Geometry is untouched by construction, not by discipline.**
+  `.card-art` is `position:absolute;inset:0;border-radius:inherit;
+  pointer-events:none` — same safety rule as `.rank-art`/`.scene-art-img`.
+  Verified: the image sits exactly 1px inside the card's own border on
+  all sides (the border box, working as CSS always has — not a bug),
+  `object-fit:cover` fills the slot with no distortion, `.dim`'s
+  `opacity`/`filter` cascade onto the image correctly since it's a normal
+  child of `.card`, and switching the equipped front away from Nocturne
+  makes `cardHTML()` stop emitting `.card-art` entirely — zero stale art,
+  zero leftover DOM.
+- **Source: one flattened reference sheet, not 52 individual files.**
+  `nocturne deck.png` (1536×1024) is a contact-sheet preview, not the
+  "52 files at 1024×1536" the sheet's own caption describes — those
+  don't exist. The 52 cards were cropped out of that single composite by
+  measuring the grid programmatically (column pitch fit from the 9 plain
+  numeral columns, which threshold cleanly; the 4 portrait columns
+  fragment under a naive luminance threshold because dark clothing reads
+  as "background", so they're read from a thin sliver near the card's
+  TOP edge instead, still inside the frame but above where portraits get
+  dark) rather than eyeballing pixel offsets across a 13×4 grid. Row
+  heights are **not uniform** (164/164/159/149px for hearts/diamonds/
+  clubs/spades) — trust the per-row measurement over forcing consistency;
+  an early pass that forced 164px everywhere clipped into the Spades
+  row's own background and showed up as a dark sliver under the Queen.
+  Each crop is upscaled 2× (Lanczos) before saving as WebP — the source
+  is inherently low-res (~85-95px × 149-164px per card), so this reduces
+  visible pixelation at larger card sizes without pretending to add real
+  detail that isn't there. `public/cardfronts/nocturne/`, 52 files,
+  ~10KB each. Not in `sw.js`'s `ASSETS` — runtime-cached on first use,
+  same reasoning as scenes and the 20 portrait avatars.
+- **The sheet also includes a card back, deliberately not wired in.**
+  Card backs are shared table furniture, not a per-player cosmetic —
+  Royal Court already established this (`.card:not(.back)` explicitly
+  excludes it) — so Nocturne follows the same precedent and leaves
+  `.card.back` exactly as it was for every front. The cropped back art
+  isn't even saved anywhere; if a future "card backs" cosmetic category
+  is ever added, it would need re-cropping then anyway.
+- **Took over Royal Court's shop slot, not its whole existence.**
+  `COSMETICS.cardFronts` (`server.js`) still lists `cardfront_royal_court`
+  with `unlock:'ach_queen_hunter'` — it just lost its `price`, reverting
+  to achievement-only exactly as it was before the shop existed. Nobody
+  who already owns or would earn it loses anything. `cardfront_nocturne`
+  is the new entry carrying **the same unlock string** plus the price —
+  so reaching Queen Hunter now grants both decks, and Nocturne is the one
+  that's also purchasable. That's a deliberate reading of "instead of...
+  in the shop": the shop LISTING swaps, nothing is revoked. Client-side,
+  `CARDFRONT_IDS`/`CARDFRONT_ATTR` gained the third id/slug pair, and
+  `cardFrontThumb()` gained a real-art branch (3 cropped minis — spades
+  A, hearts Q, clubs K — replacing the glyph-based `.cf-mini` preview
+  Classic/Royal Court still use).
+
+## Noir Casino card front (shop-exclusive, no free route)
+- **The first cosmetic with NO earn-it-for-free path at all.**
+  `COSMETICS.cardFronts`: `{ id:'cardfront_noir', unlock:null,
+  price:CREDIT_PRICES.epic }` — `unlock:null` with no `price` has always
+  meant "always free" (Classic, the default scene); this is `unlock:null`
+  **with** a price, which is a genuinely new combination every earlier
+  item avoided by always pairing a price with an achievement.
+  `cosmeticsFor`'s `unlocked` formula needed one word for this: was
+  `!c.unlock || done.has(c.unlock) || bought.has(c.id)`, now
+  `(!c.unlock && !c.price) || done.has(c.unlock) || bought.has(c.id)`.
+  Verified against all four existing shapes before shipping it (free/
+  no-price, gated/no-price, gated/priced, and the new priced/ungated) —
+  only the new shape's result actually changes.
+- **Client shows "Shop exclusive" instead of the generic "Locked"** when
+  an item has a price but no `unlockName` at all — the fallback text a
+  purely-achievement-gated locked item still uses. Saying "Locked" on a
+  shop-exclusive item would wrongly imply some non-purchase path exists.
+  The picker's price hint (`"600 in the Shop"`, next to Nocturne's
+  requirement line) is suppressed for this item specifically — it already
+  says "Shop exclusive", so repeating the price there is noise; the real
+  price and Buy button live on the Shop screen itself, unaffected by any
+  of this (`shopItemHTML` was already generic enough to need zero
+  changes for a no-unlock item — `earned = item.unlocked && !item.owned`
+  is false until purchase makes both true together).
+- **Same crop methodology as Nocturne, adapted for a near-white sheet.**
+  `Cardfront Noir 20s.png` (1536×1024, cards edge-to-edge with thin
+  drop-shadowed borders on a white page) couldn't use Nocturne's
+  dark-background threshold — card and gutter are both near-white, only
+  ~10 luminance units apart. Column-**minimum** (not average) luminance
+  over the full row height is what separated them cleanly: a gutter
+  column never has anything drawn on it so its minimum stays ~250+ the
+  whole way down, while every card column dips low somewhere (ink, the
+  border line, a corner curve) even where a naive single-slice scan
+  would have caught a blank patch and misread it as a gutter. A ≥5px
+  run-length filter rejects small blank interior patches from being
+  misread as gutters. Confirmed clean: 12 gutter bands for 13 columns,
+  5 row-bands for 4 rows, both matching exactly.
+  This sheet's card order is **A first**, not last (`A,2,3,...,10,J,Q,K`)
+  — do not assume Nocturne's column order carries over to a new sheet;
+  re-measure per sheet.
+  `public/cardfronts/noir/`, 52 files, ~6KB each (smaller than Nocturne's
+  ~10KB — this source has less fine detail to encode). Same 2× Lanczos
+  upscale, same WebP settings, same "not in `sw.js` ASSETS, runtime-
+  cached" treatment.
+- **Named after the existing "Noir Casino" avatar collection**
+  (`AVATAR_COLLECTIONS` in `server.js`: The Gambler, The Dealer, Femme
+  Fatale, The Detective...), not the source filename's "Noir 20s" — the
+  collection identity already exists in this codebase, so the card front
+  reuses it rather than inventing a second name for the same aesthetic.
+  It does NOT touch that avatar collection or its own unlock rules in
+  any way; the two are unrelated systems that happen to share a name.
+- **Same card-back omission as Nocturne, for the same reason.** The
+  source sheet doesn't include a back at all in this case, so there was
+  nothing to decide either way.
+- **Verified end-to-end** against the exact same harness as Nocturne:
+  a real 13-card hand renders with `has-art` on all 13 and the fallback
+  glyphs hidden; switching away stops `cardHTML()` emitting any art at
+  all; the My Account picker shows "Shop exclusive" with no
+  achievement-style requirement; the Shop screen shows 5,000 credits and
+  a working Buy button that emits only an id and token; the
+  under-5,000-balance state correctly disables to "Not enough"; and both
+  `server.js` and the inline client script still parse clean.
+
 - **Scenes are pure CSS gradient compositions, no image assets**, and
   that's a decision rather than a stopgap: eight full-bleed backgrounds
   would dwarf everything else this PWA pre-caches, and gradients need no
@@ -2191,8 +2329,11 @@ before pushing.
   scrim darkens it but doesn't replace good composition). Not added to
   `sw.js`'s `ASSETS` — runtime-cached on first use, same as the 20
   portrait avatars.
-- The other four card-front collections (Noir, Emerald, Occult, Grand
-  Hotel) — the brief explicitly scopes this to Royal Court only.
+- **Noir card front is done** (see its own section above) — it's out of
+  this list now. The remaining three unimplemented card-front collections
+  (Emerald, Occult, Grand Hotel) — the brief explicitly scoped the
+  original build to Royal Court only, and Noir/Nocturne both arrived
+  later as separate, standalone asks rather than through that brief.
 - **Credit economy, deferred pieces.** Achievement credits (P1), Quick
   Match / Custom Game split (P1), avatar frames and the epic/legendary
   price tiers they'd fill (P1/P2), campaign unlocks (P2). Cut entirely

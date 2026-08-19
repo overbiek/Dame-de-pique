@@ -1332,8 +1332,24 @@ const COSMETICS = {
     { id: 'scene_observatory',   name: 'The Observatory',  unlock: 'ach_high_roller',  price: CREDIT_PRICES.rare },
   ],
   cardFronts: [
-    { id: 'cardfront_standard',    name: 'Classic',     unlock: null },
-    { id: 'cardfront_royal_court', name: 'Royal Court', unlock: 'ach_queen_hunter', price: CREDIT_PRICES.common },
+    { id: 'cardfront_standard',    name: 'Classic',      unlock: null },
+    // Royal Court no longer carries a `price` — it's back to
+    // achievement-only, exactly as it was before the shop existed. The
+    // shop slot (and the achievement's own unlock string) is now shared
+    // with Nocturne Deck below, so reaching ach_queen_hunter grants BOTH;
+    // this is a deliberate swap of "which deck the shop sells", not a
+    // revocation — anyone who already owns/equips Royal Court keeps it,
+    // since it's still a real, unlockable catalog entry.
+    { id: 'cardfront_royal_court', name: 'Royal Court',  unlock: 'ach_queen_hunter' },
+    // Real illustrated art (52 unique card faces + court portraits),
+    // cropped from a reference sheet rather than drawn in CSS — see
+    // cardFrontArtImg client-side for the loading contract. Takes over
+    // Royal Court's old price/unlock slot in the shop.
+    { id: 'cardfront_nocturne',    name: 'Nocturne Deck', unlock: 'ach_queen_hunter', price: CREDIT_PRICES.common },
+    // Shop-EXCLUSIVE, deliberately: no `unlock` string at all, priced at
+    // the epic tier. This is the first cosmetic with no free route —
+    // see the `unlocked` formula's comment above for what that required.
+    { id: 'cardfront_noir',        name: 'Noir Casino',   unlock: null, price: CREDIT_PRICES.epic },
   ],
   // Crests are 1:1 with achievements by design (the brief's whole point:
   // a crest IS the visible proof of an achievement), so they're derived
@@ -1557,8 +1573,17 @@ function cosmeticsFor(achievements, stats, purchases) {
     // achievement_stats on every call, so retuning a threshold takes effect
     // immediately for everyone; the bought half is the only stored piece,
     // and it can never be revoked by a retune.
+    //
+    // `!c.unlock` alone used to mean "always free" (Classic, the default
+    // scene) — every priced item until now ALSO carried an achievement
+    // unlock, so that was never ambiguous. A shop-EXCLUSIVE item (priced,
+    // no unlock string at all) needs `!c.unlock` to stop meaning "free":
+    // gating it on `!c.price` too is what keeps Classic/Velvet Room
+    // (no unlock, no price) free while a no-unlock-but-priced item like
+    // Noir Casino falls through to `bought.has(c.id)` only, same as
+    // everything else purchasable.
     unlocked: c.rankTier ? tierReached(stats.mmrPeak, c.rankTier)
-            : (!c.unlock || done.has(c.unlock) || bought.has(c.id)),
+            : ((!c.unlock && !c.price) || done.has(c.unlock) || bought.has(c.id)),
   }));
   return {
     scenes: mark(COSMETICS.scenes),

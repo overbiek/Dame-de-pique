@@ -2140,6 +2140,36 @@ before pushing.
   and risks the avatar popping mid-trick, to save nothing.
 - Not in `sw.js`'s `ASSETS` — the fetch handler runtime-caches them, so
   no `CACHE` bump is needed and installs don't pull the set up front.
+- **A second batch of 5 (belle, countess, envoy, baron, castaway) joined
+  the same `house_regulars` collection later, and — on the requester's
+  own follow-up complaint that the first 7 were "zoomed in a bit too
+  much" — they DELIBERATELY KEEP the source's baked-in gold ring/crest,
+  the exact thing the first 7 were cropped specifically to remove.**
+  That's not an inconsistency that slipped through; it was the explicit
+  resolution to a real crop-geometry conflict discovered while trying to
+  fit these 5 the same way as the first 7: a crop tight enough to clear
+  the ring left a cut-off sliver of the bottom crest ornament on at
+  least one source image (measured — the crest's top edge sits only
+  ~177px above the bottom edge on the worst case, more clearance than
+  the ring itself needs), so there was no inset that satisfied both "no
+  ring" and "no clipped ornament" at once. Shown side by side
+  (ring-kept vs. ring-removed) before deciding; keeping the ring was the
+  explicit choice, not a fallback.
+  **Consequence worth knowing if this collection grows again: the 12
+  avatars are not visually uniform** — 7 are bare face crops, 5 carry a
+  permanent gold medallion ring, so the app's own state-reactive ring on
+  `.avatar`/`.avatar-opt` (turn indicator, picker selection) reads as a
+  double ring on those 5. Accepted rather than re-cropping the first 7
+  to match, since re-introducing their "too zoomed in" problem to fix a
+  ring mismatch would trade a confirmed complaint for a cosmetic
+  nitpick nobody raised.
+  Crop is `inset=14` (not a ratio, unlike the first 7's 13.5%) —
+  measured directly against the source's luminance profile: pure black
+  square-corner margin holds through x≈14, then jumps sharply as the
+  ring becomes visible, so 14px trims exactly the transparent corners
+  PNG export leaves outside the circular medallion and nothing else.
+  Same supersampled circular mask / 160×160 / WebP pipeline as every
+  other avatar batch.
 
 ## Credits — the second progression track
 - **Parallel to MMR and never touching it.** Credits measure engagement,

@@ -1475,10 +1475,16 @@ const RANK_COSMETICS = [
 // it can be added as an 8th entry here whenever the file resurfaces.
 const AVATAR_COLLECTIONS = [
   { id: 'house_regulars', name: 'House Regulars', dir: 'house-regulars',
+    // Second batch (belle..castaway) deliberately keeps its source's
+    // baked-in gold ring/crest medallion, unlike the first 7 above (which
+    // crop it away) — see this collection's note further up for why.
     avatars: [['regular_charmer', 'The Charmer', 'charmer'], ['regular_sharp', 'The Sharp', 'sharp'],
               ['regular_optimist', 'The Optimist', 'optimist'], ['regular_jester', 'The Jester', 'jester'],
               ['regular_scholar', 'The Scholar', 'scholar'], ['regular_wildcard', 'The Wildcard', 'wildcard'],
-              ['regular_closer', 'The Closer', 'closer']] },
+              ['regular_closer', 'The Closer', 'closer'],
+              ['regular_belle', 'The Belle', 'belle'], ['regular_countess', 'The Countess', 'countess'],
+              ['regular_envoy', 'The Envoy', 'envoy'], ['regular_baron', 'The Baron', 'baron'],
+              ['regular_castaway', 'The Castaway', 'castaway']] },
 ];
 const AVATAR_IDS = new Set(
   AVATAR_COLLECTIONS.flatMap(c => c.avatars.map(a => a[0]))

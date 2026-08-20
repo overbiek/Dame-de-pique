@@ -2099,20 +2099,17 @@ before pushing.
   resurfaces.
 - **The source art is a 1254×1254 circular medallion with a BAKED-IN
   gold ring and house crest, not a bare portrait** — unlike the original
-  20, which were plain face crops with no framing at all. That's not
-  cosmetic taste; it created a real conflict. Every avatar host in this
-  app already draws its OWN state-reactive ring (`.avatar`, `.avatar-opt`
-  — gold border on your turn, gold border when selected in the picker),
-  so a second, PERMANENT gold ring baked into the source would compete
-  with that and make the state changes hard to notice. Solved by
-  cropping inward before the mask, not after: an inset of 13.5% of the
-  source width clears the baked-in ring on every image (verified against
-  two differently-framed samples — a centred face and a tilted, laughing
-  one — before running the full batch), so what ships is the same bare
-  circular portrait the app's own ring treatment expects. Same 160×160,
-  same supersampled circular alpha mask, same `public/avatars/<dir>/`
-  layout as the set it replaced — the only thing that changed is which
-  pixels feed the mask.
+  20, which were plain face crops with no framing at all. That first
+  created a real conflict: every avatar host in this app already draws
+  its OWN state-reactive ring (`.avatar`, `.avatar-opt` — gold border on
+  your turn, gold border when selected in the picker), so a second,
+  PERMANENT gold ring baked into the source would compete with that.
+  **The first 7 were initially cropped to remove the baked-in ring for
+  exactly that reason** (13.5% inset, clearing it on every image), but
+  this was later reverted — see the "all 12 now keep the ring" note
+  below for why, and for what replaced it. Same 160×160, same
+  supersampled circular alpha mask, same `public/avatars/<dir>/` layout
+  as the set it replaced throughout — only the crop geometry changed.
 - **`sanitizeAvatar` doesn't just allow-list the current ids before its
   8-char slice — it now also CLEARS a recognizable stale one instead of
   mangling it.** Previously any string failing the allow-list fell
@@ -2144,32 +2141,55 @@ before pushing.
   the same `house_regulars` collection later, and — on the requester's
   own follow-up complaint that the first 7 were "zoomed in a bit too
   much" — they DELIBERATELY KEEP the source's baked-in gold ring/crest,
-  the exact thing the first 7 were cropped specifically to remove.**
-  That's not an inconsistency that slipped through; it was the explicit
-  resolution to a real crop-geometry conflict discovered while trying to
-  fit these 5 the same way as the first 7: a crop tight enough to clear
-  the ring left a cut-off sliver of the bottom crest ornament on at
-  least one source image (measured — the crest's top edge sits only
-  ~177px above the bottom edge on the worst case, more clearance than
-  the ring itself needs), so there was no inset that satisfied both "no
-  ring" and "no clipped ornament" at once. Shown side by side
-  (ring-kept vs. ring-removed) before deciding; keeping the ring was the
-  explicit choice, not a fallback.
-  **Consequence worth knowing if this collection grows again: the 12
-  avatars are not visually uniform** — 7 are bare face crops, 5 carry a
-  permanent gold medallion ring, so the app's own state-reactive ring on
-  `.avatar`/`.avatar-opt` (turn indicator, picker selection) reads as a
-  double ring on those 5. Accepted rather than re-cropping the first 7
-  to match, since re-introducing their "too zoomed in" problem to fix a
-  ring mismatch would trade a confirmed complaint for a cosmetic
-  nitpick nobody raised.
-  Crop is `inset=14` (not a ratio, unlike the first 7's 13.5%) —
-  measured directly against the source's luminance profile: pure black
-  square-corner margin holds through x≈14, then jumps sharply as the
-  ring becomes visible, so 14px trims exactly the transparent corners
-  PNG export leaves outside the circular medallion and nothing else.
+  the exact thing the first 7 were originally cropped specifically to
+  remove.** That was the explicit resolution to a real crop-geometry
+  conflict discovered while trying to fit these 5 the same way as the
+  first 7: a crop tight enough to clear the ring left a cut-off sliver
+  of the bottom crest ornament on at least one source image (measured —
+  the crest's top edge sits only ~177px above the bottom edge on the
+  worst case, more clearance than the ring itself needs), so there was
+  no inset that satisfied both "no ring" and "no clipped ornament" at
+  once. Shown side by side (ring-kept vs. ring-removed) before deciding;
+  keeping the ring was the explicit choice, not a fallback.
+  Crop is `inset=14` (not a ratio, unlike the first 7's original 13.5%)
+  — measured directly against the source's luminance profile: pure
+  black square-corner margin holds through x≈14, then jumps sharply as
+  the ring becomes visible, so 14px trims exactly the transparent
+  corners PNG export leaves outside the circular medallion and nothing
+  else.
+- **The original 7 were re-cropped to match, on the requester's own
+  follow-up ask, retiring the ring/no-ring split above the same day it
+  shipped.** Kept the ring on all 12 rather than the reverse (stripping
+  it from the new 5 to match the old 7) — going back to a tighter,
+  ring-free crop would have reintroduced the exact "too zoomed in"
+  complaint that started this whole thread, where keeping the ring on
+  everything has no equivalent downside beyond the app's own
+  turn/selection ring reading as a double ring, which is a much smaller
+  cost.
+  **This source set (WhatsApp-exported JPEGs, not the second batch's
+  clean PNGs) turned out to have wildly inconsistent margins between the
+  ring and the frame edge — nothing like the second batch's uniform
+  ~14px** — so the same "trim only the black corners" luminance-scan
+  method that worked for the second batch was unusable here: measured
+  per image, the ring-to-edge gap ranged from ~0px (touching the frame
+  almost exactly) to ~60px, and varied by side within a single image
+  too (one had a 58px gap on the left/right but only 14-17px on
+  top/bottom). A single fixed inset would have clipped the ring on the
+  tighter images and left visible slack on the looser ones.
+  **Resolved by visually bisecting each image individually** — rendering
+  actual candidate crops (not just reading raw luminance numbers, which
+  were noisy enough on these JPEGs to give false margins from ring
+  reflections and background candlelight) at a sweep of insets and
+  picking, per image, the largest inset that still shows a clean, full,
+  unclipped ring: `charmer`=10, `sharp`=15, `optimist`=15, `jester`=15,
+  `scholar`=10 (bald head sits close to the ring's inner top edge, so
+  kept conservative), `wildcard`=10, `closer`=15. Not a single shared
+  constant — this source set doesn't have one usable value, unlike the
+  second batch's clean 14px.
   Same supersampled circular mask / 160×160 / WebP pipeline as every
-  other avatar batch.
+  other avatar batch, output files simply overwritten in place (same
+  ids, same filenames — no `AVATAR_COLLECTIONS` change needed for this
+  part).
 
 ## Credits — the second progression track
 - **Parallel to MMR and never touching it.** Credits measure engagement,

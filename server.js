@@ -1461,23 +1461,20 @@ const RANK_COSMETICS = [
 //
 // Source art for this set is real photo-illustration portraits (not
 // generated for this game specifically — see CLAUDE.md for the crop
-// contract: each was supplied as a 1254x1254 circular medallion with a
-// baked-in gold ring and house crest, cropped down to JUST the portrait
-// at a fixed inset that clears the ring on every image, since the app's
-// own state-reactive avatar border — gold on your turn, gold when
-// selected in the picker — would otherwise compete with a second,
-// permanent ring baked into the source).
+// contract): each was supplied as a 1254x1254 circular medallion with a
+// baked-in gold ring and house crest, and EVERY avatar in this
+// collection now keeps that ring rather than cropping it away — see
+// CLAUDE.md for why the first 7 originally didn't (a since-reverted
+// attempt to avoid competing with the app's own state-reactive avatar
+// border) and why that was abandoned in favour of consistency.
 //
-// Only 7 shipped, not 8: an 8th source file ("the host", a big open
-// smile) existed when this was scoped but was gone from disk by the
-// time of actual cropping — most likely evicted by OneDrive's on-demand
-// sync between being shown and being processed. Nothing references it;
-// it can be added as an 8th entry here whenever the file resurfaces.
+// Only 7 in the first sub-batch, not 8: an 8th source file ("the host",
+// a big open smile) existed when this was scoped but was gone from disk
+// by the time of actual cropping — most likely evicted by OneDrive's
+// on-demand sync between being shown and being processed. Nothing
+// references it; it can be added whenever the file resurfaces.
 const AVATAR_COLLECTIONS = [
   { id: 'house_regulars', name: 'House Regulars', dir: 'house-regulars',
-    // Second batch (belle..castaway) deliberately keeps its source's
-    // baked-in gold ring/crest medallion, unlike the first 7 above (which
-    // crop it away) — see this collection's note further up for why.
     avatars: [['regular_charmer', 'The Charmer', 'charmer'], ['regular_sharp', 'The Sharp', 'sharp'],
               ['regular_optimist', 'The Optimist', 'optimist'], ['regular_jester', 'The Jester', 'jester'],
               ['regular_scholar', 'The Scholar', 'scholar'], ['regular_wildcard', 'The Wildcard', 'wildcard'],

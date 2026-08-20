@@ -8,6 +8,14 @@
 <link rel="manifest" href="/manifest.json"/>
 <!-- Bordeaux's --ddp-bg; applyTableTheme() rewrites this per theme -->
 <meta name="theme-color" content="#120A0D"/>
+<!-- Opts out of Android Chrome/WebView's "Force Dark" / "Simplify page
+     colours" heuristic. Without this, some Android browsers see a page
+     they don't recognise as dark-theme-aware and auto-invert light
+     elements — which is exactly the cream/white card faces here, while
+     the already-dark felt around them looks untouched. Cards end up with
+     a near-black face and light text, i.e. the opposite of every real
+     theme in this app (see the --ddp-card tokens above). -->
+<meta name="color-scheme" content="dark light"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -2711,13 +2719,20 @@ html.landscape-mode .tbl-note .nt-sub{font-size:.66rem;color:var(--cream);line-h
    block may ever be allowed to grow .mid or .hand — the --cw/--ch
    formulas are untouched by it and must stay that way.
 
-   PLAY SCREEN ONLY, and that's a design decision before it's a fit one.
-   The pass screen's stack also carries #p-go and #p-auto (moved there by
-   relocatePassChrome), leaving ~118px at 667x375 against the rail's
-   ~133 — but the better argument is that during passing no trick has
-   been played and no score has moved since the round summary the player
-   just confirmed through, so the rail has nothing to say. tableHTML only
-   emits it when opts.roster is set, which only renderPlay does.
+   NOW ON BOTH SCREENS. This used to be play-only, on the argument that
+   during passing no trick has been played and no score has moved since
+   the round summary the player just confirmed through — but the pass
+   screen carries the same four seats and the player still wants to see
+   who's who at a glance, so it's rendered there too now.
+   The fit problem that argument was papering over is real: the pass
+   screen's stack also carries #p-go and #p-auto (moved there by
+   relocatePassChrome), which the play screen never has to budget for.
+   See the `#s-pass .rt-stack.has-roster` rules further down for the
+   tightened gaps/padding that claw back the difference. tableHTML emits
+   the rail whenever opts.roster is set — renderPlay, renderPass and
+   renderPassReveal all pass it now, gated on `!tutorialActive` like the
+   play screen already was, for the same reason (see the "Suppressed
+   during the tutorial" note below).
 
    Measured budget at the tightest documented landscape viewport
    (667x375): the stack gets ~272px, of which .corner-rt takes 56, the
@@ -3050,9 +3065,29 @@ html.landscape-mode #s-pass .hand .card-slot,html.landscape-mode #s-play .hand .
 html.landscape-mode #s-pass .rt-stack #p-go{
   width:100%;margin:0;padding:9px 14px;font-size:.85rem;
 }
+html.landscape-mode #s-pass .rt-stack.has-roster #p-go{
+  padding:6px 14px;
+}
 html.landscape-mode #s-pass .rt-stack #p-auto{
   margin:0;width:100%;text-align:center;font-size:.66rem;
 }
+/* The pass screen's stack now also carries the roster rail (see the
+   roster block above) ABOVE #p-go/#p-auto, which the roster's own budget
+   comment never accounted for — that math was play-screen-only, which
+   has no confirm button/countdown sharing the stack. At the default
+   6px stack gap / 8px roster gap this measured as a real overlap with
+   the hand's card row, not a hypothetical one — worse at large Android
+   font scales (rem-sized row text), where the round-summary sheet
+   already documents 20px root as its own worst-case tier.
+   Tightened three things, scoped to #s-pass so the play screen's
+   already-verified spacing is untouched: the stack's own gap, the
+   roster's internal row gap, and #p-go's padding when the roster is
+   present. Re-measured after: positive clearance above the hand at
+   16px root, and down to ~2px at 667x375/20px-root/longest-name — the
+   same rare biggest-font-shortest-viewport intersection the summary
+   sheet already accepts rather than chasing further. */
+html.landscape-mode #s-pass .rt-stack.has-roster{gap:3px}
+html.landscape-mode #s-pass .rt-stack.has-roster .roster{gap:2px}
 html.landscape-mode #s-pass .home-btn,html.landscape-mode #s-play .home-btn{
   width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
   background:rgba(var(--ddp-scrim-rgb),.24);border:1px solid var(--line);color:var(--gold-hi);
@@ -7768,7 +7803,8 @@ function renderPassReveal(G){
   // the tutorial's fake state object, which has no passDir field.
   const dir=G.passDir||['left','right','across','keep'][(G.round-1)%4];
   parkPassChrome();   // must precede the innerHTML rebuild — see the function
-  $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir),lastTrickBtnHTML(G,"p-lt-btn"))});
+  $('p-table').innerHTML=tableHTML(G,{fan:true,roster:!tutorialActive,
+    actions:cornerActions(passInfoHTML(G,dir),lastTrickBtnHTML(G,"p-lt-btn"))});
   myStrip(G,'p-me',false);
   $('p-prompt').className='prompt';
   $('p-prompt').textContent='Cards received!';
@@ -7782,7 +7818,8 @@ function renderPass(G){
   show('pass');
   const dir=G.passDir||['left','right','across','keep'][(G.round-1)%4];
   parkPassChrome();   // must precede the innerHTML rebuild — see the function
-  $('p-table').innerHTML=tableHTML(G,{fan:true,actions:cornerActions(passInfoHTML(G,dir),lastTrickBtnHTML(G,"p-lt-btn"))});
+  $('p-table').innerHTML=tableHTML(G,{fan:true,roster:!tutorialActive,
+    actions:cornerActions(passInfoHTML(G,dir),lastTrickBtnHTML(G,"p-lt-btn"))});
   myStrip(G,'p-me',false);
 
   const mine=G.players[me];

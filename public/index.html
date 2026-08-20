@@ -2114,14 +2114,39 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
   opacity:0;transition:opacity .5s ease;
 }
 html.scene-on #scene-layer{opacity:1}
-/* Clair is a LIGHT theme: every scene is a dark room, and at full
-   strength one would invert the whole palette the screen's text was
-   tuned against. Same class of correction as the other Clair blocks —
-   it holds the scene back to a tint rather than dropping the feature.
+/* Clair is a LIGHT theme and every scene is a photo/gradient of a dark
+   room, so SOME correction is real — full 1 strength would sit the
+   portrait .prompt/.banner text (dark ink, tuned for the light felt
+   Clair shows when there's no photo) directly on a near-black photo
+   with almost no contrast. The first cut at that correction went too
+   far the other way: .30 leaves the light felt dominant and the photo
+   reduced to a barely-there tint over it — reported back as looking
+   like "a veil over the background" rather than an actual scene, which
+   defeats the cosmetic entirely for every Clair player (Clair being a
+   real equal theme option, not a rarely-picked one).
+   .85 is the fix on the photo side: the scene reads as an actual scene
+   again. The contrast half of the original reasoning still needed
+   solving on its own terms rather than by re-dimming the photo — see
+   the .banner/.prompt correction below, which forces light text with a
+   shadow specifically when a scene sits behind them, instead of
+   borrowing Clair's normal dark-ink body-text color that only ever
+   suited the plain light felt.
    Two classes + an attribute + an id beats html.scene-on #scene-layer
    outright, so unlike the end-of-stylesheet Clair blocks this one does
    NOT depend on source order. */
-html.scene-on[data-theme="clair"] #scene-layer{opacity:.30}
+html.scene-on[data-theme="clair"] #scene-layer{opacity:.85}
+/* .banner/.prompt (portrait only — landscape hides both and routes the
+   same text through .tbl-note's own dark box instead, which already
+   sets its own light text regardless of theme) render straight on top
+   of the scene with no box of their own. Clair's normal --gold-hi/
+   --cream/--faint are dark ink, correct for the plain light felt but
+   wrong the instant a dark scene photo sits behind them at real
+   strength. Fixed colors + a shadow, not themed ones — these two
+   elements only ever appear over the scene, never over plain Clair felt,
+   so there's no "normal" state of theirs left to preserve. */
+html.scene-on[data-theme="clair"] .banner{color:#EED08E;text-shadow:0 1px 3px rgba(0,0,0,.65),0 1px 10px rgba(0,0,0,.4)}
+html.scene-on[data-theme="clair"] .prompt{color:#F7F2E7;text-shadow:0 1px 3px rgba(0,0,0,.65),0 1px 10px rgba(0,0,0,.4)}
+html.scene-on[data-theme="clair"] .prompt.wait{color:#D8CFC2;text-shadow:0 1px 3px rgba(0,0,0,.65),0 1px 10px rgba(0,0,0,.4)}
 
 /* ══════════════════════════════════════════════════════════════
    ROYAL COURT card front

@@ -1202,11 +1202,6 @@ const ACHIEVEMENTS = [
     desc: 'See a game through to the end in your own seat.',
     crest: 'crest_raven',           title: 'title_dealers_nemesis' },
 
-  { id: 'ach_card_master',    stat: 'gamesCompleted',     tiers: [1, 25, 100, 500],
-    names: ['First Hand', 'Card Master', 'Table Regular', 'Living Legend'],
-    desc: 'Complete a game.',
-    crest: 'crest_card_fan',        title: 'title_trick_taker' },
-
   { id: 'ach_observer',       stat: 'gamesCompleted',     tiers: [10, 50, 200, 750],
     names: ['The Observer', 'The Watcher', 'The Archivist', 'The Chronicle'],
     desc: 'Complete games - the patient road.',
@@ -1318,7 +1313,16 @@ const COSMETICS = {
   scenes: [
     { id: 'scene_velvet_room',   name: 'The Velvet Room',  unlock: null },
     { id: 'scene_rooftop',       name: 'The Rooftop',      unlock: 'ach_observer',     price: CREDIT_PRICES.rare },
-    { id: 'scene_grand_library', name: 'The Grand Library', unlock: 'ach_card_master', price: CREDIT_PRICES.rare },
+    // First Hand (ach_card_master), the achievement this used to unlock
+    // off, was removed outright — no replacement stat assigned, so this
+    // reverts to shop-exclusive (unlock:null + price), the same shape
+    // cardfront_noir already established for "purchase only, no free
+    // route". Functionally this changed nothing on its own: cosmeticsFor's
+    // `unlocked` formula already required BOTH !unlock and !price to give
+    // something away for free, so a priced item with a dangling unlock
+    // string behaved identically to unlock:null — this just says so
+    // explicitly instead of leaving a reference to a deleted id.
+    { id: 'scene_grand_library', name: 'The Grand Library', unlock: null, price: CREDIT_PRICES.rare },
     { id: 'scene_winter_casino', name: 'The Winter Casino', unlock: 'ach_the_house',   price: CREDIT_PRICES.rare },
     { id: 'scene_moon_room',     name: 'The Moon Room',    unlock: 'ach_moon_chaser',  price: CREDIT_PRICES.rare },
     { id: 'scene_garden',        name: 'The Garden',       unlock: 'ach_heartbreaker', price: CREDIT_PRICES.rare },
@@ -1374,7 +1378,6 @@ const COSMETICS = {
     { id: 'title_strategist',        name: 'The Strategist',      unlock: 'ach_strategist' },
     { id: 'title_dealers_nemesis',   name: "Dealer's Nemesis",    unlock: 'ach_silent_dealer' },
     { id: 'title_high_roller',       name: 'High Roller',         unlock: 'ach_high_roller' },
-    { id: 'title_trick_taker',       name: 'The Trick Taker',     unlock: 'ach_card_master' },
     { id: 'title_clean_sweep',       name: 'Clean Sweep',         unlock: 'ach_observer' },
     { id: 'title_blame_the_dealer',  name: 'Blame the Dealer',    unlock: 'ach_the_dealer' },
     { id: 'title_beyond_moon',       name: 'Beyond the Moon',     unlock: 'ach_beyond_moon' },

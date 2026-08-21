@@ -3861,6 +3861,14 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
   50%{box-shadow:0 0 0 3px rgba(var(--ddp-brass-rgb),.5),0 0 4px rgba(var(--ddp-brass-rgb),.2)}
 }
 .card.tut-forced{animation:tut-pulse 1.1s ease-in-out infinite;border-radius:calc(var(--cw)*.13)}
+/* .card.dim is opacity:.32 — box-shadow (the ring above) inherits an
+   element's opacity same as everything else it paints, so a forced card
+   that was ALSO .dim (the trick-1 received-cards step deliberately
+   leaves legalCards empty, since nothing is playable yet at that point)
+   rendered its ring at barely a tenth of its real strength, easy to miss
+   entirely. The highlight is meant to be the one thing that overrides
+   dimming, not compete with it. */
+.card.dim.tut-forced{opacity:1;filter:none}
 
 /* The "now press this" glow on the pass button needs its OWN keyframe:
    #p-go is .btn-primary, i.e. a solid gold gradient, so the brass ring
@@ -9153,7 +9161,12 @@ function tutorialCallout(html,opts){
     const stack=document.querySelector('.screen.active .rt-stack');
     if(stack){
       const r=stack.getBoundingClientRect();
-      if(r.height) box.style.top=(r.bottom+8)+'px';
+      // opts.topOffset is a per-call nudge (negative = higher) on top of
+      // the measured clearance — the trick-2 follow-suit step's stack is
+      // taller than most (its status note carries more text than a bare
+      // round/trick line), which pushed that one callout noticeably lower
+      // than its neighbours even though they all share this same anchor.
+      if(r.height) box.style.top=(r.bottom+8+(opts.topOffset||0))+'px';
     }
   }
   box.classList.add('show');
@@ -9455,7 +9468,7 @@ function tutA_trick1Resolve(){
         `Your Ace was the highest club played, so you take the trick: `+
         `<b>+10 points.</b> Winning any trick is always worth +10 — the only `+
         `question is whether it's carrying a penalty too, which yours wasn't.`,
-        {next:tutA_trick2Lead}
+        {next:tutA_trick2Lead,side:'right'}
       );
     });
   });
@@ -9495,7 +9508,7 @@ function tutA_trick2YourTurn(){
     `Computer 3 led the <b>10♦</b> and Computer 4 followed with the <b>6♦</b>. `+
     `Diamonds were led and you hold some, so you <b>must follow suit</b> — any `+
     `diamond is legal, the rest are dimmed. <b>Drag one to the table.</b>`,
-    {side:'right'}
+    {side:'right',topOffset:-24}
   );
   tutAwaiting={type:'playAny',suit:'♦',after:tutA_trick2Resolve};
 }

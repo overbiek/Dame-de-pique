@@ -1166,6 +1166,11 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .stat-value.neg{color:var(--ddp-neg)}
 .stat-label{font-size:.7rem;color:var(--faint);margin-top:5px;line-height:1.3}
 .avatar.sm{width:33px;height:33px;font-size:.92rem;flex:0 0 auto}
+/* Twice .sm — the lobby seat and the draw quadrant, where the avatar is
+   the main visual anchor of "who you're playing with" rather than a
+   small identity chip, so it earns real size. */
+.avatar.md{width:66px;height:66px;font-size:1.7rem;flex:0 0 auto;border-width:2px}
+.avatar.md .dealer-badge{width:24px;height:24px;font-size:.76rem;right:-5px;bottom:-5px;border-width:2px}
 
 .profile-chip{
   display:flex;align-items:center;gap:10px;width:100%;
@@ -2460,10 +2465,22 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   padding:12px 14px;border-radius:var(--r);
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);margin-bottom:8px;
 }
+/* The box takes the rank set's own colour when the seat is dressed — same
+   metal-wash formula .cos-thumb.rankset already uses for the picker card,
+   reused here rather than invented fresh so a dressed lobby seat and a
+   dressed picker card read as the same material. Higher specificity than
+   the bare .slot rule above ([data-material] adds an attribute selector),
+   so it wins regardless of source order. */
+.slot[data-material],.dcw[data-material]{
+  background:radial-gradient(120% 140% at 50% 0,rgba(var(--ddp-gloss-rgb),.05),transparent 70%),
+             linear-gradient(160deg,color-mix(in srgb,var(--rm-edge) 22%,transparent),
+                             rgba(var(--ddp-scrim-rgb),.34));
+  border-color:var(--rm-edge);
+}
 /* Rank banner + crests, wrapped onto their own full-width row rather than
    squeezed into the name row — see slotHTML's own note on why. Indented
-   to align under the name: 33px avatar + 11px gap. */
-.slot-cos{flex:0 0 100%;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding-left:44px}
+   to align under the name: 64px avatar + 11px gap. */
+.slot-cos{flex:0 0 100%;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding-left:75px}
 .slot-crest{width:26px;height:26px;flex:0 0 auto}
 .slot .dot{width:8px;height:8px;border-radius:50%;background:rgba(var(--ddp-ink-rgb),.20);flex:0 0 auto}
 .slot .dot.on{background:var(--ok);box-shadow:0 0 8px rgba(var(--ddp-mine-rgb),.6)}
@@ -2552,7 +2569,14 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   padding:14px 10px;border-radius:var(--r);
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
 }
-.dcw.mine{border-color:rgba(var(--ddp-brass-rgb),.35)}
+/* A plain box-shadow ring rather than border-color: on a dressed seat
+   (.dcw[data-material]) the border is already the rank material's own
+   colour, and border-color here would win the tie against it (same
+   0,2,0 specificity, later in source) and silently overwrite it just
+   for whichever seat happens to be yours. A ring layers on top instead,
+   so "this is you" and "this is your rank" both stay visible together. */
+.dcw.mine{box-shadow:0 0 0 1px rgba(var(--ddp-brass-rgb),.5)}
+.dcw.mine:not([data-material]){border-color:rgba(var(--ddp-brass-rgb),.35)}
 /* Avatar + nametag, directly under the card — reuses the exact avatar
    (incl. rank-framed ring + dealer badge) the lobby and table seats
    already draw, so a player's identity looks the same everywhere. */
@@ -3675,6 +3699,13 @@ html.landscape-mode #s-lobby #l-status{margin:8px 0 !important}
 html.landscape-mode #s-draw .drawrow{margin:6px 0;gap:clamp(6px,1.6vw,12px);--dc:clamp(48px,13vh,78px)}
 html.landscape-mode #s-draw .dcw{padding:8px 6px;gap:5px}
 html.landscape-mode #s-draw #d-note{margin:6px 0}
+/* The .md avatar (below) is already tight on the portrait quadrant's own
+   scroll budget; at landscape's short vh it would only add to the
+   scroll the note above already accepts as a tradeoff, so it steps back
+   toward .sm here rather than doubling on top of an already-doubled
+   overflow. */
+html.landscape-mode #s-draw .avatar.md{width:44px;height:44px;font-size:1.1rem;border-width:1.5px}
+html.landscape-mode #s-draw .avatar.md .dealer-badge{width:17px;height:17px;font-size:.5rem;right:-4px;bottom:-4px;border-width:1.5px}
 
 /* summary / final: the score sheet is the tall part, so it keeps its own
    scroll and everything around it tightens up */
@@ -8206,7 +8237,13 @@ function toggleAI(i){
 // Laid out as a SECOND row (`.slot-cos`, flex:0 0 100% on a wrapping
 // flex row) rather than crammed into the name row: a rank-plate plus up
 // to two crest badges is real width, and at a 375px lobby the existing
-// name/dot/tag/AI-button row has none to spare.
+// name/dot/tag/AI-button row has none to spare. That wrap is also what
+// puts the rank banner directly UNDER the name+title row rather than
+// beside it — the row above always fills its own line before slot-cos
+// (flex-basis 100%) forces itself onto a new one.
+// The whole box carries `data-material` too (not just the avatar), so
+// its background/border pick up the same rank-set colour the banner
+// itself is drawn in — see the .slot[data-material] rule.
 function slotHTML(G,i){
   const p=G.players[i];
   const dot=p.isAI?'bot':p.connected?'on':'';
@@ -8218,8 +8255,8 @@ function slotHTML(G,i){
   const crests=crestIds.map(id=>
     `<span class="slot-crest crest-art">${crestHTML(id,id===p.crest?p.crestLevel:p.crest2Level)}</span>`
   ).join('');
-  return `<div class="slot">
-    <span class="avatar sm${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>
+  return `<div class="slot"${mat?` data-material="${mat}"`:''}>
+    <span class="avatar md${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>
     <span class="dot ${dot}"></span>
     <span class="who"><span class="nm">${esc(p.name)}</span>${
       p.title?`<span class="ttl">${esc(p.title)}</span>`:''}</span>
@@ -8310,10 +8347,10 @@ function renderDraw(G){
       card=`<div class="drawcard ${mine?'tap':''}"${mine?' onclick="revealDrawClick()"':''}
              ${mine?'role="button" tabindex="0" aria-label="Reveal your card"':''}></div>`;
     }
-    h+=`<div class="dcw${isWin?' is-win':''}${i===me?' mine':''}">
+    h+=`<div class="dcw${isWin?' is-win':''}${i===me?' mine':''}"${mat?` data-material="${mat}"`:''}>
       ${card}
       <div class="dq-id">
-        <span class="avatar sm${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}<span class="dealer-badge${isDealer?' on':''}">D</span></span>
+        <span class="avatar md${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}<span class="dealer-badge${isDealer?' on':''}">D</span></span>
         <span class="dcn">${esc(p.name)}${i===me?' &middot; you':''}</span>
       </div>
     </div>`;

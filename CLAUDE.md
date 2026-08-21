@@ -2190,6 +2190,31 @@ before pushing.
   other avatar batch, output files simply overwritten in place (same
   ids, same filenames — no `AVATAR_COLLECTIONS` change needed for this
   part).
+- **The re-crop above still looked visibly tighter than the second
+  batch, and it wasn't a crop choice — the WhatsApp-exported source
+  files were themselves already framed tight**, confirmed by cropping
+  at `inset=0` (the loosest possible, i.e. the raw file) and finding it
+  nearly identical to the shipped `inset=10-15` versions. WhatsApp
+  recompresses (and can crop) images on send, and the working theory is
+  that this trimmed away headroom the original renders had before
+  these 7 were ever exported through it. No amount of inset tuning can
+  recover pixels that were never in the file.
+  **Fixed by asking for, and receiving, the true originals** (not
+  WhatsApp exports) for all 7 — same 1254×1254 template, but with the
+  same generous headroom/background margin the second batch has. Once
+  re-measured against these, the per-image "trim only the black
+  corners" luminance-scan method worked cleanly again (unlike on the
+  WhatsApp files, where it was unreliable): `charmer`=7, `sharp`=10,
+  `optimist`=5, `jester`=8, `scholar`=2, `wildcard`=36, `closer`=36.
+  `wildcard`/`closer` sitting far higher than the other five isn't
+  noise — their sources simply carry a much wider black margin (visual
+  sweep confirmed a clean ring at every tested value from 20 to 52), so
+  a small inset would have left a visible black ring around the medal
+  on just those two.
+  All 12 avatars now read as one consistent set — verified via a full
+  side-by-side contact sheet, not just per-image checks. Output files
+  again overwritten in place under the same ids; no `AVATAR_COLLECTIONS`
+  change needed.
 
 ## Credits — the second progression track
 - **Parallel to MMR and never touching it.** Credits measure engagement,

@@ -1043,6 +1043,65 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 }
 .friend-btn.invite{border-color:rgba(var(--ddp-brass-rgb),.4);color:var(--gold-hi)}
 .friend-btn:active{background:rgba(214,90,70,.14)}
+/* Wraps the avatar+name so tapping either opens the friend-profile card,
+   without disturbing the Invite/Remove buttons beside it — a plain
+   button reset to keep .friend-row's flex layout exactly as it was. */
+.friend-main{
+  display:flex;align-items:center;gap:10px;flex:1;min-width:0;
+  background:none;border:none;padding:0;margin:0;text-align:left;
+  font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;
+}
+.friend-main:active{opacity:.8}
+
+/* ══ Friend profile card (popup) ══
+   A read-only mirror of My Account's own hero card: .profile-hero,
+   .hero-avatar-wrap, .avatar-preview, .hero-crest, .hero-plate/.rank-plate
+   are all bare top-level selectors (see their own definitions), not
+   scoped under #s-personal, so none of that needed restating here — only
+   the modal chrome (.fp-*) below is new. Same open/close-by-class pattern
+   as #rules/.rulecard, reusing its .rulex close button and .votein
+   entrance animation rather than inventing new ones. */
+#friend-profile{
+  display:none;position:fixed;inset:0;z-index:220;
+  background:rgba(3,16,11,.78);backdrop-filter:blur(3px);
+  padding:calc(env(safe-area-inset-top) + 14px) 12px calc(env(safe-area-inset-bottom) + 14px);
+}
+#friend-profile.on{display:flex;align-items:flex-start;justify-content:center}
+.fp-card{
+  position:relative;width:100%;max-width:420px;max-height:100%;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  background:linear-gradient(170deg,var(--ddp-felt),var(--ddp-felt) 60%,var(--ddp-bg));
+  border:1px solid rgba(var(--ddp-brass-rgb),.34);border-radius:18px;
+  box-shadow:0 18px 50px rgba(var(--ddp-scrim-rgb),.6);animation:votein .22s ease;
+}
+.fp-close{position:absolute;top:10px;right:10px;z-index:2}
+/* .scene-art already gives this its gradient/vignette/scrim layers —
+   only the shape (top corners rounded to match the card, fixed strip
+   height) is new. */
+.fp-banner{height:88px;border-radius:18px 18px 0 0}
+.fp-hero{margin:0 14px 14px;padding-top:14px}
+.fp-dot{width:15px;height:15px;right:1px;bottom:1px}
+.fp-name{
+  margin-top:11px;font:600 1.4rem 'Playfair Display',serif;color:var(--cream);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.rank-plate[data-material] .fp-name{color:var(--rm-ink)}
+.fp-rankline{margin-top:8px;font-size:.78rem;color:var(--gold-hi);font-family:var(--font-num)}
+.fp-rankline .faint{color:var(--faint);font-family:'DM Sans',sans-serif}
+.fp-pad{padding:0 16px 16px}
+.fp-tabbar{margin-bottom:12px}
+.fp-crest-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));
+  gap:12px 8px;padding:2px 0 6px;
+}
+.fp-crest-item{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.fp-crest-item svg{width:40px;height:40px}
+.fp-crest-name{font-size:.6rem;color:var(--faint);line-height:1.25}
+.fp-crest-lv{font-size:.58rem;color:var(--gold-hi);font-family:var(--font-num)}
+.fp-crest-grid .stats-grid{margin:0}
+#friend-profile .stats-grid{grid-template-columns:1fr 1fr;margin:0}
+#friend-profile .stat-card{padding:10px 8px}
+#friend-profile .stat-value{font-size:1.15rem}
 
 /* ══ Friend invite banner — floats above any screen ══ */
 .friend-invite-banner{
@@ -5123,6 +5182,75 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
   <button class="btn btn-ghost btn-sm" onclick="dismissFriendInvite()">✕</button>
 </div>
 
+<!-- ═══ FRIEND PROFILE CARD ═══
+     Tapping a friend row (friendRowHTML's new .friend-main wrapper) opens
+     this. Same #rules/.rulecard open-by-class pattern: closeFriendProfile
+     just toggles the .on class, nothing here re-renders the game screens
+     underneath. Deliberately outside every .screen for the same reason
+     #friend-invite is — fixed overlay positioning needs to work no matter
+     which screen happens to be active when a friend is tapped (the
+     Friends tab and the lobby's friend picker both call openFriendProfile). -->
+<div id="friend-profile" onclick="if(event.target===this)closeFriendProfile()">
+  <div class="fp-card">
+    <button class="rulex fp-close" onclick="closeFriendProfile()" aria-label="Close">&#10005;</button>
+
+    <div id="fp-loading" class="empty-state" style="display:none">
+      <div class="empty-icon">⏳</div>
+      <h3>Loading…</h3>
+    </div>
+    <div id="fp-error" class="empty-state" style="display:none">
+      <div class="empty-icon">⚠️</div>
+      <h3 id="fp-error-msg">Couldn't load that profile.</h3>
+    </div>
+
+    <div id="fp-body" style="display:none">
+      <div id="fp-scene" class="scene-art fp-banner" data-scene=""></div>
+
+      <!-- Same hero markup as My Account's own .profile-hero (see the
+           <style> note above), only read-only: a plain name div instead
+           of #pv-name's live <input>, and no click handler on the avatar. -->
+      <div class="profile-hero fp-hero">
+        <div class="hero-avatar-wrap">
+          <div class="avatar-preview" id="fp-avatar">👤</div>
+          <div class="hero-crest crest-art" id="fp-crest"></div>
+          <span class="friend-dot fp-dot" id="fp-dot"></span>
+        </div>
+        <div class="hero-plate rank-plate lg" id="fp-plate">
+          <span class="nameplate-art" id="fp-plate-art"></span>
+          <span class="nameplate-content">
+            <div class="fp-name" id="fp-name"></div>
+            <div class="hero-title" id="fp-title"></div>
+          </span>
+        </div>
+        <div class="fp-rankline" id="fp-rankline"></div>
+      </div>
+
+      <div class="fp-pad">
+        <div class="acct-tabbar fp-tabbar">
+          <button class="acct-toptab deco-box active" id="fp-tab-crests" onclick="switchFriendProfileTab('crests')">Achievements</button>
+          <button class="acct-toptab deco-box" id="fp-tab-stats" onclick="switchFriendProfileTab('stats')">Statistics</button>
+        </div>
+
+        <div class="acct-panel active" id="fp-panel-crests">
+          <div class="fp-crest-grid" id="fp-crest-grid"></div>
+          <div class="empty-state" id="fp-crest-empty" style="display:none;padding:14px 6px 4px">
+            <p>No achievements unlocked yet.</p>
+          </div>
+        </div>
+
+        <div class="acct-panel" id="fp-panel-stats">
+          <div class="acct-tabs">
+            <button class="acct-tab active" id="fp-stats-tab-casual" onclick="switchFriendStatsTab('casual')">Casual</button>
+            <button class="acct-tab" id="fp-stats-tab-ranked" onclick="switchFriendStatsTab('ranked')">Ranked</button>
+          </div>
+          <div class="stats-grid" id="fp-stats-casual"></div>
+          <div class="stats-grid" id="fp-stats-ranked" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -7103,11 +7231,13 @@ function friendRowHTML(f,opts){
   const avatar=avatarHTML(f.avatar,f.nickname);
   const canInvite=opts.invite&&f.online;
   return `<div class="friend-row">
-    <span class="friend-avatar">${avatar}<span class="friend-dot${f.online?' on':''}"></span></span>
-    <span class="friend-info">
-      <div class="friend-name">${esc(f.nickname)}</div>
-      ${opts.showStatus!==false?`<div class="friend-status">${f.online?'Online':'Offline'}</div>`:''}
-    </span>
+    <button class="friend-main" onclick="openFriendProfile(${f.id})">
+      <span class="friend-avatar">${avatar}<span class="friend-dot${f.online?' on':''}"></span></span>
+      <span class="friend-info">
+        <div class="friend-name">${esc(f.nickname)}</div>
+        ${opts.showStatus!==false?`<div class="friend-status">${f.online?'Online':'Offline'}</div>`:''}
+      </span>
+    </button>
     <span class="friend-actions">
       ${canInvite?`<button class="friend-btn invite" onclick="inviteFriendToRoom(${f.id},this)">Invite</button>`:''}
       ${opts.remove!==false?`<button class="friend-btn" onclick="confirmRemoveFriend(${f.id},this)">Remove</button>`:''}
@@ -7176,6 +7306,140 @@ socket.on('friendPresence',d=>{
   if($('s-personal').classList.contains('active')) renderFriendsList();
   renderLobbyFriendPicker();
 });
+
+/* ── Friend profile card ──
+   A read-only counterpart to My Account's own hero + stats — same
+   underlying render helpers (rankPlateDressHTML, crestHTML, sceneArtImg,
+   RANK_SET_BY_ID), just pointed at whatever getFriendProfile came back
+   with instead of the logged-in account's own cosState. Opens over
+   whichever screen is active (Friends tab, or the lobby's friend picker),
+   same #rules-style class toggle. */
+function openFriendProfile(id){
+  if(!account) return;
+  $('friend-profile').classList.add('on');
+  $('fp-loading').style.display='block';
+  $('fp-error').style.display='none';
+  $('fp-body').style.display='none';
+  switchFriendProfileTab('crests');
+  switchFriendStatsTab('casual');
+  socket.emit('getFriendProfile',{token:accountToken,friendId:id});
+}
+function closeFriendProfile(){
+  $('friend-profile').classList.remove('on');
+}
+function switchFriendProfileTab(tab){
+  $('fp-tab-crests').classList.toggle('active',tab==='crests');
+  $('fp-tab-stats').classList.toggle('active',tab==='stats');
+  $('fp-panel-crests').classList.toggle('active',tab==='crests');
+  $('fp-panel-stats').classList.toggle('active',tab==='stats');
+}
+function switchFriendStatsTab(mode){
+  $('fp-stats-tab-casual').classList.toggle('active',mode==='casual');
+  $('fp-stats-tab-ranked').classList.toggle('active',mode==='ranked');
+  $('fp-stats-casual').style.display=mode==='casual'?'grid':'none';
+  $('fp-stats-ranked').style.display=mode==='ranked'?'grid':'none';
+}
+// Compact on purpose — this is "how much has my friend played", not the
+// full ~20-card personal breakdown #s-stats shows for your own account.
+function fpStatCardsHTML(rows){
+  return rows.map(([label,val,cls])=>
+    `<div class="stat-card"><div class="stat-value${cls?' '+cls:''}">${val}</div>`+
+    `<div class="stat-label">${esc(label)}</div></div>`
+  ).join('');
+}
+function friendCasualStatsHTML(s){
+  return fpStatCardsHTML([
+    ['Games played',s.gamesPlayed,''],
+    ['Games finished',s.gamesFinished,''],
+    ['Average score',fmtStat(s.avgPoints),''],
+    ['Best game total',fmtStat(s.bestGame),'pos'],
+    ['Worst game total',fmtStat(s.worstGame),'neg'],
+    ['Best hand',fmtStat(s.bestRound),'pos'],
+    ['Worst hand',fmtStat(s.worstRound),'neg'],
+    ['Moons shot',s.moonsTotal,''],
+    ['Queen of Spades taken',s.queenSpadesTaken,''],
+    ['Longest win streak',s.winStreakBest,''],
+  ]);
+}
+function friendRankedStatsHTML(s){
+  return fpStatCardsHTML([
+    ['Games played',s.gamesPlayed,''],
+    ['Average score',fmtStat(s.avgPoints),''],
+    ['Best game total',fmtStat(s.bestGame),'pos'],
+    ['Worst game total',fmtStat(s.worstGame),'neg'],
+    ['Best hand',fmtStat(s.bestRound),'pos'],
+    ['Worst hand',fmtStat(s.worstRound),'neg'],
+    ['Moons shot',s.moonsTotal,''],
+    ['Peak MMR',s.mmrHighest===null?'—':s.mmrHighest,''],
+  ]);
+}
+socket.on('friendProfileOk',d=>{
+  // Guard against a stale response landing after the card was closed —
+  // same reasoning as the ranked-profile/account-rank listeners.
+  if(!$('friend-profile').classList.contains('on')) return;
+  $('fp-loading').style.display='none';
+  $('fp-error').style.display='none';
+  $('fp-body').style.display='block';
+
+  const scene=d.equipped.scene||'';
+  $('fp-scene').setAttribute('data-scene',scene);
+  $('fp-scene').innerHTML=scene?sceneArtImg(scene):'';
+
+  setAvatarInto($('fp-avatar'),d.avatar,d.nickname||'?');
+  $('fp-crest').innerHTML=d.equipped.crest?crestHTML(d.equipped.crest):'';
+  $('fp-crest').classList.toggle('on',!!d.equipped.crest);
+  $('fp-dot').classList.toggle('on',!!d.online);
+
+  const setId=d.equipped.rankSet;
+  const set=setId?RANK_SET_BY_ID[setId]:null;
+  const mat=set?set.material:null;
+  const av=$('fp-avatar'),plate=$('fp-plate'),art=$('fp-plate-art');
+  av.classList.toggle('rank-framed',!!mat);
+  if(mat) av.setAttribute('data-material',mat); else av.removeAttribute('data-material');
+  if(mat&&set){
+    plate.setAttribute('data-material',mat);
+    plate.setAttribute('data-emblem',set.emblem);
+  }else{
+    plate.removeAttribute('data-material');
+    plate.removeAttribute('data-emblem');
+  }
+  art.innerHTML=setId?rankPlateDressHTML(setId):'';
+
+  $('fp-name').textContent=d.nickname||'Player';
+  $('fp-title').textContent=d.titleName||'';
+  $('fp-rankline').innerHTML=d.rank
+    ? `${esc(d.rank.label)} <span class="faint">· ${d.rank.mmr} MMR</span>`
+    : (d.isPlacement
+        ?`<span class="faint">Placement · ${d.placementGamesPlayed}/5 games</span>`
+        :`<span class="faint">Not ranked</span>`);
+
+  if(d.crests&&d.crests.length){
+    $('fp-crest-empty').style.display='none';
+    $('fp-crest-grid').style.display='grid';
+    $('fp-crest-grid').innerHTML=d.crests.map(c=>
+      `<div class="fp-crest-item" title="${esc(c.name)}">`+
+      crestHTML(c.crest)+
+      `<div class="fp-crest-name">${esc(c.name)}</div>`+
+      `<div class="fp-crest-lv">Lv ${c.level}/${c.maxLevel}</div>`+
+      `</div>`
+    ).join('');
+  }else{
+    $('fp-crest-grid').style.display='none';
+    $('fp-crest-grid').innerHTML='';
+    $('fp-crest-empty').style.display='block';
+  }
+
+  $('fp-stats-casual').innerHTML=friendCasualStatsHTML(d.stats);
+  $('fp-stats-ranked').innerHTML=friendRankedStatsHTML(d.rankedStats);
+});
+socket.on('friendProfileError',d=>{
+  if(!$('friend-profile').classList.contains('on')) return;
+  $('fp-loading').style.display='none';
+  $('fp-body').style.display='none';
+  $('fp-error').style.display='block';
+  $('fp-error-msg').textContent=d.msg;
+});
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeFriendProfile(); });
 
 /* Invite banner — a plain sibling of every screen (see the markup near
    #app's closing tag), so it can float above whichever one is active.

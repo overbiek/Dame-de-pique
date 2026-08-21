@@ -2800,6 +2800,60 @@ io.on('connection', (socket) => {
     }
   });
 
+  // The friend-card popup: rank, equipped cosmetics, casual + ranked
+  // stats for someone ELSE's account. Gated on friendship (not just a
+  // valid token) so this can't become a general "look up any account by
+  // id" endpoint — the friends list is the only place a friendId is ever
+  // discovered client-side anyway.
+  // Deliberately sends only IDs for cosmetics (equipped.rankSet/crest/
+  // scene), not a full catalog — RANK_COSMETICS/CREST_ART/SCENE art are
+  // static registries already mirrored client-side (same contract the
+  // table seats' rankMaterial/title already rely on), so the client can
+  // render all of it from an id alone. titleName is the one exception,
+  // resolved here via the same titleNameFor() a seat join uses, since
+  // title *display strings* aren't otherwise duplicated client-side.
+  socket.on('getFriendProfile', async ({ token, friendId }) => {
+    if (!DB_ENABLED || !token) return socket.emit('friendProfileError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendProfileError', { msg: 'Your session expired — log in again.' });
+      const fid = Number(friendId);
+      if (!Number.isInteger(fid)) return socket.emit('friendProfileError', { msg: 'Unknown player.' });
+      const isFriend = await db.areFriends(account.id, fid);
+      if (!isFriend) return socket.emit('friendProfileError', { msg: 'Not on your friends list.' });
+      const friendAccount = await db.findAccountById(fid);
+      if (!friendAccount) return socket.emit('friendProfileError', { msg: 'That player no longer exists.' });
+      const [rankedProfile, stats, rankedStats, cos] = await Promise.all([
+        db.getOrCreateRankedProfile(fid),
+        db.getStats(fid),
+        db.getRankedStats(fid),
+        loadPlayerCosmetics(fid),
+      ]);
+      const isPlacement = rankedProfile.placementGamesPlayed < 5;
+      socket.emit('friendProfileOk', {
+        id: fid,
+        nickname: friendAccount.nickname,
+        avatar: friendAccount.avatar,
+        online: accountSockets.has(fid),
+        rank: isPlacement ? null : rankForMmr(rankedProfile.mmr),
+        isPlacement,
+        placementGamesPlayed: rankedProfile.placementGamesPlayed,
+        stats, rankedStats,
+        equipped: cos.equipped,
+        titleName: titleNameFor(cos.equipped.title),
+        // Unlocked achievements only — an unearned secret's name/desc is
+        // already blanked by evaluateAchievements, but there's no reason
+        // to hand a friend's client the locked half at all.
+        crests: cos.achievements.filter(a => a.unlocked).map(a => ({
+          id: a.id, name: a.name, crest: a.crest, level: a.level, maxLevel: a.maxLevel,
+        })),
+      });
+    } catch (e) {
+      console.error('getFriendProfile error:', e.message);
+      socket.emit('friendProfileError', { msg: 'Could not load that profile. Try again.' });
+    }
+  });
+
   socket.on('getStats', async ({ token }) => {
     if (!DB_ENABLED || !token) return socket.emit('statsError', { msg: 'Accounts aren\'t set up on this server yet.' });
     try {

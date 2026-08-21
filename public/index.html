@@ -2456,10 +2456,15 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
 .friends-add-col input[type=text]{padding:5px 8px;font-size:.78rem}
 .friends-add-col .btn{padding:5px 12px;font-size:.74rem}
 .slot{
-  display:flex;align-items:center;gap:11px;
+  display:flex;align-items:center;flex-wrap:wrap;gap:11px;
   padding:12px 14px;border-radius:var(--r);
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);margin-bottom:8px;
 }
+/* Rank banner + crests, wrapped onto their own full-width row rather than
+   squeezed into the name row — see slotHTML's own note on why. Indented
+   to align under the name: 33px avatar + 11px gap. */
+.slot-cos{flex:0 0 100%;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding-left:44px}
+.slot-crest{width:26px;height:26px;flex:0 0 auto}
 .slot .dot{width:8px;height:8px;border-radius:50%;background:rgba(var(--ddp-ink-rgb),.20);flex:0 0 auto}
 .slot .dot.on{background:var(--ok);box-shadow:0 0 8px rgba(var(--ddp-mine-rgb),.6)}
 .slot .dot.bot{background:#6cb6ff;box-shadow:0 0 8px rgba(108,182,255,.5)}
@@ -2524,13 +2529,34 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    Sizing is driven by --dc, one number, clamped against BOTH axes:
    landscape here is short rather than narrow (the whole screen is ~375px
    tall on the tightest phone) so a width-only clamp overflowed vertically.
-   min() against vh is what keeps four cards plus caption inside it. */
+   min() against vh is what keeps four cards plus caption inside it.
+
+   A 2x2 GRID rather than a wrapping row — each player gets a real
+   quadrant (card + avatar + nametag) instead of four cards squeezed
+   shoulder to shoulder with a bare name underneath, which is what makes
+   this read as "who you're playing with" rather than just a deck of
+   draws. --dc is correspondingly bigger than the old single-row values. */
 .drawrow{
-  display:flex;gap:clamp(8px,2.4vw,18px);justify-content:center;align-items:flex-start;
-  flex-wrap:wrap;margin:18px 0;
-  --dc:clamp(56px,min(16vw,11vh),86px);
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(10px,3vw,20px);
+  margin:16px 0;
+  --dc:clamp(64px,min(22vw,14vh),110px);
 }
-.dcw{display:flex;flex-direction:column;align-items:center;gap:7px;position:relative}
+/* minmax(0,1fr) above, NOT bare 1fr — a bare 1fr track still floors at
+   its content's min-content width, and a long name's .dcn (nowrap, for
+   the ellipsis) blew the two columns out to wildly uneven widths
+   (measured 285px vs 133px at 375px wide) instead of splitting evenly.
+   min-width:0 here is the matching half of that fix: without it the grid
+   item itself still refuses to shrink below its own content. */
+.dcw{
+  display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0;
+  padding:14px 10px;border-radius:var(--r);
+  background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
+}
+.dcw.mine{border-color:rgba(var(--ddp-brass-rgb),.35)}
+/* Avatar + nametag, directly under the card — reuses the exact avatar
+   (incl. rank-framed ring + dealer badge) the lobby and table seats
+   already draw, so a player's identity looks the same everywhere. */
+.dq-id{display:flex;align-items:center;gap:7px;min-width:0;max-width:100%}
 .drawcard{
   position:relative;width:var(--dc);aspect-ratio:.7;border-radius:calc(var(--dc)*.11);
   display:grid;place-items:center;text-align:center;
@@ -2580,13 +2606,10 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   transform:translateY(-5px);
 }
 .dcn{
-  font-size:clamp(.58rem,1.6vh,.72rem);color:var(--muted);text-align:center;
-  max-width:calc(var(--dc) + 14px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:clamp(.66rem,1.8vh,.8rem);color:var(--muted);text-align:left;
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .dcw.is-win .dcn{color:var(--gold-hi);font-weight:600}
-/* the dealer's card carries the physical D button, same as the table's
-   avatars — reusing .dealer-badge rather than inventing a second marker */
-.dcw .dealer-badge{right:-6px;bottom:auto;top:-6px;width:22px;height:22px;font-size:.68rem}
 
 /* ══ Tables / scores ══ */
 .scores{width:100%;border-collapse:collapse;font-size:.9rem;margin:.6rem 0}
@@ -3642,8 +3665,16 @@ html.landscape-mode #s-lobby #l-status{margin:8px 0 !important}
    needs to be sized off the short axis so all four fit */
 /* landscape is SHORT, not narrow — the binding constraint flips, so the
    card is sized off viewport height here and the row's margin collapses */
-html.landscape-mode #s-draw .drawrow{margin:8px 0;--dc:clamp(48px,15vh,82px)}
-html.landscape-mode #s-draw #d-note{margin:8px 0}
+/* Two rows of (bigger) cards no longer fit one landscape screen without
+   scrolling the way the old single-row layout did — a real tradeoff of
+   "bigger cards, one quadrant per player" on a SHORT viewport, not an
+   oversight. .center-wrap's existing overflow-y:auto (shared by every
+   game-flow screen) is what absorbs it; --dc and the row/gap padding are
+   trimmed harder here than in portrait specifically to keep that scroll
+   as small as possible rather than eliminate it. */
+html.landscape-mode #s-draw .drawrow{margin:6px 0;gap:clamp(6px,1.6vw,12px);--dc:clamp(48px,13vh,78px)}
+html.landscape-mode #s-draw .dcw{padding:8px 6px;gap:5px}
+html.landscape-mode #s-draw #d-note{margin:6px 0}
 
 /* summary / final: the score sheet is the tall part, so it keeps its own
    scroll and everything around it tightens up */
@@ -8163,25 +8194,47 @@ function toggleAI(i){
   const p=S.players[i];
   socket.emit('setAI',{code:room,slotIndex:i,isAI:!p.isAI});
 }
+// The lobby seat, and the round summary / final podium before it, are the
+// only three places a player's rank BANNER (nameplate) and earned crests
+// show up outside the table itself — the table's own vertical budget is
+// spent (see Frontend UI's rank-cosmetics notes), so the lobby is where
+// they actually get room to be seen. AI seats wear the same humble
+// "paper" plate the roster rail gives them (AI_MATERIAL/AI_TITLE, defined
+// with the roster above) so four AI seats read as dressed-down rather
+// than broken, but never carry crests — those are earned, and a computer
+// hasn't earned anything.
+// Laid out as a SECOND row (`.slot-cos`, flex:0 0 100% on a wrapping
+// flex row) rather than crammed into the name row: a rank-plate plus up
+// to two crest badges is real width, and at a 375px lobby the existing
+// name/dot/tag/AI-button row has none to spare.
+function slotHTML(G,i){
+  const p=G.players[i];
+  const dot=p.isAI?'bot':p.connected?'on':'';
+  const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
+  const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
+  const setId=mat?((RANK_SETS.find(r=>r.material===mat)||{}).id||null):null;
+  const crestIds=p.isAI?[]:[p.crest,p.crest2].filter(Boolean);
+  const plate=setId?rankNameplateHTML(setId,'sm'):'';
+  const crests=crestIds.map(id=>
+    `<span class="slot-crest crest-art">${crestHTML(id,id===p.crest?p.crestLevel:p.crest2Level)}</span>`
+  ).join('');
+  return `<div class="slot">
+    <span class="avatar sm${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>
+    <span class="dot ${dot}"></span>
+    <span class="who"><span class="nm">${esc(p.name)}</span>${
+      p.title?`<span class="ttl">${esc(p.title)}</span>`:''}</span>
+    ${i===me?'<span class="tag you">you</span>':''}
+    ${p.isAI?'<span class="tag bot">AI</span>':''}
+    ${host&&i>0&&!p.connected||host&&i>0&&p.isAI
+      ? `<button class="mini-btn ${p.isAI?'on':''}" onclick="toggleAI(${i})">${p.isAI?'AI on':'Add AI'}</button>`:''}
+    ${plate||crests?`<div class="slot-cos">${plate}${crests}</div>`:''}
+  </div>`;
+}
 function renderLobby(G){
   show('lobby');
   $('l-code').textContent=G.code;
   let h='';
-  for(let i=0;i<4;i++){
-    const p=G.players[i];
-    const dot=p.isAI?'bot':p.connected?'on':'';
-    const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
-    h+=`<div class="slot">
-      <span class="avatar sm">${avatarContent}</span>
-      <span class="dot ${dot}"></span>
-      <span class="who"><span class="nm">${esc(p.name)}</span>${
-        p.title?`<span class="ttl">${esc(p.title)}</span>`:''}</span>
-      ${i===me?'<span class="tag you">you</span>':''}
-      ${p.isAI?'<span class="tag bot">AI</span>':''}
-      ${host&&i>0&&!p.connected||host&&i>0&&p.isAI
-        ? `<button class="mini-btn ${p.isAI?'on':''}" onclick="toggleAI(${i})">${p.isAI?'AI on':'Add AI'}</button>`:''}
-    </div>`;
-  }
+  for(let i=0;i<4;i++) h+=slotHTML(G,i);
   $('l-slots').innerHTML=h;
   const ready=G.players.every(p=>p.connected||p.isAI);
   // Length is the host's choice at creation time — everyone else finds out
@@ -8224,12 +8277,18 @@ function renderDraw(G){
     ? 'Everyone draws a card to settle into their seats around the table.'
     : 'Highest card deals first.';
 
-  // Each seat is a card plus a caption UNDERNEATH it (.dcw), rather than
-  // the name printed on the card face — that's what a real cut looks
-  // like, and it stops a long name fighting the rank for the same space.
-  // Face-down uses the table's own blue back; face-up is a real card
-  // face with a corner index and a centre pip, both sized off --dc so
-  // one number drives the whole thing at any viewport.
+  // Each seat is a card, bigger than the old single-row layout allowed,
+  // with the player's own avatar + nametag clearly underneath it (.dq-id)
+  // rather than a bare text caption — the point of this screen is "who
+  // you're playing with", not just "whose card is whose". One quadrant
+  // per player (.drawrow is a 2x2 grid — see its own CSS note) instead of
+  // four cards squeezed into one row, so each player genuinely gets a
+  // quarter of the screen. Face-down uses the table's own blue back;
+  // face-up is a real card face with a corner index and a centre pip,
+  // both sized off --dc so one number drives the whole thing at any
+  // viewport. The avatar reuses the same rank-framed treatment the lobby
+  // and table seats already carry, and the dealer badge moves onto it
+  // (matching seatHTML's convention) rather than floating over the card.
   let h='';
   for(let i=0;i<4;i++){
     const p=G.players[i], up=G.drawRevealed[i], c=G.drawCards[i];
@@ -8238,6 +8297,8 @@ function renderDraw(G){
     // The D button only appears once the cut is actually settled — during
     // round 1 (seats) there is no dealer yet, and mid-cut it isn't known.
     const isDealer=G.drawRound===2 && G.phase==='drawDone' && G.dealer===i;
+    const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
+    const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
     let card;
     if(up&&c){
       const col=RED.has(c.suit)?'var(--red)':'var(--ink)';
@@ -8249,9 +8310,12 @@ function renderDraw(G){
       card=`<div class="drawcard ${mine?'tap':''}"${mine?' onclick="revealDrawClick()"':''}
              ${mine?'role="button" tabindex="0" aria-label="Reveal your card"':''}></div>`;
     }
-    h+=`<div class="dcw${isWin?' is-win':''}">
-      ${card}${isDealer?'<span class="dealer-badge on">D</span>':''}
-      <span class="dcn">${esc(p.name)}${i===me?' &middot; you':''}</span>
+    h+=`<div class="dcw${isWin?' is-win':''}${i===me?' mine':''}">
+      ${card}
+      <div class="dq-id">
+        <span class="avatar sm${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}<span class="dealer-badge${isDealer?' on':''}">D</span></span>
+        <span class="dcn">${esc(p.name)}${i===me?' &middot; you':''}</span>
+      </div>
     </div>`;
   }
   $('d-row').innerHTML=h;

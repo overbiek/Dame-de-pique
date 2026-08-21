@@ -1663,15 +1663,29 @@ function titleNameFor(id) {
 // `title` field for why this must not move into publicState.
 // Returns the empty shape rather than throwing: these are decorations,
 // and a DB blip must never stop someone sitting down.
-const NO_SEAT_COSMETICS = { title: null, rankMaterial: null };
+const NO_SEAT_COSMETICS = {
+  title: null, rankMaterial: null,
+  crest: null, crestLevel: 1, crest2: null, crest2Level: 1,
+};
 async function lookupSeatCosmetics(accountId) {
   if (!DB_ENABLED || !accountId) return NO_SEAT_COSMETICS;
   try {
     const { equipped, catalog } = await loadPlayerCosmetics(accountId);
     const set = catalog.rankSets.find(r => r.id === equipped.rankSet);
+    // Same "resolve once at join, not per broadcast" contract as title/
+    // rankMaterial above — crest level is looked up here rather than
+    // re-read from the catalog on every gameState.
+    const crestLevel = equipped.crest
+      ? ((catalog.crests.find(c => c.id === equipped.crest) || {}).level || 1) : 1;
+    const crest2Level = equipped.crest2
+      ? ((catalog.crests.find(c => c.id === equipped.crest2) || {}).level || 1) : 1;
     return {
       title: titleNameFor(equipped.title),
       rankMaterial: set ? set.material : null,
+      crest: equipped.crest || null,
+      crestLevel,
+      crest2: equipped.crest2 || null,
+      crest2Level,
     };
   } catch (e) {
     return NO_SEAT_COSMETICS;
@@ -1731,6 +1745,7 @@ function createRoom(hostName, hostAvatar, hostAccountId, opts) {
       // would put a DB round trip in the hot path of every card played.
       title: null,
       rankMaterial: null,
+      crest: null, crestLevel: 1, crest2: null, crest2Level: 1,
       isAI: false, socketId: null, token: null,
       score: 0, hand: [], tricks: [], connected: false, hasPassed: false,
       // Suits this player has won a trick in, for the whole GAME — the
@@ -2181,6 +2196,8 @@ function publicState(G) {
     players: G.players.map((p, i) => ({
       name: p.name, avatar: p.avatar || null, title: p.title || null,
       rankMaterial: p.rankMaterial || null,
+      crest: p.crest || null, crestLevel: p.crestLevel || 1,
+      crest2: p.crest2 || null, crest2Level: p.crest2Level || 1,
       isAI: p.isAI, score: p.score,
       roundScore: p.score - (G.roundBefore[i] || 0),
       tricksWon: p.tricks.length / 4,
@@ -3356,6 +3373,7 @@ io.on('connection', (socket) => {
       // Free the seat entirely
       Object.assign(G.players[idx], {
         name: 'Empty seat', avatar: null, accountId: null, title: null, rankMaterial: null,
+        crest: null, crestLevel: 1, crest2: null, crest2Level: 1,
         isAI: false, socketId: null, token: null,
         connected: false, score: 0, hand: [], tricks: [], hasPassed: false, suitsWon: [],
       });
@@ -3368,7 +3386,7 @@ io.on('connection', (socket) => {
       scheduleRankedTakeover(G, idx);
     } else {
       // Mid-game: hand the seat to the computer so the others can finish
-      Object.assign(G.players[idx], { isAI: true, avatar: null, accountId: null, title: null, rankMaterial: null, connected: true, socketId: null, token: null });
+      Object.assign(G.players[idx], { isAI: true, avatar: null, accountId: null, title: null, rankMaterial: null, crest: null, crestLevel: 1, crest2: null, crest2Level: 1, connected: true, socketId: null, token: null });
     }
 
     if (wasHost) {

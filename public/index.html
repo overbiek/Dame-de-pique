@@ -2438,6 +2438,26 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
 .code{font-family:'Playfair Display',serif;font-size:clamp(2.1rem,10vw,2.9rem);
   font-weight:700;color:var(--gold);letter-spacing:.22em;text-indent:.22em;line-height:1.15}
 .codehint{font-size:.75rem;color:var(--faint);margin-top:6px}
+/* The lobby's own headline codebox above is retired in favour of THIS —
+   a small chip sharing a line with "Waiting for players…", right above
+   Start — so the room it used to take goes to the 4 (now much bigger)
+   player cards instead. .friends-codebox (below) is the other compact
+   variant of .codebox; this one is unrelated to it, purpose-built as a
+   button rather than a static card since it's the click target. */
+.lobby-bar{display:flex;align-items:center;gap:10px;margin:10px 0;flex-wrap:wrap}
+.lobby-code-chip{
+  display:flex;flex-direction:column;align-items:flex-start;gap:0;flex:0 0 auto;
+  font:inherit;color:inherit;appearance:none;cursor:pointer;
+  padding:6px 11px;border-radius:10px;
+  background:rgba(var(--ddp-brass-rgb),.08);border:1px solid rgba(var(--ddp-brass-rgb),.22);
+}
+.lcc-code{font-size:.68rem;color:var(--faint)}
+.lcc-code b{
+  font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;
+  color:var(--gold);letter-spacing:.14em;margin-left:4px;
+}
+.lcc-hint{font-size:.56rem;color:var(--faint)}
+#l-status{flex:1;min-width:110px;font-size:.8rem;color:var(--faint);margin:0;text-align:left}
 
 /* Friends tab: friend code + add-a-friend side by side (each half width)
    instead of stacked, to free up vertical room for the friends list below.
@@ -2460,44 +2480,70 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    primary call-to-action, not this inline "Add" button. */
 .friends-add-col input[type=text]{padding:5px 8px;font-size:.78rem}
 .friends-add-col .btn{padding:5px 12px;font-size:.74rem}
+/* ══ Lobby seats — one uniform "banner" card per player ══
+   A fixed 2x2 grid in BOTH orientations, not a stacked list of full-width
+   rows — that's the room the old headline codebox used to occupy (now a
+   small chip on the status line, see #s-lobby's markup), spent instead on
+   4 bigger cards that fit one screen without scrolling.
+   Every card renders the SAME rows (dot/tag, avatar, name, title, tier)
+   whether or not a seat actually has that content — an empty .slot-title
+   still reserves its line height, same "reserve constant space" rule the
+   turn badge and note lines elsewhere in this file already follow — which
+   is what keeps all 4 cards the same min-height without measuring
+   anything in JS. */
+#l-slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
 .slot{
-  display:flex;align-items:center;flex-wrap:wrap;gap:11px;
-  padding:12px 14px;border-radius:var(--r);
-  background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);margin-bottom:8px;
+  position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;
+  gap:2px;padding:10px 8px 12px;border-radius:var(--r);min-height:180px;
+  background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
 }
-/* The box takes the rank set's own colour when the seat is dressed — same
-   metal-wash formula .cos-thumb.rankset already uses for the picker card,
-   reused here rather than invented fresh so a dressed lobby seat and a
-   dressed picker card read as the same material. Higher specificity than
-   the bare .slot rule above ([data-material] adds an attribute selector),
-   so it wins regardless of source order. */
-.slot[data-material],.dcw[data-material]{
-  background:radial-gradient(120% 140% at 50% 0,rgba(var(--ddp-gloss-rgb),.05),transparent 70%),
-             linear-gradient(160deg,color-mix(in srgb,var(--rm-edge) 22%,transparent),
-                             rgba(var(--ddp-scrim-rgb),.34));
-  border-color:var(--rm-edge);
+/* The box background IS the banner now — the exact same interior
+   gradient + metal border .rank-plate[data-material] draws, not a
+   diluted tint of it. A dressed seat's whole card is the rank plaque. */
+.slot[data-material]{
+  background:linear-gradient(180deg,var(--rm-hi),var(--rm-lo));
+  border:2px solid var(--rm-edge);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.20),inset 0 -1px 0 rgba(0,0,0,.30);
 }
-/* Rank banner + crests, wrapped onto their own full-width row rather than
-   squeezed into the name row — see slotHTML's own note on why. Indented
-   to align under the name: 64px avatar + 11px gap. */
-.slot-cos{flex:0 0 100%;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding-left:75px}
-.slot-crest{width:26px;height:26px;flex:0 0 auto}
+/* min-height in px, measured against the real .tag pill — not em: an
+   empty row and a real .tag rendered 16px vs 21px here, the same
+   "computed min-height doesn't match the real line box" drift this file
+   already warns about elsewhere (see the roster rail's .tbl-note note).
+   Concrete px against the tallest real content is what actually closes
+   it, not a cleverer formula. */
+.slot-top{width:100%;display:flex;align-items:center;justify-content:space-between;min-height:22px}
 .slot .dot{width:8px;height:8px;border-radius:50%;background:rgba(var(--ddp-ink-rgb),.20);flex:0 0 auto}
 .slot .dot.on{background:var(--ok);box-shadow:0 0 8px rgba(var(--ddp-mine-rgb),.6)}
 .slot .dot.bot{background:#6cb6ff;box-shadow:0 0 8px rgba(108,182,255,.5)}
-.slot .nm{flex:1;font-size:.92rem;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* Player title under the lobby name (brief §8's two-line form). The
-   wrapper takes over the flex:1 the bare name used to carry, so the
-   name keeps its own ellipsis behaviour and the row's other children
-   (dot, tags, AI button) are positioned exactly as before. Rendered
-   only when a seat actually has a title, so a lobby of players with
-   none is pixel-identical to the old one. */
-.slot .who{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
-.slot .who .nm{flex:none;width:100%}
-.slot .ttl{
-  font-size:.6rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--gold-lo);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+.slot-name{
+  margin-top:4px;font-size:.86rem;font-weight:600;color:var(--cream);
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
+.slot[data-material] .slot-name{color:var(--rm-ink)}
+/* min-height in px here too, same reason as .slot-top above — an empty
+   title measured 7.6px against a real one's 12px under the em value. */
+.slot-title{
+  font-size:.56rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--gold-lo);min-height:12px;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.slot[data-material] .slot-title{color:var(--rm-ink);opacity:.8}
+/* The rank tier, plain text now — the ornate plaque widget (frame,
+   ornaments, emblem) that used to render this is retired here since the
+   card itself IS the plaque; keeping both would double the same idea.
+   min-height in px, same reason as .slot-top/.slot-title: measured 8.6px
+   empty against 13px real. */
+.slot-tier{
+  font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);min-height:13px;
+}
+.slot[data-material] .slot-tier{color:var(--rm-orn)}
+/* Fixed-height reserve for whichever ONE of {crests, AI toggle} a card
+   has (see slotHTML's own note) — this is what keeps that height
+   identical across all 4 cards regardless of which, if either, appears. */
+.slot-footer{min-height:30px;display:flex;align-items:center;justify-content:center;margin-top:4px}
+.slot-crests{display:flex;gap:5px}
+.slot-crest{width:22px;height:22px;flex:0 0 auto}
 .tag{font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
   padding:3px 8px;border-radius:999px;flex:0 0 auto}
 .tag.you{background:rgba(var(--ddp-mine-rgb),.16);color:#8fe0be;border:1px solid rgba(var(--ddp-mine-rgb),.3)}
@@ -2568,6 +2614,16 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0;
   padding:14px 10px;border-radius:var(--r);
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
+}
+/* Same metal-wash formula .cos-thumb.rankset uses for the picker card —
+   a tint rather than the lobby seat's full-strength banner gradient,
+   since this box still has a card sitting on top of it and needs to stay
+   a background, not compete with the card face for attention. */
+.dcw[data-material]{
+  background:radial-gradient(120% 140% at 50% 0,rgba(var(--ddp-gloss-rgb),.05),transparent 70%),
+             linear-gradient(160deg,color-mix(in srgb,var(--rm-edge) 22%,transparent),
+                             rgba(var(--ddp-scrim-rgb),.34));
+  border-color:var(--rm-edge);
 }
 /* A plain box-shadow ring rather than border-color: on a dressed seat
    (.dcw[data-material]) the border is already the rank material's own
@@ -3676,14 +3732,22 @@ html.landscape-mode #s-draw .exit-row,
 html.landscape-mode #s-summary .exit-row,
 html.landscape-mode #s-final .exit-row{flex-direction:row;margin-top:10px !important}
 
-/* lobby: the four seats sit two-up instead of one long list */
-html.landscape-mode #s-lobby .codebox{padding:9px;margin:8px 0}
-html.landscape-mode #s-lobby .code{font-size:clamp(1.5rem,5vh,2.1rem)}
-html.landscape-mode #s-lobby #l-slots{
-  display:grid;grid-template-columns:1fr 1fr;gap:8px;
-}
-html.landscape-mode #s-lobby .slot{margin-bottom:0}
-html.landscape-mode #s-lobby #l-status{margin:8px 0 !important}
+/* lobby: the 2x2 card grid is the base layout now (not landscape-only —
+   see #l-slots/.slot's own CSS note). Every internal row gets trimmed
+   here, not just the card shell, because at ~375px tall the portrait
+   sizing alone still left a real ~212px of scroll — same trade-off seat
+   draw's own landscape block accepts, just pushed harder since this
+   screen has no card art competing for the same room. */
+html.landscape-mode #s-lobby .slot{min-height:0;gap:0;padding:5px 5px 6px}
+html.landscape-mode #s-lobby .avatar.md{width:38px;height:38px;font-size:1.05rem;border-width:1.5px}
+html.landscape-mode #s-lobby .slot-top{min-height:15px}
+html.landscape-mode #s-lobby .slot-name{margin-top:2px;font-size:.72rem}
+html.landscape-mode #s-lobby .slot-title{font-size:.5rem;min-height:9px}
+html.landscape-mode #s-lobby .slot-tier{font-size:.52rem;min-height:9px}
+html.landscape-mode #s-lobby .slot-footer{min-height:20px;margin-top:2px}
+html.landscape-mode #s-lobby .slot-crest{width:16px;height:16px}
+html.landscape-mode #s-lobby .mini-btn{padding:3px 8px;font-size:.6rem}
+html.landscape-mode #s-lobby #l-status{margin:0}
 
 /* seat draw / dealer cut: the card row is already horizontal, it just
    needs to be sized off the short axis so all four fit */
@@ -5192,13 +5256,18 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
 <section id="s-lobby" class="screen">
   <div class="center-wrap" style="padding-top:2vh;max-width:460px">
     <h2>Game lobby</h2>
-    <div class="codebox">
-      <p style="font-size:.75rem;color:var(--faint)">Share this code</p>
-      <div class="code" id="l-code">·····</div>
-      <p class="codehint" id="l-hint" onclick="copyLink()" style="cursor:pointer">Tap to copy invite link</p>
-    </div>
     <div id="l-slots"></div>
-    <p id="l-status" style="font-size:.82rem;color:var(--faint);margin:10px 0"></p>
+    <!-- The code used to be its own headline card up top; it's now a
+         small chip sharing a line with the status text, right above
+         Start — see slotHTML's own note on why: that's the room the
+         4 player cards spend on being bigger instead. -->
+    <div class="lobby-bar">
+      <button class="lobby-code-chip" onclick="copyLink()">
+        <span class="lcc-code">Code <b id="l-code">·····</b></span>
+        <span class="lcc-hint" id="l-hint">Tap to copy</span>
+      </button>
+      <p id="l-status"></p>
+    </div>
     <!-- Only for a real casual room (never ranked/daily — those don't
          have open seats to invite into) and only once there's at least
          one online friend to show, both decided in renderLobby/
@@ -8217,7 +8286,7 @@ window.addEventListener('resize',()=>{
 function copyLink(){
   const url=location.origin+location.pathname+'?join='+room;
   const done=()=>{ $('l-hint').textContent='Copied!';
-    setTimeout(()=>$('l-hint').textContent='Tap to copy invite link',1800); };
+    setTimeout(()=>$('l-hint').textContent='Tap to copy',1800); };
   if(navigator.share){ navigator.share({title:'Dame de Pique',text:`Join my game — code ${room}`,url}).catch(()=>{}); return; }
   navigator.clipboard.writeText(url).then(done).catch(done);
 }
@@ -8234,37 +8303,45 @@ function toggleAI(i){
 // with the roster above) so four AI seats read as dressed-down rather
 // than broken, but never carry crests — those are earned, and a computer
 // hasn't earned anything.
-// Laid out as a SECOND row (`.slot-cos`, flex:0 0 100% on a wrapping
-// flex row) rather than crammed into the name row: a rank-plate plus up
-// to two crest badges is real width, and at a 375px lobby the existing
-// name/dot/tag/AI-button row has none to spare. That wrap is also what
-// puts the rank banner directly UNDER the name+title row rather than
-// beside it — the row above always fills its own line before slot-cos
-// (flex-basis 100%) forces itself onto a new one.
-// The whole box carries `data-material` too (not just the avatar), so
-// its background/border pick up the same rank-set colour the banner
-// itself is drawn in — see the .slot[data-material] rule.
+// Each seat is a whole "banner" card now, not a felt row with a small
+// plate widget inside it: `data-material` goes on the card itself, and
+// .slot[data-material] paints the card in the exact same interior
+// gradient + metal border the rank plaque uses elsewhere — the card IS
+// the banner, so the separate rankNameplateHTML() plaque (frame,
+// ornaments, emblem) is retired here rather than nested inside it, which
+// would just draw the same idea twice. The tier name renders as plain
+// text instead (.slot-tier). Every row (dot/tag, name, title, tier) is
+// always emitted, even empty, so all 4 cards share one exact layout and
+// come out the same height with no per-card JS measuring — see
+// #l-slots/.slot's own CSS note.
 function slotHTML(G,i){
   const p=G.players[i];
   const dot=p.isAI?'bot':p.connected?'on':'';
   const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
   const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
-  const setId=mat?((RANK_SETS.find(r=>r.material===mat)||{}).id||null):null;
+  const set=mat?RANK_SETS.find(r=>r.material===mat):null;
   const crestIds=p.isAI?[]:[p.crest,p.crest2].filter(Boolean);
-  const plate=setId?rankNameplateHTML(setId,'sm'):'';
   const crests=crestIds.map(id=>
     `<span class="slot-crest crest-art">${crestHTML(id,id===p.crest?p.crestLevel:p.crest2Level)}</span>`
   ).join('');
+  // A seat only ever has ONE of {crests, the host's AI toggle} — crests
+  // are earned, so an AI/empty seat never has them, and the button only
+  // ever shows on an AI/empty seat. Both share one fixed-height footer
+  // slot rather than each keeping its own margin, so whichever (or
+  // neither) appears still reserves identical space across all 4 cards.
+  const footer=crests?`<div class="slot-crests">${crests}</div>`
+    :(host&&i>0&&!p.connected||host&&i>0&&p.isAI)
+      ?`<button class="mini-btn ${p.isAI?'on':''}" onclick="toggleAI(${i})">${p.isAI?'AI on':'Add AI'}</button>`:'';
   return `<div class="slot"${mat?` data-material="${mat}"`:''}>
+    <div class="slot-top">
+      <span class="dot ${dot}"></span>
+      ${i===me?'<span class="tag you">you</span>':p.isAI?'<span class="tag bot">AI</span>':''}
+    </div>
     <span class="avatar md${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>
-    <span class="dot ${dot}"></span>
-    <span class="who"><span class="nm">${esc(p.name)}</span>${
-      p.title?`<span class="ttl">${esc(p.title)}</span>`:''}</span>
-    ${i===me?'<span class="tag you">you</span>':''}
-    ${p.isAI?'<span class="tag bot">AI</span>':''}
-    ${host&&i>0&&!p.connected||host&&i>0&&p.isAI
-      ? `<button class="mini-btn ${p.isAI?'on':''}" onclick="toggleAI(${i})">${p.isAI?'AI on':'Add AI'}</button>`:''}
-    ${plate||crests?`<div class="slot-cos">${plate}${crests}</div>`:''}
+    <span class="slot-name">${esc(p.name)}</span>
+    <span class="slot-title">${p.title?esc(p.title):''}</span>
+    <span class="slot-tier">${set?esc(set.tier):''}</span>
+    <div class="slot-footer">${footer}</div>
   </div>`;
 }
 function renderLobby(G){

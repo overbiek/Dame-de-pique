@@ -1206,15 +1206,13 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .stat-value.neg{color:var(--ddp-neg)}
 .stat-label{font-size:.7rem;color:var(--faint);margin-top:5px;line-height:1.3}
 .avatar.sm{width:33px;height:33px;font-size:.92rem;flex:0 0 auto}
-/* Bigger than .sm — the lobby seat and the draw quadrant, where the
-   avatar is the main visual anchor of "who you're playing with" rather
-   than a small identity chip. Sits on the LEFT of the card in both
-   places now (.slot's own row layout, .dq-id's existing one), which is
-   what makes a size this big workable at all — a vertically-centred
-   avatar this large only needs the row's own height, not a whole
-   dedicated row above the text. Cut down hard in landscape (its own
-   override, further below) since the short viewport has none of this
-   room to spare. */
+/* Bigger than .sm — the draw quadrant now (the lobby seat has its own
+   .lg size below, since its box has a different, fixed height budget).
+   Sits on the LEFT of the row (.dq-id's own layout), which is what makes
+   a size this big workable at all — a vertically-centred avatar this
+   large only needs the row's own height, not a whole dedicated row above
+   the text. Cut down hard in landscape (its own override, further
+   below) since the short viewport has none of this room to spare. */
 /* clamp, not a flat 100px — at a 320px-wide phone (2-up grid, so ~144px
    a card) a flat 100px avatar left only 14px for the whole text column
    and every line overflowed it. The clamp keeps the full 100px at the
@@ -1222,6 +1220,16 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
    fine margin), and only actually shrinks it below that. */
 .avatar.md{width:clamp(60px,24vw,100px);height:clamp(60px,24vw,100px);font-size:clamp(1.4rem,5.5vw,2.3rem);flex:0 0 auto;border-width:3px}
 .avatar.md .dealer-badge{width:32px;height:32px;font-size:.9rem;right:-6px;bottom:-6px;border-width:2px}
+/* The lobby seat's avatar — its OWN size, not shared with .md, because
+   its box has a fixed (not content-driven) height: sized to fill that
+   box nearly edge to edge rather than to some independent ideal, so it
+   reads as "as big as the box allows" rather than a size picked in
+   isolation. See .slot's own note for the box height this is built
+   against.
+   clamp, same reasoning as .avatar.md's own clamp: a flat 84px left only
+   30px for the text column at 320px wide (2-up grid), and a "you" tag or
+   two crest badges don't fit that. 84px still holds at 375px+. */
+.avatar.lg{width:clamp(52px,21vw,84px);height:clamp(52px,21vw,84px);font-size:clamp(1.3rem,4.8vw,2rem);flex:0 0 auto;border-width:3px}
 
 .profile-chip{
   display:flex;align-items:center;gap:10px;width:100%;
@@ -2517,6 +2525,29 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   color:var(--gold);letter-spacing:.14em;margin-left:4px;
 }
 .lcc-hint{font-size:.6rem;color:var(--faint)}
+/* The Start button, now a circle sitting dead-centre over the 4 seat
+   cards rather than a full-width bar at the bottom of the screen.
+   Absolutely positioned against .lobby-grid-wrap (which just wraps
+   #l-slots, so it's sized to exactly the grid's own footprint) and
+   centred with the standard translate(-50%,-50%) trick — that's what
+   lands it precisely on the intersection point of all 4 cards regardless
+   of the grid's actual pixel size at any viewport.
+   display:flex here, not the .btn-block it used to carry: the base .btn
+   rule's padding/border-radius/width are all wrong for a circle and get
+   overridden below, and renderLobby() shows/hides it via
+   style.display='flex'/'none' now instead of 'block' for exactly this
+   reason — an inline style always wins over a stylesheet rule, so it has
+   to say the right thing itself. z-index lifts it above the cards, whose
+   own stacking order would otherwise put it behind the ones later in
+   DOM order (it's a LATER sibling of #l-slots, but position:absolute
+   removes it from that flow, so this isn't usually necessary — kept as
+   a safety margin against the cards' own box-shadow/border layers). */
+.l-start-circle{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;
+  width:72px;height:72px;border-radius:50%;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.8rem;font-weight:700;letter-spacing:.02em;text-align:center;
+}
 #l-status{font-size:.82rem;color:var(--faint);margin:8px 0;text-align:center}
 
 /* Friends tab: friend code + add-a-friend side by side (each half width)
@@ -2552,14 +2583,25 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    is what keeps all 4 cards the same min-height without measuring
    anything in JS. */
 #l-slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
-/* Horizontal now, not a centred vertical stack — the big avatar sits on
-   the LEFT (its own column), text stacks to its right in .slot-info.
-   That's what makes a 100px avatar workable at all inside a card this
-   compact: the row only has to be as tall as the avatar itself, not the
-   avatar PLUS a whole separate text block stacked underneath it. */
+/* Position:relative + a set size (matching #l-slots' own footprint) is
+   what lets #l-start sit dead-centre over the 4 cards via absolute
+   positioning below, without needing to know the grid's own pixel
+   dimensions anywhere. */
+.lobby-grid-wrap{position:relative}
+/* height:96px is a FIXED height now, not a min-height reserve — 20%
+   less than the ~120px cards were before this pass. Fixed rather than
+   content-driven is deliberate here: it's what guarantees all 4 cards
+   come out EXACTLY the same height (the min-height approach earlier
+   needed real per-row-type px reserves and still drifted a px or two
+   between cards with different content; a flat height can't drift at
+   all). overflow:hidden is the safety net if any content ever runs
+   longer than this budget allows. Horizontal, not a centred vertical
+   stack — the avatar sits on the LEFT (its own column), text stacks to
+   its right in .slot-info; see .avatar.lg's own note for how its size
+   was picked against this height. */
 .slot{
   position:relative;display:flex;flex-direction:row;align-items:center;gap:10px;
-  padding:8px;border-radius:var(--r);min-height:0;
+  height:96px;padding:8px;border-radius:var(--r);overflow:hidden;
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
 }
 /* The box background IS the banner now — the exact same interior
@@ -3810,10 +3852,11 @@ html.landscape-mode #s-final .exit-row{flex-direction:row;margin-top:10px !impor
    left, text right — see .slot's own note), which is what makes this
    landscape cut so much deeper than before actually pay off: the row
    only has to clear the avatar's own (now tiny) height, not a stacked
-   avatar-then-text column. Pushed harder than the last pass specifically
-   because the base avatar doubled again since then. */
-html.landscape-mode #s-lobby .slot{min-height:0;gap:6px;padding:4px 5px}
-html.landscape-mode #s-lobby .avatar.md{width:26px;height:26px;font-size:.72rem;border-width:1.5px}
+   avatar-then-text column. height:64px here is the same "fixed, not
+   min-height" 20%-off treatment the portrait size just got (80px -> 64),
+   scaled down from its own prior landscape numbers the same way. */
+html.landscape-mode #s-lobby .slot{height:64px;gap:6px;padding:5px}
+html.landscape-mode #s-lobby .avatar.lg{width:52px;height:52px;font-size:1.25rem;border-width:2px}
 html.landscape-mode #s-lobby .slot-top{min-height:13px}
 html.landscape-mode #s-lobby .slot-name{margin-top:1px;font-size:.66rem}
 html.landscape-mode #s-lobby .slot-title{font-size:.46rem;min-height:8px}
@@ -3822,6 +3865,10 @@ html.landscape-mode #s-lobby .slot-footer{min-height:16px;margin-top:1px}
 html.landscape-mode #s-lobby .slot-crest{width:14px;height:14px}
 html.landscape-mode #s-lobby .mini-btn{padding:2px 7px;font-size:.56rem}
 html.landscape-mode #s-lobby #l-status{margin:0}
+/* The circle itself scales down with the rest, same reasoning as .avatar
+   here — the landscape grid it floats over is much shorter, and a 72px
+   circle would swallow most of it. */
+html.landscape-mode #s-lobby .l-start-circle{width:48px;height:48px;font-size:.62rem}
 
 /* seat draw / dealer cut: the card row is already horizontal, it just
    needs to be sized off the short axis so all four fit */
@@ -5329,7 +5376,15 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
 <section id="s-lobby" class="screen">
   <div class="center-wrap" style="padding-top:2vh;max-width:460px">
     <h2>Game lobby</h2>
-    <div id="l-slots"></div>
+    <!-- #l-start sits OUTSIDE #l-slots on purpose: renderLobby() rebuilds
+         #l-slots' innerHTML from scratch on every render (see slotHTML),
+         which would destroy a button living inside it. It's positioned
+         over the grid's own centre via this wrapper instead — see
+         .lobby-grid-wrap/.l-start-circle's own CSS note. -->
+    <div class="lobby-grid-wrap">
+      <div id="l-slots"></div>
+      <button class="btn btn-primary l-start-circle" id="l-start" onclick="send('startGame')" disabled>Start</button>
+    </div>
     <p id="l-status"></p>
     <!-- Only for a real casual room (never ranked/daily — those don't
          have open seats to invite into) and only once there's at least
@@ -5337,11 +5392,7 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
          renderLobbyFriendPicker. -->
     <button class="btn btn-ghost btn-block" id="l-invite-btn" onclick="toggleLobbyFriendPicker()" style="display:none;margin-bottom:10px">Invite friends</button>
     <div id="l-friend-picker" style="display:none;margin-bottom:10px"></div>
-    <button class="btn btn-primary btn-block" id="l-start" onclick="send('startGame')" disabled>Start game</button>
     <p id="l-wait" class="prompt wait" style="display:none">Waiting for the host to start…</p>
-    <!-- Below Start now, not above it — a small headline card used to
-         sit here; it's a wider chip now, but still secondary to the
-         actual decision the screen exists for. -->
     <button class="lobby-code-chip" onclick="copyLink()">
       <span class="lcc-code">Code <b id="l-code">·····</b></span>
       <span class="lcc-hint" id="l-hint">Tap to copy</span>
@@ -8485,7 +8536,7 @@ function slotHTML(G,i){
     :(host&&i>0&&!p.connected||host&&i>0&&p.isAI)
       ?`<button class="mini-btn ${p.isAI?'on':''}" onclick="toggleAI(${i})">${p.isAI?'AI':'+AI'}</button>`:'';
   return `<div class="slot"${mat?` data-material="${mat}"`:''}>
-    <span class="avatar md${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>
+    <span class="avatar lg${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>
     <div class="slot-info">
       <div class="slot-top">
         <span class="dot ${dot}"></span>
@@ -8510,7 +8561,7 @@ function renderLobby(G){
   // round badge once play starts.
   const len=`${G.totalRounds} rounds`;
   $('l-status').textContent=(ready?'All four seats are filled.':'Waiting for players…')+' · '+len;
-  $('l-start').style.display=host?'block':'none';
+  $('l-start').style.display=host?'flex':'none';
   $('l-start').disabled=!ready;
   $('l-wait').style.display=host?'none':'block';
 

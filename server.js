@@ -1217,21 +1217,20 @@ const ACHIEVEMENTS = [
     desc: 'Deal a hand.',
     crest: 'crest_dealer_button',   title: 'title_blame_the_dealer' },
 
-  // -- rank ladders --
-  // Seven tiers are actually reachable (a new account starts mid-Novice),
-  // which does not split into 4+4 - so Ace is the top rung of the first
-  // ladder and the entry rung of the second. The thresholds are
-  // RANK_TABLE's own tier-entry MMRs, and they read mmrPeak, so a losing
-  // streak can never revoke one.
-  { id: 'ach_high_roller',    stat: 'mmrPeak',            tiers: [500, 1000, 1500, 2000],
-    names: ['Apprentice', 'Climbing the Ranks', 'Gambler', 'Ace'],
+  // -- rank ladder --
+  // One ladder, one tier per reachable rank — 7, not the usual 4: a new
+  // account starts mid-Novice, so Novice itself is never "reached" (there's
+  // nothing to unlock by starting where you already are), leaving exactly
+  // the 7 tiers above it. This used to be split across two 4-tier
+  // achievements (ach_high_roller capped at Ace, ach_the_ascent picking up
+  // from Ace to Legend) purely because every other achievement here caps at
+  // 4 — merged into one now that "one tier per rank" is the actual point.
+  // Thresholds are RANK_TABLE's own tier-entry MMRs and read mmrPeak, so a
+  // losing streak can never revoke a rung already reached.
+  { id: 'ach_high_roller',    stat: 'mmrPeak',            tiers: [500, 1000, 1500, 2000, 2500, 3000, 3500],
+    names: ['Apprentice', 'Climbing the Ranks', 'Gambler', 'Ace', 'Master', 'Grand Master', 'Legend'],
     desc: 'Reach a new rank in ranked play.',
     crest: 'crest_diamond',         title: 'title_high_roller' },
-
-  { id: 'ach_the_ascent',     stat: 'mmrPeak',            tiers: [2000, 2500, 3000, 3500],
-    names: ['Ace', 'Master', 'Grand Master', 'Legend'],
-    desc: 'Climb the top half of the ladder.',
-    crest: 'crest_ascent',          title: 'title_the_ascent' },
 
   // -- skill, not time --
   // +61 in a single HAND, i.e. out-scoring a moon (+60) by ordinary play.
@@ -1378,7 +1377,6 @@ const COSMETICS = {
     { id: 'title_trick_taker',       name: 'The Trick Taker',     unlock: 'ach_card_master' },
     { id: 'title_clean_sweep',       name: 'Clean Sweep',         unlock: 'ach_observer' },
     { id: 'title_blame_the_dealer',  name: 'Blame the Dealer',    unlock: 'ach_the_dealer' },
-    { id: 'title_the_ascent',        name: 'The Ascendant',       unlock: 'ach_the_ascent' },
     { id: 'title_beyond_moon',       name: 'Beyond the Moon',     unlock: 'ach_beyond_moon' },
     { id: 'title_the_slam',          name: 'The Trickster',       unlock: 'ach_the_slam' },
     { id: 'title_the_ledger',        name: 'The Godfather',       unlock: 'ach_ledger' },

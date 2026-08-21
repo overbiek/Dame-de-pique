@@ -6438,7 +6438,25 @@ function crestHTML(id,level){
    so it isn't retried on every re-render. */
 const crestArtMissing={};
 function crestArtSlug(id){ return id.replace(/^crest_/,''); }
-function crestArtSrc(id,level){ return `/crests/${crestArtSlug(id)}/${level}.webp`; }
+// "Climbing the Ranks" (ach_high_roller, crest_diamond) is the one
+// exception to "drop new art in /crests/<slug>/<level>.webp when it's
+// ready": its whole point is to celebrate the rank you just reached, so
+// its crest should be that exact rank's badge, not a new picture someone
+// has to draw seven of. public/badges/*.svg already has all of them —
+// same file badgeSrc()/badgeImg() point the Ranked screen and account
+// medallion at — so this just reuses them instead of waiting on new art.
+// Keyed by level (1-7), matching ach_high_roller's tiers array 1:1: each
+// entry is that tier's FIRST division, since the achievement only cares
+// about reaching the tier at all, not which division within it.
+const RANK_CLIMB_BADGE_SRC={
+  1:'/badges/silver-1.svg', 2:'/badges/gold-1.svg', 3:'/badges/platinum-1.svg',
+  4:'/badges/diamond-1.svg', 5:'/badges/master-1.svg', 6:'/badges/grandmaster-1.svg',
+  7:'/badges/legend.svg',
+};
+function crestArtSrc(id,level){
+  if(id==='crest_diamond'&&RANK_CLIMB_BADGE_SRC[level]) return RANK_CLIMB_BADGE_SRC[level];
+  return `/crests/${crestArtSlug(id)}/${level}.webp`;
+}
 function crestArtImg(id,level){
   const key=id+'/'+level;
   if(crestArtMissing[key]) return '';
@@ -7007,7 +7025,10 @@ function renderAchievements(){
   gate.style.display=account?'none':'block';
   loading.style.display=(account&&!cosState)?'block':'none';
   if(!account||!cosState){ list.innerHTML=''; return; }
-  const ROMAN=['','I','II','III','IV'];
+  // Was capped at IV when every ladder topped out at 4 tiers — the merged
+  // rank-climb achievement now runs to 7 (one per reachable rank), so this
+  // needs to cover that too.
+  const ROMAN=['','I','II','III','IV','V','VI','VII'];
   list.innerHTML=cosState.achievements.filter(a=>{
     // An unearned secret is not listed AT ALL - not even as a "???" row,
     // which would still announce how many there are. The server already
@@ -7032,8 +7053,11 @@ function renderAchievements(){
     const tierLine=max>1
       ? `<span class="ach-tier">Tier ${ROMAN[Math.max(1,lvl)]} of ${ROMAN[max]}</span>`
       : '';
+    // Was a hardcoded [1,2,3,4] back when every ladder capped at 4 rungs —
+    // built to length now so the merged 7-rung rank-climb ladder gets 7
+    // pips instead of silently losing its top 3.
     const pips=max>1
-      ? `<span class="ach-pips">${[1,2,3,4].slice(0,max).map(n=>
+      ? `<span class="ach-pips">${Array.from({length:max},(_,i)=>i+1).map(n=>
           `<em class="${n<=lvl?'on':''}"></em>`).join('')}</span>`
       : '';
     return `<div class="ach-row${lvl>0?' done':''}${done?' maxed':''}">

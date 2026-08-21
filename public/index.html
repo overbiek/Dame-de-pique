@@ -1111,6 +1111,46 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 #friend-profile .stat-card{padding:10px 8px}
 #friend-profile .stat-value{font-size:1.15rem}
 
+/* ══ Big crest view (tap an achievement card) ══
+   Same overlay contract as #friend-profile: display:none by default,
+   .on flips it to a centred flex card over a blurred scrim. */
+#crest-popup{
+  display:none;position:fixed;inset:0;z-index:230;
+  background:rgba(3,16,11,.78);backdrop-filter:blur(3px);
+  padding:calc(env(safe-area-inset-top) + 14px) 12px calc(env(safe-area-inset-bottom) + 14px);
+}
+#crest-popup.on{display:flex;align-items:center;justify-content:center}
+.crest-pop-card{
+  position:relative;width:100%;max-width:320px;
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:34px 22px 22px;
+  background:linear-gradient(170deg,var(--ddp-felt),var(--ddp-felt) 60%,var(--ddp-bg));
+  border:1px solid rgba(var(--ddp-brass-rgb),.34);border-radius:18px;
+  box-shadow:0 18px 50px rgba(var(--ddp-scrim-rgb),.6);animation:votein .22s ease;
+}
+/* 168px — six times the achievement list's 28px original, three times
+   the "twice as big" 56px it's now grown to in the list itself. Big
+   enough that a still-missing-art bug (the whole reason this popup
+   exists) is unmissable rather than just less-small.
+   Selector is .crest-pop-art.crest-art (two classes), not the bare
+   class: .crest-art itself sets width/height:100% and it's declared
+   LATER in this stylesheet, so at equal single-class specificity it
+   would win and stretch this to the card's full content width instead
+   of 168px — the exact same source-order trap .cos-thumb.crest
+   .crest-art already works around by nesting instead of a bare class. */
+.crest-pop-art.crest-art{width:168px;height:168px;margin-bottom:14px}
+.crest-pop-art.locked{filter:grayscale(.9) brightness(.5)}
+.crest-pop-name{font:600 1.15rem 'Playfair Display',serif;color:var(--cream)}
+.crest-pop-tier{
+  font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--gold);margin-top:4px;
+}
+.crest-pop-desc{font-size:.86rem;color:rgba(var(--ddp-ink-rgb),.78);line-height:1.5;margin-top:10px}
+.crest-pop-prog{
+  font-family:var(--font-num);font-size:.8rem;font-weight:700;color:var(--gold-hi);
+  margin-top:12px;
+}
+
 /* ══ Friend invite banner — floats above any screen ══ */
 .friend-invite-banner{
   position:fixed;left:50%;transform:translateX(-50%);
@@ -1591,22 +1631,29 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 
 /* ── achievements list ──
    Two per row, not one full-width row each — 20 rows of the old
-   flex-row layout ran very long. A card needs its content stacked
-   (icon+name on one line, everything else full-width below) rather than
-   the old single-row layout's icon | text | trailing-progress-column,
-   since a ~half-phone-width card has nowhere to put a third side-by-side
-   column without wrapping. */
+   flex-row layout ran very long. Text sits in its own column on the
+   left (.ach-body); the crest is a big medallion pinned to the right,
+   twice its old 28px, rather than a small icon paired with the name —
+   the request that drove this was literally "can't see the picture" on
+   an achievement that WAS unlocked (a separate CREST_ART bug, see
+   crest_clean/crest_veil/crest_slam/crest_ledger above), and a bigger,
+   more prominent badge is the fix that also makes that kind of gap
+   obvious at a glance instead of blending into a one-line icon. The
+   whole card is clickable (openCrestPopup) rather than just the crest,
+   since the crest sitting inside the achievement's own card already
+   makes "tap the crest" and "tap the achievement" the same gesture. */
 .ach-list{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .ach-row{
-  display:flex;flex-direction:column;gap:5px;min-width:0;
-  padding:9px 10px;border-radius:14px;
+  display:flex;flex-direction:row;align-items:center;gap:8px;min-width:0;
+  padding:8px 8px 8px 10px;border-radius:14px;cursor:pointer;
   background:rgba(var(--ddp-scrim-rgb),.18);border:1px solid var(--line);
+  touch-action:manipulation;
 }
+.ach-row:active{transform:scale(.98)}
 .ach-row.done{border-color:rgba(var(--ddp-brass-rgb),.44);background:rgba(var(--ddp-brass-rgb),.08)}
-.ach-top{display:flex;align-items:center;gap:8px;min-width:0}
-.ach-crest{flex:0 0 auto;width:28px;height:28px}
+.ach-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.ach-crest{flex:0 0 auto;width:56px;height:56px;align-self:center}
 .ach-row:not(.done) .ach-crest{filter:grayscale(.9) brightness(.5)}
-.ach-info{flex:1;min-width:0}
 .ach-name{font-size:.72rem;font-weight:600;color:var(--cream);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ach-row:not(.done) .ach-name{color:var(--muted)}
@@ -5444,6 +5491,22 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
   </div>
 </div>
 
+<!-- Big crest view, opened by tapping an achievement card (crest or
+     text — same card, same tap). Reuses the .rulex close button and the
+     .fp-card-style overlay pattern #friend-profile already established,
+     rather than inventing a third variant of "centred card over a
+     blurred scrim". -->
+<div id="crest-popup" onclick="if(event.target===this)closeCrestPopup()">
+  <div class="crest-pop-card">
+    <button class="rulex" onclick="closeCrestPopup()" aria-label="Close">&#10005;</button>
+    <div class="crest-pop-art crest-art" id="cp-art"></div>
+    <div class="crest-pop-name" id="cp-name"></div>
+    <div class="crest-pop-tier" id="cp-tier"></div>
+    <div class="crest-pop-desc" id="cp-desc"></div>
+    <div class="crest-pop-prog" id="cp-prog"></div>
+  </div>
+</div>
+
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -6593,6 +6656,31 @@ const CREST_ART={
     `<circle cx="24" cy="24" r="8.5" fill="var(--gold)"/>`+
     `<circle cx="24" cy="24" r="8.5" fill="none" stroke="var(--gold-hi)" stroke-width="1"/>`+
     crestGlyph('&#9824;',9,'#0F1220',25),
+  // Four more that had real per-tier art on disk (public/crests/clean,
+  // veil, slam, ledger — added in a parallel session) but, same gap as
+  // crest_sun above, no entry here at all: crestHTML bails out before
+  // ever calling crestArtImg when CREST_ART[id] is missing, so all four
+  // rendered completely blank regardless of tier, not just tier 1 — that
+  // just happened to be the tier that had actually been unlocked and
+  // noticed. Same dark-disc family as the rest of this object.
+  crest_clean:
+    `<circle cx="24" cy="24" r="18" fill="#0F1A14"/>`+
+    `<rect x="14" y="12" width="20" height="26" rx="2" fill="none" stroke="var(--gold)" stroke-width="1.6"/>`+
+    `<path d="M17 18h14M17 22h14" stroke="var(--gold-lo)" stroke-width="1" opacity=".5"/>`+
+    crestGlyph('&#9824;',10,'var(--gold-hi)',30),
+  crest_veil:
+    `<circle cx="24" cy="24" r="18" fill="#1A0F14"/>`+
+    `<path d="M14 30c0-9 4.5-16 10-16s10 7 10 16" fill="none" stroke="var(--gold)" stroke-width="1.6"/>`+
+    `<path d="M14 30h20" stroke="var(--gold-lo)" stroke-width="1.2"/>`+
+    crestGlyph('&#9824;',9,'var(--gold-hi)',27),
+  crest_slam:
+    `<circle cx="24" cy="24" r="18" fill="#141019"/>`+CREST_RAYS+
+    `<path d="M24 10l3.6 8.6L36 22l-8.4 3.4L24 34l-3.6-8.6L12 22l8.4-3.4z" fill="var(--gold)"/>`,
+  crest_ledger:
+    `<circle cx="24" cy="24" r="18" fill="#12140F"/>`+
+    `<rect x="13" y="14" width="22" height="20" rx="2" fill="none" stroke="var(--gold)" stroke-width="1.6"/>`+
+    `<path d="M13 20h22M18 14v20" stroke="var(--gold-lo)" stroke-width="1"/>`+
+    crestGlyph('&#9824;',9,'var(--gold-hi)',27),
 };
 function crestHTML(id,level){
   const art=CREST_ART[id];
@@ -7255,23 +7343,45 @@ function renderAchievements(){
       ? `<span class="ach-pips">${Array.from({length:max},(_,i)=>i+1).map(n=>
           `<em class="${n<=lvl?'on':''}"></em>`).join('')}</span>`
       : '';
-    return `<div class="ach-row${lvl>0?' done':''}${done?' maxed':''}">
-      <div class="ach-top">
-        <div class="ach-crest crest-art" data-level="${lvl||1}">${crestHTML(a.crest,lvl||1)}</div>
-        <div class="ach-info">
-          <div class="ach-name">${esc(a.name)}${max>1&&lvl>0?` <b>${ROMAN[lvl]}</b>`:''}</div>
+    return `<div class="ach-row${lvl>0?' done':''}${done?' maxed':''}" onclick="openCrestPopup('${a.id}')">
+      <div class="ach-body">
+        <div class="ach-name">${esc(a.name)}${max>1&&lvl>0?` <b>${ROMAN[lvl]}</b>`:''}</div>
+        <div class="ach-desc">${esc(a.desc)}</div>
+        <div class="ach-meta">${pips}${tierLine}</div>
+        ${done?'':`<div class="ach-bar"><i style="width:${pct}%"></i></div>`}
+        <div class="ach-prog">
+          <b>${done?'Complete':`${a.progress}/${a.threshold}`}</b>
+          ${done?'':`<small>${max>1?`next tier at ${a.threshold}`:'to unlock'}</small>`}
         </div>
       </div>
-      <div class="ach-desc">${esc(a.desc)}</div>
-      <div class="ach-meta">${pips}${tierLine}</div>
-      ${done?'':`<div class="ach-bar"><i style="width:${pct}%"></i></div>`}
-      <div class="ach-prog">
-        <b>${done?'Complete':`${a.progress}/${a.threshold}`}</b>
-        ${done?'':`<small>${max>1?`next tier at ${a.threshold}`:'to unlock'}</small>`}
-      </div>
+      <div class="ach-crest crest-art" data-level="${lvl||1}">${crestHTML(a.crest,lvl||1)}</div>
     </div>`;
   }).join('');
 }
+
+// Tapping an achievement card (or, since the crest sits inside that same
+// card, tapping the crest — there's no separate handler for it) opens a
+// big view of the same art the small 56px badge in the list is showing,
+// at a size where a missing-art bug like the crest_clean/crest_veil one
+// above would be obvious immediately instead of blending into a small
+// icon. Reads straight out of cosState rather than taking the row's data
+// as arguments, so the popup can't go stale relative to whatever's
+// currently rendered.
+const ROMAN_POP=['','I','II','III','IV','V','VI','VII'];
+function openCrestPopup(achId){
+  const pop=$('crest-popup');
+  const a=cosState&&cosState.achievements.find(x=>x.id===achId);
+  if(!pop||!a) return;
+  const lvl=a.level||0, max=a.maxLevel||1;
+  $('cp-art').innerHTML=a.crest?crestHTML(a.crest,lvl||1):'';
+  $('cp-art').classList.toggle('locked',lvl<=0);
+  $('cp-name').textContent=a.name+(max>1&&lvl>0?' '+ROMAN_POP[lvl]:'');
+  $('cp-tier').textContent=max>1?`Tier ${ROMAN_POP[Math.max(1,lvl)]} of ${ROMAN_POP[max]}`:'';
+  $('cp-desc').textContent=a.desc||'';
+  $('cp-prog').textContent=lvl>=max?'Complete':`${a.progress}/${a.threshold}`;
+  pop.classList.add('on');
+}
+function closeCrestPopup(){ $('crest-popup').classList.remove('on'); }
 
 // The equipped crest's ladder LEVEL isn't in `equipped` itself (just the
 // id, which doesn't change between tiers) — looked up from the catalog

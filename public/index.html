@@ -1191,10 +1191,9 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .avatar-grid.open{display:block}
 .av-sec{margin-top:12px}
 .av-sec:first-child{margin-top:0}
-/* Portraits get 4 across (one row per collection, matching the reference
-   sheet's own grouping); the emoji set keeps its denser 6. */
+/* 4 across, one row per collection, matching the reference sheet's own
+   grouping. */
 .av-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:4px}
-.av-row.emoji{grid-template-columns:repeat(6,1fr)}
 /* A portrait avatar wherever one is drawn. Every host (.avatar,
    .avatar.sm, .avatar-preview, .avatar-opt, .tile-icon) is already a
    fixed-size round well, so filling it and inheriting its radius is the
@@ -5528,10 +5527,6 @@ function clearSession(){ try{localStorage.removeItem(SK);}catch(e){} }
 
 /* ── profile (name + avatar, survives across games) ── */
 const PK='ddp.profile';
-// The Personal-tab avatar picker renders exactly this list, in this order.
-// It's just emoji characters — add, remove, or reorder freely, no other
-// code needs to change. Paste any emoji in; the grid re-flows automatically.
-const AVATARS=['👑','🃏','🦊','🐺','🦁','🐯','🦅','🐉','🎩','🕶️','💎','🎲','🍀','🔱','⚜️','🌙','⭐','🔥','⚔️','🛡️'];
 
 /* ── portrait avatars: 20 across 5 collections ──
    These live in the SAME `accounts.avatar` column the emoji avatars use,

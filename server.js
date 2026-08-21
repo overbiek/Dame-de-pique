@@ -1390,11 +1390,11 @@ const COSMETICS = {
     // against RANK_TABLE's slug, so a capitalised tier name here would
     // silently never match and lock every rank title forever.
     { id: 'title_rising_star',       name: 'Rising Star',         rankTier: 'silver' },
-    { id: 'title_ace',               name: 'The Ace',             rankTier: 'gold' },
+    { id: 'title_one_more_game',     name: 'One More Game',       rankTier: 'gold' },
     { id: 'title_no_hearts_please',  name: 'No Hearts, Please',   rankTier: 'platinum' },
-    { id: 'title_grandmaster',       name: 'The Grandmaster',     rankTier: 'diamond' },
+    { id: 'title_ace',               name: 'The Ace',             rankTier: 'diamond' },
     { id: 'title_definitely_not_counting_cards', name: 'Definitely Not Counting Cards', rankTier: 'master' },
-    { id: 'title_one_more_game',     name: 'One More Game',       rankTier: 'grandmaster' },
+    { id: 'title_grandmaster',       name: 'The Grandmaster',     rankTier: 'grandmaster' },
     { id: 'title_the_legend',        name: 'The Legend',          rankTier: 'legend' },
   ],
 };

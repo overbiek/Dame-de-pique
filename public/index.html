@@ -1208,9 +1208,17 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 /* ── top tab bar (Profile / Achievements / Friends) — distinct from
    .acct-tabs/.acct-tab, which is the login/signup form's own pair ── */
 .acct-tabbar{display:flex;gap:4px;margin:0 0 14px;background:rgba(var(--ddp-scrim-rgb),.24);padding:4px;border-radius:12px}
+/* white-space:nowrap + ellipsis is load-bearing, not decorative: with
+   the real DM Sans webfont loaded (narrower system fonts hid this in
+   quick local testing), "Achievements" was wide enough to wrap onto a
+   second line at three-way flex widths on a 375px phone, which doubled
+   this bar's height past the ‹ Menu button's single-line height instead
+   of matching it. Ellipsis is a safety net for even larger font scales;
+   the label is never actually long enough to need it in practice. */
 .acct-toptab{
-  flex:1;padding:9px 6px;border:1px solid transparent;background:transparent;color:var(--faint);
-  font:600 .8rem/1 'DM Sans',sans-serif;border-radius:9px;cursor:pointer;transition:background .16s,color .16s;
+  flex:1;padding:9px 4px;border:1px solid transparent;background:transparent;color:var(--faint);
+  font:600 .78rem/1 'DM Sans',sans-serif;border-radius:9px;cursor:pointer;transition:background .16s,color .16s;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .acct-toptab.active{background:rgba(var(--ddp-brass-rgb),.18);color:var(--gold-hi)}
 .acct-panel{display:none}
@@ -1238,12 +1246,25 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
   #s-personal .acct-layout{
     display:grid;
     grid-template-columns:minmax(160px,220px) 1fr;
+    grid-template-areas:"hero main";
     column-gap:24px;align-items:start;
   }
+  #s-personal .profile-hero{grid-area:hero}
   #s-personal .acct-main{
+    grid-area:main;
     padding-left:24px;border-left:1px solid rgba(var(--ddp-brass-rgb),.24);
   }
 }
+/* Below the breakpoint (plain block stack) .acct-main — tab bar AND its
+   panels — is moved ABOVE .profile-hero in markup order, so the
+   Profile/Achievements/Friends tabs sit right under the ‹ Menu button
+   instead of below the identity card, and switching to Achievements or
+   Friends needs no scroll past the hero first. The named grid-area
+   assignments above (and in the landscape-mode block below) are what
+   let that DOM reorder happen without also flipping which column
+   hero/main land in once the layout goes side-by-side — those two
+   layouts place children by NAME, not by source order, so they're
+   unaffected by moving .acct-main earlier in the markup. */
 
 .sec-label{
   font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-lo);
@@ -1465,29 +1486,37 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 .hero-crest.on{display:grid}
 .hero-avatar-wrap{position:relative;display:inline-block}
 
-/* ── achievements list ── */
-.ach-list{display:flex;flex-direction:column;gap:9px}
+/* ── achievements list ──
+   Two per row, not one full-width row each — 20 rows of the old
+   flex-row layout ran very long. A card needs its content stacked
+   (icon+name on one line, everything else full-width below) rather than
+   the old single-row layout's icon | text | trailing-progress-column,
+   since a ~half-phone-width card has nowhere to put a third side-by-side
+   column without wrapping. */
+.ach-list{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
 .ach-row{
-  display:flex;align-items:center;gap:11px;
-  padding:11px 13px;border-radius:14px;
+  display:flex;flex-direction:column;gap:5px;min-width:0;
+  padding:9px 10px;border-radius:14px;
   background:rgba(var(--ddp-scrim-rgb),.18);border:1px solid var(--line);
 }
 .ach-row.done{border-color:rgba(var(--ddp-brass-rgb),.44);background:rgba(var(--ddp-brass-rgb),.08)}
-.ach-crest{flex:0 0 auto;width:38px;height:38px}
+.ach-top{display:flex;align-items:center;gap:8px;min-width:0}
+.ach-crest{flex:0 0 auto;width:28px;height:28px}
 .ach-row:not(.done) .ach-crest{filter:grayscale(.9) brightness(.5)}
 .ach-info{flex:1;min-width:0}
-.ach-name{font-size:.84rem;font-weight:600;color:var(--cream)}
+.ach-name{font-size:.72rem;font-weight:600;color:var(--cream);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ach-row:not(.done) .ach-name{color:var(--muted)}
-.ach-desc{font-size:.68rem;color:var(--faint);line-height:1.4;margin-top:2px}
+.ach-desc{font-size:.6rem;color:var(--faint);line-height:1.3;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .ach-bar{
-  height:5px;border-radius:999px;margin-top:7px;overflow:hidden;
+  height:4px;border-radius:999px;overflow:hidden;
   background:rgba(var(--ddp-scrim-rgb),.42);
 }
 .ach-bar>i{display:block;height:100%;border-radius:999px;
   background:linear-gradient(90deg,var(--gold-lo),var(--gold-hi))}
 .ach-prog{
-  flex:0 0 auto;font-family:var(--font-num);font-size:.66rem;color:var(--faint);
-  text-align:right;min-width:46px;
+  font-family:var(--font-num);font-size:.6rem;color:var(--faint);
 }
 .ach-row.done .ach-prog{color:var(--gold-hi)}
 
@@ -2313,12 +2342,21 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    codebox — halving the column without also shrinking the font/letter-
    spacing would overflow a 6-character code, so this context gets its own
    smaller scale. */
-.friends-code-row{display:flex;gap:10px;align-items:stretch;margin:14px 0 12px}
-.friends-codebox{flex:1;margin:0;padding:12px 10px}
-.friends-codebox .code{font-size:clamp(1.3rem,7vw,1.7rem);letter-spacing:.13em;text-indent:.13em}
+.friends-code-row{display:flex;gap:10px;align-items:stretch;margin:8px 0 8px}
+.friends-codebox{flex:1;margin:0;padding:4px 8px}
+.friends-codebox p{font-size:.56rem!important;line-height:1.2!important}
+.friends-codebox .code{font-size:clamp(.8rem,4.2vw,1rem);letter-spacing:.08em;text-indent:.08em;line-height:1.05}
+.friends-codebox .codehint{margin-top:1px}
 .friends-add-col{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0}
-.friends-add-col .sec-label{margin-bottom:8px}
+.friends-add-col .sec-label{margin-bottom:3px;font-size:.56rem}
 .friends-add-col .row{margin-bottom:0}
+/* Roughly halves the row's height alongside the codebox shrink above —
+   the generic input[type=text] rule's 14px padding and 1rem font are
+   sized for a full login field, not a 6-character code entry sitting
+   next to it, and the generic .btn rule's 14px padding is sized for a
+   primary call-to-action, not this inline "Add" button. */
+.friends-add-col input[type=text]{padding:5px 8px;font-size:.78rem}
+.friends-add-col .btn{padding:5px 12px;font-size:.74rem}
 .slot{
   display:flex;align-items:center;gap:11px;
   padding:12px 14px;border-radius:var(--r);
@@ -2925,13 +2963,16 @@ html.landscape-mode #s-summary .note.gold{
    name and a part-filled bar both read as decoration on their own - on
    device it was not apparent there was another rung at all, which is what
    this line fixes. */
-.ach-meta{display:flex;align-items:center;gap:7px;margin:4px 0 2px}
+.ach-meta{display:flex;align-items:center;gap:6px;margin:0;flex-wrap:wrap}
 .ach-tier{
-  font-size:.6rem;letter-spacing:.06em;text-transform:uppercase;
+  font-size:.56rem;letter-spacing:.06em;text-transform:uppercase;
   color:var(--gold);opacity:.9;
 }
 .ach-row.maxed .ach-tier{color:var(--gold-hi)}
-.ach-prog{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+/* Two-column card: the trailing progress column from the old single-row
+   layout has nowhere to go, so it drops to a normal left-aligned line
+   under the bar instead of the old right-aligned flex-end block. */
+.ach-prog{display:block}
 .ach-prog small{
   font-size:.56rem;color:var(--muted);white-space:nowrap;
   font-variant-numeric:tabular-nums;
@@ -3422,8 +3463,16 @@ html.landscape-mode #s-personal>.center-wrap>.acct-layout{
      shouldn't silently depend on that being true */
   display:grid;
   grid-template-columns:minmax(148px,204px) 1fr;
+  grid-template-areas:"hero main";
   column-gap:0;
 }
+/* .acct-main was moved earlier than .profile-hero in the markup (see the
+   width-based breakpoint above) so the portrait stack shows the tabs
+   before the hero card. Named grid-area assignment is what keeps THIS
+   layout's hero-left/tabs-right column order correct regardless of that
+   markup order. */
+html.landscape-mode #s-personal .profile-hero{grid-area:hero}
+html.landscape-mode #s-personal .acct-main{grid-area:main}
 html.landscape-mode #s-personal .profile-hero{
   margin:0;position:static;min-height:0;
   overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -4492,49 +4541,11 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
       <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
     </div>
 
+    <!-- .acct-main (tab bar + panels) comes BEFORE .profile-hero in
+         markup on purpose — see the grid-area comment near .acct-layout
+         in <style> — so the Profile/Achievements/Friends tabs sit right
+         under ‹ Menu instead of below the identity card. -->
     <div class="acct-layout">
-      <!-- HERO player card -->
-      <div class="profile-hero">
-        <!-- The wrapper exists purely so the equipped crest can sit on
-             the avatar's corner; .avatar-preview keeps its exact id,
-             class and click handler so the picker is unaffected. -->
-        <div class="hero-avatar-wrap">
-          <div class="avatar-preview" id="pv-avatar" onclick="toggleAvatarPicker()">👤</div>
-          <div class="hero-crest crest-art" id="pv-crest"></div>
-        </div>
-        <!-- RANK NAMEPLATE — a decorative layer BEHIND the live name and
-             title, which is why both live inside it (see .hero-plate in
-             <style> for the whole contract). #pv-plate-art is the only
-             part renderHeroCosmetics() rewrites; the input is never
-             touched by it, so the plaque can change without the field
-             losing focus or its value. Undressed (no data-material) this
-             renders as the plain name + title it always was. -->
-        <div class="hero-plate rank-plate lg" id="pv-plate">
-          <span class="nameplate-art" id="pv-plate-art"></span>
-          <span class="nameplate-content">
-            <input type="text" id="pv-name" class="hero-name-input" placeholder="Your name"
-                   maxlength="16" autocomplete="nickname" oninput="updateAvatarPreview()"
-                   onfocus="if(!account){this.blur();openAuthForm('signup');}"/>
-            <!-- reserves its line even when empty, so equipping or
-                 clearing a title can't resize the hero under the
-                 player's finger while they browse the picker -->
-            <div class="hero-title" id="pv-title"></div>
-          </span>
-        </div>
-        <button class="acct-chip" id="acct-chip" onclick="handleAcctChip()">
-          <span class="acct-chip-icon" id="acct-chip-icon">👤</span>
-          <span class="acct-chip-text" id="acct-chip-text">Guest</span>
-          <span class="acct-chip-action" id="acct-chip-action">Log in</span>
-        </button>
-
-        <!-- rank medallion: emblem + label + MMR below -->
-        <div class="rank-med" id="acct-rank">
-          <div class="rank-emblem" id="acct-rank-emblem"></div>
-          <div class="rank-lbl" id="acct-rank-label">Unranked</div>
-          <div class="rank-mmr" id="acct-rank-mmr"></div>
-        </div>
-      </div>
-
       <div class="acct-main">
         <!-- TAB BAR -->
         <div class="acct-tabbar">
@@ -4701,6 +4712,48 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
               <p>Share your code above, or add someone else's to get started.</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- HERO player card -->
+      <div class="profile-hero">
+        <!-- The wrapper exists purely so the equipped crest can sit on
+             the avatar's corner; .avatar-preview keeps its exact id,
+             class and click handler so the picker is unaffected. -->
+        <div class="hero-avatar-wrap">
+          <div class="avatar-preview" id="pv-avatar" onclick="toggleAvatarPicker()">👤</div>
+          <div class="hero-crest crest-art" id="pv-crest"></div>
+        </div>
+        <!-- RANK NAMEPLATE — a decorative layer BEHIND the live name and
+             title, which is why both live inside it (see .hero-plate in
+             <style> for the whole contract). #pv-plate-art is the only
+             part renderHeroCosmetics() rewrites; the input is never
+             touched by it, so the plaque can change without the field
+             losing focus or its value. Undressed (no data-material) this
+             renders as the plain name + title it always was. -->
+        <div class="hero-plate rank-plate lg" id="pv-plate">
+          <span class="nameplate-art" id="pv-plate-art"></span>
+          <span class="nameplate-content">
+            <input type="text" id="pv-name" class="hero-name-input" placeholder="Your name"
+                   maxlength="16" autocomplete="nickname" oninput="updateAvatarPreview()"
+                   onfocus="if(!account){this.blur();openAuthForm('signup');}"/>
+            <!-- reserves its line even when empty, so equipping or
+                 clearing a title can't resize the hero under the
+                 player's finger while they browse the picker -->
+            <div class="hero-title" id="pv-title"></div>
+          </span>
+        </div>
+        <button class="acct-chip" id="acct-chip" onclick="handleAcctChip()">
+          <span class="acct-chip-icon" id="acct-chip-icon">👤</span>
+          <span class="acct-chip-text" id="acct-chip-text">Guest</span>
+          <span class="acct-chip-action" id="acct-chip-action">Log in</span>
+        </button>
+
+        <!-- rank medallion: emblem + label + MMR below -->
+        <div class="rank-med" id="acct-rank">
+          <div class="rank-emblem" id="acct-rank-emblem"></div>
+          <div class="rank-lbl" id="acct-rank-label">Unranked</div>
+          <div class="rank-mmr" id="acct-rank-mmr"></div>
         </div>
       </div>
     </div>
@@ -6775,13 +6828,15 @@ function renderAchievements(){
           `<em class="${n<=lvl?'on':''}"></em>`).join('')}</span>`
       : '';
     return `<div class="ach-row${lvl>0?' done':''}${done?' maxed':''}">
-      <div class="ach-crest crest-art" data-level="${lvl||1}">${crestHTML(a.crest)}</div>
-      <div class="ach-info">
-        <div class="ach-name">${esc(a.name)}${max>1&&lvl>0?` <b>${ROMAN[lvl]}</b>`:''}</div>
-        <div class="ach-desc">${esc(a.desc)}</div>
-        <div class="ach-meta">${pips}${tierLine}</div>
-        ${done?'':`<div class="ach-bar"><i style="width:${pct}%"></i></div>`}
+      <div class="ach-top">
+        <div class="ach-crest crest-art" data-level="${lvl||1}">${crestHTML(a.crest)}</div>
+        <div class="ach-info">
+          <div class="ach-name">${esc(a.name)}${max>1&&lvl>0?` <b>${ROMAN[lvl]}</b>`:''}</div>
+        </div>
       </div>
+      <div class="ach-desc">${esc(a.desc)}</div>
+      <div class="ach-meta">${pips}${tierLine}</div>
+      ${done?'':`<div class="ach-bar"><i style="width:${pct}%"></i></div>`}
       <div class="ach-prog">
         <b>${done?'Complete':`${a.progress}/${a.threshold}`}</b>
         ${done?'':`<small>${max>1?`next tier at ${a.threshold}`:'to unlock'}</small>`}

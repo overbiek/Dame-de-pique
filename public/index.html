@@ -1206,11 +1206,12 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 .stat-value.neg{color:var(--ddp-neg)}
 .stat-label{font-size:.7rem;color:var(--faint);margin-top:5px;line-height:1.3}
 .avatar.sm{width:33px;height:33px;font-size:.92rem;flex:0 0 auto}
-/* Twice .sm — the lobby seat and the draw quadrant, where the avatar is
-   the main visual anchor of "who you're playing with" rather than a
-   small identity chip, so it earns real size. */
-.avatar.md{width:66px;height:66px;font-size:1.7rem;flex:0 0 auto;border-width:2px}
-.avatar.md .dealer-badge{width:24px;height:24px;font-size:.76rem;right:-5px;bottom:-5px;border-width:2px}
+/* Bigger than .sm — the lobby seat and the draw quadrant, where the
+   avatar is the main visual anchor of "who you're playing with" rather
+   than a small identity chip — but kept well short of the card's own
+   height budget, which is what this size was scaled back down for. */
+.avatar.md{width:50px;height:50px;font-size:1.3rem;flex:0 0 auto;border-width:2px}
+.avatar.md .dealer-badge{width:20px;height:20px;font-size:.66rem;right:-4px;bottom:-4px;border-width:1.5px}
 
 .profile-chip{
   display:flex;align-items:center;gap:10px;width:100%;
@@ -3784,7 +3785,7 @@ html.landscape-mode #s-final .exit-row{flex-direction:row;margin-top:10px !impor
    draw's own landscape block accepts, just pushed harder since this
    screen has no card art competing for the same room. */
 html.landscape-mode #s-lobby .slot{min-height:0;gap:0;padding:5px 5px 6px}
-html.landscape-mode #s-lobby .avatar.md{width:38px;height:38px;font-size:1.05rem;border-width:1.5px}
+html.landscape-mode #s-lobby .avatar.md{width:32px;height:32px;font-size:.9rem;border-width:1.5px}
 html.landscape-mode #s-lobby .slot-top{min-height:15px}
 html.landscape-mode #s-lobby .slot-name{margin-top:2px;font-size:.72rem}
 html.landscape-mode #s-lobby .slot-title{font-size:.5rem;min-height:9px}
@@ -3813,8 +3814,8 @@ html.landscape-mode #s-draw #d-note{margin:6px 0}
    scroll the note above already accepts as a tradeoff, so it steps back
    toward .sm here rather than doubling on top of an already-doubled
    overflow. */
-html.landscape-mode #s-draw .avatar.md{width:44px;height:44px;font-size:1.1rem;border-width:1.5px}
-html.landscape-mode #s-draw .avatar.md .dealer-badge{width:17px;height:17px;font-size:.5rem;right:-4px;bottom:-4px;border-width:1.5px}
+html.landscape-mode #s-draw .avatar.md{width:36px;height:36px;font-size:.95rem;border-width:1.5px}
+html.landscape-mode #s-draw .avatar.md .dealer-badge{width:15px;height:15px;font-size:.46rem;right:-3px;bottom:-3px;border-width:1.5px}
 
 /* summary / final: the score sheet is the tall part, so it keeps its own
    scroll and everything around it tightens up */

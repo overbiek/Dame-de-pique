@@ -692,6 +692,12 @@ async function getStats(accountId) {
     blitzAvgPoints: s && s.blitz_games_finished > 0
       ? Math.round((s.blitz_points_total / s.blitz_games_finished) * 10) / 10
       : null,
+    // Every casual variant's running +/- combined into one lifetime figure
+    // — points_total is standard casual only (recordGameFinished) and
+    // blitz_points_total is Blitz only (recordBlitzGameFinished), two
+    // mutually-exclusive write sites (see isBlitz(G) in server.js), so
+    // summing them can't double-count a single game either way.
+    totalPointsCasual: s ? (s.points_total + s.blitz_points_total) : 0,
   };
 }
 
@@ -862,6 +868,10 @@ async function getRankedStats(accountId) {
     endedNegative: s ? s.ended_negative : 0,
     mmrHighest: s ? s.mmr_highest : null,
     mmrLowest: s ? s.mmr_lowest : null,
+    // The ranked counterpart to getStats()' totalPointsCasual — ranked's
+    // own points_total, already accumulated for avgPoints above, just not
+    // previously surfaced on its own.
+    totalPointsRanked: s ? s.points_total : 0,
   };
 }
 

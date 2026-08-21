@@ -4934,6 +4934,10 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
             <div class="stat-label">Games finished</div>
           </div>
           <div class="stat-card">
+            <div class="stat-value" id="st-total-points">0</div>
+            <div class="stat-label">Lifetime total (casual + Blitz)</div>
+          </div>
+          <div class="stat-card">
             <div class="stat-value neg" id="st-worst-trick">—</div>
             <div class="stat-label">Worst single trick</div>
           </div>
@@ -5021,6 +5025,10 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
           <div class="stat-card">
             <div class="stat-value" id="rst-played">0</div>
             <div class="stat-label">Games played</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="rst-total-points">0</div>
+            <div class="stat-label">Lifetime total</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="rst-avg-points">—</div>
@@ -6226,9 +6234,6 @@ function renderAvatarGrid(){
       +c.avatars.map(([id,name])=>opt(id,name,avatarHTML(id,name,true))).join('')
       +`</div>`;
   }
-  h+=`<div class="sec-label av-sec">Classic</div><div class="av-row emoji">`
-    +AVATARS.map(a=>opt(a,'Avatar '+a,a)).join('')
-    +`</div>`;
   el.innerHTML=h;
 }
 function pickAvatar(a){
@@ -7366,6 +7371,7 @@ function friendCasualStatsHTML(s){
   return fpStatCardsHTML([
     ['Games played',s.gamesPlayed,''],
     ['Games finished',s.gamesFinished,''],
+    ['Lifetime total',fmtStat(s.totalPointsCasual),''],
     ['Average score',fmtStat(s.avgPoints),''],
     ['Best game total',fmtStat(s.bestGame),'pos'],
     ['Worst game total',fmtStat(s.worstGame),'neg'],
@@ -7394,6 +7400,7 @@ function placementBadgeSVG(played){
 function friendRankedStatsHTML(s){
   return fpStatCardsHTML([
     ['Games played',s.gamesPlayed,''],
+    ['Lifetime total',fmtStat(s.totalPointsRanked),''],
     ['Average score',fmtStat(s.avgPoints),''],
     ['Best game total',fmtStat(s.bestGame),'pos'],
     ['Worst game total',fmtStat(s.worstGame),'neg'],
@@ -7541,6 +7548,7 @@ socket.on('statsOk',d=>{
   $('stats-content').style.display='block';
   $('st-played').textContent=s.gamesPlayed;
   $('st-finished').textContent=s.gamesFinished;
+  $('st-total-points').textContent=fmtStat(s.totalPointsCasual);
   $('st-worst-trick').textContent=fmtStat(s.worstTrick);
   $('st-best-round').textContent=fmtStat(s.bestRound);
   $('st-worst-round').textContent=fmtStat(s.worstRound);
@@ -7570,6 +7578,7 @@ socket.on('rankedStatsOk',d=>{
   if(!$('s-stats').classList.contains('active')) return;
   const s=d.stats;
   $('rst-played').textContent=s.gamesPlayed;
+  $('rst-total-points').textContent=fmtStat(s.totalPointsRanked);
   $('rst-worst-trick').textContent=fmtStat(s.worstTrick);
   $('rst-best-round').textContent=fmtStat(s.bestRound);
   $('rst-worst-round').textContent=fmtStat(s.worstRound);

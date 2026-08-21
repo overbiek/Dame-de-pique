@@ -1165,7 +1165,7 @@ function rankForMmr(mmr) {
 // Each old single threshold now appears as one rung of its ladder.
 const ACHIEVEMENTS = [
   { id: 'ach_queen_hunter',   stat: 'queensTaken',        tiers: [1, 10, 100, 1000],
-    names: ['First Blood', 'Queen Hunter', 'Queen Collector', 'Queen of Queens'],
+    names: ["Hey, That's My Wife!", 'Queen Hunter', 'Queen Collector', 'Queen of Queens'],
     desc: 'Take the Queen of Spades.',
     crest: 'crest_queen_of_spades', title: 'title_queen_hunter' },
 
@@ -1173,7 +1173,7 @@ const ACHIEVEMENTS = [
   // actively defends against one (see oppMoonPace / moonPaceOwner), so a
   // 1000 rung works out at ~3,000 games - not extreme, just unreachable.
   { id: 'ach_moon_chaser',    stat: 'moonsTotal',         tiers: [1, 10, 50, 500],
-    names: ['Lunar Debut', 'Moon Chaser', 'Moonstruck', 'Lord of the Moon'],
+    names: ['Moonshooter', 'Moon Chaser', 'Moonstruck', 'Lord of the Moon'],
     desc: 'Shoot the moon.',
     crest: 'crest_crescent',        title: 'title_moon_chaser' },
 
@@ -1186,11 +1186,6 @@ const ACHIEVEMENTS = [
     names: ['First Win', 'The House', 'House Rules', 'The Whole Casino'],
     desc: 'Win a game.',
     crest: 'crest_crown',           title: 'title_the_house' },
-
-  { id: 'ach_ace_collector',  stat: 'gamesWon',           tiers: [5, 25, 75, 250],
-    names: ['Ace Collector', 'Ace Hoarder', 'Ace Baron', 'Ace Sovereign'],
-    desc: 'Win games - the long road.',
-    crest: 'crest_ace',             title: 'title_ace_collector' },
 
   { id: 'ach_heartbreaker',   stat: 'gamesWonPositive',   tiers: [1, 10, 50, 200],
     names: ['Heartbreaker', 'Heartless', 'Heart of Stone', 'The Unmoved'],
@@ -1229,7 +1224,7 @@ const ACHIEVEMENTS = [
   // RANK_TABLE's own tier-entry MMRs, and they read mmrPeak, so a losing
   // streak can never revoke one.
   { id: 'ach_high_roller',    stat: 'mmrPeak',            tiers: [500, 1000, 1500, 2000],
-    names: ['Apprentice', 'Player', 'Gambler', 'Ace'],
+    names: ['Apprentice', 'Climbing the Ranks', 'Gambler', 'Ace'],
     desc: 'Reach a new rank in ranked play.',
     crest: 'crest_diamond',         title: 'title_high_roller' },
 
@@ -1256,12 +1251,12 @@ const ACHIEVEMENTS = [
   // Measured as "every trick PLAYED", because resolveTrick ends the hand
   // the moment the moon locks and the remaining tricks are never dealt.
   { id: 'ach_the_slam',       stat: 'slams',              tiers: [1, 3, 10, 25],
-    names: ['The Slam', 'Double Slam', 'Slam Artist', 'Untouchable'],
+    names: ['The Trickster', 'Double Slam', 'Slam Artist', 'Untouchable'],
     desc: 'Win every trick in a hand.',
     crest: 'crest_slam',            title: 'title_the_slam' },
 
   { id: 'ach_ledger',         stat: 'bestGame',           tiers: [250],
-    names: ['The Ledger'],
+    names: ['The Godfather'],
     desc: 'Finish a game on +250 or better.',
     crest: 'crest_ledger',          title: 'title_the_ledger' },
 
@@ -1271,7 +1266,7 @@ const ACHIEVEMENTS = [
     crest: 'crest_clean',           title: 'title_clean_sheet' },
 
   { id: 'ach_queen_dodger',   stat: 'queenlessGames',     tiers: [1, 10, 50, 200],
-    names: ['Queen Dodger', 'Untouched', 'She Never Finds You', 'Ghost'],
+    names: ['Not My Queen', 'Untouched', 'She Never Finds You', 'Ghost'],
     desc: 'Complete a whole game without ever taking the Queen of Spades.',
     crest: 'crest_veil',            title: 'title_queen_dodger' },
 
@@ -1376,7 +1371,6 @@ const COSMETICS = {
     { id: 'title_four_suit_master',  name: 'Four-Suit Master',    unlock: 'ach_four_suit' },
     { id: 'title_the_house',         name: 'The House',           unlock: 'ach_the_house' },
     { id: 'title_moon_chaser',       name: 'Moon Chaser',         unlock: 'ach_moon_chaser' },
-    { id: 'title_ace_collector',     name: 'Ace Collector',       unlock: 'ach_ace_collector' },
     { id: 'title_heartbreaker',      name: 'Heartbreaker',        unlock: 'ach_heartbreaker' },
     { id: 'title_strategist',        name: 'The Strategist',      unlock: 'ach_strategist' },
     { id: 'title_dealers_nemesis',   name: "Dealer's Nemesis",    unlock: 'ach_silent_dealer' },
@@ -1386,10 +1380,10 @@ const COSMETICS = {
     { id: 'title_blame_the_dealer',  name: 'Blame the Dealer',    unlock: 'ach_the_dealer' },
     { id: 'title_the_ascent',        name: 'The Ascendant',       unlock: 'ach_the_ascent' },
     { id: 'title_beyond_moon',       name: 'Beyond the Moon',     unlock: 'ach_beyond_moon' },
-    { id: 'title_the_slam',          name: 'The Slam',            unlock: 'ach_the_slam' },
-    { id: 'title_the_ledger',        name: 'The Ledger',          unlock: 'ach_ledger' },
+    { id: 'title_the_slam',          name: 'The Trickster',       unlock: 'ach_the_slam' },
+    { id: 'title_the_ledger',        name: 'The Godfather',       unlock: 'ach_ledger' },
     { id: 'title_clean_sheet',       name: 'Clean Sheet',         unlock: 'ach_clean_sheet' },
-    { id: 'title_queen_dodger',      name: 'The Queen Dodger',    unlock: 'ach_queen_dodger' },
+    { id: 'title_queen_dodger',      name: 'Not My Queen',        unlock: 'ach_queen_dodger' },
     { id: 'title_abyss',             name: 'Out of the Abyss',    unlock: 'ach_abyss' },
     { id: 'title_rock_bottom',       name: 'Rock Bottom',         unlock: 'ach_rock_bottom' },
     // rankTier is a SLUG, not a display name — tierReached compares

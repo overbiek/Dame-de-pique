@@ -2491,7 +2491,7 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    player cards instead. .friends-codebox (below) is the other compact
    variant of .codebox; this one is unrelated to it, purpose-built as a
    button rather than a static card since it's the click target. */
-.lobby-bar{display:flex;align-items:center;gap:10px;margin:10px 0;flex-wrap:wrap}
+.lobby-bar{display:flex;align-items:center;gap:10px;margin:6px 0;flex-wrap:wrap}
 .lobby-code-chip{
   display:flex;flex-direction:column;align-items:flex-start;gap:0;flex:0 0 auto;
   font:inherit;color:inherit;appearance:none;cursor:pointer;
@@ -2538,10 +2538,10 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    turn badge and note lines elsewhere in this file already follow — which
    is what keeps all 4 cards the same min-height without measuring
    anything in JS. */
-#l-slots{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+#l-slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
 .slot{
   position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;
-  gap:2px;padding:10px 8px 12px;border-radius:var(--r);min-height:180px;
+  gap:1px;padding:8px 8px 8px;border-radius:var(--r);min-height:0;
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
 }
 /* The box background IS the banner now — the exact same interior
@@ -2552,45 +2552,43 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   border:2px solid var(--rm-edge);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.20),inset 0 -1px 0 rgba(0,0,0,.30);
 }
-/* min-height in px, measured against the real .tag pill — not em: an
-   empty row and a real .tag rendered 16px vs 21px here, the same
-   "computed min-height doesn't match the real line box" drift this file
-   already warns about elsewhere (see the roster rail's .tbl-note note).
-   Concrete px against the tallest real content is what actually closes
-   it, not a cleverer formula. */
-.slot-top{width:100%;display:flex;align-items:center;justify-content:space-between;min-height:22px}
+/* Flatter cards: the tag pill inside this row is scoped down (below)
+   specifically so the row's own min-height can shrink with it — .tag is
+   shared with the leaderboard elsewhere and stays full-size there.
+   min-height stays in px, not em, for the same "computed min-height
+   doesn't match the real line box" reason as before — just a smaller
+   real measurement now (real .tag here is ~17px). */
+.slot-top{width:100%;display:flex;align-items:center;justify-content:space-between;min-height:17px}
+.slot-top .tag{padding:2px 6px;font-size:.56rem}
 .slot .dot{width:8px;height:8px;border-radius:50%;background:rgba(var(--ddp-ink-rgb),.20);flex:0 0 auto}
 .slot .dot.on{background:var(--ok);box-shadow:0 0 8px rgba(var(--ddp-mine-rgb),.6)}
 .slot .dot.bot{background:#6cb6ff;box-shadow:0 0 8px rgba(108,182,255,.5)}
 .slot-name{
-  margin-top:4px;font-size:.86rem;font-weight:600;color:var(--cream);
+  margin-top:2px;font-size:.86rem;font-weight:600;color:var(--cream);
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .slot[data-material] .slot-name{color:var(--rm-ink)}
-/* min-height in px here too, same reason as .slot-top above — an empty
-   title measured 7.6px against a real one's 12px under the em value. */
 .slot-title{
   font-size:.56rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--gold-lo);min-height:12px;max-width:100%;
+  color:var(--gold-lo);min-height:10px;max-width:100%;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .slot[data-material] .slot-title{color:var(--rm-ink);opacity:.8}
 /* The rank tier, plain text now — the ornate plaque widget (frame,
    ornaments, emblem) that used to render this is retired here since the
-   card itself IS the plaque; keeping both would double the same idea.
-   min-height in px, same reason as .slot-top/.slot-title: measured 8.6px
-   empty against 13px real. */
+   card itself IS the plaque; keeping both would double the same idea. */
 .slot-tier{
   font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--faint);min-height:13px;
+  color:var(--faint);min-height:11px;
 }
 .slot[data-material] .slot-tier{color:var(--rm-orn)}
 /* Fixed-height reserve for whichever ONE of {crests, AI toggle} a card
    has (see slotHTML's own note) — this is what keeps that height
    identical across all 4 cards regardless of which, if either, appears. */
-.slot-footer{min-height:30px;display:flex;align-items:center;justify-content:center;margin-top:4px}
-.slot-crests{display:flex;gap:5px}
-.slot-crest{width:22px;height:22px;flex:0 0 auto}
+.slot-footer{min-height:24px;display:flex;align-items:center;justify-content:center;margin-top:2px}
+.slot-crests{display:flex;gap:4px}
+.slot-crest{width:18px;height:18px;flex:0 0 auto}
+.slot .mini-btn{padding:4px 9px;font-size:.6rem}
 .tag{font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
   padding:3px 8px;border-radius:999px;flex:0 0 auto}
 .tag.you{background:rgba(var(--ddp-mine-rgb),.16);color:#8fe0be;border:1px solid rgba(var(--ddp-mine-rgb),.3)}

@@ -327,6 +327,9 @@ async function ensureSchema() {
   // than a missing value: it means "follow my rank automatically", which
   // is what filterEquipped resolves to the highest unlocked set.
   await pool.query(`ALTER TABLE player_cosmetics ADD COLUMN IF NOT EXISTS rank_set TEXT;`);
+  // Second crest slot, same story: added after the table first shipped,
+  // same validation and NULL-means-unequipped convention as `crest`.
+  await pool.query(`ALTER TABLE player_cosmetics ADD COLUMN IF NOT EXISTS crest2 TEXT;`);
 }
 
 function toPublic(row) {
@@ -988,7 +991,7 @@ async function getAchievementStats(accountId) {
 // queried by element.
 async function getCosmetics(accountId) {
   const { rows } = await pool.query(
-    `SELECT scene, card_front, crest, title, rank_set, seen_achievements
+    `SELECT scene, card_front, crest, crest2, title, rank_set, seen_achievements
      FROM player_cosmetics WHERE account_id = $1`,
     [accountId]
   );
@@ -997,6 +1000,9 @@ async function getCosmetics(accountId) {
     scene: (c && c.scene) || null,
     cardFront: (c && c.card_front) || null,
     crest: (c && c.crest) || null,
+    // Second, independent crest slot — same "" unequip / NULL storage
+    // convention as every other column here.
+    crest2: (c && c.crest2) || null,
     title: (c && c.title) || null,
     rankSet: (c && c.rank_set) || null,
     seen: c && c.seen_achievements ? c.seen_achievements.split(',').filter(Boolean) : [],
@@ -1007,21 +1013,22 @@ async function getCosmetics(accountId) {
 // impossible, so an explicit empty string is the unequip signal and is
 // stored as NULL. The caller (server.js) has already validated every ID
 // against what the account has actually unlocked.
-async function saveCosmetics(accountId, { scene, cardFront, crest, title, rankSet }) {
+async function saveCosmetics(accountId, { scene, cardFront, crest, crest2, title, rankSet }) {
   const norm = v => (v === undefined ? undefined : (v || null));
-  const s = norm(scene), cf = norm(cardFront), cr = norm(crest), t = norm(title), rs = norm(rankSet);
+  const s = norm(scene), cf = norm(cardFront), cr = norm(crest), cr2 = norm(crest2), t = norm(title), rs = norm(rankSet);
   await pool.query(
-    `INSERT INTO player_cosmetics (account_id, scene, card_front, crest, title, rank_set)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO player_cosmetics (account_id, scene, card_front, crest, crest2, title, rank_set)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT (account_id) DO UPDATE SET
-       scene = CASE WHEN $7 THEN $2 ELSE player_cosmetics.scene END,
-       card_front = CASE WHEN $8 THEN $3 ELSE player_cosmetics.card_front END,
-       crest = CASE WHEN $9 THEN $4 ELSE player_cosmetics.crest END,
-       title = CASE WHEN $10 THEN $5 ELSE player_cosmetics.title END,
-       rank_set = CASE WHEN $11 THEN $6 ELSE player_cosmetics.rank_set END,
+       scene = CASE WHEN $8 THEN $2 ELSE player_cosmetics.scene END,
+       card_front = CASE WHEN $9 THEN $3 ELSE player_cosmetics.card_front END,
+       crest = CASE WHEN $10 THEN $4 ELSE player_cosmetics.crest END,
+       crest2 = CASE WHEN $11 THEN $5 ELSE player_cosmetics.crest2 END,
+       title = CASE WHEN $12 THEN $6 ELSE player_cosmetics.title END,
+       rank_set = CASE WHEN $13 THEN $7 ELSE player_cosmetics.rank_set END,
        updated_at = now()`,
-    [accountId, s ?? null, cf ?? null, cr ?? null, t ?? null, rs ?? null,
-     s !== undefined, cf !== undefined, cr !== undefined, t !== undefined, rs !== undefined]
+    [accountId, s ?? null, cf ?? null, cr ?? null, cr2 ?? null, t ?? null, rs ?? null,
+     s !== undefined, cf !== undefined, cr !== undefined, cr2 !== undefined, t !== undefined, rs !== undefined]
   );
   return getCosmetics(accountId);
 }

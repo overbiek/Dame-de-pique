@@ -1516,6 +1516,25 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 }
 .cos-thumb.crest .crest-art{width:42px;height:42px}
 
+/* Which of the two crest slots (left/right of the avatar) the grid below
+   is currently editing. Deliberately its own small class, not a reuse of
+   .acct-toptab — that class is targeted by switchAccountTab's own
+   querySelectorAll('#s-personal .acct-toptab'), and this toggle lives
+   nested inside that same screen, so sharing the class would have made
+   switching Profile/Achievements/Friends also toggle .active here. */
+.crest-slot-toggle{display:flex;gap:6px;margin:0 0 12px}
+/* Same idle/active colours as .cos-tab and .acct-toptab (--faint idle,
+   --gold-hi-on-brass-wash active), so it needs the identical Clair
+   corrections those two already carry — added to their existing
+   selector lists at the end of the stylesheet rather than re-measured,
+   since the computed colours are byte-identical. */
+.crest-slot-btn{
+  flex:1;padding:7px 8px;border:1px solid rgba(var(--ddp-brass-rgb),.28);
+  background:transparent;color:var(--faint);font:600 .74rem 'DM Sans',sans-serif;
+  border-radius:9px;cursor:pointer;transition:background .16s,color .16s;
+}
+.crest-slot-btn.active{background:rgba(var(--ddp-brass-rgb),.18);color:var(--gold-hi);border-color:rgba(var(--ddp-brass-rgb),.5)}
+
 /* ── hero additions: title line + equipped crest ── */
 /* Reserves its line even when empty (visibility, not display) — the
    same constant-space rule the .mystrip badge follows, so equipping or
@@ -1551,12 +1570,17 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
    un-themed materials, and on paper/gold it all but disappeared. */
 .rank-plate[data-material] .hero-title{color:var(--rm-ink);opacity:.78}
 .hero-title:empty::after{content:'\00a0'}
+/* Two independent crest slots flank the avatar now, not one — same
+   badge chrome, mirrored corners. Bumped 28px->32px ("slightly bigger")
+   at the same time, since both were being touched together anyway. */
 .hero-crest{
-  position:absolute;right:-4px;bottom:-4px;width:28px;height:28px;
+  position:absolute;bottom:-5px;width:32px;height:32px;
   border-radius:50%;display:none;place-items:center;padding:3px;
   background:rgba(var(--ddp-bg-rgb),.9);border:1.5px solid rgba(var(--ddp-brass-rgb),.55);
   box-shadow:0 2px 8px rgba(var(--ddp-scrim-rgb),.45);
 }
+.hero-crest-right{right:-5px}
+.hero-crest-left{left:-5px}
 .hero-crest.on{display:grid}
 .hero-avatar-wrap{position:relative;display:inline-block}
 
@@ -3994,7 +4018,8 @@ html.landscape-mode #tutorial-callout{
    families: .acct-toptab (Profile/Achievements/Friends) and .acct-tab
    (login/signup, and Casual/Ranked on the statistics screen). */
 [data-theme="clair"] .acct-tab.active,
-[data-theme="clair"] .acct-toptab.active{color:var(--ddp-ink)}
+[data-theme="clair"] .acct-toptab.active,
+[data-theme="clair"] .crest-slot-btn.active{color:var(--ddp-ink)}
 /* The mockup's tagline is opacity .7, which works where --muted is a pale
    mint on dark felt (Bordeaux 5.11, Émeraude 3.83, Marquee 4.89) but not
    on Clair, where --muted is a dark ink on pale felt and .7 washes 9px
@@ -4029,7 +4054,8 @@ html.landscape-mode #tutorial-callout{
 [data-theme="clair"] .cos-req,
 [data-theme="clair"] .title-opt .to-req,
 [data-theme="clair"] .sec-count,
-[data-theme="clair"] .cos-tab{color:rgba(var(--ddp-ink-rgb),.72)}
+[data-theme="clair"] .cos-tab,
+[data-theme="clair"] .crest-slot-btn{color:rgba(var(--ddp-ink-rgb),.72)}
 
 /* Rank nameplate on Clair: the OUTER RING, not the plate.
    The eight materials are deliberately un-themed (a rank is the same rank
@@ -4828,7 +4854,8 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
              class and click handler so the picker is unaffected. -->
         <div class="hero-avatar-wrap">
           <div class="avatar-preview" id="pv-avatar" onclick="toggleAvatarPicker()">👤</div>
-          <div class="hero-crest crest-art" id="pv-crest"></div>
+          <div class="hero-crest hero-crest-left crest-art" id="pv-crest-left"></div>
+          <div class="hero-crest hero-crest-right crest-art" id="pv-crest"></div>
         </div>
         <!-- RANK NAMEPLATE — a decorative layer BEHIND the live name and
              title, which is why both live inside it (see .hero-plate in
@@ -5243,7 +5270,8 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
       <div class="profile-hero fp-hero">
         <div class="hero-avatar-wrap">
           <div class="avatar-preview" id="fp-avatar">👤</div>
-          <div class="hero-crest crest-art" id="fp-crest"></div>
+          <div class="hero-crest hero-crest-left crest-art" id="fp-crest-left"></div>
+          <div class="hero-crest hero-crest-right crest-art" id="fp-crest"></div>
           <span class="friend-dot fp-dot" id="fp-dot"></span>
         </div>
         <div class="hero-plate rank-plate lg" id="fp-plate">
@@ -6269,8 +6297,10 @@ function goPersonal(){
   // Reset the customization strip to Table theme for the same reason
   // switchAccountTab('profile') is called above — a stale sub-tab left
   // behind a return visit is confusing, and Table theme is the one tab
-  // that works for everyone.
+  // that works for everyone. Same logic for which crest slot the picker
+  // is aimed at.
   switchCosTab('theme');
+  activeCrestSlot='crest';
   if(account){ renderAccountRank(null); socket.emit('getRankedProfile',{token:accountToken}); }
   else renderAccountRank();
   // Re-requested on every visit rather than cached for the session:
@@ -6816,6 +6846,7 @@ let cosState=null;
 let cosTab='theme';
 let cosPending=false;      // a request is in flight (drives the loading line)
 let unlockQueue=[];        // achievements waiting to be celebrated, one at a time
+let activeCrestSlot='crest';   // which of the two crest slots the picker is editing — 'crest' (right) or 'crest2' (left)
 
 function requestCosmetics(){
   if(!account||!accountToken) return;
@@ -6831,11 +6862,19 @@ function switchCosTab(tab){
     p.classList.toggle('active',p.id==='cos-panel-'+tab));
 }
 
+function switchCrestSlot(slot){
+  activeCrestSlot=slot;
+  renderCosmeticPanels();
+}
+
 // Locked items are rendered, not hidden: seeing what a scene looks like
 // and what earns it is the whole point of a collection screen. The lock
 // state is carried by a glyph and a text line as well as the dimming,
 // per the brief's "never colour alone".
-function cosItemHTML(kind,item,thumbHTML,equippedId){
+// `slot` is only passed for kind==='crest' (see equipCosmetic) — it
+// threads which of the two crest slots this grid is currently editing
+// through to the click handler, so tapping an item equips it there.
+function cosItemHTML(kind,item,thumbHTML,equippedId,slot){
   const equipped=item.id===equippedId;
   const cls=['cos-item','deco-box',item.unlocked?'':'locked',equipped?'equipped':''].join(' ');
   const flag=equipped?'✓':(item.unlocked?'':'🔒');
@@ -6861,7 +6900,7 @@ function cosItemHTML(kind,item,thumbHTML,equippedId){
         // for a shop-exclusive item, since "Shop exclusive" already said it.
         + (item.price&&!item.unlocked&&item.unlockName
             ? `<div class="cos-price">${creditChipHTML(12)}${fmtCredits(item.price)} in the Shop</div>` : '');
-  const click=item.unlocked?` onclick="equipCosmetic('${kind}','${item.id}')"`:'';
+  const click=item.unlocked?` onclick="equipCosmetic('${kind}','${item.id}'${slot?`,'${slot}'`:''})"`:'';
   // Scene thumbnails carry .scene-art + data-scene, which is the SAME
   // pair the full-screen #scene-layer uses — every stop in those rules is
   // a percentage precisely so one definition can serve a 52px preview and
@@ -6942,13 +6981,22 @@ function renderCosmeticPanels(){
 
   // Crests and titles both allow "none": an unequipped crest is simply
   // nothing shown, which is a real choice, unlike a missing background.
+  // Two independent slots (left/right of the avatar) share this ONE grid
+  // rather than being duplicated — the toggle picks which slot a tap
+  // writes to, and the checkmark/requirement state below follows whatever
+  // that slot currently holds.
+  const crestEquippedId=equipped[activeCrestSlot]||'';
   panels.crest.innerHTML=
     secLabel('Player crests',catalog.crests)+
-    `<div class="cos-grid">`+
-    cosItemHTML('crest',{id:'',name:'No crest',unlocked:true},'',equipped.crest||'')+
-    catalog.crests.map(c=>cosItemHTML('crest',c,crestHTML(c.id,c.level||1),equipped.crest||'')).join('')+
+    `<div class="crest-slot-toggle">`+
+    `<button class="crest-slot-btn${activeCrestSlot==='crest2'?' active':''}" onclick="switchCrestSlot('crest2')">Left</button>`+
+    `<button class="crest-slot-btn${activeCrestSlot==='crest'?' active':''}" onclick="switchCrestSlot('crest')">Right</button>`+
     `</div>`+
-    `<p class="pick-hint">Your crest sits on your avatar and is earned by achievements.</p>`;
+    `<div class="cos-grid">`+
+    cosItemHTML('crest',{id:'',name:'No crest',unlocked:true},'',crestEquippedId,activeCrestSlot)+
+    catalog.crests.map(c=>cosItemHTML('crest',c,crestHTML(c.id,c.level||1),crestEquippedId,activeCrestSlot)).join('')+
+    `</div>`+
+    `<p class="pick-hint">Crests sit on either side of your avatar and are earned by achievements.</p>`;
 
   panels.title.innerHTML=
     secLabel('Player titles',catalog.titles)+
@@ -7004,18 +7052,21 @@ function titleOptHTML(t,equippedId){
 // actually persists it and is free to disagree, at which point the next
 // render corrects the picker. Crest and title have nothing to preview
 // until the response lands, so they just wait.
-function equipCosmetic(kind,id){
+// `slot` is only meaningful for kind==='crest', where it picks which of
+// the two equip fields ('crest' or 'crest2') this tap writes to — every
+// other kind ignores it entirely.
+function equipCosmetic(kind,id,slot){
   if(!account||!cosState) return;
   SFX.play('click');
   if(kind==='scene'){ applyScene(id); cosState.equipped.scene=id; }
   if(kind==='cardFront'){ applyCardFront(id); cosState.equipped.cardFront=id; }
-  if(kind==='crest'){ cosState.equipped.crest=id||null; }
+  if(kind==='crest'){ cosState.equipped[slot||'crest']=id||null; }
   if(kind==='title'){ cosState.equipped.title=id||null; }
   if(kind==='rankSet'){ cosState.equipped.rankSet=id||null; }
   renderCosmeticPanels();
   renderHeroCosmetics();
   const payload={token:accountToken};
-  payload[kind]=id;
+  payload[kind==='crest'?(slot||'crest'):kind]=id;
   socket.emit('saveCosmetics',payload);
 }
 
@@ -7078,8 +7129,24 @@ function renderAchievements(){
   }).join('');
 }
 
-// The hero's title line and crest badge. Both read the equipped set, so
-// they show the same thing another player sees in the lobby.
+// The equipped crest's ladder LEVEL isn't in `equipped` itself (just the
+// id, which doesn't change between tiers) — looked up from the catalog
+// the picker already renders, matched by crest id. Shared by both hero
+// slots (and would be by a friend's own hero, if it read its own
+// catalog — it doesn't, see the friendProfileOk handler's own lookup
+// off `d.crests` instead).
+function catalogCrestLevel(catalog,crestId){
+  if(!crestId) return 1;
+  return (catalog.crests.find(x=>x.id===crestId)||{}).level||1;
+}
+function renderCrestBadge(el,crestId,level){
+  if(!el) return;
+  el.innerHTML=crestId?crestHTML(crestId,level||1):'';
+  el.classList.toggle('on',!!crestId);
+}
+
+// The hero's title line and two crest badges. All read the equipped set,
+// so they show the same thing another player sees.
 function renderHeroCosmetics(){
   const t=$('pv-title'),c=$('pv-crest');
   if(!t||!c) return;
@@ -7089,12 +7156,9 @@ function renderHeroCosmetics(){
     : '';
   t.textContent=account?titleName:'';
   const crestId=account&&eq?eq.crest:null;
-  // The equipped crest's ladder LEVEL isn't in `equipped` itself (just the
-  // id, which doesn't change between tiers) — it's looked up from the same
-  // catalog the picker already renders, matched by crest id.
-  const crestLevel=crestId?((cosState.catalog.crests.find(x=>x.id===crestId)||{}).level||1):1;
-  c.innerHTML=crestId?crestHTML(crestId,crestLevel):'';
-  c.classList.toggle('on',!!crestId);
+  const crest2Id=account&&eq?eq.crest2:null;
+  renderCrestBadge(c,crestId,catalogCrestLevel(cosState.catalog,crestId));
+  renderCrestBadge($('pv-crest-left'),crest2Id,catalogCrestLevel(cosState.catalog,crest2Id));
 
   // Rank set: the frame is applied to the EXISTING avatar well (border +
   // glow only, no geometry), and the nameplate is the plaque BEHIND the
@@ -7488,12 +7552,12 @@ socket.on('friendProfileOk',d=>{
   $('fp-scene').innerHTML=scene?sceneArtImg(scene):'';
 
   setAvatarInto($('fp-avatar'),d.avatar,d.nickname||'?');
-  // d.equipped only carries the crest id (unchanged across tiers) — the
+  // d.equipped only carries crest ids (unchanged across tiers) — the
   // ladder level comes from d.crests, the same per-achievement list the
   // gallery below renders, matched by crest id.
-  const fpCrestLevel=d.equipped.crest?((d.crests||[]).find(x=>x.crest===d.equipped.crest)||{}).level||1:1;
-  $('fp-crest').innerHTML=d.equipped.crest?crestHTML(d.equipped.crest,fpCrestLevel):'';
-  $('fp-crest').classList.toggle('on',!!d.equipped.crest);
+  const friendCrestLevel=crestId=>crestId?((d.crests||[]).find(x=>x.crest===crestId)||{}).level||1:1;
+  renderCrestBadge($('fp-crest'),d.equipped.crest,friendCrestLevel(d.equipped.crest));
+  renderCrestBadge($('fp-crest-left'),d.equipped.crest2,friendCrestLevel(d.equipped.crest2));
   $('fp-dot').classList.toggle('on',!!d.online);
 
   const setId=d.equipped.rankSet;

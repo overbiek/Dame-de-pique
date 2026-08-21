@@ -1624,6 +1624,10 @@ function filterEquipped(equipped, catalog) {
     scene: ok(catalog.scenes, equipped.scene) || 'scene_velvet_room',
     cardFront: ok(catalog.cardFronts, equipped.cardFront) || 'cardfront_standard',
     crest: ok(catalog.crests, equipped.crest),
+    // Second, independent crest slot — same validation as the first, and
+    // deliberately allowed to hold the SAME id as `crest` (no dedupe):
+    // nothing about wearing one achievement's crest twice is invalid.
+    crest2: ok(catalog.crests, equipped.crest2),
     title: ok(catalog.titles, equipped.title),
     rankSet: ok(catalog.rankSets, equipped.rankSet) || (highestRank ? highestRank.id : null),
   };
@@ -2903,7 +2907,7 @@ io.on('connection', (socket) => {
   // than rejected outright, so a partially-stale client (one that hasn't
   // reloaded since a cosmetic was renamed) still saves the fields it got
   // right instead of failing the whole request.
-  socket.on('saveCosmetics', async ({ token, scene, cardFront, crest, title, rankSet }) => {
+  socket.on('saveCosmetics', async ({ token, scene, cardFront, crest, crest2, title, rankSet }) => {
     if (!DB_ENABLED || !token) return;
     try {
       const account = await db.findAccountByToken(token);
@@ -2919,6 +2923,7 @@ io.on('connection', (socket) => {
         scene: pick(catalog.scenes, scene),
         cardFront: pick(catalog.cardFronts, cardFront),
         crest: pick(catalog.crests, crest),
+        crest2: pick(catalog.crests, crest2),
         title: pick(catalog.titles, title),
         rankSet: pick(catalog.rankSets, rankSet),
       });

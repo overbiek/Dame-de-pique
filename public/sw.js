@@ -9,7 +9,18 @@
 // v7: manifest display standalone -> fullscreen (and background_color to
 // the Marquee splash edge). Bumping is what makes the new manifest reach
 // an already-installed copy at all — see the note above.
-const CACHE = 'ddp-v7';
+// v8: the SAME trap, but for a runtime-cached (not ASSETS-listed) file —
+// the "keep the ring" avatar re-crops overwrote charmer.webp etc. in
+// place under their EXISTING filenames. The fetch handler below is
+// cache-first with no revalidation, so any browser that had already
+// loaded the old bytes under that exact URL just kept serving them
+// forever; the new file on the server was never even requested. Bumping
+// CACHE deletes the whole old cache namespace (activate handler, below),
+// which is what actually forces a re-fetch — editing the image files
+// alone changes nothing this service worker will notice. Any future
+// in-place overwrite of a runtime-cached asset (avatars, scenes, card
+// fronts, rank art) needs the same bump, not just an ASSETS change.
+const CACHE = 'ddp-v8';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
                 '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 

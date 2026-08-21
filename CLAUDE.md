@@ -1165,6 +1165,19 @@ before pushing.
   installed will very likely need to uninstall and reinstall
   (Add to Home Screen again) to actually pick up an orientation change,
   not just reload/relaunch it
+- **The SAME trap applies to any runtime-cached (non-`ASSETS`) file
+  overwritten in place under its existing filename** — avatars, scenes,
+  card fronts, rank art. This bit us for real a second time: re-cropping
+  `charmer.webp` etc. in place (same filenames, new bytes) shipped fine
+  on the server, but every browser that had already fetched the old
+  avatar under that exact URL kept serving it from cache forever — the
+  fetch handler is unconditionally cache-first with no revalidation, so
+  the new file was never even requested. A player reported the change
+  "not applying" when it had; **bump `CACHE` (v8)** whenever an
+  in-place asset overwrite needs to actually reach returning players —
+  it deletes the whole old cache namespace in `activate`, which is what
+  forces the re-fetch. Editing the image bytes alone changes nothing
+  this service worker will notice, exactly like the manifest case above.
 
 ## Accounts & stats (needs DATABASE_URL — Railway Postgres plugin)
 - Username/password, bcrypt-hashed, session tokens

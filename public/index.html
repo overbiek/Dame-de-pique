@@ -1086,8 +1086,12 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
   max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .rank-plate[data-material] .fp-name{color:var(--rm-ink)}
-.fp-rankline{margin-top:8px;font-size:.78rem;color:var(--gold-hi);font-family:var(--font-num)}
-.fp-rankline .faint{color:var(--faint);font-family:'DM Sans',sans-serif}
+/* Reuses .rank-med/.rank-emblem/.rank-lbl (My Account's own rank
+   medallion — bare selectors, not scoped to #s-personal) rather than
+   the plain MMR text this used to show: a friend's exact number was
+   pulled per the user's own request, the badge symbol is what stands
+   in for it now. */
+.fp-rankmed{margin-top:10px}
 .fp-pad{padding:0 16px 16px}
 .fp-tabbar{margin-bottom:12px}
 .fp-crest-grid{
@@ -5222,7 +5226,10 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
             <div class="hero-title" id="fp-title"></div>
           </span>
         </div>
-        <div class="fp-rankline" id="fp-rankline"></div>
+        <div class="rank-med fp-rankmed" id="fp-rankmed">
+          <div class="rank-emblem" id="fp-rank-emblem"></div>
+          <div class="rank-lbl" id="fp-rank-lbl"></div>
+        </div>
       </div>
 
       <div class="fp-pad">
@@ -7361,6 +7368,21 @@ function friendCasualStatsHTML(s){
     ['Longest win streak',s.winStreakBest,''],
   ]);
 }
+// No dedicated placement-match badge exists in public/badges/ (that
+// folder is 22 rank-tier medallions, bronze-1..legend, nothing for "still
+// placing") — this is a small self-drawn stand-in rather than blank
+// space, in the same inline-SVG-from-CSS-vars style as creditChipSVG and
+// the achievement crests, so it re-tints with the active theme instead
+// of being frozen art. Dashed ring echoes crest_dealer_button's dash
+// pattern, the closest existing "in progress, not settled yet" motif.
+function placementBadgeSVG(played){
+  return `<svg viewBox="0 0 48 48" role="img" aria-hidden="true">`+
+    `<circle cx="24" cy="24" r="18" fill="rgba(var(--ddp-scrim-rgb),.3)"/>`+
+    `<circle cx="24" cy="24" r="18" fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-dasharray="4.5 3.5"/>`+
+    `<text x="24" y="25" text-anchor="middle" dominant-baseline="central" `+
+    `font-family="var(--font-num)" font-size="12" font-weight="700" fill="var(--gold-hi)">${played}/5</text>`+
+    `</svg>`;
+}
 function friendRankedStatsHTML(s){
   return fpStatCardsHTML([
     ['Games played',s.gamesPlayed,''],
@@ -7407,11 +7429,21 @@ socket.on('friendProfileOk',d=>{
 
   $('fp-name').textContent=d.nickname||'Player';
   $('fp-title').textContent=d.titleName||'';
-  $('fp-rankline').innerHTML=d.rank
-    ? `${esc(d.rank.label)} <span class="faint">· ${d.rank.mmr} MMR</span>`
-    : (d.isPlacement
-        ?`<span class="faint">Placement · ${d.placementGamesPlayed}/5 games</span>`
-        :`<span class="faint">Not ranked</span>`);
+
+  // Badge symbol only — no MMR number shown here, on request. Same
+  // isPlacement/rank branching renderAccountRank() already uses for the
+  // logged-in player's own medallion, just pointed at the friend's data.
+  const remb=$('fp-rank-emblem'),rlbl=$('fp-rank-lbl');
+  if(d.isPlacement){
+    remb.innerHTML=placementBadgeSVG(d.placementGamesPlayed);
+    rlbl.textContent=`Placement · ${d.placementGamesPlayed}/5`;
+  }else if(d.rank){
+    remb.innerHTML=badgeImg(d.rank,46);
+    rlbl.textContent=d.rank.label;
+  }else{
+    remb.innerHTML='';
+    rlbl.textContent='Not ranked';
+  }
 
   if(d.crests&&d.crests.length){
     $('fp-crest-empty').style.display='none';

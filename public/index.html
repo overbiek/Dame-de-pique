@@ -3742,6 +3742,16 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
    tutorialCommitPlay(), which hides it the instant a forced card is
    played rather than leaving stale instructions on screen during the
    scripted AI response) — display can't transition. */
+/* Pop in/out rather than a flat opacity crossfade. The `visibility 0s
+   linear .28s` on the base (hidden) rule is load-bearing, not decoration:
+   visibility isn't itself animatable, so without an explicit delay it
+   snaps to `hidden` the INSTANT the .show class is removed — which
+   hides the box from rendering before the opacity/transform fade has
+   any chance to paint, i.e. the "smoother going-away" the box was
+   missing. Delaying it to the end of the fade is what lets the hide
+   direction actually be seen. The .show rule below overrides that same
+   property with a 0-delay so appearing stays instant-visible + fade-in,
+   only the hide direction needs the delay. */
 #tutorial-callout{
   position:fixed;left:8px;top:calc(env(safe-area-inset-top) + 8px);
   z-index:510;width:min(320px,calc(100vw - 16px));
@@ -3750,9 +3760,23 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
   padding:14px 16px;
   box-shadow:0 10px 30px rgba(var(--ddp-scrim-rgb),.4);
   opacity:0;visibility:hidden;pointer-events:none;
-  transition:opacity .25s ease;
+  transform:scale(.94) translateY(-6px);
+  transition:opacity .28s cubic-bezier(.22,1,.36,1),
+             transform .28s cubic-bezier(.22,1,.36,1),
+             visibility 0s linear .28s;
 }
-#tutorial-callout.show{opacity:1;visibility:visible;pointer-events:auto}
+#tutorial-callout.show{
+  opacity:1;visibility:visible;pointer-events:auto;
+  transform:scale(1) translateY(0);
+  transition:opacity .28s cubic-bezier(.22,1,.36,1),
+             transform .28s cubic-bezier(.22,1,.36,1),
+             visibility 0s linear 0s;
+}
+@media (prefers-reduced-motion:reduce){
+  #tutorial-callout,#tutorial-callout.show{
+    transform:none;transition:opacity .15s linear,visibility 0s linear;
+  }
+}
 /* opts.side==='right' — see tutorialCallout(). Its `top` is set inline
    from .rt-stack's measured bottom, so only the horizontal edge flips
    here. */
@@ -8922,17 +8946,40 @@ function tutA_welcome(){
   );
 }
 
+// Four short stops, one per control in the info panel, rather than one
+// callout naming all of them at once — each gets its own ring (via
+// tutorialSpotlight's liftSel) so the highlight and the sentence
+// describing it always agree, instead of asking the player to match
+// several sentences to several rings simultaneously.
 function tutA_table(){
   renderPass(tutG);
-  // Scrim on the whole info panel, plus explicit rings on the two
-  // controls the text actually names (round badge and the last-trick
-  // eye) — see tutorialSpotlight's liftSel for why the extras can't
-  // simply be additional scrim targets.
-  tutorialSpotlight('.rt-stack .corner-rt',
-                    '.rt-stack .tb-badge:not(.pass), #p-lt-btn');
+  tutorialSpotlight('.rt-stack .corner-rt','.rt-stack .tb-badge:not(.pass)');
   tutorialCallout(
-    `<b>Round 1 of 16.</b> That badge shows the round — and next to it, `+
-    `<b>👁</b> lets you hold to peek at the last trick once one exists. `+
+    `<b>Round 1 of 16.</b> This badge tracks which round you're on.`,
+    {next:tutA_tablePassDir}
+  );
+}
+function tutA_tablePassDir(){
+  tutorialSpotlight('.rt-stack .corner-rt','.rt-stack .tb-badge.pass');
+  tutorialCallout(
+    `Right next to it, a letter shows which way you're passing this round — `+
+    `<b>L</b>eft, <b>R</b>ight, acr<b>O</b>ss, or <b>K</b>eep (no passing at `+
+    `all). It rotates every round in that order.`,
+    {next:tutA_tableRules}
+  );
+}
+function tutA_tableRules(){
+  tutorialSpotlight('.rt-stack .corner-rt','.rt-stack .tb-round.info');
+  tutorialCallout(
+    `<b>📖</b> opens the full rulebook any time you need to double-check `+
+    `something mid-game.`,
+    {next:tutA_tableEye}
+  );
+}
+function tutA_tableEye(){
+  tutorialSpotlight('.rt-stack .corner-rt','#p-lt-btn');
+  tutorialCallout(
+    `And <b>👁</b> lets you hold to peek at the last trick, once one exists. `+
     `The <b>D</b> marker on an avatar shows who's dealing.`,
     {next:tutA_handPass}
   );
@@ -8946,10 +8993,14 @@ function tutA_table(){
 // .sel class on those same DOM nodes directly rather than re-rendering
 // the hand, so the highlight survives every tap without needing
 // re-application the way the spotlight ring does after a table rebuild.
-function tutorialHighlightCards(cards){
+// `containerSel` defaults to the pass screen's hand (#p-hand) since
+// that's every pre-existing caller; the trick-1 received-cards step is
+// the first one on the PLAY screen and passes '#g-hand' explicitly.
+function tutorialHighlightCards(cards,containerSel){
   document.querySelectorAll('.tut-forced').forEach(el=>el.classList.remove('tut-forced'));
+  const base=containerSel||'#p-hand';
   cards.forEach(c=>{
-    const el=document.querySelector(`#p-hand .card[data-r="${c.rank}"][data-s="${c.suit}"]`);
+    const el=document.querySelector(`${base} .card[data-r="${c.rank}"][data-s="${c.suit}"]`);
     if(el) el.classList.add('tut-forced');
   });
 }
@@ -8965,8 +9016,14 @@ function tutA_handPass(){
   tutorialHighlightCards(TUT_PASS_AWAY);
   tutorialSpotlight('#p-hand');
   tutorialCallout(
-    `This is your hand — each player has 13 cards. <b>Click to select 2 `+
-    `cards to pass on</b> — in this case, the highlighted ones.`
+    `This is your hand — each player gets 13 cards. Before play starts, `+
+    `everyone passes 2 cards away — it's your one chance to offload the `+
+    `cards most likely to hurt you, since hearts and the <b>Q♠</b> cost `+
+    `you points once the round is underway. Notice you're already down `+
+    `to a single spade, the <b>Q♠</b> herself — she can't be passed this `+
+    `round, so you'll have to work carefully to get rid of her once spades `+
+    `come up. <b>Click to select 2 cards to pass on</b> — in this case, the `+
+    `highlighted ones.`
   );
   tutAwaiting='passConfirm';
 }
@@ -8983,8 +9040,8 @@ function tutorialCommitPass(){
   renderPass(tutG);
   tutorialSpotlight(null);
   tutorialCallout(
-    `Hearts and the <b>Q♠</b> are liabilities once play starts — passing `+
-    `your worst ones on early, like you just did, is almost always worth it.`,
+    `Nicely done — that's exactly the kind of pass you want to make early. `+
+    `Now let's see what came back to you.`,
     {next:tutA_trick1}
   );
 }
@@ -8995,23 +9052,39 @@ function tutorialCommitPass(){
 // received in the same breath as the lead instruction. Fewer stops,
 // and it's what lets the callout end on the literal drag instruction
 // rather than a "Next" tap that doesn't lead anywhere actionable yet.
+// Split into two stops rather than one combined callout: first the
+// received cards get their own highlight and sentence, then the Ace
+// gets its own forced-play highlight and instruction — matching the
+// same "one ring, one sentence" approach the info-panel walkthrough
+// above uses, instead of asking the player to parse both at once.
 function tutA_trick1(){
   tutG.myReceived=TUT_RECEIVED.slice();
   tutG.myHand.push(...TUT_RECEIVED);
   tutG.phase='play';
   tutG.currentTrick=[];
   tutG.trickLeader=0; tutG.trickNum=1;
+  tutG.legalCards=[];
+  renderPlay(tutG);
+  tutorialHighlightCards(TUT_RECEIVED,'#g-hand');
+  tutorialSpotlight('#g-hand');
+  tutorialCallout(
+    `Everyone passes at once, so you got 2 back too — the `+
+    `<b>${esc(TUT_RECEIVED.map(c=>c.rank+c.suit).join(' and '))}</b>, highlighted `+
+    `here in your hand.`,
+    {next:tutA_trick1Lead}
+  );
+}
+function tutA_trick1Lead(){
+  tutorialHighlightCards([]);
   tutG.legalCards=[lc('A','♣')];
   renderPlay(tutG);
   tutorialSpotlight('#g-hand');
   // side:'right' — the default top-left corner sits directly over the
   // .mid drop target this step is asking the player to drag INTO.
   tutorialCallout(
-    `Everyone passes at once, so you got 2 back too — the `+
-    `<b>${esc(TUT_RECEIVED.map(c=>c.rank+c.suit).join(' and '))}</b>. Trick 1 always `+
-    `opens the round, and the opening card can never be a heart or the Q♠. `+
-    `<b>Drag your A♣ into the playing field to lead</b> — or just `+
-    `<b>double-tap it</b>, whichever you prefer.`,
+    `Trick 1 always opens the round, and the opening card can never be a `+
+    `heart or the Q♠. <b>Drag your A♣ into the playing field to lead</b> — `+
+    `or just <b>double-tap it</b>, whichever you prefer.`,
     {side:'right'}
   );
   tutAwaiting={type:'play',rank:'A',suit:'♣',after:tutA_trick1Resolve};
@@ -9157,7 +9230,8 @@ function tutA_trick3(){
   // appeared on the following tap. Seat→name mapping is TUT_NAMES: seat 1
   // is "Computer 2", seat 2 is "Computer 3", seat 3 is "Computer 4".
   tutorialCallout(
-    `Here comes the trick that matters most — Computer 2 leads this one.`,
+    `Now pay close attention to this trick — it's the one that matters most. `+
+    `Computer 2 leads.`,
     {next:tutA_trick3b,side:'right'}
   );
 }
@@ -9198,7 +9272,7 @@ function tutA_trick3Resolve(){
       `Your Q♠ was the highest spade, so you take the trick — and the Queen `+
       `herself. <b>+10 for the trick, −26 for the Queen of Spades: −16 net.</b> `+
       `This is the single biggest hit in the game, and now you've felt it.`,
-      {next:tutA_trick4}
+      {next:tutA_trick4,side:'right'}
     );
   });
 }
@@ -9225,10 +9299,20 @@ function tutA_trick4Resolve(){
         `in this case. Your 9♣ was still the highest club, so you take the trick `+
         `<i>and</i> that heart: <b>+10 for the trick, −4 for the 4♥: +6 net.</b> `+
         `Compare that to the Queen — hearts sting, but nothing like she does.`,
-        {next:tutA_roundSummary}
+        {next:tutA_trick4Note,side:'right'}
       );
     });
   });
+}
+function tutA_trick4Note(){
+  tutorialSpotlight('.mid');
+  tutorialCallout(
+    `Don't get too comfortable, though — a trick can carry more than one `+
+    `small heart. Two or three low hearts stacked in the same trick can `+
+    `easily outweigh the +10 you get for winning it, so count what's `+
+    `already fallen before deciding a trick is safe to take.`,
+    {next:tutA_roundSummary,side:'right'}
+  );
 }
 
 function tutA_roundSummary(){
@@ -9238,22 +9322,35 @@ function tutA_roundSummary(){
   // otherwise.
   tutG.history=[{round:1,deltas:[tutG.players[0].score,tutG.players[1].score,tutG.players[2].score,tutG.players[3].score],moon:-1}];
   renderSummary(tutG);
-  tutorialSpotlight('#r-next');
+  // tutAwaiting is set once, here, and read by tutorialAfterRoundSummary()
+  // — both stops below share it, so the real Continue button (bound to
+  // confirmRoundClick()) works throughout this two-step explanation, not
+  // just after the second callout appears.
+  tutAwaiting='roundSummary';
+  tutorialSpotlight('.sumwrap');
+  tutorialCallout(
+    `We skipped ahead — a real round plays all 13 tricks before this screen `+
+    `appears. This is the scoresheet: <b>each row is a player</b>, each `+
+    `column is a round, and the right-most column is their running total.`,
+    {next:tutA_roundSummaryConfirm}
+  );
+}
+function tutA_roundSummaryConfirm(){
   // "Got it" only dismisses the callout AND its spotlight — it does not
   // advance. The spotlight's scrim dims the scoresheet, which is the one
   // thing worth reading on this screen, so the player needs a way to
   // clear the overlay and actually look at it before committing. It
-  // deliberately leaves tutAwaiting on 'roundSummary', so the real
-  // Continue button still drives the step forward whenever they're ready.
+  // deliberately leaves tutAwaiting on 'roundSummary' (set by tutA_roundSummary
+  // above), so the real Continue button still drives the step forward
+  // whenever they're ready.
+  tutorialSpotlight('#r-next');
   tutorialCallout(
-    `We skipped ahead — a real round plays all 13 tricks before this screen `+
-    `appears. Every seat has to confirm here before the game moves on, so one `+
+    `Every seat has to confirm here before the game moves on, so one `+
     `AFK player can't hold the table hostage: after <b>20 seconds</b> it `+
     `advances on its own. <b>Got it</b> to read your scores, then `+
     `<b>Continue</b> to finish up.`,
     {next:tutorialHideCallout,nextLabel:'Got it'}
   );
-  tutAwaiting='roundSummary';
 }
 function tutorialAfterRoundSummary(){
   if(tutAwaiting!=='roundSummary')return;

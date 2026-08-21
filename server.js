@@ -1244,7 +1244,7 @@ const ACHIEVEMENTS = [
   // tricks. So it is a strict subset and the rarest thing in the game.
   // Measured as "every trick PLAYED", because resolveTrick ends the hand
   // the moment the moon locks and the remaining tricks are never dealt.
-  { id: 'ach_the_slam',       stat: 'slams',              tiers: [1, 3, 10, 25],
+  { id: 'ach_the_slam',       stat: 'slams',              tiers: [1, 10, 50, 100],
     names: ['The Trickster', 'Double Slam', 'Slam Artist', 'Untouchable'],
     desc: 'Win every trick in a hand.',
     crest: 'crest_slam',            title: 'title_the_slam' },
@@ -1254,12 +1254,12 @@ const ACHIEVEMENTS = [
     desc: 'Finish a game on +250 or better.',
     crest: 'crest_ledger',          title: 'title_the_ledger' },
 
-  { id: 'ach_clean_sheet',    stat: 'cleanRounds',        tiers: [1, 10, 50, 200],
+  { id: 'ach_clean_sheet',    stat: 'cleanRounds',        tiers: [1, 10, 100, 200],
     names: ['Clean Sheet', 'Spotless', 'Immaculate', 'Without a Mark'],
     desc: 'Finish a hand without taking a single penalty card.',
     crest: 'crest_clean',           title: 'title_clean_sheet' },
 
-  { id: 'ach_queen_dodger',   stat: 'queenlessGames',     tiers: [1, 10, 50, 200],
+  { id: 'ach_queen_dodger',   stat: 'queenlessGames',     tiers: [1, 10, 50, 100],
     names: ['Not My Queen', 'Untouched', 'She Never Finds You', 'Ghost'],
     desc: 'Complete a whole game without ever taking the Queen of Spades.',
     crest: 'crest_veil',            title: 'title_queen_dodger' },

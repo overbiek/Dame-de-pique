@@ -1197,15 +1197,10 @@ const ACHIEVEMENTS = [
     desc: 'Win a game after taking tricks in all four suits.',
     crest: 'crest_four_suits',      title: 'title_four_suit_master' },
 
-  { id: 'ach_silent_dealer',  stat: 'gamesCompletedFull', tiers: [1, 10, 50, 200],
+  { id: 'ach_silent_dealer',  stat: 'gamesCompletedFull', tiers: [1, 100, 500, 1000],
     names: ['Stayed the Course', 'The Silent Dealer', 'Iron Resolve', 'Never Folds'],
     desc: 'See a game through to the end in your own seat.',
     crest: 'crest_raven',           title: 'title_dealers_nemesis' },
-
-  { id: 'ach_observer',       stat: 'gamesCompleted',     tiers: [10, 50, 200, 750],
-    names: ['The Observer', 'The Watcher', 'The Archivist', 'The Chronicle'],
-    desc: 'Complete games - the patient road.',
-    crest: 'crest_eye',             title: 'title_clean_sweep' },
 
   { id: 'ach_the_dealer',     stat: 'dealerRounds',       tiers: [1, 25, 100, 500],
     names: ['Cut the Deck', 'The Dealer', 'House Dealer', 'Dealer Eternal'],
@@ -1312,7 +1307,11 @@ const CREDIT_PRICES = { common: 600, rare: 2000, epic: 5000, legendary: 12000 };
 const COSMETICS = {
   scenes: [
     { id: 'scene_velvet_room',   name: 'The Velvet Room',  unlock: null },
-    { id: 'scene_rooftop',       name: 'The Rooftop',      unlock: 'ach_observer',     price: CREDIT_PRICES.rare },
+    // The Observer (ach_observer), the achievement this used to unlock off,
+    // was removed outright — same shop-exclusive fallback as The Grand
+    // Library got when First Hand was removed (see that comment for why a
+    // dangling unlock string would have behaved identically anyway).
+    { id: 'scene_rooftop',       name: 'The Rooftop',      unlock: null,     price: CREDIT_PRICES.rare },
     // First Hand (ach_card_master), the achievement this used to unlock
     // off, was removed outright — no replacement stat assigned, so this
     // reverts to shop-exclusive (unlock:null + price), the same shape
@@ -1378,7 +1377,6 @@ const COSMETICS = {
     { id: 'title_strategist',        name: 'The Strategist',      unlock: 'ach_strategist' },
     { id: 'title_dealers_nemesis',   name: "Dealer's Nemesis",    unlock: 'ach_silent_dealer' },
     { id: 'title_high_roller',       name: 'High Roller',         unlock: 'ach_high_roller' },
-    { id: 'title_clean_sweep',       name: 'Clean Sweep',         unlock: 'ach_observer' },
     { id: 'title_blame_the_dealer',  name: 'Blame the Dealer',    unlock: 'ach_the_dealer' },
     { id: 'title_beyond_moon',       name: 'Beyond the Moon',     unlock: 'ach_beyond_moon' },
     { id: 'title_the_slam',          name: 'The Trickster',       unlock: 'ach_the_slam' },

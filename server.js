@@ -1577,6 +1577,11 @@ function cosmeticsFor(achievements, stats, purchases) {
     material: c.material || null,
     emblem: c.emblem || null,
     price: c.price || null,
+    // Only meaningful for an achievement-ladder item (a crest, so far) —
+    // the rung reached on c.unlock's own achievement, so the client can
+    // pick the matching tier of raster art instead of always showing the
+    // first rung's. null for anything not gated on an achievement at all.
+    level: c.unlock ? ((achievements.find(a => a.id === c.unlock) || {}).level || 0) : null,
     owned: bought.has(c.id),
     // Earned OR bought. The earned half is still re-derived from
     // achievement_stats on every call, so retuning a threshold takes effect

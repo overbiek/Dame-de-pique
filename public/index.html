@@ -1220,15 +1220,14 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
    fine margin), and only actually shrinks it below that. */
 .avatar.md{width:clamp(60px,24vw,100px);height:clamp(60px,24vw,100px);font-size:clamp(1.4rem,5.5vw,2.3rem);flex:0 0 auto;border-width:3px}
 .avatar.md .dealer-badge{width:32px;height:32px;font-size:.9rem;right:-6px;bottom:-6px;border-width:2px}
-/* The lobby seat's avatar — its OWN size, not shared with .md, because
-   its box has a fixed (not content-driven) height: sized to fill that
-   box nearly edge to edge rather than to some independent ideal, so it
-   reads as "as big as the box allows" rather than a size picked in
-   isolation. Reads --av off .slot (an ancestor) rather than carrying its
-   own clamp, which is what lets .slot-crest track exactly half this same
-   value without the two ever being able to drift apart. See .slot's own
-   note for the clamp itself and the box height it's built against. */
+/* Shared by the lobby seat card AND the seat-draw identity card (.slot,
+   .dcw — both declare their own --av). Reads --av off that ancestor
+   rather than carrying its own clamp, which is what lets .slot-crest
+   track exactly half this same value on either screen without the two
+   ever being able to drift apart. See .slot's/.dcw's own notes for the
+   clamp itself and the box each is built against. */
 .avatar.lg{width:var(--av);height:var(--av);font-size:clamp(1.35rem,5vw,2.1rem);flex:0 0 auto;border-width:3px}
+.avatar.lg .dealer-badge{width:28px;height:28px;font-size:.82rem;right:-5px;bottom:-5px;border-width:2px}
 
 .profile-chip{
   display:flex;align-items:center;gap:10px;width:100%;
@@ -2791,12 +2790,13 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   --dc:clamp(64px,min(22vw,14vh),110px);
 }
 /* minmax(0,1fr) above, NOT bare 1fr — a bare 1fr track still floors at
-   its content's min-content width, and a long name's .dcn (nowrap, for
-   the ellipsis) blew the two columns out to wildly uneven widths
+   its content's min-content width, and a long name's .slot-name (nowrap,
+   for the ellipsis) blew the two columns out to wildly uneven widths
    (measured 285px vs 133px at 375px wide) instead of splitting evenly.
    min-width:0 here is the matching half of that fix: without it the grid
    item itself still refuses to shrink below its own content. */
 .dcw{
+  --av:clamp(54px,22vw,90px);
   display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0;
   padding:14px 10px;border-radius:var(--r);
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
@@ -2819,10 +2819,13 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    so "this is you" and "this is your rank" both stay visible together. */
 .dcw.mine{box-shadow:0 0 0 1px rgba(var(--ddp-brass-rgb),.5)}
 .dcw.mine:not([data-material]){border-color:rgba(var(--ddp-brass-rgb),.35)}
-/* Avatar + nametag, directly under the card — reuses the exact avatar
-   (incl. rank-framed ring + dealer badge) the lobby and table seats
-   already draw, so a player's identity looks the same everywhere. */
-.dq-id{display:flex;align-items:center;gap:7px;min-width:0;max-width:100%}
+/* The identity card, directly under the drawn card — same avatar-left,
+   name+crests/title/tier-right layout the lobby seat cards use
+   (.slot-mid, .slot-name-row etc., reused directly rather than
+   duplicated), so a player's identity looks and reads the same on both
+   screens. .avatar.lg (not .md) for the same reason — .dcw's own --av
+   above is what a lobby .slot would otherwise supply. */
+.dq-id{display:flex;align-items:center;gap:10px;min-width:0;max-width:100%}
 .drawcard{
   position:relative;width:var(--dc);aspect-ratio:.7;border-radius:calc(var(--dc)*.11);
   display:grid;place-items:center;text-align:center;
@@ -2871,11 +2874,10 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
              0 8px 20px rgba(var(--ddp-scrim-rgb),.45);
   transform:translateY(-5px);
 }
-.dcn{
-  font-size:clamp(.66rem,1.8vh,.8rem);color:var(--muted);text-align:left;
-  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-.dcw.is-win .dcn{color:var(--gold-hi);font-weight:600}
+/* .dcn (the old bare name caption) is retired — .slot-name inside
+   .dq-id's .slot-mid carries the name now, same class the lobby cards
+   use, so the win highlight below targets that instead. */
+.dcw.is-win .slot-name{color:var(--gold-hi)}
 
 /* ══ Tables / scores ══ */
 .scores{width:100%;border-collapse:collapse;font-size:.9rem;margin:.6rem 0}
@@ -3956,14 +3958,16 @@ html.landscape-mode #s-lobby .l-start-circle{width:56px;height:56px;font-size:.6
    trimmed harder here than in portrait specifically to keep that scroll
    as small as possible rather than eliminate it. */
 html.landscape-mode #s-draw .drawrow{margin:4px 0;gap:clamp(5px,1.4vw,10px);--dc:clamp(42px,11vh,68px)}
-html.landscape-mode #s-draw .dcw{padding:6px 5px;gap:3px}
+/* --av override, not a separate .avatar.md/.lg rule — .dcw's identity
+   card grew a title/tier/crests row this pass (see .dq-id's own note),
+   so this is cut back harder than the old avatar-only version to keep
+   the same scrolling trade-off seat draw already accepted rather than
+   letting it grow further. */
+html.landscape-mode #s-draw .dcw{--av:26px;padding:6px 5px;gap:3px}
 html.landscape-mode #s-draw #d-note{margin:4px 0}
-/* The base .md avatar doubled again since this override was last tuned
-   (see .avatar.md's own note) — cut back even harder here than before,
-   the same trade-off seat draw already accepted, just pushed further
-   now there's more to cut back from. */
-html.landscape-mode #s-draw .avatar.md{width:28px;height:28px;font-size:.75rem;border-width:1.5px}
-html.landscape-mode #s-draw .avatar.md .dealer-badge{width:12px;height:12px;font-size:.4rem;right:-2px;bottom:-2px;border-width:1px}
+html.landscape-mode #s-draw .avatar.lg .dealer-badge{width:12px;height:12px;font-size:.4rem;right:-2px;bottom:-2px;border-width:1px}
+html.landscape-mode #s-draw .slot-title,
+html.landscape-mode #s-draw .slot-tier{font-size:.46rem;min-height:8px}
 
 /* summary / final: the score sheet is the tall part, so it keeps its own
    scroll and everything around it tightens up */
@@ -8681,17 +8685,20 @@ function renderDraw(G){
     : 'Highest card deals first.';
 
   // Each seat is a card, bigger than the old single-row layout allowed,
-  // with the player's own avatar + nametag clearly underneath it (.dq-id)
-  // rather than a bare text caption — the point of this screen is "who
-  // you're playing with", not just "whose card is whose". One quadrant
-  // per player (.drawrow is a 2x2 grid — see its own CSS note) instead of
-  // four cards squeezed into one row, so each player genuinely gets a
-  // quarter of the screen. Face-down uses the table's own blue back;
-  // face-up is a real card face with a corner index and a centre pip,
-  // both sized off --dc so one number drives the whole thing at any
-  // viewport. The avatar reuses the same rank-framed treatment the lobby
-  // and table seats already carry, and the dealer badge moves onto it
-  // (matching seatHTML's convention) rather than floating over the card.
+  // with the player's own IDENTITY CARD underneath it (.dq-id) instead of
+  // a bare avatar+name caption — the point of this screen is "who you're
+  // playing with", not just "whose card is whose", and .dq-id is now the
+  // same avatar-left/name+crests/title/tier layout the lobby seat cards
+  // use (.slot-mid and friends, reused directly rather than duplicated —
+  // --av on .dcw is what keeps the avatar and its crests in the same
+  // ratio as the lobby, exactly like .slot's own --av does). One
+  // quadrant per player (.drawrow is a 2x2 grid — see its own CSS note)
+  // instead of four cards squeezed into one row, so each player
+  // genuinely gets a quarter of the screen. Face-down uses the table's
+  // own blue back; face-up is a real card face with a corner index and a
+  // centre pip, both sized off --dc so one number drives the whole thing
+  // at any viewport. The dealer badge sits on the avatar (matching
+  // seatHTML's convention) rather than floating over the card.
   let h='';
   for(let i=0;i<4;i++){
     const p=G.players[i], up=G.drawRevealed[i], c=G.drawCards[i];
@@ -8702,6 +8709,11 @@ function renderDraw(G){
     const isDealer=G.drawRound===2 && G.phase==='drawDone' && G.dealer===i;
     const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
     const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
+    const set=mat?RANK_SETS.find(r=>r.material===mat):null;
+    const crestIds=p.isAI?[]:[p.crest,p.crest2].filter(Boolean);
+    const crests=crestIds.map(id=>
+      `<span class="slot-crest crest-art">${crestHTML(id,id===p.crest?p.crestLevel:p.crest2Level)}</span>`
+    ).join('');
     let card;
     if(up&&c){
       const col=RED.has(c.suit)?'var(--red)':'var(--ink)';
@@ -8716,8 +8728,15 @@ function renderDraw(G){
     h+=`<div class="dcw${isWin?' is-win':''}${i===me?' mine':''}"${mat?` data-material="${mat}"`:''}>
       ${card}
       <div class="dq-id">
-        <span class="avatar md${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}<span class="dealer-badge${isDealer?' on':''}">D</span></span>
-        <span class="dcn">${esc(p.name)}${i===me?' &middot; you':''}</span>
+        <span class="avatar lg${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}<span class="dealer-badge${isDealer?' on':''}">D</span></span>
+        <div class="slot-mid">
+          <div class="slot-name-row">
+            <span class="slot-name">${esc(p.name)}${i===me?' &middot; you':''}</span>
+            ${crests?`<span class="slot-crests">${crests}</span>`:''}
+          </div>
+          <span class="slot-title">${p.title?esc(p.title):''}</span>
+          <span class="slot-tier">${set?esc(set.tier):''}</span>
+        </div>
       </div>
     </div>`;
   }

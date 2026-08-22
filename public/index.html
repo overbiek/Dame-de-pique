@@ -2609,21 +2609,23 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    content (the min-height approach from before this whole redesign
    needed real per-row-type px reserves and still drifted a px or two
    between cards with different content; a flat height can't drift at
-   all). 132px is sized against .slot-mid's REAL content plus genuine
-   top/bottom clearance for .slot-top and .slot-footer — see .slot-info's
-   own note for why "genuine clearance" needed a layout change, not just
-   a taller box, and .slot-crest's own note for why the budget grew this
-   much this pass. overflow:hidden is still the safety net if content
-   ever runs longer than this. Horizontal, not a centred vertical stack —
-   the avatar sits on the LEFT (its own column, nudged right a few px via
-   the box's own padding-left), text stacks to its right in .slot-info.
-   --av is the avatar's own size, read by .avatar.lg AND .slot-crest (half
-   of it) — defined once here so the two can never drift out of the
-   ratio the crests were explicitly asked to track. */
+   all). 120px, down from a first-cut 132px: that first cut had more
+   headroom in .slot-mid than it actually needed, which is what let this
+   box shrink by 12px overall AND still grow the padding (8px -> 11px
+   top/bottom, for real clearance off the border on .slot-top/.slot-footer)
+   at the same time — verified against real rendered content, not just
+   arithmetic, since .slot-mid's height doesn't reduce on its own from
+   either of those two changes. overflow:hidden is still the safety net
+   if content ever runs longer than this. Horizontal, not a centred
+   vertical stack — the avatar sits on the LEFT (its own column, nudged
+   right a few px via the box's own padding-left), text stacks to its
+   right in .slot-info. --av is the avatar's own size, read by .avatar.lg
+   AND .slot-crest (half of it) — defined once here so the two can never
+   drift out of the ratio the crests were explicitly asked to track. */
 .slot{
   --av:clamp(54px,22vw,90px);
   position:relative;display:flex;flex-direction:row;align-items:center;gap:10px;
-  height:132px;padding:8px 8px 8px 12px;border-radius:var(--r);overflow:hidden;
+  height:120px;padding:11px 8px 11px 12px;border-radius:var(--r);overflow:hidden;
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
 }
 /* The box background IS the banner now — the exact same interior
@@ -2672,8 +2674,15 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    row out. Uses width, not flex-basis, so aspect-ratio still holds them
    square as they shrink. */
 .slot-name-row{display:flex;align-items:center;gap:4px;min-width:0;max-width:100%}
+/* flex:0 (no grow) — flex:1 stretched the name's own BOX to fill the row
+   even when its text was short, which shoved the crests away from the
+   visible end of the name out toward the row's far edge instead of
+   sitting right after it. Now the name only ever takes the width its
+   own text needs (still shrinking below that via flex-shrink + the
+   ellipsis if it doesn't fit), so the crests land immediately beside it
+   rather than floating separately. */
 .slot-name{
-  flex:1 1 auto;min-width:16px;font-size:.86rem;font-weight:600;color:var(--cream);
+  flex:0 1 auto;min-width:16px;max-width:100%;font-size:.86rem;font-weight:600;color:var(--cream);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .slot[data-material] .slot-name{color:var(--rm-ink)}
@@ -3921,7 +3930,7 @@ html.landscape-mode #s-final .exit-row{flex-direction:row;margin-top:10px !impor
    landscape too. --av is overridden here rather than .avatar.lg/
    .slot-crest directly — both read off it, so one number keeps them both
    in proportion. */
-html.landscape-mode #s-lobby .slot{--av:55px;height:94px;gap:6px;padding:5px 5px 5px 8px}
+html.landscape-mode #s-lobby .slot{--av:55px;height:95px;gap:6px;padding:7px 5px 7px 8px}
 html.landscape-mode #s-lobby .slot-top{min-height:15px}
 html.landscape-mode #s-lobby .slot-top .tag{padding:2px 6px;font-size:.54rem}
 html.landscape-mode #s-lobby .slot-name{font-size:.66rem}

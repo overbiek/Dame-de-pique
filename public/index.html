@@ -1224,13 +1224,11 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
    its box has a fixed (not content-driven) height: sized to fill that
    box nearly edge to edge rather than to some independent ideal, so it
    reads as "as big as the box allows" rather than a size picked in
-   isolation. See .slot's own note for the box height this is built
-   against.
-   clamp, same reasoning as .avatar.md's own clamp: a flat ceiling left
-   too little for the text column at 320px wide (2-up grid), where a
-   "you" tag or two crest badges don't fit a too-narrow leftover. Ceiling
-   raised to 90px to track .slot's own 96px -> 102px bump. */
-.avatar.lg{width:clamp(54px,22vw,90px);height:clamp(54px,22vw,90px);font-size:clamp(1.35rem,5vw,2.1rem);flex:0 0 auto;border-width:3px}
+   isolation. Reads --av off .slot (an ancestor) rather than carrying its
+   own clamp, which is what lets .slot-crest track exactly half this same
+   value without the two ever being able to drift apart. See .slot's own
+   note for the clamp itself and the box height it's built against. */
+.avatar.lg{width:var(--av);height:var(--av);font-size:clamp(1.35rem,5vw,2.1rem);flex:0 0 auto;border-width:3px}
 
 .profile-chip{
   display:flex;align-items:center;gap:10px;width:100%;
@@ -2511,13 +2509,18 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    (now much bigger) player cards instead. .friends-codebox (below) is
    the other compact variant of .codebox; this one is unrelated to it,
    purpose-built as a button rather than a static card since it's the
-   click target. Row layout + generous horizontal padding + centred
-   margin is what makes it read as "a little longer" than the tight
-   corner chip it started as, without it becoming a second headline. */
+   click target.
+   width:100%, not fit-content — a shrink-wrapped chip measured
+   mathematically centred on its own, but every OTHER control on this
+   screen (Start, Invite friends, the exit-row pair) is a full-width
+   block, and a narrower chip sitting among them reads as pulled toward
+   the left edge by comparison even when its own centring is correct.
+   Full width plus justify-content:center matches those and removes the
+   ambiguity outright. */
 .lobby-code-chip{
   display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;
-  font:inherit;color:inherit;appearance:none;cursor:pointer;width:fit-content;
-  padding:10px 26px;border-radius:12px;margin:10px auto 0;
+  font:inherit;color:inherit;appearance:none;cursor:pointer;width:100%;
+  padding:10px 26px;border-radius:12px;margin:10px 0 0;
   background:rgba(var(--ddp-brass-rgb),.08);border:1px solid rgba(var(--ddp-brass-rgb),.22);
 }
 .lcc-code{font-size:.72rem;color:var(--faint)}
@@ -2601,24 +2604,26 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    positioning below, without needing to know the grid's own pixel
    dimensions anywhere. */
 .lobby-grid-wrap{position:relative}
-/* height:102px is a FIXED height, not a min-height reserve, and stayed
-   fixed rather than content-driven when this refit bumped the tag/AI
-   button back up to a legible size — it's what guarantees all 4 cards
-   come out EXACTLY the same height regardless (the min-height approach
-   from before this whole redesign needed real per-row-type px reserves
-   and still drifted a px or two between cards with different content; a
-   flat height can't drift at all). 96px (this pass' first cut) clipped
-   real content by 4-5px once the tag/button grew back to a usable size —
-   102 is the number that actually clears it again, still comfortably
-   flatter than the ~120px cards were two passes ago. overflow:hidden is
-   the safety net if any content ever runs longer than this budget
-   allows. Horizontal, not a centred vertical stack — the avatar sits on
-   the LEFT (its own column, nudged right a few px via the box's own
-   padding-left), text stacks to its right in .slot-info; see .avatar.lg's
-   own note for how its size was picked against this height. */
+/* height is a FIXED height, not a min-height reserve — it's what
+   guarantees all 4 cards come out EXACTLY the same height regardless of
+   content (the min-height approach from before this whole redesign
+   needed real per-row-type px reserves and still drifted a px or two
+   between cards with different content; a flat height can't drift at
+   all). 132px is sized against .slot-mid's REAL content plus genuine
+   top/bottom clearance for .slot-top and .slot-footer — see .slot-info's
+   own note for why "genuine clearance" needed a layout change, not just
+   a taller box, and .slot-crest's own note for why the budget grew this
+   much this pass. overflow:hidden is still the safety net if content
+   ever runs longer than this. Horizontal, not a centred vertical stack —
+   the avatar sits on the LEFT (its own column, nudged right a few px via
+   the box's own padding-left), text stacks to its right in .slot-info.
+   --av is the avatar's own size, read by .avatar.lg AND .slot-crest (half
+   of it) — defined once here so the two can never drift out of the
+   ratio the crests were explicitly asked to track. */
 .slot{
+  --av:clamp(54px,22vw,90px);
   position:relative;display:flex;flex-direction:row;align-items:center;gap:10px;
-  height:102px;padding:8px 8px 8px 12px;border-radius:var(--r);overflow:hidden;
+  height:132px;padding:8px 8px 8px 12px;border-radius:var(--r);overflow:hidden;
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
 }
 /* The box background IS the banner now — the exact same interior
@@ -2629,7 +2634,19 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   border:2px solid var(--rm-edge);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.20),inset 0 -1px 0 rgba(0,0,0,.30);
 }
-.slot-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;text-align:left}
+/* justify-content:space-between, not a uniform small gap — the previous
+   version packed .slot-top/name/title/tier/.slot-footer into one tight
+   block and CENTRED that block in the row, which left barely 2px of
+   clearance above .slot-top and below .slot-footer once the tag/button
+   grew back to size: both read as "touching the card's border" (the
+   actual complaint: the AI button looked like it sat "over the line",
+   the you/AI tag "not completely visible"). space-between instead pins
+   .slot-top to the row's own top and .slot-footer to its own bottom —
+   each only has to clear .slot's padding, never fight the OTHER rows for
+   space — with .slot-mid (name/title/tier, its own tight-gap group)
+   taking whatever's left in the middle. */
+.slot-info{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:space-between;text-align:left}
+.slot-mid{display:flex;flex-direction:column;gap:1px;min-width:0}
 /* min-height in px, not em — a "computed min-height doesn't match the
    real line box" drift this file already warns about elsewhere (see the
    roster rail's .tbl-note note). .tag is scoped down here specifically
@@ -2643,13 +2660,20 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
 .slot .dot.on{background:var(--ok);box-shadow:0 0 8px rgba(var(--ddp-mine-rgb),.6)}
 .slot .dot.bot{background:#6cb6ff;box-shadow:0 0 8px rgba(108,182,255,.5)}
 /* Crests moved onto this row, beside the name, rather than getting a
-   whole separate row below — see slotHTML's own note on why. .slot-name
-   is the one that shrinks (flex:1,min-width:0 + its own ellipsis);
-   .slot-crests stays its natural width so the crest icons never get
-   squeezed. */
-.slot-name-row{display:flex;align-items:center;gap:5px;min-width:0;max-width:100%;margin-top:2px}
+   whole separate row below — see slotHTML's own note on why.
+   .slot-crest is now HALF THE AVATAR'S size (see its own note) — at that
+   size, two of them plus any real name text is wider than the ~57px
+   info column has at 375px, which forced the row wider than the card
+   and overflowed it horizontally. .slot-name keeps a real min-width (20px)
+   so it can never fully vanish, but .slot-crests is now allowed to
+   shrink below its own calc()'d size — via flex-shrink on the container
+   AND a min-width floor on each crest (14px, its old fixed size before
+   this pass) — so two crests compress together rather than blowing the
+   row out. Uses width, not flex-basis, so aspect-ratio still holds them
+   square as they shrink. */
+.slot-name-row{display:flex;align-items:center;gap:4px;min-width:0;max-width:100%}
 .slot-name{
-  flex:1;min-width:0;font-size:.86rem;font-weight:600;color:var(--cream);
+  flex:1 1 auto;min-width:16px;font-size:.86rem;font-weight:600;color:var(--cream);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .slot[data-material] .slot-name{color:var(--rm-ink)}
@@ -2677,10 +2701,23 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
 /* Fixed-height reserve for the host's AI toggle (the only thing left
    here now that crests moved up beside the name) — still always
    rendered, even empty, so a seat with nothing here reserves the same
-   space as one with the button. */
-.slot-footer{min-height:28px;display:flex;align-items:center;justify-content:flex-start;margin-top:2px}
-.slot-crests{display:flex;gap:4px;flex:0 0 auto}
-.slot-crest{width:14px;height:14px;flex:0 0 auto}
+   space as one with the button. No margin-top any more: .slot-info's
+   own justify-content:space-between now does that spacing job, and a
+   margin here on top of it would just push the button further down
+   toward the border again — the exact thing being fixed. */
+.slot-footer{min-height:28px;display:flex;align-items:center;justify-content:flex-start}
+.slot-crests{display:flex;gap:3px;flex:0 1 auto;min-width:0}
+/* Half the avatar's own size, tracking it via the shared --av custom
+   property on .slot (rather than a fixed px) so the two can never drift
+   out of that ratio at any viewport — capped by min-width:11px as a
+   shrink floor (down from the crest's old fixed 14px, which still
+   clipped ~9px at 320px wide with 2 crests + a long name both fighting
+   for the same ~50px), so two of them together can compress to fit the
+   row instead of overflowing it. flex-grow:0 throughout: these should
+   only ever shrink from their calc()'d size, never grow past it just
+   because space is free. aspect-ratio is what keeps them square while
+   width shrinks via flex. */
+.slot-crest{width:calc(var(--av) / 2);min-width:11px;aspect-ratio:1;flex:0 1 auto}
 /* Refit bigger — this had shrunk to 3px/7px/.56rem chasing width at
    320px and ended up looking (and tapping) too small. */
 .slot .mini-btn{padding:5px 11px;font-size:.66rem}
@@ -3877,19 +3914,20 @@ html.landscape-mode #s-final .exit-row{flex-direction:row;margin-top:10px !impor
    left, text right — see .slot's own note), which is what makes this
    landscape cut so much deeper than before actually pay off: the row
    only has to clear the avatar's own (now tiny) height, not a stacked
-   avatar-then-text column. height:64px here is the same "fixed, not
-   min-height" 20%-off treatment the portrait size just got (80px -> 64),
-   scaled down from its own prior landscape numbers the same way. */
-html.landscape-mode #s-lobby .slot{height:68px;gap:6px;padding:5px 5px 5px 8px}
-html.landscape-mode #s-lobby .avatar.lg{width:55px;height:55px;font-size:1.3rem;border-width:2px}
+   avatar-then-text column. Height scaled up from its own prior landscape
+   number by the same ratio the portrait size just grew by (102 -> 132),
+   for the same reason: .slot-info's own space-between clearance fix and
+   the half-avatar crests both need more real room than before, in
+   landscape too. --av is overridden here rather than .avatar.lg/
+   .slot-crest directly — both read off it, so one number keeps them both
+   in proportion. */
+html.landscape-mode #s-lobby .slot{--av:55px;height:94px;gap:6px;padding:5px 5px 5px 8px}
 html.landscape-mode #s-lobby .slot-top{min-height:15px}
 html.landscape-mode #s-lobby .slot-top .tag{padding:2px 6px;font-size:.54rem}
-html.landscape-mode #s-lobby .slot-name-row{margin-top:1px}
 html.landscape-mode #s-lobby .slot-name{font-size:.66rem}
 html.landscape-mode #s-lobby .slot-title{font-size:.46rem;min-height:8px}
 html.landscape-mode #s-lobby .slot-tier{font-size:.48rem;min-height:8px}
-html.landscape-mode #s-lobby .slot-footer{min-height:20px;margin-top:1px}
-html.landscape-mode #s-lobby .slot-crest{width:12px;height:12px}
+html.landscape-mode #s-lobby .slot-footer{min-height:20px}
 html.landscape-mode #s-lobby .mini-btn{padding:3px 8px;font-size:.58rem}
 html.landscape-mode #s-lobby #l-status{margin:0}
 /* The circle itself scales down with the rest, same reasoning as .avatar
@@ -3971,8 +4009,9 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
 .tcap.turn .nm{color:var(--gold-hi)}
 .tcap.off{opacity:.45}
 .tcap .dl{background:var(--ddp-card);color:var(--ddp-spade);border-radius:50%;
-  width:12px;height:12px;display:inline-grid;place-items:center;
-  font-family:'Playfair Display',serif;font-weight:800;font-size:.5rem}
+  width:15px;height:15px;display:inline-grid;place-items:center;
+  font-family:'Playfair Display',serif;font-weight:800;font-size:.6rem;
+  border:1px solid var(--gold-hi);flex:none}
 
 /* ══ Numeric readouts — scoreboard type ══
    Scores, MMR, timers and trick counters move to IBM Plex Mono with
@@ -6263,8 +6302,8 @@ function tableHTML(G,opts){
     return `<div class="tcap ${cls}">`
       +(p.rankMaterial?rankBadgeHTML(p.rankMaterial):'')
       +`<span class="nm">${esc(p.name)}</span>`
-      +`<span class="sc">${tw}<small> · ${total}</small></span>`
       +(i===G.dealer?'<span class="dl">D</span>':'')
+      +`<span class="sc">${tw}<small> · ${total}</small></span>`
       +`</div>`;
   };
 
@@ -8573,12 +8612,14 @@ function slotHTML(G,i){
         <span class="dot ${dot}"></span>
         ${i===me?'<span class="tag you">you</span>':p.isAI?'<span class="tag bot">AI</span>':''}
       </div>
-      <div class="slot-name-row">
-        <span class="slot-name">${esc(p.name)}</span>
-        ${crests?`<span class="slot-crests">${crests}</span>`:''}
+      <div class="slot-mid">
+        <div class="slot-name-row">
+          <span class="slot-name">${esc(p.name)}</span>
+          ${crests?`<span class="slot-crests">${crests}</span>`:''}
+        </div>
+        <span class="slot-title">${p.title?esc(p.title):''}</span>
+        <span class="slot-tier">${set?esc(set.tier):''}</span>
       </div>
-      <span class="slot-title">${p.title?esc(p.title):''}</span>
-      <span class="slot-tier">${set?esc(set.tier):''}</span>
       <div class="slot-footer">${footer}</div>
     </div>
   </div>`;

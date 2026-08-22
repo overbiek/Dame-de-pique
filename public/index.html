@@ -1226,10 +1226,11 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
    reads as "as big as the box allows" rather than a size picked in
    isolation. See .slot's own note for the box height this is built
    against.
-   clamp, same reasoning as .avatar.md's own clamp: a flat 84px left only
-   30px for the text column at 320px wide (2-up grid), and a "you" tag or
-   two crest badges don't fit that. 84px still holds at 375px+. */
-.avatar.lg{width:clamp(52px,21vw,84px);height:clamp(52px,21vw,84px);font-size:clamp(1.3rem,4.8vw,2rem);flex:0 0 auto;border-width:3px}
+   clamp, same reasoning as .avatar.md's own clamp: a flat ceiling left
+   too little for the text column at 320px wide (2-up grid), where a
+   "you" tag or two crest badges don't fit a too-narrow leftover. Ceiling
+   raised to 90px to track .slot's own 96px -> 102px bump. */
+.avatar.lg{width:clamp(54px,22vw,90px);height:clamp(54px,22vw,90px);font-size:clamp(1.35rem,5vw,2.1rem);flex:0 0 auto;border-width:3px}
 
 .profile-chip{
   display:flex;align-items:center;gap:10px;width:100%;
@@ -2544,10 +2545,22 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    a safety margin against the cards' own box-shadow/border layers). */
 .l-start-circle{
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;
-  width:72px;height:72px;border-radius:50%;padding:0;
+  width:84px;height:84px;border-radius:50%;padding:0;
   display:flex;align-items:center;justify-content:center;
-  font-size:.8rem;font-weight:700;letter-spacing:.02em;text-align:center;
+  font-size:.86rem;font-weight:700;letter-spacing:.02em;text-align:center;
 }
+/* The base .btn:active press effect (0,2,0: class+pseudo-class) beats
+   .l-start-circle's own transform (0,1,0) on specificity, REPLACING it
+   rather than combining with it — transform isn't additive across rules,
+   only within one. That threw away the translate(-50%,-50%) centering
+   the instant the button was pressed, snapping it to (50%,50%) minus
+   half its own box instead of true centre: a real, visible jump away
+   from the finger on every tap, which is what made this read as "doesn't
+   work" rather than just "looks off" — a fast enough jump can cancel a
+   touch's click entirely. The ID selector here outranks .btn:active
+   outright and folds both transforms into one declaration instead of
+   letting either replace the other. */
+#l-start.l-start-circle:active{transform:translate(-50%,-50%) scale(.97)}
 #l-status{font-size:.82rem;color:var(--faint);margin:8px 0;text-align:center}
 
 /* Friends tab: friend code + add-a-friend side by side (each half width)
@@ -2588,20 +2601,24 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    positioning below, without needing to know the grid's own pixel
    dimensions anywhere. */
 .lobby-grid-wrap{position:relative}
-/* height:96px is a FIXED height now, not a min-height reserve — 20%
-   less than the ~120px cards were before this pass. Fixed rather than
-   content-driven is deliberate here: it's what guarantees all 4 cards
-   come out EXACTLY the same height (the min-height approach earlier
-   needed real per-row-type px reserves and still drifted a px or two
-   between cards with different content; a flat height can't drift at
-   all). overflow:hidden is the safety net if any content ever runs
-   longer than this budget allows. Horizontal, not a centred vertical
-   stack — the avatar sits on the LEFT (its own column), text stacks to
-   its right in .slot-info; see .avatar.lg's own note for how its size
-   was picked against this height. */
+/* height:102px is a FIXED height, not a min-height reserve, and stayed
+   fixed rather than content-driven when this refit bumped the tag/AI
+   button back up to a legible size — it's what guarantees all 4 cards
+   come out EXACTLY the same height regardless (the min-height approach
+   from before this whole redesign needed real per-row-type px reserves
+   and still drifted a px or two between cards with different content; a
+   flat height can't drift at all). 96px (this pass' first cut) clipped
+   real content by 4-5px once the tag/button grew back to a usable size —
+   102 is the number that actually clears it again, still comfortably
+   flatter than the ~120px cards were two passes ago. overflow:hidden is
+   the safety net if any content ever runs longer than this budget
+   allows. Horizontal, not a centred vertical stack — the avatar sits on
+   the LEFT (its own column, nudged right a few px via the box's own
+   padding-left), text stacks to its right in .slot-info; see .avatar.lg's
+   own note for how its size was picked against this height. */
 .slot{
   position:relative;display:flex;flex-direction:row;align-items:center;gap:10px;
-  height:96px;padding:8px;border-radius:var(--r);overflow:hidden;
+  height:102px;padding:8px 8px 8px 12px;border-radius:var(--r);overflow:hidden;
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
 }
 /* The box background IS the banner now — the exact same interior
@@ -2617,15 +2634,23 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    real line box" drift this file already warns about elsewhere (see the
    roster rail's .tbl-note note). .tag is scoped down here specifically
    so this row can shrink with it; .tag itself stays full-size where the
-   leaderboard uses it elsewhere. */
-.slot-top{width:100%;display:flex;align-items:center;justify-content:space-between;min-height:17px}
-.slot-top .tag{padding:2px 6px;font-size:.56rem}
+   leaderboard uses it elsewhere. Bumped back up from an earlier, too-
+   cramped pass — 20px/.6rem is the real refit, not the 17px/.56rem this
+   briefly shrank to. */
+.slot-top{width:100%;display:flex;align-items:center;justify-content:space-between;min-height:20px}
+.slot-top .tag{padding:3px 7px;font-size:.6rem}
 .slot .dot{width:8px;height:8px;border-radius:50%;background:rgba(var(--ddp-ink-rgb),.20);flex:0 0 auto}
 .slot .dot.on{background:var(--ok);box-shadow:0 0 8px rgba(var(--ddp-mine-rgb),.6)}
 .slot .dot.bot{background:#6cb6ff;box-shadow:0 0 8px rgba(108,182,255,.5)}
+/* Crests moved onto this row, beside the name, rather than getting a
+   whole separate row below — see slotHTML's own note on why. .slot-name
+   is the one that shrinks (flex:1,min-width:0 + its own ellipsis);
+   .slot-crests stays its natural width so the crest icons never get
+   squeezed. */
+.slot-name-row{display:flex;align-items:center;gap:5px;min-width:0;max-width:100%;margin-top:2px}
 .slot-name{
-  margin-top:2px;font-size:.86rem;font-weight:600;color:var(--cream);
-  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  flex:1;min-width:0;font-size:.86rem;font-weight:600;color:var(--cream);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .slot[data-material] .slot-name{color:var(--rm-ink)}
 .slot-title{
@@ -2649,16 +2674,16 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .slot[data-material] .slot-tier{color:var(--rm-orn)}
-/* Fixed-height reserve for whichever ONE of {crests, AI toggle} a card
-   has (see slotHTML's own note) — this is what keeps that height
-   identical across all 4 cards regardless of which, if either, appears.
-   Left-aligned now along with everything else in .slot-info. */
-.slot-footer{min-height:24px;display:flex;align-items:center;justify-content:flex-start;margin-top:2px}
-.slot-crests{display:flex;gap:4px}
-/* 14px, not 18 — the info column is only ~33px wide now that the
-   avatar takes most of the card, and 2x18px+gap (40px) overflowed it. */
+/* Fixed-height reserve for the host's AI toggle (the only thing left
+   here now that crests moved up beside the name) — still always
+   rendered, even empty, so a seat with nothing here reserves the same
+   space as one with the button. */
+.slot-footer{min-height:28px;display:flex;align-items:center;justify-content:flex-start;margin-top:2px}
+.slot-crests{display:flex;gap:4px;flex:0 0 auto}
 .slot-crest{width:14px;height:14px;flex:0 0 auto}
-.slot .mini-btn{padding:3px 7px;font-size:.56rem}
+/* Refit bigger — this had shrunk to 3px/7px/.56rem chasing width at
+   320px and ended up looking (and tapping) too small. */
+.slot .mini-btn{padding:5px 11px;font-size:.66rem}
 .tag{font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
   padding:3px 8px;border-radius:999px;flex:0 0 auto}
 .tag.you{background:rgba(var(--ddp-mine-rgb),.16);color:#8fe0be;border:1px solid rgba(var(--ddp-mine-rgb),.3)}
@@ -3855,20 +3880,22 @@ html.landscape-mode #s-final .exit-row{flex-direction:row;margin-top:10px !impor
    avatar-then-text column. height:64px here is the same "fixed, not
    min-height" 20%-off treatment the portrait size just got (80px -> 64),
    scaled down from its own prior landscape numbers the same way. */
-html.landscape-mode #s-lobby .slot{height:64px;gap:6px;padding:5px}
-html.landscape-mode #s-lobby .avatar.lg{width:52px;height:52px;font-size:1.25rem;border-width:2px}
-html.landscape-mode #s-lobby .slot-top{min-height:13px}
-html.landscape-mode #s-lobby .slot-name{margin-top:1px;font-size:.66rem}
+html.landscape-mode #s-lobby .slot{height:68px;gap:6px;padding:5px 5px 5px 8px}
+html.landscape-mode #s-lobby .avatar.lg{width:55px;height:55px;font-size:1.3rem;border-width:2px}
+html.landscape-mode #s-lobby .slot-top{min-height:15px}
+html.landscape-mode #s-lobby .slot-top .tag{padding:2px 6px;font-size:.54rem}
+html.landscape-mode #s-lobby .slot-name-row{margin-top:1px}
+html.landscape-mode #s-lobby .slot-name{font-size:.66rem}
 html.landscape-mode #s-lobby .slot-title{font-size:.46rem;min-height:8px}
 html.landscape-mode #s-lobby .slot-tier{font-size:.48rem;min-height:8px}
-html.landscape-mode #s-lobby .slot-footer{min-height:16px;margin-top:1px}
-html.landscape-mode #s-lobby .slot-crest{width:14px;height:14px}
-html.landscape-mode #s-lobby .mini-btn{padding:2px 7px;font-size:.56rem}
+html.landscape-mode #s-lobby .slot-footer{min-height:20px;margin-top:1px}
+html.landscape-mode #s-lobby .slot-crest{width:12px;height:12px}
+html.landscape-mode #s-lobby .mini-btn{padding:3px 8px;font-size:.58rem}
 html.landscape-mode #s-lobby #l-status{margin:0}
 /* The circle itself scales down with the rest, same reasoning as .avatar
    here — the landscape grid it floats over is much shorter, and a 72px
    circle would swallow most of it. */
-html.landscape-mode #s-lobby .l-start-circle{width:48px;height:48px;font-size:.62rem}
+html.landscape-mode #s-lobby .l-start-circle{width:56px;height:56px;font-size:.68rem}
 
 /* seat draw / dealer cut: the card row is already horizontal, it just
    needs to be sized off the short axis so all four fit */
@@ -8519,22 +8546,26 @@ function slotHTML(G,i){
   const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
   const set=mat?RANK_SETS.find(r=>r.material===mat):null;
   const crestIds=p.isAI?[]:[p.crest,p.crest2].filter(Boolean);
+  // Crests sit right after the name now (.slot-name-row), not in their
+  // own row below — a crest is earned the moment an achievement is,
+  // which reads more like a detail ON your identity than a separate
+  // fact about you, so it belongs beside the name rather than getting
+  // its own line.
   const crests=crestIds.map(id=>
     `<span class="slot-crest crest-art">${crestHTML(id,id===p.crest?p.crestLevel:p.crest2Level)}</span>`
   ).join('');
-  // A seat only ever has ONE of {crests, the host's AI toggle} — crests
-  // are earned, so an AI/empty seat never has them, and the button only
-  // ever shows on an AI/empty seat. Both share one fixed-height footer
-  // slot rather than each keeping its own margin, so whichever (or
-  // neither) appears still reserves identical space across all 4 cards.
-  // Shortened labels ("+AI"/"AI") rather than "Add AI"/"AI on": the info
-  // column is only ~33px wide now that the avatar takes most of the
-  // card's width, and the full-length labels overflowed it at 360px —
-  // .mini-btn.on already carries its own colour, so the shorter label
-  // loses no information the button doesn't already show some other way.
-  const footer=crests?`<div class="slot-crests">${crests}</div>`
-    :(host&&i>0&&!p.connected||host&&i>0&&p.isAI)
-      ?`<button class="mini-btn ${p.isAI?'on':''}" onclick="toggleAI(${i})">${p.isAI?'AI':'+AI'}</button>`:'';
+  // Crests and the host's AI toggle never both apply to the same seat —
+  // crests are earned, so an AI/empty seat never has them — but the
+  // footer still always renders (even empty) so every card reserves the
+  // same fixed height for it regardless.
+  // Short labels ("AI"/"+AI") rather than "AI on"/"Add AI": the button
+  // itself got noticeably BIGGER this pass (padding+font, per the "it
+  // looks small" ask), and the full-length labels overflowed the ~42px
+  // info column at 320px wide with that much padding. .mini-btn.on
+  // already carries its own colour, so the short label loses no
+  // information the button doesn't already show another way.
+  const footer=(host&&i>0&&!p.connected||host&&i>0&&p.isAI)
+    ? `<button class="mini-btn ${p.isAI?'on':''}" onclick="toggleAI(${i})">${p.isAI?'AI':'+AI'}</button>` : '';
   return `<div class="slot"${mat?` data-material="${mat}"`:''}>
     <span class="avatar lg${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>
     <div class="slot-info">
@@ -8542,7 +8573,10 @@ function slotHTML(G,i){
         <span class="dot ${dot}"></span>
         ${i===me?'<span class="tag you">you</span>':p.isAI?'<span class="tag bot">AI</span>':''}
       </div>
-      <span class="slot-name">${esc(p.name)}</span>
+      <div class="slot-name-row">
+        <span class="slot-name">${esc(p.name)}</span>
+        ${crests?`<span class="slot-crests">${crests}</span>`:''}
+      </div>
       <span class="slot-title">${p.title?esc(p.title):''}</span>
       <span class="slot-tier">${set?esc(set.tier):''}</span>
       <div class="slot-footer">${footer}</div>

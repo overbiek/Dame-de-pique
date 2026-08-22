@@ -2601,8 +2601,11 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
 /* Position:relative + a set size (matching #l-slots' own footprint) is
    what lets #l-start sit dead-centre over the 4 cards via absolute
    positioning below, without needing to know the grid's own pixel
-   dimensions anywhere. */
-.lobby-grid-wrap{position:relative}
+   dimensions anywhere. .draw-grid-wrap (seat draw's #d-row) does the
+   exact same job for #d-begin — kept as its own class rather than
+   reusing .lobby-grid-wrap on a screen that isn't the lobby, but the
+   rule is identical on purpose. */
+.lobby-grid-wrap,.draw-grid-wrap{position:relative}
 /* height is a FIXED height, not a min-height reserve — it's what
    guarantees all 4 cards come out EXACTLY the same height regardless of
    content (the min-height approach from before this whole redesign
@@ -2684,13 +2687,13 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   flex:0 1 auto;min-width:16px;max-width:100%;font-size:.86rem;font-weight:600;color:var(--cream);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.slot[data-material] .slot-name{color:var(--rm-ink)}
+.slot[data-material] .slot-name,.dcw[data-material] .slot-name{color:var(--rm-ink)}
 .slot-title{
   font-size:.56rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
   color:var(--gold-lo);min-height:10px;max-width:100%;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.slot[data-material] .slot-title{color:var(--rm-ink);opacity:.8}
+.slot[data-material] .slot-title,.dcw[data-material] .slot-title{color:var(--rm-ink);opacity:.8}
 /* The rank tier, plain text now — the ornate plaque widget (frame,
    ornaments, emblem) that used to render this is retired here since the
    card itself IS the plaque; keeping both would double the same idea.
@@ -2705,7 +2708,7 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   color:var(--faint);min-height:11px;max-width:100%;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.slot[data-material] .slot-tier{color:var(--rm-orn)}
+.slot[data-material] .slot-tier,.dcw[data-material] .slot-tier{color:var(--rm-orn)}
 /* Fixed-height reserve for the host's AI toggle (the only thing left
    here now that crests moved up beside the name) — still always
    rendered, even empty, so a seat with nothing here reserves the same
@@ -2801,15 +2804,17 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   padding:14px 10px;border-radius:var(--r);
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
 }
-/* Same metal-wash formula .cos-thumb.rankset uses for the picker card —
-   a tint rather than the lobby seat's full-strength banner gradient,
-   since this box still has a card sitting on top of it and needs to stay
-   a background, not compete with the card face for attention. */
+/* The same full-strength banner gradient .slot[data-material] uses on
+   the lobby cards — was a diluted metal-wash tint here on the theory
+   that the drawn card needed the contrast instead, but that's also what
+   made crests read as low-contrast/hard to see against it. "The same as
+   the lobby" now, card included — the card face is its own bright white
+   card-face gradient regardless of what sits behind it, so it was never
+   actually competing. */
 .dcw[data-material]{
-  background:radial-gradient(120% 140% at 50% 0,rgba(var(--ddp-gloss-rgb),.05),transparent 70%),
-             linear-gradient(160deg,color-mix(in srgb,var(--rm-edge) 22%,transparent),
-                             rgba(var(--ddp-scrim-rgb),.34));
-  border-color:var(--rm-edge);
+  background:linear-gradient(180deg,var(--rm-hi),var(--rm-lo));
+  border:2px solid var(--rm-edge);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.20),inset 0 -1px 0 rgba(0,0,0,.30);
 }
 /* A plain box-shadow ring rather than border-color: on a dressed seat
    (.dcw[data-material]) the border is already the rank material's own
@@ -2829,6 +2834,11 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
 .drawcard{
   position:relative;width:var(--dc);aspect-ratio:.7;border-radius:calc(var(--dc)*.11);
   display:grid;place-items:center;text-align:center;
+  /* Nudged off dead-centre, same reasoning as the lobby avatar's own
+     padding-left nudge — a few px of asymmetry reads as more deliberate
+     than a perfectly centred card sitting above a left-aligned identity
+     row. */
+  margin-left:8px;
   border:1px solid var(--card-edge);
   box-shadow:0 5px 14px rgba(var(--ddp-scrim-rgb),.42);
   transition:transform .2s cubic-bezier(.2,.9,.3,1.2),box-shadow .2s;
@@ -3968,6 +3978,11 @@ html.landscape-mode #s-draw #d-note{margin:4px 0}
 html.landscape-mode #s-draw .avatar.lg .dealer-badge{width:12px;height:12px;font-size:.4rem;right:-2px;bottom:-2px;border-width:1px}
 html.landscape-mode #s-draw .slot-title,
 html.landscape-mode #s-draw .slot-tier{font-size:.46rem;min-height:8px}
+/* Same reasoning as the lobby's own #l-start override — a full-size
+   circle floating over an already-short landscape grid eats into the
+   scroll budget seat draw already accepts as a trade-off for more than
+   it needs to. */
+html.landscape-mode #s-draw .l-start-circle{width:56px;height:56px;font-size:.68rem}
 
 /* summary / final: the score sheet is the tall part, so it keeps its own
    scroll and everything around it tightens up */
@@ -5489,9 +5504,16 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
   <div class="center-wrap" style="padding-top:3vh;max-width:460px">
     <h2 id="d-title">Cut for dealer</h2>
     <p id="d-sub">Highest card deals first.</p>
-    <div id="d-row" class="drawrow"></div>
+    <!-- #d-begin sits OUTSIDE #d-row on purpose, same reason as the
+         lobby's #l-start: renderDraw() rebuilds #d-row's innerHTML from
+         scratch every render, which would destroy a button living
+         inside it. .draw-grid-wrap + .l-start-circle (shared with the
+         lobby's own Start button) is what centres it over the grid. -->
+    <div class="draw-grid-wrap">
+      <div id="d-row" class="drawrow"></div>
+      <button class="btn btn-primary l-start-circle" id="d-begin" style="display:none" onclick="send('startRound')">Begin</button>
+    </div>
     <div id="d-note" class="note gold" style="display:none"></div>
-    <button class="btn btn-primary btn-block" id="d-begin" style="display:none" onclick="send('startRound')">Begin round 1</button>
     <p id="d-wait" class="prompt wait" style="display:none">Waiting for the host…</p>
     <p id="d-auto" class="autoline"></p>
     <div class="exit-row">
@@ -8752,8 +8774,12 @@ function renderDraw(G){
   }else note.style.display='none';
 
   const advanceReady=round1Waiting||round2Done;
-  $('d-begin').textContent=round1Waiting?'Cut for dealer':'Begin round 1';
-  $('d-begin').style.display=advanceReady&&host?'block':'none';
+  // Short labels ("Cut"/"Begin") — .l-start-circle is sized for a word
+  // like "Start", and the full "Cut for dealer"/"Begin round 1" text
+  // overflowed a circle that size. The h2 above already says the full
+  // phrase, so nothing is lost.
+  $('d-begin').textContent=round1Waiting?'Cut':'Begin';
+  $('d-begin').style.display=advanceReady&&host?'flex':'none';
   $('d-wait').style.display=advanceReady&&!host?'block':'none';
 }
 

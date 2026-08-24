@@ -502,13 +502,13 @@ p{font-size:.9rem;color:var(--muted);line-height:1.6}
 .btn-block{display:block;width:100%}
 .btn-ghost{background:transparent;border-color:var(--line);color:var(--muted)}
 
-input[type=text],input[type=password]{
+input[type=text],input[type=password],input[type=email]{
   width:100%;font:500 1rem 'DM Sans',sans-serif;padding:14px 16px;
   border-radius:var(--r);border:1px solid rgba(var(--ddp-brass-rgb),.26);
   background:rgba(var(--ddp-scrim-rgb),.22);color:var(--cream);
 }
-input[type=text]:focus,input[type=password]:focus{outline:none;border-color:var(--gold);background:rgba(var(--ddp-scrim-rgb),.32)}
-input[type=text]::placeholder,input[type=password]::placeholder{color:var(--faint)}
+input[type=text]:focus,input[type=password]:focus,input[type=email]:focus{outline:none;border-color:var(--gold);background:rgba(var(--ddp-scrim-rgb),.32)}
+input[type=text]::placeholder,input[type=password]::placeholder,input[type=email]::placeholder{color:var(--faint)}
 
 /* ══ Playing cards ══ */
 .card{
@@ -1290,6 +1290,12 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
 }
 .acct-tab.active{background:rgba(var(--ddp-brass-rgb),.18);color:var(--gold-hi)}
 .acct-form>*+*{margin-top:10px}
+.link-inline{
+  display:block;text-align:right;font-size:.78rem;color:var(--gold-hi);
+  text-decoration:underline;cursor:pointer;
+}
+#reset-request-form,#reset-new-form{margin:14px 0 18px;text-align:left}
+#reset-request-form>*+*,#reset-new-form>*+*{margin-top:10px}
 
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
 .stat-card{
@@ -5230,9 +5236,32 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
             </div>
             <input type="text" id="auth-username" placeholder="Username" maxlength="20" autocomplete="username"/>
             <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password"/>
+            <a href="#" id="auth-forgot-link" class="link-inline"
+               onclick="event.preventDefault(); openResetRequestForm();"
+               style="display:none">Forgot password?</a>
             <button class="btn btn-primary btn-block" id="auth-submit" onclick="submitAuth()">Log in</button>
             <button class="btn btn-ghost btn-sm btn-block" onclick="closeAuthForm()">Cancel</button>
             <div id="err-auth" class="note bad" style="display:none"></div>
+          </div>
+
+          <!-- "Forgot password?" request-reset form — a sibling of
+               #acct-form, not nested inside it, so the two can be toggled
+               independently (see openResetRequestForm/closeResetRequestForm). -->
+          <div id="reset-request-form" style="display:none">
+            <input type="email" id="reset-email" autocomplete="email" placeholder="you@example.com">
+            <button class="btn btn-primary btn-block" onclick="submitResetRequest()">Send reset link</button>
+            <button class="btn btn-ghost btn-sm btn-block" onclick="closeResetRequestForm()">Cancel</button>
+            <div id="err-reset-request" class="note bad" style="display:none"></div>
+          </div>
+
+          <!-- Reset-token landing view — opened directly on load when the
+               page URL carries ?resetToken=. No cancel button: a used/
+               expired token has no natural "back to login" state, and a
+               fresh one is meant to be finished, not abandoned. -->
+          <div id="reset-new-form" style="display:none">
+            <input type="password" id="reset-new-password" autocomplete="new-password" placeholder="New password">
+            <button class="btn btn-primary btn-block" onclick="submitResetPassword()">Set new password</button>
+            <div id="err-reset-new" class="note bad" style="display:none"></div>
           </div>
 
           <!-- Guests can't set a name/avatar at all anymore — friends and
@@ -5304,6 +5333,12 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
             <button class="btn btn-primary btn-block" onclick="savePersonal()">Save</button>
             <div id="err-personal" class="note bad" style="display:none"></div>
             <p id="pv-saved" class="note gold" style="display:none;margin-top:10px;text-align:center">Saved.</p>
+            <!-- Recovery email — separate save action from the name/avatar/
+                 cosmetics Save button above, since it hits its own socket
+                 event (updateEmail) with its own success/error routing. -->
+            <input type="email" id="pv-email" autocomplete="email" placeholder="Recovery email" style="margin-top:14px">
+            <button class="btn btn-ghost btn-block" onclick="saveEmail()" style="margin-top:10px">Save email</button>
+            <div id="err-email" class="note bad" style="display:none"></div>
           </div>
         </div>
 
@@ -6839,6 +6874,16 @@ function renderDailyResult(){
 let draftAvatar='';    // scratch value while editing the avatar picker
 let authMode='login';
 let lastAuthAction='';
+let resetToken=null;   // raw token pulled from ?resetToken= on page load, if present
+(function(){
+  const params=new URLSearchParams(location.search);
+  const t=params.get('resetToken');
+  if(t){
+    resetToken=t;
+    // strip it from the URL so a refresh/share doesn't leak it
+    history.replaceState(null,'',location.pathname);
+  }
+})();
 
 function updateMenuProfileUI(){
   const id=identity();
@@ -8056,6 +8101,49 @@ function switchAuthTab(mode){
   $('tab-signup').classList.toggle('active',mode==='signup');
   $('auth-submit').textContent=mode==='login'?'Log in':'Create account';
   $('auth-password').autocomplete=mode==='login'?'current-password':'new-password';
+  $('auth-forgot-link').style.display=mode==='login'?'block':'none';
+}
+function openResetRequestForm(){
+  $('acct-form').style.display='none';
+  $('reset-request-form').style.display='block';
+  $('reset-email').value='';
+  $('err-reset-request').style.display='none';
+  $('reset-email').focus();
+}
+function closeResetRequestForm(){
+  $('reset-request-form').style.display='none';
+  $('acct-form').style.display='block';
+}
+function submitResetRequest(){
+  const email=$('reset-email').value.trim();
+  if(!email) return;
+  lastAuthAction='requestReset';
+  socket.emit('requestPasswordReset',{email});
+}
+function openResetNewPasswordForm(){
+  // force the account/profile panel open, same as openAuthForm() does
+  $('acct-form').style.display='none';
+  $('reset-request-form').style.display='none';
+  $('acct-guest-gate').style.display='none';
+  $('reset-new-form').style.display='block';
+  $('reset-new-password').value='';
+  $('err-reset-new').style.display='none';
+}
+function submitResetPassword(){
+  const password=$('reset-new-password').value;
+  if(!password||password.length<6){
+    toast('err-reset-new','Password needs to be at least 6 characters.');
+    return;
+  }
+  lastAuthAction='resetPassword';
+  socket.emit('resetPassword',{token:resetToken,password});
+}
+function saveEmail(){
+  if(!accountToken) return; // only makes sense when logged in
+  const email=$('pv-email').value.trim();
+  if(!email) return;
+  lastAuthAction='updateEmail';
+  socket.emit('updateEmail',{token:accountToken,email});
 }
 function submitAuth(){
   const u=$('auth-username').value.trim();
@@ -8676,9 +8764,14 @@ socket.on('authOk',d=>{
     renderAccountUI();
     draftAvatar=account.avatar||'';
     if($('pv-name')) $('pv-name').value=account.nickname||'';
+    if($('pv-email')) $('pv-email').value=account.email||'';
     updateAvatarPreview();
   }else if(lastAuthAction==='update'){
     renderAccountUI();
+    toast('pv-saved','Saved.');
+  }else if(lastAuthAction==='updateEmail'){
+    renderAccountUI();
+    if($('pv-email')) $('pv-email').value=account.email||'';
     toast('pv-saved','Saved.');
   }else{ // resume (silent — this fires on every page load if a token is stored)
     renderAccountUI();
@@ -8687,6 +8780,7 @@ socket.on('authOk',d=>{
       $('pv-name').value=account.nickname||'';
       updateAvatarPreview();
     }
+    if($('pv-email')) $('pv-email').value=account.email||'';
   }
 });
 socket.on('authError',d=>{
@@ -8695,7 +8789,22 @@ socket.on('authError',d=>{
     accountToken=''; saveAccountToken('');
     return;
   }
-  toast('err-auth',d.msg);
+  if(lastAuthAction==='requestReset') toast('err-reset-request',d.msg);
+  else if(lastAuthAction==='resetPassword') toast('err-reset-new',d.msg);
+  else if(lastAuthAction==='updateEmail') toast('err-email',d.msg);
+  else toast('err-auth',d.msg);
+});
+socket.on('passwordResetRequested',d=>{
+  toast('err-reset-request',d.msg); // reuse the same element for the "check your email" confirmation
+});
+socket.on('passwordResetOk',d=>{
+  toast('err-reset-new',d.msg);
+  resetToken=null;
+  // let the user read the confirmation before the view swaps
+  setTimeout(()=>{
+    $('reset-new-form').style.display='none';
+    openAuthForm('login');
+  },1500);
 });
 
 /* connection status */
@@ -10744,7 +10853,8 @@ function tutorialPartBNext(){
   if(c){ $('f-code').value=c.toUpperCase(); goCasual(); }
   const s=loadSession();
   if(s&&s.room){ room=s.room; token=s.token; }
-  maybeShowWelcome();
+  if(resetToken){ goPersonal(); openResetNewPasswordForm(); }
+  else maybeShowWelcome();
 })();
 
 /* stop pinch-zoom double taps from firing plays twice */

@@ -32,7 +32,8 @@
 <script>
 (function(){try{
   var t=localStorage.getItem('ddp.tableTheme');
-  if(t==='emeraude'||t==='clair'||t==='marquee') document.documentElement.setAttribute('data-theme',t);
+  if(t==='emeraude'||t==='clair'||t==='marquee'||t==='minuit'||t==='sable'||t==='riviera'||t==='obsidienne')
+    document.documentElement.setAttribute('data-theme',t);
 }catch(e){}})();
 </script>
 
@@ -165,6 +166,93 @@
   --ddp-mine:#1E7A52;      --ddp-mine-rgb:30,122,82;
   --ddp-on-brass:#FFF6E4;
   --ddp-scrim-rgb:43,27,31; --ddp-gloss-rgb:255,255,255;
+}
+/* Minuit — midnight navy + champagne. Dark theme, same shape as
+   Bordeaux/Émeraude/Marquee: status/ai/mine/scrim/gloss all carry over
+   unchanged since the felt is dark enough for them to still read. */
+[data-theme="minuit"]{
+  --ddp-bg:#040812;      --ddp-bg-rgb:4,8,18;
+  --ddp-felt:#102C49;      --ddp-felt-lo:#081525;   --ddp-felt-rgb:16,44,73;
+  --ddp-card:#F5F0E7;      --ddp-card-hi:#FAF6EF;   --ddp-card-lo:#EAE2D2;
+  --ddp-card-edge:#D9D0C2;
+  --ddp-ink:#F2EBDD;       --ddp-ink-rgb:242,235,221;
+  --ddp-muted:#A8B5C4;
+  --ddp-brass:#C9A45F;     --ddp-brass-hi:#ECD291;  --ddp-brass-lo:#796039;
+  --ddp-brass-rgb:201,164,95;
+  --ddp-heart:#8C2233;     --ddp-heart-rgb:140,34,51;
+  --ddp-spade:#17191C;     --ddp-spade-rgb:23,25,28;
+  --ddp-pos:#7FE0B4;       --ddp-neg:#F0968C;
+  --ddp-ai:#A8D4FF;        --ddp-ai-rgb:110,180,255;
+  --ddp-mine:#A8ECCE;      --ddp-mine-rgb:63,191,136;
+  --ddp-on-brass:#111923;
+  --ddp-scrim-rgb:0,0,0;   --ddp-gloss-rgb:255,255,255;
+}
+/* Riviera — Mediterranean blue-teal + sun gold. Dark theme, same shape
+   as Minuit; sits visibly between blue and teal rather than reading as
+   either Émeraude's green or Minuit's navy. */
+[data-theme="riviera"]{
+  --ddp-bg:#041419;      --ddp-bg-rgb:4,20,25;
+  --ddp-felt:#0B5261;      --ddp-felt-lo:#07303A;   --ddp-felt-rgb:11,82,97;
+  --ddp-card:#F5F0E6;      --ddp-card-hi:#FAF6F0;   --ddp-card-lo:#EAE2D0;
+  --ddp-card-edge:#D8D0C0;
+  --ddp-ink:#F2EBDD;       --ddp-ink-rgb:242,235,221;
+  --ddp-muted:#A5C3C1;
+  --ddp-brass:#D0A85F;     --ddp-brass-hi:#EBCF8C;  --ddp-brass-lo:#80663B;
+  --ddp-brass-rgb:208,168,95;
+  --ddp-heart:#8C2233;     --ddp-heart-rgb:140,34,51;
+  --ddp-spade:#171B1C;     --ddp-spade-rgb:23,27,28;
+  --ddp-pos:#7FE0B4;       --ddp-neg:#F0968C;
+  --ddp-ai:#A8D4FF;        --ddp-ai-rgb:110,180,255;
+  --ddp-mine:#A8ECCE;      --ddp-mine-rgb:63,191,136;
+  --ddp-on-brass:#102024;
+  --ddp-scrim-rgb:0,0,0;   --ddp-gloss-rgb:255,255,255;
+}
+/* Obsidienne — near-black graphite + restrained champagne. Darkest and
+   most desaturated of the eight; gold stays a small highlight rather
+   than a dominant hue, which is what keeps it from reading like an even
+   darker Marquee. */
+[data-theme="obsidienne"]{
+  --ddp-bg:#050506;      --ddp-bg-rgb:5,5,6;
+  --ddp-felt:#1A1D1F;      --ddp-felt-lo:#0D0F10;   --ddp-felt-rgb:26,29,31;
+  --ddp-card:#F4F0E8;      --ddp-card-hi:#FAF7F1;   --ddp-card-lo:#E9E3D6;
+  --ddp-card-edge:#D5D0C6;
+  --ddp-ink:#EFE9DE;       --ddp-ink-rgb:239,233,222;
+  --ddp-muted:#AAA69E;
+  --ddp-brass:#B9A06A;     --ddp-brass-hi:#E1CFA0;  --ddp-brass-lo:#71613F;
+  --ddp-brass-rgb:185,160,106;
+  --ddp-heart:#8C2233;     --ddp-heart-rgb:140,34,51;
+  --ddp-spade:#151515;     --ddp-spade-rgb:21,21,21;
+  --ddp-pos:#7FE0B4;       --ddp-neg:#F0968C;
+  --ddp-ai:#A8D4FF;        --ddp-ai-rgb:110,180,255;
+  --ddp-mine:#A8ECCE;      --ddp-mine-rgb:63,191,136;
+  --ddp-on-brass:#111112;
+  --ddp-scrim-rgb:0,0,0;   --ddp-gloss-rgb:255,255,255;
+}
+/* Sable Royale — sand, stone and champagne. Light theme, same SHAPE as
+   Clair: bg is the lightest tone (the "page"), felt is the darkest of
+   the ramp (the warmer table surface), felt-lo sits between — see
+   Clair's own block above for why that ordering is inverted from the
+   dark themes'. pos/neg/ai/mine/scrim are Clair's own values, not
+   re-derived: both are pale warm-ink-on-light-ground themes, and this
+   is the same "flip scrim to the ink" trick Clair uses so shading reads
+   as a soft shadow instead of grey sludge. Its own light-theme
+   corrections (mirroring Clair's) are at the end of the stylesheet. */
+[data-theme="sable"]{
+  --ddp-bg:#E3D0AF;      --ddp-bg-rgb:227,208,175;
+  --ddp-felt:#B89D76;      --ddp-felt-lo:#D0B68F;   --ddp-felt-rgb:184,157,118;
+  --ddp-card:#F5EBDD;      --ddp-card-hi:#FBF5EC;   --ddp-card-lo:#EEE1CC;
+  --ddp-card-edge:#D7C6AA;
+  --ddp-ink:#49392C;       --ddp-ink-rgb:73,57,44;
+  --ddp-muted:#776651;
+  --ddp-brass:#B98945;     --ddp-brass-hi:#DDBB78;  --ddp-brass-lo:#806033;
+  --ddp-brass-rgb:185,137,69;
+  --ddp-heart:#8C2233;     --ddp-heart-rgb:140,34,51;
+  --ddp-spade:#28221D;     --ddp-spade-rgb:40,34,29;
+  --ddp-pos:#1E7A52;      --ddp-neg:#A83A2E;
+  --ddp-ai:#2A6494;        --ddp-ai-rgb:42,100,148;
+  --ddp-mine:#1E7A52;      --ddp-mine-rgb:30,122,82;
+  --ddp-on-brass:#FBF3E2;
+  --ddp-scrim-rgb:73,57,44; --ddp-gloss-rgb:255,255,255;
 }
 
 :root{
@@ -4437,6 +4525,46 @@ html.landscape-mode #tutorial-callout{
    matter where it sits. This is (0,4,2) and wins outright — it doesn't
    depend on source order at all, unlike its neighbours here. */
 html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
+
+/* ══ Sable Royale-only corrections ══
+   The same category of fix as the Clair block above, for the same
+   reason: Sable is the second light/pale-ground theme, so the same
+   pale-text-on-dark-wash accents go pale-on-pale here too. Mirrors
+   Clair's selectors and alpha choices rather than re-deriving them from
+   scratch — both are a dark warm ink on a light warm ground, so the same
+   corrections apply. Deliberately its OWN block, not coupled to
+   [data-theme="clair"], per the "a Sable-specific equivalent rather than
+   coupling Sable to Clair" requirement — Sable's sand tones are warmer/
+   darker than Clair's near-white, so its exact colours differ even where
+   the shape of the fix is identical. Lives at the END of the stylesheet
+   for the same specificity-tie reason Clair's block does. */
+[data-theme="sable"] .tag{color:var(--ddp-ink)}
+[data-theme="sable"] .note.bad{color:#8E2A20}
+[data-theme="sable"] .btn.danger{color:#8E2A20}
+[data-theme="sable"] .note.good{color:var(--ddp-mine)}
+[data-theme="sable"]{
+  --deco-edge:rgba(var(--ddp-scrim-rgb),.13);
+  --deco-frame:rgba(var(--ddp-brass-rgb),.40);
+  --deco-frame-strong:rgba(var(--ddp-brass-rgb),.72);
+}
+[data-theme="sable"] .tile{border-color:rgba(var(--ddp-brass-rgb),.45)}
+[data-theme="sable"] .acct-tab.active,
+[data-theme="sable"] .acct-toptab.active,
+[data-theme="sable"] .crest-slot-btn.active{color:var(--ddp-ink)}
+[data-theme="sable"] .tile-sub{opacity:1}
+[data-theme="sable"] .cos-tab.active{color:var(--gold-lo)}
+[data-theme="sable"] .cos-req,
+[data-theme="sable"] .title-opt .to-req,
+[data-theme="sable"] .sec-count,
+[data-theme="sable"] .cos-tab,
+[data-theme="sable"] .crest-slot-btn{color:rgba(var(--ddp-ink-rgb),.72)}
+[data-theme="sable"] .rank-plate[data-material]{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),
+             inset 0 -1px 0 rgba(0,0,0,.30),
+             0 2px 9px rgba(var(--ddp-scrim-rgb),.30),
+             0 0 0 1px rgba(var(--ddp-scrim-rgb),.62);
+}
+html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 </style>
 </head>
 <body>
@@ -5108,6 +5236,26 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
               <span class="tc-swatch" style="background:linear-gradient(160deg,#0D2E25,#020605)"><span class="tc-chip" style="background:#C49E58"></span></span>
               <span class="tc-name">Marquee</span>
             </button>
+            <button class="theme-swatch-btn theme-card deco-box" data-theme="minuit"
+              onclick="applyTableTheme('minuit')" aria-label="Minuit theme">
+              <span class="tc-swatch" style="background:linear-gradient(160deg,#102C49,#040812)"><span class="tc-chip" style="background:#C9A45F"></span></span>
+              <span class="tc-name">Minuit</span>
+            </button>
+            <button class="theme-swatch-btn theme-card deco-box" data-theme="sable"
+              onclick="applyTableTheme('sable')" aria-label="Sable Royale theme">
+              <span class="tc-swatch" style="background:linear-gradient(160deg,#D0B68F,#B89D76)"><span class="tc-chip" style="background:#B98945"></span></span>
+              <span class="tc-name">Sable Royale</span>
+            </button>
+            <button class="theme-swatch-btn theme-card deco-box" data-theme="riviera"
+              onclick="applyTableTheme('riviera')" aria-label="Riviera theme">
+              <span class="tc-swatch" style="background:linear-gradient(160deg,#0B5261,#041419)"><span class="tc-chip" style="background:#D0A85F"></span></span>
+              <span class="tc-name">Riviera</span>
+            </button>
+            <button class="theme-swatch-btn theme-card deco-box" data-theme="obsidienne"
+              onclick="applyTableTheme('obsidienne')" aria-label="Obsidienne theme">
+              <span class="tc-swatch" style="background:linear-gradient(160deg,#1A1D1F,#050506)"><span class="tc-chip" style="background:#B9A06A"></span></span>
+              <span class="tc-name">Obsidienne</span>
+            </button>
           </div>
           </div><!-- /cos-panel-theme -->
 
@@ -5750,11 +5898,14 @@ function toggleSfxMuted(){
 // Bordeaux is the default and lives on :root, so it's the one value that
 // clears data-theme rather than setting it — keeps "no attribute" and
 // "bordeaux" from being two different states.
-const DDP_THEMES=['bordeaux','emeraude','clair','marquee'];
+const DDP_THEMES=['bordeaux','emeraude','clair','marquee','minuit','sable','riviera','obsidienne'];
 const DDP_THEME_KEY='ddp.tableTheme';
 // keep in step with each theme's --ddp-bg; drives the Android status-bar
 // tint, which would otherwise stay the old hardcoded green
-const DDP_THEME_BG={bordeaux:'#120A0D',emeraude:'#0D1512',clair:'#F7F2E7',marquee:'#020605'};
+const DDP_THEME_BG={
+  bordeaux:'#120A0D',emeraude:'#0D1512',clair:'#F7F2E7',marquee:'#020605',
+  minuit:'#040812',sable:'#E3D0AF',riviera:'#041419',obsidienne:'#050506',
+};
 
 function applyTableTheme(key){
   if(!DDP_THEMES.includes(key)) key='bordeaux';

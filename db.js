@@ -60,6 +60,37 @@ async function ensureSchema() {
     );
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS sessions_account_id_idx ON sessions(account_id);`);
+
+  // ── Password recovery ──
+  // Nullable + a partial unique index, same pattern as friend_code below:
+  // existing accounts predate this column and stay NULL (and therefore
+  // can't request a reset) until they add one from Profile. Stored
+  // already-lowercased by the caller (setAccountEmail), same convention
+  // as username_lower — case-insensitive lookup with no separate column
+  // needed since email has no display-case reason to differ from stored.
+  await pool.query(`ALTER TABLE accounts ADD COLUMN IF NOT EXISTS email TEXT;`);
+  await pool.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_idx
+       ON accounts(email) WHERE email IS NOT NULL;`
+  );
+  // Only the HASH of the reset token is stored — same reason password_hash
+  // isn't the password. Unlike password_hash this doesn't need bcrypt's
+  // slow hashing: the token is 32 random bytes (256 bits of entropy, not a
+  // human-chosen secret), so a fast sha256 is enough and keeps reset
+  // requests cheap. expires_at is enforced in the query, not a cron job —
+  // an expired row is just never returned as valid and gets cleaned up
+  // opportunistically (see createPasswordReset).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      token_hash TEXT PRIMARY KEY,
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      used_at TIMESTAMPTZ
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS password_resets_account_id_idx ON password_resets(account_id);`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS stats (
       account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
@@ -330,11 +361,19 @@ async function ensureSchema() {
   // Second crest slot, same story: added after the table first shipped,
   // same validation and NULL-means-unequipped convention as `crest`.
   await pool.query(`ALTER TABLE player_cosmetics ADD COLUMN IF NOT EXISTS crest2 TEXT;`);
+  // Table theme, promoted from a pure client-side localStorage preference
+  // into a real shop-gated cosmetic — same NULL-means-"use the default"
+  // convention as rank_set, resolved by filterEquipped to theme_obsidienne.
+  await pool.query(`ALTER TABLE player_cosmetics ADD COLUMN IF NOT EXISTS table_theme TEXT;`);
 }
 
 function toPublic(row) {
   if (!row) return null;
-  return { id: row.id, username: row.username, nickname: row.nickname, avatar: row.avatar };
+  // Despite the name, every caller sends this back down the OWNER's own
+  // socket (signup/login/resumeSession/updateProfile) — never broadcast
+  // to other players — so including email here is safe. It's what the
+  // client uses to show "add an email" vs "change email" in Profile.
+  return { id: row.id, username: row.username, nickname: row.nickname, avatar: row.avatar, email: row.email || null };
 }
 
 async function createAccount({ username, passwordHash, nickname, avatar }) {
@@ -382,6 +421,69 @@ async function updateProfile(accountId, { nickname, avatar }) {
     [accountId, nickname, avatar]
   );
   return rows[0];
+}
+
+// ── Password recovery ─────────────────────────────────────────
+// Caller (server.js) lowercases before calling, same convention as
+// username_lower — kept there rather than here so this file stays plain
+// SQL wrappers with no normalization logic of its own.
+async function setAccountEmail(accountId, email) {
+  const { rows } = await pool.query(
+    `UPDATE accounts SET email = $2 WHERE id = $1 RETURNING *`,
+    [accountId, email]
+  );
+  return rows[0];
+}
+
+async function findAccountByEmail(email) {
+  const { rows } = await pool.query(`SELECT * FROM accounts WHERE email = $1`, [email]);
+  return rows[0] || null;
+}
+
+// One-hour window, same shape reasoning as sessions: short-lived, single
+// use, tied to one account. Opportunistically sweeps this account's own
+// expired/used rows on every new request rather than a separate cron —
+// there's no scheduler in this process, and piggybacking on the one path
+// that already touches this account's reset rows keeps the table from
+// growing unbounded without adding new infrastructure.
+async function createPasswordReset(accountId, tokenHash) {
+  await pool.query(
+    `DELETE FROM password_resets WHERE account_id = $1 AND (used_at IS NOT NULL OR expires_at < now())`,
+    [accountId]
+  );
+  await pool.query(
+    `INSERT INTO password_resets (token_hash, account_id, expires_at)
+     VALUES ($1, $2, now() + interval '1 hour')`,
+    [tokenHash, accountId]
+  );
+}
+
+// Valid = exists, not expired, not already used. Everything the caller
+// needs to decide is in this one query rather than three round trips.
+async function findValidPasswordReset(tokenHash) {
+  const { rows } = await pool.query(
+    `SELECT * FROM password_resets
+     WHERE token_hash = $1 AND used_at IS NULL AND expires_at > now()`,
+    [tokenHash]
+  );
+  return rows[0] || null;
+}
+
+async function usePasswordReset(tokenHash) {
+  await pool.query(`UPDATE password_resets SET used_at = now() WHERE token_hash = $1`, [tokenHash]);
+}
+
+async function updatePassword(accountId, passwordHash) {
+  await pool.query(`UPDATE accounts SET password_hash = $2 WHERE id = $1`, [accountId, passwordHash]);
+}
+
+// Called after a successful reset so a stolen/guessed-old session can't
+// keep riding — the same reason changing your password logs you out
+// everywhere on most services. Deliberately NOT called on a normal
+// updateProfile save; only a password change is security-sensitive enough
+// to justify signing every device out.
+async function deleteSessionsForAccount(accountId) {
+  await pool.query(`DELETE FROM sessions WHERE account_id = $1`, [accountId]);
 }
 
 // ── Friends ────────────────────────────────────────────────────
@@ -991,7 +1093,7 @@ async function getAchievementStats(accountId) {
 // queried by element.
 async function getCosmetics(accountId) {
   const { rows } = await pool.query(
-    `SELECT scene, card_front, crest, crest2, title, rank_set, seen_achievements
+    `SELECT scene, card_front, crest, crest2, title, rank_set, table_theme, seen_achievements
      FROM player_cosmetics WHERE account_id = $1`,
     [accountId]
   );
@@ -1005,6 +1107,7 @@ async function getCosmetics(accountId) {
     crest2: (c && c.crest2) || null,
     title: (c && c.title) || null,
     rankSet: (c && c.rank_set) || null,
+    tableTheme: (c && c.table_theme) || null,
     seen: c && c.seen_achievements ? c.seen_achievements.split(',').filter(Boolean) : [],
   };
 }
@@ -1013,22 +1116,23 @@ async function getCosmetics(accountId) {
 // impossible, so an explicit empty string is the unequip signal and is
 // stored as NULL. The caller (server.js) has already validated every ID
 // against what the account has actually unlocked.
-async function saveCosmetics(accountId, { scene, cardFront, crest, crest2, title, rankSet }) {
+async function saveCosmetics(accountId, { scene, cardFront, crest, crest2, title, rankSet, tableTheme }) {
   const norm = v => (v === undefined ? undefined : (v || null));
-  const s = norm(scene), cf = norm(cardFront), cr = norm(crest), cr2 = norm(crest2), t = norm(title), rs = norm(rankSet);
+  const s = norm(scene), cf = norm(cardFront), cr = norm(crest), cr2 = norm(crest2), t = norm(title), rs = norm(rankSet), tt = norm(tableTheme);
   await pool.query(
-    `INSERT INTO player_cosmetics (account_id, scene, card_front, crest, crest2, title, rank_set)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO player_cosmetics (account_id, scene, card_front, crest, crest2, title, rank_set, table_theme)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (account_id) DO UPDATE SET
-       scene = CASE WHEN $8 THEN $2 ELSE player_cosmetics.scene END,
-       card_front = CASE WHEN $9 THEN $3 ELSE player_cosmetics.card_front END,
-       crest = CASE WHEN $10 THEN $4 ELSE player_cosmetics.crest END,
-       crest2 = CASE WHEN $11 THEN $5 ELSE player_cosmetics.crest2 END,
-       title = CASE WHEN $12 THEN $6 ELSE player_cosmetics.title END,
-       rank_set = CASE WHEN $13 THEN $7 ELSE player_cosmetics.rank_set END,
+       scene = CASE WHEN $9 THEN $2 ELSE player_cosmetics.scene END,
+       card_front = CASE WHEN $10 THEN $3 ELSE player_cosmetics.card_front END,
+       crest = CASE WHEN $11 THEN $4 ELSE player_cosmetics.crest END,
+       crest2 = CASE WHEN $12 THEN $5 ELSE player_cosmetics.crest2 END,
+       title = CASE WHEN $13 THEN $6 ELSE player_cosmetics.title END,
+       rank_set = CASE WHEN $14 THEN $7 ELSE player_cosmetics.rank_set END,
+       table_theme = CASE WHEN $15 THEN $8 ELSE player_cosmetics.table_theme END,
        updated_at = now()`,
-    [accountId, s ?? null, cf ?? null, cr ?? null, cr2 ?? null, t ?? null, rs ?? null,
-     s !== undefined, cf !== undefined, cr !== undefined, cr2 !== undefined, t !== undefined, rs !== undefined]
+    [accountId, s ?? null, cf ?? null, cr ?? null, cr2 ?? null, t ?? null, rs ?? null, tt ?? null,
+     s !== undefined, cf !== undefined, cr !== undefined, cr2 !== undefined, t !== undefined, rs !== undefined, tt !== undefined]
   );
   return getCosmetics(accountId);
 }
@@ -1155,6 +1259,8 @@ module.exports = {
   pool, ensureSchema, toPublic,
   createAccount, findAccountByUsername, findAccountById,
   createSession, findAccountByToken, deleteSession, updateProfile,
+  setAccountEmail, findAccountByEmail, createPasswordReset, findValidPasswordReset,
+  usePasswordReset, updatePassword, deleteSessionsForAccount,
   getOrCreateFriendCode, findAccountByFriendCode, addFriend, removeFriend, areFriends, getFriends,
   recordGameStarted, recordTrick, recordRound, recordGameFinished, recordQueenTaken, getStats,
   recordBlitzGameStarted, recordBlitzGameFinished,

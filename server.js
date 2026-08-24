@@ -25,6 +25,7 @@ if (DB_ENABLED) {
   console.log('Accounts: DATABASE_URL not set, account system disabled (guest play still works)');
 }
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const loginAttempts = new Map(); // username_lower -> { count, resetAt }
 function loginRateLimited(usernameLower) {
   const now = Date.now();
@@ -38,6 +39,75 @@ function recordLoginAttempt(usernameLower, failed) {
   if (!rec || now > rec.resetAt) rec = { count: 0, resetAt: now + 10 * 60 * 1000 };
   if (failed) rec.count++; else rec.count = 0;
   loginAttempts.set(usernameLower, rec);
+}
+
+// ── Password reset email (optional — only active if RESEND_API_KEY is
+// set, same DB_ENABLED-style gating as the account system itself) ──
+// Uses Resend's plain HTTP API via Node's built-in fetch (Node >=18, see
+// package.json's engines field) rather than an SDK dependency — one POST,
+// no new package to install or keep updated. Swap the fetch call for
+// another provider's REST API later without touching any caller; nothing
+// outside this function knows which provider sends the email.
+const EMAIL_ENABLED = !!process.env.RESEND_API_KEY;
+// Set this in Railway's env vars to your deployed origin (e.g.
+// https://dameDepique.up.railway.app or a custom domain) once you have
+// one — it's what the reset link in the email points back at. Falls back
+// to a relative-looking placeholder so a missing var fails loudly in the
+// email itself instead of silently linking nowhere.
+const PUBLIC_URL = process.env.PUBLIC_URL || 'http://localhost:3000';
+// Resend requires the FROM address's domain to be verified in your Resend
+// account before it will actually deliver — their free tier includes a
+// shared onboarding@resend.dev sender that works with zero setup for low
+// volume, which is what this defaults to. Override with RESEND_FROM once
+// you've verified your own domain there.
+const RESEND_FROM = process.env.RESEND_FROM || 'Dame de Pique <onboarding@resend.dev>';
+async function sendPasswordResetEmail(to, resetUrl) {
+  if (!EMAIL_ENABLED) {
+    console.log(`[email disabled] password reset link for ${to}: ${resetUrl}`);
+    return false;
+  }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: RESEND_FROM,
+        to: [to],
+        subject: 'Reset your Dame de Pique password',
+        text: `Someone (hopefully you) asked to reset the password on your Dame de Pique account.\n\n`
+          + `Reset it here — this link works once and expires in 1 hour:\n${resetUrl}\n\n`
+          + `If you didn't request this, you can ignore this email — your password hasn't changed.`,
+      }),
+    });
+    if (!res.ok) {
+      console.error('sendPasswordResetEmail: Resend returned', res.status, await res.text().catch(() => ''));
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('sendPasswordResetEmail error:', e.message);
+    return false;
+  }
+}
+// Same shape as loginAttempts — keyed by email this time, since the
+// attack this guards against is spamming reset emails at one address
+// rather than password-guessing one username.
+const resetRequestAttempts = new Map(); // email -> { count, resetAt }
+function resetRequestRateLimited(email) {
+  const now = Date.now();
+  const rec = resetRequestAttempts.get(email);
+  if (!rec || now > rec.resetAt) return false;
+  return rec.count >= 3;
+}
+function recordResetRequestAttempt(email) {
+  const now = Date.now();
+  let rec = resetRequestAttempts.get(email);
+  if (!rec || now > rec.resetAt) rec = { count: 0, resetAt: now + 60 * 60 * 1000 };
+  rec.count++;
+  resetRequestAttempts.set(email, rec);
 }
 // Fire-and-forget stats writes — a DB hiccup here should never affect the
 // game itself, just get logged and silently skipped.
@@ -1297,14 +1367,37 @@ function achievementLevel(a, value) {
 // achievement-unlocked OR purchased — see cosmeticsFor. That split is what
 // keeps every threshold retunable, since only the purchase is stored.
 //
-// Only scenes and card fronts are purchasable, deliberately. Crests are
-// 1:1 with achievements — a crest IS the visible proof of one, so a bought
-// crest would be a lie. Rank sets are earned by reaching a tier and are
-// documented as never purchasable; selling them would also make credits
-// look like they touch rank, which is this spec's own first non-goal.
-// Neither carries a price, and buyCosmetic hard-rejects both.
+// Scenes, card fronts and table themes are purchasable, deliberately.
+// Crests are 1:1 with achievements — a crest IS the visible proof of one,
+// so a bought crest would be a lie. Rank sets are earned by reaching a
+// tier and are documented as never purchasable; selling them would also
+// make credits look like they touch rank, which is this spec's own first
+// non-goal. None of those three carry a price, and buyCosmetic only ever
+// searches the three purchasable arrays.
 const CREDIT_PRICES = { common: 600, rare: 2000, epic: 5000, legendary: 12000 };
+// Table themes get their own flat 500 rather than reusing one of the tiers
+// above — those tiers price cosmetics that vary a lot in rarity/effort
+// (a background photo vs. a whole illustrated deck); every table theme is
+// the same kind of thing (a felt palette), so one flat price fits all six
+// locked ones evenly.
+const THEME_PRICE = 500;
 const COSMETICS = {
+  // Obsidienne and Émeraude are the two free/default themes (see
+  // filterEquipped's fallback and applyTableTheme's client-side default);
+  // every other theme is shop-exclusive, same unlock:null+price shape
+  // cardfront_noir established — no achievement route, purchase only.
+  // Order here is display order everywhere this catalog is rendered (the
+  // My Account picker, the Shop), which is why the two free ones lead.
+  tableThemes: [
+    { id: 'theme_obsidienne', name: 'Obsidienne',  unlock: null },
+    { id: 'theme_emeraude',   name: 'Émeraude',     unlock: null },
+    { id: 'theme_bordeaux',   name: 'Bordeaux',     unlock: null, price: THEME_PRICE },
+    { id: 'theme_clair',      name: 'Clair',        unlock: null, price: THEME_PRICE },
+    { id: 'theme_marquee',    name: 'Marquee',      unlock: null, price: THEME_PRICE },
+    { id: 'theme_minuit',     name: 'Minuit',       unlock: null, price: THEME_PRICE },
+    { id: 'theme_sable',      name: 'Sable Royale', unlock: null, price: THEME_PRICE },
+    { id: 'theme_riviera',    name: 'Riviera',      unlock: null, price: THEME_PRICE },
+  ],
   scenes: [
     { id: 'scene_velvet_room',   name: 'The Velvet Room',  unlock: null },
     // The Observer (ach_observer), the achievement this used to unlock off,
@@ -1604,6 +1697,7 @@ function cosmeticsFor(achievements, stats, purchases) {
     crests: mark(COSMETICS.crests),
     titles: mark(COSMETICS.titles),
     rankSets: mark(COSMETICS.rankSets),
+    tableThemes: mark(COSMETICS.tableThemes),
   };
 }
 
@@ -1631,6 +1725,10 @@ function filterEquipped(equipped, catalog) {
     crest2: ok(catalog.crests, equipped.crest2),
     title: ok(catalog.titles, equipped.title),
     rankSet: ok(catalog.rankSets, equipped.rankSet) || (highestRank ? highestRank.id : null),
+    // Obsidienne is the app's default felt (see applyTableTheme client-
+    // side) — same "always resolve to something equipped" reasoning as
+    // scene/cardFront above, not a fixed fallback picked at random.
+    tableTheme: ok(catalog.tableThemes, equipped.tableTheme) || 'theme_obsidienne',
   };
 }
 
@@ -2195,6 +2293,12 @@ function publicState(G) {
     ranked: !!G.ranked,
     players: G.players.map((p, i) => ({
       name: p.name, avatar: p.avatar || null, title: p.title || null,
+      // Only a real account's id, never a bot's or a not-yet-logged-in
+      // guest's — this is what lets the lobby seat card open the same
+      // profile popup the daily leaderboard and friends list already use
+      // (see getPlayerProfile), and both those callers already gate on
+      // it being truthy before rendering a click affordance.
+      accountId: p.accountId || null,
       rankMaterial: p.rankMaterial || null,
       crest: p.crest || null, crestLevel: p.crestLevel || 1,
       crest2: p.crest2 || null, crest2Level: p.crest2Level || 1,
@@ -2723,6 +2827,93 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Sets or changes the recovery email on the CURRENTLY logged-in
+  // account — not part of signup, so it works for existing accounts that
+  // predate this column too. Re-uses the authOk/authError pair
+  // updateProfile does, since the client-side shape (an updated account
+  // object) is identical.
+  socket.on('updateEmail', async ({ token, email }) => {
+    if (!DB_ENABLED || !token) return;
+    const e2 = String(email || '').trim().toLowerCase();
+    if (!EMAIL_RE.test(e2)) return socket.emit('authError', { msg: 'That doesn\'t look like a valid email address.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('authError', { msg: 'Your session expired — log in again.' });
+      const existing = await db.findAccountByEmail(e2);
+      if (existing && existing.id !== account.id) {
+        return socket.emit('authError', { msg: 'That email is already on another account.' });
+      }
+      const updated = await db.setAccountEmail(account.id, e2);
+      socket.emit('authOk', { token, account: db.toPublic(updated) });
+    } catch (e) {
+      console.error('updateEmail error:', e.message);
+      socket.emit('authError', { msg: 'Could not save that email. Try again.' });
+    }
+  });
+
+  // ── Password recovery ───────────────────────────────────────
+  // Deliberately logged-OUT flows — a locked-out player has no token.
+  // Always emits the SAME generic success message whether or not the
+  // email matched an account, so this can't be used to test which emails
+  // have accounts here (the classic account-enumeration leak). The only
+  // branch that differs is entirely server-side (whether an email actually
+  // goes out).
+  socket.on('requestPasswordReset', async ({ email }) => {
+    if (!DB_ENABLED) return socket.emit('authError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    const e2 = String(email || '').trim().toLowerCase();
+    const GENERIC_OK = { msg: 'If that email is on an account, a reset link is on its way.' };
+    if (!EMAIL_RE.test(e2)) return socket.emit('authError', { msg: 'That doesn\'t look like a valid email address.' });
+    if (resetRequestRateLimited(e2)) {
+      // Same generic message, not a rate-limit-specific one — telling an
+      // attacker "you're rate limited" still confirms the endpoint is
+      // being hit; better to look identical to the success case.
+      return socket.emit('passwordResetRequested', GENERIC_OK);
+    }
+    recordResetRequestAttempt(e2);
+    try {
+      const account = await db.findAccountByEmail(e2);
+      if (account) {
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        await db.createPasswordReset(account.id, tokenHash);
+        const resetUrl = `${PUBLIC_URL}/?resetToken=${rawToken}`;
+        sendPasswordResetEmail(account.email, resetUrl).catch(() => {});
+      }
+      socket.emit('passwordResetRequested', GENERIC_OK);
+    } catch (e) {
+      console.error('requestPasswordReset error:', e.message);
+      // Still generic — an internal error here shouldn't tell the caller
+      // anything more than "try again later" would.
+      socket.emit('passwordResetRequested', GENERIC_OK);
+    }
+  });
+
+  socket.on('resetPassword', async ({ token: rawToken, password }) => {
+    if (!DB_ENABLED) return socket.emit('authError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    const p = String(password || '');
+    const t = String(rawToken || '');
+    if (!t) return socket.emit('authError', { msg: 'Missing or invalid reset link.' });
+    if (p.length < 6) return socket.emit('authError', { msg: 'Password needs to be at least 6 characters.' });
+    try {
+      const tokenHash = crypto.createHash('sha256').update(t).digest('hex');
+      const reset = await db.findValidPasswordReset(tokenHash);
+      if (!reset) {
+        return socket.emit('authError', { msg: 'This reset link is invalid or has expired — request a new one.' });
+      }
+      const passwordHash = await bcrypt.hash(p, 10);
+      await db.updatePassword(reset.account_id, passwordHash);
+      await db.usePasswordReset(tokenHash);
+      // Every existing session is signed out, including this one if it
+      // happened to be logged in elsewhere — the same "changing your
+      // password logs you out everywhere" convention most accounts use.
+      await db.deleteSessionsForAccount(reset.account_id);
+      socket.emit('passwordResetOk', { msg: 'Password changed — log in with your new password.' });
+    } catch (e) {
+      console.error('resetPassword error:', e.message);
+      socket.emit('authError', { msg: 'Could not reset your password. Try again.' });
+    }
+  });
+
   // ── Friends ──────────────────────────────────────────────────
   socket.on('getFriendCode', async ({ token }) => {
     if (!DB_ENABLED || !token) return;
@@ -2820,10 +3011,12 @@ io.on('connection', (socket) => {
   });
 
   // The friend-card popup: rank, equipped cosmetics, casual + ranked
-  // stats for someone ELSE's account. Gated on friendship (not just a
-  // valid token) so this can't become a general "look up any account by
-  // id" endpoint — the friends list is the only place a friendId is ever
-  // discovered client-side anyway.
+  // stats for someone ELSE's account. `getFriendProfile` is gated on
+  // friendship; `getPlayerProfile` below is the same card opened from a
+  // lobby seat or the daily leaderboard, where a playerId is discovered
+  // without any friendship at all, so it's gated on login instead. Both
+  // funnel into emitProfileCard so the two gates can't drift apart in
+  // what they actually send.
   // Deliberately sends only IDs for cosmetics (equipped.rankSet/crest/
   // scene), not a full catalog — RANK_COSMETICS/CREST_ART/SCENE art are
   // static registries already mirrored client-side (same contract the
@@ -2831,6 +3024,37 @@ io.on('connection', (socket) => {
   // render all of it from an id alone. titleName is the one exception,
   // resolved here via the same titleNameFor() a seat join uses, since
   // title *display strings* aren't otherwise duplicated client-side.
+  async function emitProfileCard(sock, targetId) {
+    const fid = Number(targetId);
+    if (!Number.isInteger(fid)) return sock.emit('friendProfileError', { msg: 'Unknown player.' });
+    const targetAccount = await db.findAccountById(fid);
+    if (!targetAccount) return sock.emit('friendProfileError', { msg: 'That player no longer exists.' });
+    const [rankedProfile, stats, rankedStats, cos] = await Promise.all([
+      db.getOrCreateRankedProfile(fid),
+      db.getStats(fid),
+      db.getRankedStats(fid),
+      loadPlayerCosmetics(fid),
+    ]);
+    const isPlacement = rankedProfile.placementGamesPlayed < 5;
+    sock.emit('friendProfileOk', {
+      id: fid,
+      nickname: targetAccount.nickname,
+      avatar: targetAccount.avatar,
+      online: accountSockets.has(fid),
+      rank: isPlacement ? null : rankForMmr(rankedProfile.mmr),
+      isPlacement,
+      placementGamesPlayed: rankedProfile.placementGamesPlayed,
+      stats, rankedStats,
+      equipped: cos.equipped,
+      titleName: titleNameFor(cos.equipped.title),
+      // Unlocked achievements only — an unearned secret's name/desc is
+      // already blanked by evaluateAchievements, but there's no reason
+      // to hand another player's client the locked half at all.
+      crests: cos.achievements.filter(a => a.unlocked).map(a => ({
+        id: a.id, name: a.name, crest: a.crest, level: a.level, maxLevel: a.maxLevel,
+      })),
+    });
+  }
   socket.on('getFriendProfile', async ({ token, friendId }) => {
     if (!DB_ENABLED || !token) return socket.emit('friendProfileError', { msg: 'Accounts aren\'t set up on this server yet.' });
     try {
@@ -2840,35 +3064,28 @@ io.on('connection', (socket) => {
       if (!Number.isInteger(fid)) return socket.emit('friendProfileError', { msg: 'Unknown player.' });
       const isFriend = await db.areFriends(account.id, fid);
       if (!isFriend) return socket.emit('friendProfileError', { msg: 'Not on your friends list.' });
-      const friendAccount = await db.findAccountById(fid);
-      if (!friendAccount) return socket.emit('friendProfileError', { msg: 'That player no longer exists.' });
-      const [rankedProfile, stats, rankedStats, cos] = await Promise.all([
-        db.getOrCreateRankedProfile(fid),
-        db.getStats(fid),
-        db.getRankedStats(fid),
-        loadPlayerCosmetics(fid),
-      ]);
-      const isPlacement = rankedProfile.placementGamesPlayed < 5;
-      socket.emit('friendProfileOk', {
-        id: fid,
-        nickname: friendAccount.nickname,
-        avatar: friendAccount.avatar,
-        online: accountSockets.has(fid),
-        rank: isPlacement ? null : rankForMmr(rankedProfile.mmr),
-        isPlacement,
-        placementGamesPlayed: rankedProfile.placementGamesPlayed,
-        stats, rankedStats,
-        equipped: cos.equipped,
-        titleName: titleNameFor(cos.equipped.title),
-        // Unlocked achievements only — an unearned secret's name/desc is
-        // already blanked by evaluateAchievements, but there's no reason
-        // to hand a friend's client the locked half at all.
-        crests: cos.achievements.filter(a => a.unlocked).map(a => ({
-          id: a.id, name: a.name, crest: a.crest, level: a.level, maxLevel: a.maxLevel,
-        })),
-      });
+      await emitProfileCard(socket, fid);
     } catch (e) {
       console.error('getFriendProfile error:', e.message);
+      socket.emit('friendProfileError', { msg: 'Could not load that profile. Try again.' });
+    }
+  });
+  // Opened by tapping a seat in the game lobby or a row on the daily
+  // leaderboard — both already hand the client a real accountId
+  // (publicState's players[].accountId, and dailyLeaderboardOk's
+  // rows[].accountId/you.accountId), neither of which implies any
+  // friendship. Gated on being logged in at all, not on friendship —
+  // a lobby opponent or a leaderboard entry is never a friend by
+  // definition, so reusing getFriendProfile's gate would just always
+  // reject.
+  socket.on('getPlayerProfile', async ({ token, playerId }) => {
+    if (!DB_ENABLED || !token) return socket.emit('friendProfileError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendProfileError', { msg: 'Your session expired — log in again.' });
+      await emitProfileCard(socket, playerId);
+    } catch (e) {
+      console.error('getPlayerProfile error:', e.message);
       socket.emit('friendProfileError', { msg: 'Could not load that profile. Try again.' });
     }
   });
@@ -2925,7 +3142,7 @@ io.on('connection', (socket) => {
   // than rejected outright, so a partially-stale client (one that hasn't
   // reloaded since a cosmetic was renamed) still saves the fields it got
   // right instead of failing the whole request.
-  socket.on('saveCosmetics', async ({ token, scene, cardFront, crest, crest2, title, rankSet }) => {
+  socket.on('saveCosmetics', async ({ token, scene, cardFront, crest, crest2, title, rankSet, tableTheme }) => {
     if (!DB_ENABLED || !token) return;
     try {
       const account = await db.findAccountByToken(token);
@@ -2944,6 +3161,7 @@ io.on('connection', (socket) => {
         crest2: pick(catalog.crests, crest2),
         title: pick(catalog.titles, title),
         rankSet: pick(catalog.rankSets, rankSet),
+        tableTheme: pick(catalog.tableThemes, tableTheme),
       });
       const after = await loadPlayerCosmetics(account.id);
       socket.emit('profileCosmeticsOk', {
@@ -2979,9 +3197,9 @@ io.on('connection', (socket) => {
     try {
       const account = await db.findAccountByToken(token);
       if (!account) return socket.emit('shopError', { msg: 'Your session expired — log in again.' });
-      // Only the two purchasable categories are even searched, so an id
+      // Only the three purchasable categories are even searched, so an id
       // from any other category simply isn't found.
-      const item = [...COSMETICS.scenes, ...COSMETICS.cardFronts].find(c => c.id === itemId);
+      const item = [...COSMETICS.scenes, ...COSMETICS.cardFronts, ...COSMETICS.tableThemes].find(c => c.id === itemId);
       if (!item || !item.price) return socket.emit('shopError', { msg: "That item isn't for sale." });
       const res = await db.purchaseItem(account.id, item.id, item.price);
       if (!res.ok) {

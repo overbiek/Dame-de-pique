@@ -20,7 +20,15 @@
 // alone changes nothing this service worker will notice. Any future
 // in-place overwrite of a runtime-cached asset (avatars, scenes, card
 // fronts, rank art) needs the same bump, not just an ASSETS change.
-const CACHE = 'ddp-v8';
+// v9: recropped the four Clean Sheet crest tiers in place.
+// v10: replaced the app icons (icon-192/512, icon-maskable-512,
+// apple-touch-icon) in place — the OLD two-card artwork was still what
+// Android's native launch splash and the installed icon showed, flashing
+// briefly before the JS-driven #splash overlay (the NEW Marquee card
+// mark) took over, i.e. two different pictures back to back on startup.
+// Same in-place-overwrite trap as v8: bumping is what actually forces a
+// re-fetch of the new bytes under those existing filenames.
+const CACHE = 'ddp-v10';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
                 '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 

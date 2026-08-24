@@ -6,8 +6,8 @@
 <title>Dame de Pique</title>
 
 <link rel="manifest" href="/manifest.json"/>
-<!-- Bordeaux's --ddp-bg; applyTableTheme() rewrites this per theme -->
-<meta name="theme-color" content="#120A0D"/>
+<!-- Obsidienne's --ddp-bg (the default theme); applyTableTheme() rewrites this per theme -->
+<meta name="theme-color" content="#050506"/>
 <!-- Opts out of Android Chrome/WebView's "Force Dark" / "Simplify page
      colours" heuristic. Without this, some Android browsers see a page
      they don't recognise as dark-theme-aware and auto-invert light
@@ -25,15 +25,23 @@
 
 <!-- Set the saved theme before ANY paint. The main script is at the end
      of <body>, so leaving this to initTableTheme() alone would flash the
-     default Bordeaux felt at anyone using Émeraude or Clair — same
-     reasoning as the .screen anti-flash ordering in show(). This only
-     sets the attribute; initTableTheme() still runs later to mark the
-     active swatch and sync theme-color once the menu markup exists. -->
+     wrong felt at anyone not on Bordeaux — same reasoning as the .screen
+     anti-flash ordering in show(). This only sets the attribute;
+     initTableTheme() still runs later to sync theme-color once the menu
+     markup exists.
+     Obsidienne, not Bordeaux, is the default now (see COSMETICS.
+     tableThemes server-side) — Bordeaux is still the one key with no
+     [data-theme="bordeaux"] block (bare :root), so a saved 'bordeaux' is
+     still the one value this leaves unset, but an UNSAVED (first-ever
+     visit) key now falls to Obsidienne instead of leaving the attribute
+     off entirely. -->
 <script>
 (function(){try{
   var t=localStorage.getItem('ddp.tableTheme');
   if(t==='emeraude'||t==='clair'||t==='marquee'||t==='minuit'||t==='sable'||t==='riviera'||t==='obsidienne')
     document.documentElement.setAttribute('data-theme',t);
+  else if(t!=='bordeaux')
+    document.documentElement.setAttribute('data-theme','obsidienne');
 }catch(e){}})();
 </script>
 
@@ -1316,6 +1324,13 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
    clamp itself and the box each is built against. */
 .avatar.lg{width:var(--av);height:var(--av);font-size:clamp(1.35rem,5vw,2.1rem);flex:0 0 auto;border-width:3px}
 .avatar.lg .dealer-badge{width:28px;height:28px;font-size:.82rem;right:-5px;bottom:-5px;border-width:2px}
+/* A lobby seat's avatar and name open the same read-only profile card
+   .friend-main opens from the Friends tab (see openPlayerProfile) — .tap
+   here is just a bare cursor/active-state hook, not the card-drag .tap
+   these table screens also use, since neither element lives anywhere
+   near that gesture code. */
+.avatar.tap,.slot-name.tap{cursor:pointer;touch-action:manipulation}
+.avatar.tap:active,.slot-name.tap:active{opacity:.8}
 
 .profile-chip{
   display:flex;align-items:center;gap:10px;width:100%;
@@ -1364,6 +1379,12 @@ input[type=text]::placeholder,input[type=password]::placeholder{color:var(--fain
    same way .lb-table's rank badges already are. */
 .lb-av{display:inline-block;width:20px;height:20px;vertical-align:-5px}
 .lb-av .av-img{border-radius:50%}
+/* Opens the same profile card a lobby seat/friend row does — see
+   openPlayerProfile. Inline, not flex: .lb-av is already inline-block
+   with its own vertical-align, and wrapping it changes nothing about
+   that as long as this stays inline too. */
+.lb-who.tap{cursor:pointer;touch-action:manipulation}
+.lb-who.tap:active{opacity:.8}
 /* The My Account menu tile when a portrait is equipped: drop the
    typographic-glyph treatment (font sizing, brass tint, text-shadow)
    that .tile-icon applies to ♠/☀/☺ and let the image fill instead. */
@@ -1490,32 +1511,6 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 
 .pick-hint{font-size:.72rem;color:var(--faint);font-style:italic;text-align:center;margin:2px 0 10px}
 
-/* theme preview cards — keeps the .theme-swatch-btn hook applyTableTheme()
-   toggles .active on, restyled from a bare swatch dot into a card */
-/* auto-fit rather than a fixed count: four cards sit in one row where
-   there's room and fall to 2x2 in the narrower landscape account panel,
-   so adding a theme never overflows the column it lives in */
-.theme-swatch-row{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(82px,1fr));
-  gap:10px;margin-bottom:16px;
-}
-/* Selectors are .theme-swatch-btn.theme-card, not bare .theme-card, and
-   that matters: the base .theme-swatch-btn rule (28px circle, 50% radius)
-   is declared ~800 lines LATER in this stylesheet, so at the equal
-   specificity a bare .theme-card gives, source order handed the win to
-   the circle — these cards were rendering as 28px dots with their labels
-   clipped away, which is what the overflow:hidden was hiding. Same class
-   of source-order tie the Clair correction block and the tabular-figures
-   block both call out. Two classes (0,2,0) beats one (0,1,0) outright,
-   so this no longer depends on where either block sits. */
-.theme-swatch-btn.theme-card{
-  width:auto;height:auto;border-radius:14px;padding:0;overflow:hidden;border:2px solid transparent;
-  background:rgba(var(--ddp-scrim-rgb),.20);box-shadow:none;display:flex;flex-direction:column;
-}
-.theme-swatch-btn.theme-card.active{border-color:var(--gold)}
-.tc-swatch{position:relative;height:44px;display:block}
-.tc-chip{position:absolute;top:8px;left:8px;width:14px;height:14px;border-radius:50%;border:1.5px solid rgba(var(--ddp-gloss-rgb),.25)}
-.tc-name{font-size:.72rem;font-weight:600;color:var(--muted);padding:7px 6px;text-align:center}
 
 /* ══════════════════════════════════════════════════════════════
    Cosmetics: customization sub-tabs inside the Profile panel
@@ -1569,9 +1564,9 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 .cos-panel.active{display:block}
 
 /* ── cosmetic pickers ──
-   auto-fit, same reasoning as .theme-swatch-row: these render in a
-   narrow landscape account column AND a full-width portrait one, and a
-   9th scene must never need a layout change. */
+   auto-fit: these render in a narrow landscape account column AND a
+   full-width portrait one, and a 9th scene (or table theme) must never
+   need a layout change. */
 .cos-grid{
   display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));
   gap:10px;margin-bottom:14px;
@@ -1596,6 +1591,16 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 .cos-thumb{
   position:relative;display:block;height:52px;width:100%;
   border-bottom:1px solid rgba(var(--ddp-brass-rgb),.14);
+}
+/* Table theme's thumbnail: the felt-gradient swatch that used to live in
+   the now-retired .theme-swatch-btn.theme-card. Fills .cos-thumb
+   edge-to-edge (absolute inset:0) rather than the old fixed 44px block,
+   since .cos-item's own overflow:hidden is what clips it now, matching
+   every other cosmetic thumbnail instead of carrying its own card shell. */
+.theme-thumb-fill{position:absolute;inset:0;display:block}
+.theme-thumb-chip{
+  position:absolute;top:8px;left:8px;width:14px;height:14px;border-radius:50%;
+  border:1.5px solid rgba(var(--ddp-gloss-rgb),.25);
 }
 .cos-body{padding:7px 8px 8px}
 .cos-name{font-size:.72rem;font-weight:600;color:var(--cream);line-height:1.25}
@@ -4051,7 +4056,6 @@ html.landscape-mode #s-personal .acct-main{
   overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding-left:18px;border-left:1px solid rgba(var(--ddp-brass-rgb),.28);
 }
-html.landscape-mode #s-personal .tc-swatch{height:40px}
 /* The hero is the narrowest column in the app and its chip carries a full
    username. .profile-hero .acct-chip is width:auto/flex:0 0 auto, so its
    intrinsic width won over the column and was what actually overflowed at
@@ -4241,24 +4245,6 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
 /* Plex Mono runs wider than DM Sans at the same size, and this one has
    to hold "16/16" inside a 32px token */
 .tb-badge{font-size:.5rem}
-
-/* ══ Theme swatches — base dot styling; the My Account hub overrides
-   this into a card via .theme-card, see the "Personal / My Account hub"
-   block above ══
-   The `.theme-swatch-row{display:flex;gap:8px}` that used to sit here is
-   deleted rather than left as a harmless leftover: it tied on specificity
-   with the card-grid rule in that block and, being ~800 lines later, won.
-   Between that and .theme-swatch-btn beating a bare .theme-card on the
-   same tie, the entire theme-card redesign was inert — the picker was
-   rendering as flex-packed 28px circles with their labels clipped off by
-   overflow:hidden. The grid rule now lives only in the hub block, and
-   .theme-card carries two classes so it can't lose that tie again. */
-.theme-swatch-btn{
-  width:28px;height:28px;border-radius:50%;padding:0;
-  border:2px solid transparent;cursor:pointer;
-  box-shadow:inset 0 0 0 1px rgba(var(--ddp-scrim-rgb),.35);
-}
-.theme-swatch-btn.active{border-color:var(--ddp-brass)}
 
 /* ══ Brand splash ══
    The handoff shipped a 1080x1920 portrait loading screen, but this game
@@ -5273,23 +5259,31 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
           </div>
 
           <!-- ── CUSTOMIZATION: sub-tabs inside the Profile panel ──
-               Table theme was a flat section here; it's now the first of
-               five sibling pickers behind their own tab strip. Theme and
-               Card front change how the game is drawn, Scene what's
-               behind it, Crest and Title what other people see on you.
-               Only the Table theme tab is available to guests — the other
-               four are unlocked by achievements, which are a fact about
-               an account (same reasoning as the Daily Challenge's "guests
-               play but nothing is banked"). -->
+               Table theme was a flat section here, always fully open; it's
+               now the first of six sibling pickers behind their own tab
+               strip, and — since Obsidienne/Émeraude went free and the
+               other six went shop-gated (500 credits each, see
+               COSMETICS.tableThemes server-side) — it's rendered from the
+               server catalog by renderCosmeticPanels() exactly like the
+               other five, not static markup. Theme and Card front change
+               how the game is drawn, Scene what's behind it, Crest and
+               Title what other people see on you.
+               Table theme is the one tab still usable by guests (see
+               renderThemePanel/equipCosmetic's 'tableTheme' branch) — the
+               two free entries are a display preference, not an account
+               fact, same as before this became a shop cosmetic. The other
+               five are unlocked by achievements or purchase, both of which
+               are facts about an account (same reasoning as the Daily
+               Challenge's "guests play but nothing is banked"). -->
           <div class="sec-label">Customization</div>
-          <!-- Tab labels are ONE WORD each, deliberately: five tabs at
+          <!-- Tab labels are ONE WORD each, deliberately: six tabs at
                375px (the narrowest phone this targets) overflowed the
                strip with "Table theme"/"Backgrounds"/"Card fronts", and
                a horizontally-scrolling tab row with no affordance hides
                the last two tabs completely. The full name lives in each
                panel's own .sec-label instead, so nothing is lost. -->
           <div class="cos-tabs" id="cos-tabs">
-            <button class="cos-tab active" data-cos="theme" onclick="switchCosTab('theme')">Theme</button>
+            <button class="cos-tab active" data-cos="theme" onclick="switchCosTab('theme')">Theme<span class="cos-tab-n" id="cos-n-theme"></span></button>
             <button class="cos-tab" data-cos="scene" onclick="switchCosTab('scene')">Scenes<span class="cos-tab-n" id="cos-n-scene"></span></button>
             <button class="cos-tab" data-cos="cards" onclick="switchCosTab('cards')">Cards<span class="cos-tab-n" id="cos-n-cards"></span></button>
             <button class="cos-tab" data-cos="crest" onclick="switchCosTab('crest')">Crests<span class="cos-tab-n" id="cos-n-crest"></span></button>
@@ -5297,51 +5291,8 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
             <button class="cos-tab" data-cos="rank" onclick="switchCosTab('rank')">Rank<span class="cos-tab-n" id="cos-n-rank"></span></button>
           </div>
 
-          <div class="cos-panel active" id="cos-panel-theme">
-          <div class="sec-label">Table theme</div>
-          <div class="theme-swatch-row">
-            <button class="theme-swatch-btn theme-card deco-box" data-theme="bordeaux"
-              onclick="applyTableTheme('bordeaux')" aria-label="Bordeaux theme">
-              <span class="tc-swatch" style="background:linear-gradient(160deg,#2B0D18,#120A0D)"><span class="tc-chip" style="background:#B8922E"></span></span>
-              <span class="tc-name">Bordeaux</span>
-            </button>
-            <button class="theme-swatch-btn theme-card deco-box" data-theme="emeraude"
-              onclick="applyTableTheme('emeraude')" aria-label="Émeraude theme">
-              <span class="tc-swatch" style="background:linear-gradient(160deg,#1F4732,#0D1512)"><span class="tc-chip" style="background:#C9A227"></span></span>
-              <span class="tc-name">Émeraude</span>
-            </button>
-            <button class="theme-swatch-btn theme-card deco-box" data-theme="clair"
-              onclick="applyTableTheme('clair')" aria-label="Clair theme">
-              <span class="tc-swatch" style="background:linear-gradient(160deg,#E4D9C5,#CDBFA6)"><span class="tc-chip" style="background:#A9863C"></span></span>
-              <span class="tc-name">Clair</span>
-            </button>
-            <button class="theme-swatch-btn theme-card deco-box" data-theme="marquee"
-              onclick="applyTableTheme('marquee')" aria-label="Marquee theme">
-              <span class="tc-swatch" style="background:linear-gradient(160deg,#0D2E25,#020605)"><span class="tc-chip" style="background:#C49E58"></span></span>
-              <span class="tc-name">Marquee</span>
-            </button>
-            <button class="theme-swatch-btn theme-card deco-box" data-theme="minuit"
-              onclick="applyTableTheme('minuit')" aria-label="Minuit theme">
-              <span class="tc-swatch" style="background:linear-gradient(160deg,#102C49,#040812)"><span class="tc-chip" style="background:#C9A45F"></span></span>
-              <span class="tc-name">Minuit</span>
-            </button>
-            <button class="theme-swatch-btn theme-card deco-box" data-theme="sable"
-              onclick="applyTableTheme('sable')" aria-label="Sable Royale theme">
-              <span class="tc-swatch" style="background:linear-gradient(160deg,#D0B68F,#B89D76)"><span class="tc-chip" style="background:#B98945"></span></span>
-              <span class="tc-name">Sable Royale</span>
-            </button>
-            <button class="theme-swatch-btn theme-card deco-box" data-theme="riviera"
-              onclick="applyTableTheme('riviera')" aria-label="Riviera theme">
-              <span class="tc-swatch" style="background:linear-gradient(160deg,#0B5261,#041419)"><span class="tc-chip" style="background:#D0A85F"></span></span>
-              <span class="tc-name">Riviera</span>
-            </button>
-            <button class="theme-swatch-btn theme-card deco-box" data-theme="obsidienne"
-              onclick="applyTableTheme('obsidienne')" aria-label="Obsidienne theme">
-              <span class="tc-swatch" style="background:linear-gradient(160deg,#1A1D1F,#050506)"><span class="tc-chip" style="background:#B9A06A"></span></span>
-              <span class="tc-name">Obsidienne</span>
-            </button>
-          </div>
-          </div><!-- /cos-panel-theme -->
+          <!-- Mount point only — see renderThemePanel(). -->
+          <div class="cos-panel active" id="cos-panel-theme"></div>
 
           <!-- The four unlockable pickers. Every one is rendered from the
                server's catalog by renderCosmeticPanels(); the markup is
@@ -5986,33 +5937,67 @@ function toggleSfxMuted(){
   if(!m) SFX.play('click');
 }
 
-/* ── table theme (see the --ddp-* token block in <style>) ── */
-// Bordeaux is the default and lives on :root, so it's the one value that
-// clears data-theme rather than setting it — keeps "no attribute" and
-// "bordeaux" from being two different states.
-const DDP_THEMES=['bordeaux','emeraude','clair','marquee','minuit','sable','riviera','obsidienne'];
+/* ── table theme (see the --ddp-* token block in <style>) ──
+   Obsidienne is the app's default now (was Bordeaux) — see the
+   COSMETICS.tableThemes comment server-side for why Obsidienne and
+   Émeraude specifically are the two free ones. Bordeaux still lives bare
+   on :root with no [data-theme="bordeaux"] block (see that CSS comment),
+   so it's still the one key that leaves nothing dressed up beyond the
+   default cascade — that's just no longer the key applyTableTheme falls
+   back to. */
+const DDP_THEMES=['obsidienne','emeraude','bordeaux','clair','marquee','minuit','sable','riviera'];
 const DDP_THEME_KEY='ddp.tableTheme';
+const DDP_DEFAULT_THEME='obsidienne';
 // keep in step with each theme's --ddp-bg; drives the Android status-bar
 // tint, which would otherwise stay the old hardcoded green
 const DDP_THEME_BG={
   bordeaux:'#120A0D',emeraude:'#0D1512',clair:'#F7F2E7',marquee:'#020605',
   minuit:'#040812',sable:'#E3D0AF',riviera:'#041419',obsidienne:'#050506',
 };
+// The catalog behind the Table theme picker/shop: display data
+// (gradient/chip swatch colours, the 500-credit price on the six locked
+// ones) is presentation-only and lives here, matching every other
+// cosmetic category's client/server split. Order is display order
+// everywhere, so Obsidienne/Émeraude lead. Ids follow the same
+// `theme_<key>` prefix convention scene_/cardfront_/crest_/title_ already
+// use; THEME_ID_TO_KEY/THEME_KEY_TO_ID are the two-way bridge to the bare
+// CSS key applyTableTheme() actually consumes.
+const THEME_PRICE=500;
+const THEME_CATALOG=[
+  {id:'theme_obsidienne',key:'obsidienne',name:'Obsidienne',  grad:'linear-gradient(160deg,#1A1D1F,#050506)',chip:'#B9A06A'},
+  {id:'theme_emeraude',  key:'emeraude',  name:'Émeraude',    grad:'linear-gradient(160deg,#1F4732,#0D1512)',chip:'#C9A227'},
+  {id:'theme_bordeaux',  key:'bordeaux',  name:'Bordeaux',    grad:'linear-gradient(160deg,#2B0D18,#120A0D)',chip:'#B8922E',price:THEME_PRICE},
+  {id:'theme_clair',     key:'clair',     name:'Clair',       grad:'linear-gradient(160deg,#E4D9C5,#CDBFA6)',chip:'#A9863C',price:THEME_PRICE},
+  {id:'theme_marquee',   key:'marquee',   name:'Marquee',     grad:'linear-gradient(160deg,#0D2E25,#020605)',chip:'#C49E58',price:THEME_PRICE},
+  {id:'theme_minuit',    key:'minuit',    name:'Minuit',      grad:'linear-gradient(160deg,#102C49,#040812)',chip:'#C9A45F',price:THEME_PRICE},
+  {id:'theme_sable',     key:'sable',     name:'Sable Royale',grad:'linear-gradient(160deg,#D0B68F,#B89D76)',chip:'#B98945',price:THEME_PRICE},
+  {id:'theme_riviera',   key:'riviera',   name:'Riviera',     grad:'linear-gradient(160deg,#0B5261,#041419)',chip:'#D0A85F',price:THEME_PRICE},
+];
+const THEME_ID_TO_KEY=Object.fromEntries(THEME_CATALOG.map(t=>[t.id,t.key]));
+const THEME_KEY_TO_ID=Object.fromEntries(THEME_CATALOG.map(t=>[t.key,t.id]));
+// The two that stay switchable without an account — same "played today"
+// reasoning every other guest-gated cosmetic uses, except a table felt is
+// a display preference rather than an account fact, so it keeps the
+// pre-shop behaviour of working logged out (see renderThemePanel/
+// equipCosmetic's 'tableTheme' branch).
+const FREE_THEME_IDS=['theme_obsidienne','theme_emeraude'];
 
+// Tracks the currently-applied bare key so renderThemePanel can show the
+// right swatch as equipped for a guest, who has no cosState.equipped to
+// read instead.
+let currentThemeKey=DDP_DEFAULT_THEME;
 function applyTableTheme(key){
-  if(!DDP_THEMES.includes(key)) key='bordeaux';
+  if(!DDP_THEMES.includes(key)) key=DDP_DEFAULT_THEME;
+  currentThemeKey=key;
   document.documentElement.setAttribute('data-theme',key);
   try{ localStorage.setItem(DDP_THEME_KEY,key); }catch(e){}
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta) meta.setAttribute('content',DDP_THEME_BG[key]);
-  document.querySelectorAll('.theme-swatch-btn').forEach(btn=>{
-    btn.classList.toggle('active',btn.dataset.theme===key);
-  });
 }
 function initTableTheme(){
   let saved=null;
   try{ saved=localStorage.getItem(DDP_THEME_KEY); }catch(e){}
-  applyTableTheme(saved||'bordeaux');
+  applyTableTheme(saved||DDP_DEFAULT_THEME);
 }
 
 /* ══════════ COSMETICS: scene & card front ══════════
@@ -6780,9 +6765,15 @@ socket.on('dailyLeaderboardOk',d=>{
   $('daily-board-rows').innerHTML=rows.map((r,i)=>{
     if(r.score!==prevScore){ pos=i+1; prevScore=r.score; }
     const mine=account&&r.accountId===account.id;
+    // Same profile card the lobby seats and Friends tab open — a
+    // leaderboard row is never a friend by definition, so this goes
+    // through openPlayerProfile, not openFriendProfile.
+    const who=r.accountId
+      ? `<span class="lb-who tap" onclick="openPlayerProfile(${r.accountId})" role="button" tabindex="0" aria-label="View ${esc(r.nickname)}'s profile"><span class="lb-av">${avatarHTML(r.avatar,r.nickname)}</span> ${esc(r.nickname)}${r.shotMoon?' 🌕':''}</span>`
+      : `<span class="lb-av">${avatarHTML(r.avatar,r.nickname)}</span> ${esc(r.nickname)}${r.shotMoon?' 🌕':''}`;
     return `<tr class="${mine?'me':''}">
       <td class="pos-col">${pos}</td>
-      <td><span class="lb-av">${avatarHTML(r.avatar,r.nickname)}</span> ${esc(r.nickname)}${r.shotMoon?' 🌕':''}</td>
+      <td>${who}</td>
       <td class="score-col">${r.score>0?'+':''}${r.score}</td>
     </tr>`;
   }).join('');
@@ -7458,7 +7449,8 @@ function renderShop(){
   if(!account||!cosState){ wrap.innerHTML=''; return; }
   const cat=cosState.catalog;
   let h='';
-  for(const [label,list,kind] of [['Backgrounds',cat.scenes,'scene'],
+  for(const [label,list,kind] of [['Table themes',cat.tableThemes,'tableTheme'],
+                                  ['Backgrounds',cat.scenes,'scene'],
                                   ['Card designs',cat.cardFronts,'cardFront']]){
     const forSale=list.filter(c=>c.price);
     if(!forSale.length) continue;
@@ -7478,7 +7470,9 @@ function shopItemHTML(kind,item){
   const afford=creditBalance>=item.price;
   const thumb=kind==='scene'
     ? `<span class="cos-thumb scene-art" data-scene="${item.id}">${sceneArtImg(item.id)}</span>`
-    : `<span class="cos-thumb">${cardFrontThumb(item.id)}</span>`;
+    : kind==='tableTheme'
+      ? `<span class="cos-thumb">${themeSwatchThumb(item.id)}</span>`
+      : `<span class="cos-thumb">${cardFrontThumb(item.id)}</span>`;
   const foot=have
     ? `<span class="cos-owned">${item.owned?'Purchased':'Earned'}</span>`
     : `<span class="cos-price${afford?'':' short'}">${creditChipHTML(13)}${fmtCredits(item.price)}</span>`
@@ -7620,7 +7614,51 @@ function secLabel(name,list){
   return `<div class="sec-label">${name}${n?`<span class="sec-count">${n} locked</span>`:''}</div>`;
 }
 
+// The felt-gradient swatch previously drawn by .theme-swatch-btn.
+// theme-card — see THEME_CATALOG for where the colours live now.
+function themeSwatchThumb(id){
+  const t=THEME_CATALOG.find(x=>x.id===id);
+  if(!t) return '';
+  return `<span class="theme-thumb-fill" style="background:${t.grad}"><span class="theme-thumb-chip" style="background:${t.chip}"></span></span>`;
+}
+// Guests never get a cosState, but Table theme is the one picker that has
+// to keep working for them anyway (see equipCosmetic's 'tableTheme'
+// branch) — this synthesizes the same shape cosmeticsFor's `mark()` sends
+// a logged-in client, with only the two free ids ever unlocked.
+function themeCatalogForRender(){
+  if(cosState) return cosState.catalog.tableThemes;
+  return THEME_CATALOG.map(t=>({
+    id:t.id, name:t.name, price:t.price||null, unlockName:null, rankTier:null,
+    unlocked:FREE_THEME_IDS.includes(t.id),
+  }));
+}
+// Renders on its own, separate from the account-gated grid below —
+// logged out, this still shows all eight (two pickable, six locked with
+// "Log in to unlock" via the Shop) rather than the "log in" gate the
+// other five panels show, since a table felt is a display preference,
+// not an account fact.
+function renderThemePanel(){
+  const panel=$('cos-panel-theme');
+  if(!panel) return;
+  const list=themeCatalogForRender();
+  const equippedId=cosState?cosState.equipped.tableTheme:(THEME_KEY_TO_ID[currentThemeKey]||'theme_obsidienne');
+  panel.innerHTML=
+    secLabel('Table theme',list)+
+    `<div class="cos-grid">${list.map(t=>
+      cosItemHTML('tableTheme',t,themeSwatchThumb(t.id),equippedId)).join('')}</div>`+
+    `<p class="pick-hint">${account
+      ?'Two are free; the rest unlock in the Shop.'
+      :'Two are free to try now &mdash; log in to unlock the rest in the Shop.'}</p>`;
+  const n=$('cos-n-theme');
+  if(n){
+    const locked=lockedCount(list);
+    n.textContent=locked?'•':'';
+    if(locked) n.setAttribute('aria-label',`${locked} still locked`); else n.removeAttribute('aria-label');
+  }
+}
+
 function renderCosmeticPanels(){
+  renderThemePanel();
   const gate=`<div class="cos-empty">Log in to collect backgrounds, card designs, crests and titles.</div>`;
   const panels={scene:$('cos-panel-scene'),cards:$('cos-panel-cards'),
                 crest:$('cos-panel-crest'),title:$('cos-panel-title'),
@@ -7725,7 +7763,29 @@ function titleOptHTML(t,equippedId){
 // `slot` is only meaningful for kind==='crest', where it picks which of
 // the two equip fields ('crest' or 'crest2') this tap writes to — every
 // other kind ignores it entirely.
+//
+// tableTheme is handled first and returns early, deliberately ahead of
+// the `!account||!cosState` guard below: it's the one cosmetic still
+// usable logged out (see THEME_CATALOG/renderThemePanel), so a guest
+// picking one of the two free felts must not be turned away by a guard
+// written for the other five, account-only categories.
 function equipCosmetic(kind,id,slot){
+  if(kind==='tableTheme'){
+    const item=THEME_CATALOG.find(x=>x.id===id);
+    if(!item) return;
+    const unlocked=cosState
+      ? (cosState.catalog.tableThemes.find(t=>t.id===id)||{}).unlocked
+      : FREE_THEME_IDS.includes(id);
+    if(!unlocked) return;
+    SFX.play('click');
+    applyTableTheme(item.key);
+    if(account&&cosState){
+      cosState.equipped.tableTheme=id;
+      socket.emit('saveCosmetics',{token:accountToken,tableTheme:id});
+    }
+    renderThemePanel();
+    return;
+  }
   if(!account||!cosState) return;
   SFX.play('click');
   if(kind==='scene'){ applyScene(id); cosState.equipped.scene=id; }
@@ -7916,6 +7976,7 @@ socket.on('profileCosmeticsOk',d=>{
   // stopped being unlocked (a renamed ID, a retuned threshold).
   applyScene(cosState.equipped.scene);
   applyCardFront(cosState.equipped.cardFront);
+  applyTableTheme(THEME_ID_TO_KEY[cosState.equipped.tableTheme]||DDP_DEFAULT_THEME);
   if(d.credits) setCreditBalance(d.credits.balance);
   renderCosmeticPanels();
   renderAchievements();
@@ -8163,7 +8224,7 @@ socket.on('friendPresence',d=>{
    with instead of the logged-in account's own cosState. Opens over
    whichever screen is active (Friends tab, or the lobby's friend picker),
    same #rules-style class toggle. */
-function openFriendProfile(id){
+function openProfileCard(evt,payload){
   if(!account) return;
   $('friend-profile').classList.add('on');
   $('fp-loading').style.display='block';
@@ -8171,7 +8232,16 @@ function openFriendProfile(id){
   $('fp-body').style.display='none';
   switchFriendProfileTab('crests');
   switchFriendStatsTab('casual');
-  socket.emit('getFriendProfile',{token:accountToken,friendId:id});
+  socket.emit(evt,Object.assign({token:accountToken},payload));
+}
+function openFriendProfile(id){
+  openProfileCard('getFriendProfile',{friendId:id});
+}
+// Same card, opened from a lobby seat or a daily-leaderboard row instead
+// of the friends list — see getPlayerProfile server-side for why this is
+// a separate event rather than reusing getFriendProfile's gate.
+function openPlayerProfile(id){
+  openProfileCard('getPlayerProfile',{playerId:id});
 }
 function closeFriendProfile(){
   $('friend-profile').classList.remove('on');
@@ -8552,9 +8622,15 @@ socket.on('leaderboardOk',d=>{
   $('rank-rows').innerHTML=d.rows.map((r,i)=>{
     const badge=r.isPlacement?'':badgeImg(r.rank,20);
     const mine=account&&r.accountId===account.id;
+    // Same profile card the lobby seats/friends list/daily leaderboard
+    // open — a ranked-leaderboard row is never a friend by definition,
+    // so this goes through openPlayerProfile, not openFriendProfile.
+    const who=r.accountId
+      ? `<span class="lb-who tap" onclick="openPlayerProfile(${r.accountId})" role="button" tabindex="0" aria-label="View ${esc(r.nickname)}'s profile"><span class="lb-av">${avatarHTML(r.avatar,r.nickname)}</span> ${esc(r.nickname)}</span>`
+      : `<span class="lb-av">${avatarHTML(r.avatar,r.nickname)}</span> ${esc(r.nickname)}`;
     return `<tr class="${mine?'me':''}">
       <td>${i+1}</td>
-      <td><span class="lb-av">${avatarHTML(r.avatar,r.nickname)}</span> ${esc(r.nickname)}</td>
+      <td>${who}</td>
       <td>${badge}${esc(leaderboardRowLabel(r))}</td>
       <td>${r.mmr}</td>
     </tr>`;
@@ -8897,8 +8973,17 @@ function slotHTML(G,i){
   // information the button doesn't already show another way.
   const footer=(host&&i>0&&!p.connected||host&&i>0&&p.isAI)
     ? `<button class="mini-btn ${p.isAI?'on':''}" onclick="toggleAI(${i})">${p.isAI?'AI':'+AI'}</button>` : '';
+  // A seat opens the same read-only profile card the Friends tab uses
+  // (openPlayerProfile, not openFriendProfile — a lobby opponent is never
+  // a friend by definition) whenever it's a real account, bot or empty
+  // seats excepted. `.tap` reuses the existing tap-affordance styling
+  // rather than inventing a new "clickable avatar" look.
+  const clickable=!!p.accountId;
+  const avatarTag=clickable
+    ? `<span class="avatar lg tap${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''} onclick="openPlayerProfile(${p.accountId})" role="button" tabindex="0" aria-label="View ${esc(p.name)}'s profile">${avatarContent}</span>`
+    : `<span class="avatar lg${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>`;
   return `<div class="slot"${mat?` data-material="${mat}"`:''}>
-    <span class="avatar lg${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>
+    ${avatarTag}
     <div class="slot-info">
       <div class="slot-top">
         <span class="dot ${dot}"></span>
@@ -8906,7 +8991,7 @@ function slotHTML(G,i){
       </div>
       <div class="slot-mid">
         <div class="slot-name-row">
-          <span class="slot-name">${esc(p.name)}</span>
+          <span class="slot-name${clickable?' tap':''}"${clickable?` onclick="openPlayerProfile(${p.accountId})" role="button" tabindex="0"`:''}>${esc(p.name)}</span>
           ${crests?`<span class="slot-crests">${crests}</span>`:''}
         </div>
         <span class="slot-title">${p.title?esc(p.title):''}</span>

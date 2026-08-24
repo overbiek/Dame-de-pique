@@ -1567,7 +1567,9 @@ const AVATAR_COLLECTIONS = [
               ['regular_closer', 'The Closer', 'closer'],
               ['regular_belle', 'The Belle', 'belle'], ['regular_countess', 'The Countess', 'countess'],
               ['regular_envoy', 'The Envoy', 'envoy'], ['regular_baron', 'The Baron', 'baron'],
-              ['regular_castaway', 'The Castaway', 'castaway']] },
+              ['regular_castaway', 'The Castaway', 'castaway'],
+              ['regular_rookie', 'The Rookie', 'rookie'], ['regular_sheikh', 'The Sheikh', 'sheikh'],
+              ['regular_duke', 'The Duke', 'duke'], ['regular_reveler', 'The Reveler', 'reveler']] },
 ];
 const AVATAR_IDS = new Set(
   AVATAR_COLLECTIONS.flatMap(c => c.avatars.map(a => a[0]))

@@ -6161,7 +6161,7 @@ function clearSession(){ try{localStorage.removeItem(SK);}catch(e){} }
 /* ── profile (name + avatar, survives across games) ── */
 const PK='ddp.profile';
 
-/* ── portrait avatars: 20 across 5 collections ──
+/* ── portrait avatars: 16 across 1 collection (House Regulars) ──
    These live in the SAME `accounts.avatar` column the emoji avatars use,
    so everything that already carries an avatar — publicState, every
    leaderboard query, the friends list — carries these for free. The
@@ -6182,7 +6182,9 @@ const AVATAR_COLLECTIONS=[
     ['regular_closer','The Closer','closer'],
     ['regular_belle','The Belle','belle'],['regular_countess','The Countess','countess'],
     ['regular_envoy','The Envoy','envoy'],['regular_baron','The Baron','baron'],
-    ['regular_castaway','The Castaway','castaway']]},
+    ['regular_castaway','The Castaway','castaway'],
+    ['regular_rookie','The Rookie','rookie'],['regular_sheikh','The Sheikh','sheikh'],
+    ['regular_duke','The Duke','duke'],['regular_reveler','The Reveler','reveler']]},
 ];
 const AVATAR_ART={};
 for(const c of AVATAR_COLLECTIONS)

@@ -4125,9 +4125,9 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
 .tcap.turn .nm{color:var(--gold-hi)}
 .tcap.off{opacity:.45}
 .tcap .dl{background:var(--ddp-card);color:var(--ddp-spade);border-radius:50%;
-  width:15px;height:15px;display:inline-grid;place-items:center;
-  font-family:'Playfair Display',serif;font-weight:800;font-size:.6rem;
-  border:1px solid var(--gold-hi);flex:none}
+  width:18px;height:18px;display:inline-grid;place-items:center;
+  font-family:'Playfair Display',serif;font-weight:800;font-size:.68rem;
+  border:1.5px solid var(--gold-hi);flex:none}
 
 /* ══ Numeric readouts — scoreboard type ══
    Scores, MMR, timers and trick counters move to IBM Plex Mono with
@@ -6478,13 +6478,19 @@ function tableHTML(G,opts){
     const total=(G.roundBefore&&typeof G.roundBefore[i]==='number')?G.roundBefore[i]:p.score;
     const cls=[i===active?'turn':'',i===me?'mine':'',
                (!p.connected&&!p.isAI)?'off':''].join(' ');
-    // With the roster rail up (play screen), the badge, the score and the
-    // dealer button all live there instead and the caption reduces to the
+    // With the roster rail up (play screen), the badge and the score live
+    // there instead and the caption drops to name (+ dealer letter) — the
     // one job the rail can't do: telling you whose card is in that slot.
+    // The dealer letter is intentionally duplicated here rather than
+    // reused from the rail: the rail's badge sits on a plaque avatar
+    // that's off to the side, and the table caption is what's actually
+    // beside the cards being played, so it gets its own.
     // The pass screen has no rail, so it keeps the full caption — dropping
     // the score there would simply lose it.
     if(opts.roster)
-      return `<div class="tcap ${cls}"><span class="nm">${esc(p.name)}</span></div>`;
+      return `<div class="tcap ${cls}"><span class="nm">${esc(p.name)}</span>`
+        +(i===G.dealer?'<span class="dl">D</span>':'')
+        +`</div>`;
     return `<div class="tcap ${cls}">`
       +(p.rankMaterial?rankBadgeHTML(p.rankMaterial):'')
       +`<span class="nm">${esc(p.name)}</span>`

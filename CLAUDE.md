@@ -11,14 +11,27 @@ rounds of on-device iteration on a OnePlus 13R and is being tuned
 against real screenshots — the vertical budget is the fragile part, so
 re-check that the whole pass/play screen still fits one viewport without
 scrolling after touching any landscape sizing.
-The tutorial (see its own section below) is implemented but has **never
-been run** — it was built without any way to execute JS in this
-environment, verified by exhaustive static tracing (every function
-reference cross-checked against a definition, every `tutAwaiting`
-contract checked against `tutorialCommitPlay`'s handling of it, every
-`$('tutorial-*')` id checked against the markup, brace/paren balance
-checked on the whole file) rather than by running it. Treat the first
-real on-device run as the actual first test, not a formality.
+
+**Update 2026-08-24 — real-device verification pass.** Casual, Ranked,
+Daily Challenge, Blitz, the Tutorial, and achievement ladder unlocks have
+all now been played to completion by the developer against the live
+Railway deploy, on a real device, and confirmed working. That supersedes
+the "implemented, never executed" caveats below for those specific
+items — the static-verification notes are kept as-is because they still
+document how each was checked *before* that pass, which remains useful
+if something regresses. **Still genuinely open, not yet touched by this
+pass:** password reset (not built — no email service configured) and
+error/crash monitoring under real traffic. Both are tracked in
+`ROADMAP.md`, which also has the launch sequencing this status feeds
+into.
+
+The tutorial (see its own section below) was implemented without any way
+to execute JS in the environment that built it, so it was verified by
+exhaustive static tracing instead: every function reference
+cross-checked against a definition, every `tutAwaiting` contract checked
+against `tutorialCommitPlay`'s handling of it, every `$('tutorial-*')`
+id checked against the markup, brace/paren balance checked on the whole
+file. The 2026-08-24 pass above is the first real on-device run.
 
 **Achievements & cosmetics (own section below) is the newest addition
 and is in a BETTER position than the rest: its client half has actually
@@ -31,9 +44,14 @@ five customization sub-tabs at 375px and in landscape, equipping and the
 locked-item no-op, the guest gates, logout reset, the 12 achievement
 rows, the scene layer's z-order and hit-testing behind a real hand of
 cards, the Royal Court card skin, titles on the lobby rows, and
-contrast across all four themes. **What is still unexercised is every
-line of SQL and every socket handler** — the same "first real run is the
-actual first test" caveat as below applies to those.
+contrast across all four themes. **The achievement-ladder unlock path
+itself — a rung actually clearing and the unlock landing in the
+client — is now confirmed on live Railway as of the 2026-08-24 pass
+above**, which means that flow's socket handler and SQL write are no
+longer purely statically-verified. The rest of the SQL surface (the
+shop/purchase path — `buyCosmetic`, credit spending — and any socket
+handler outside the achievement-unlock flow) is still unexercised; the
+same "first real run is the actual first test" caveat applies to those.
 Two traps worth knowing if you repeat that setup, both of which read as
 product bugs and are not:
 1. The Browser pane doesn't composite when it isn't displayed, so **CSS
@@ -49,16 +67,18 @@ product bugs and are not:
 Layout measurement (`getBoundingClientRect`, `scrollWidth`) is unaffected
 by either and is trustworthy as-is.
 
-**Blitz and Daily Challenge (their own sections below) are in the same
-position — implemented, never executed.** No Node runtime was available
-in the environment that built them either. What *was* verified
-statically: bracket/string/template balance across `server.js`, `db.js`
-and both inline `<script>` blocks; every `db.*` call cross-checked
-against `db.js`'s exports and every export against a definition; every
-`$('id')` in the client cross-checked against the markup; every
-`onclick=` handler against a definition. Not verified: any SQL actually
-running, and the Daily Challenge's end-to-end flow. **These are the
-first things to exercise on device**, and `server.js` is no longer
+**Blitz and Daily Challenge (their own sections below) were built the
+same way — implemented, statically verified, never executed** — until
+the 2026-08-24 pass above, which played both to completion against live
+Railway and confirmed them working end-to-end, SQL included. No Node
+runtime was available in the environment that originally built them, so
+what got checked *before* that pass was static only: bracket/string/
+template balance across `server.js`, `db.js` and both inline `<script>`
+blocks; every `db.*` call cross-checked against `db.js`'s exports and
+every export against a definition; every `$('id')` in the client
+cross-checked against the markup; every `onclick=` handler against a
+definition. **That static pass is no longer the only evidence for these
+two** — treat them as verified, and `server.js` is no longer
 untouched-by-new-features, so a bad deploy now affects live casual and
 ranked games too — worth a local run against a throwaway Postgres
 before pushing.
@@ -2349,8 +2369,12 @@ before pushing.
   `data-level` on `.ach-crest`; art is keyed `(crest, level)` and rendered
   only if present, the same "drop the files in later, no code change"
   contract the rank plates (`public/ranks/<slug>/`) and scene art already
-  use. **The art does not exist yet** - the CSS/inline-SVG crest shows
-  through until it does. The title is granted at **level 1**.
+  use. **Most of the art still doesn't exist** - the CSS/inline-SVG crest
+  shows through until it does. `crest_raven` (`ach_silent_dealer` /
+  "Stayed the Course") now has real 4-tier art at
+  `public/crests/raven/1-4.webp`, same 1254×1254-medallion-cropped-to-512
+  pipeline as the other populated crests. The title is granted at
+  **level 1**.
 - **Every pre-existing achievement id is still here, on its original
   stat.** `COSMETICS` gates the scenes, the Royal Court card front and all
   twelve titles on those ids, and unlocks are re-derived on every read -

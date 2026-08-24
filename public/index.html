@@ -2616,6 +2616,33 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   color:var(--gold);letter-spacing:.14em;margin-left:4px;
 }
 .lcc-hint{font-size:.6rem;color:var(--faint)}
+/* Lobby header: "Game lobby" and the How to play / Leave lobby pair now
+   share one line, top-right, instead of sitting at the bottom of the
+   screen — reuses .screen-header's flex row (space-between) with the
+   exit-row nested a level deeper than every other screen's header, which
+   is why the generic direct-child landscape selectors keyed off
+   >.center-wrap>h2/.exit-row don't reach this one and this block
+   restates the sizing itself. */
+.lobby-header{margin-bottom:10px}
+.lobby-header h2{margin:0}
+.lobby-header .exit-row{margin-top:0;flex-wrap:nowrap;gap:4px;justify-content:flex-end}
+.lobby-header .exit-row .btn{padding:5px 9px;font-size:.62rem;white-space:nowrap}
+/* Code + Invite friends now share one row, half width each. flex:1 on
+   both is what lets the code chip alone still fill the row when Invite
+   friends is hidden (no online friends, or not eligible) — a lone
+   flex:1 item just grows to fill its container on its own. */
+.lobby-code-row{display:flex;gap:8px;align-items:stretch;margin-top:10px}
+/* Half the width means "Code" + the value no longer fit on the chip's
+   normal single row (same problem .friends-codebox already solves for
+   the friends tab's own half-width code box) — stacked instead, with
+   the label/value/hint all scaled down to match. */
+.lobby-code-row .lobby-code-chip{
+  flex:1;width:auto;margin:0;padding:8px 10px;flex-direction:column;gap:2px;
+}
+.lobby-code-row .lcc-code{font-size:.58rem}
+.lobby-code-row .lcc-code b{font-size:.82rem;letter-spacing:.1em;margin-left:3px}
+.lobby-code-row .lcc-hint{font-size:.5rem}
+.lobby-code-row .btn-block{flex:1;width:auto;margin:0;padding:10px 10px;font-size:.76rem}
 /* The Start button, now a circle sitting dead-centre over the 4 seat
    cards rather than a full-width bar at the bottom of the screen.
    Absolutely positioned against .lobby-grid-wrap (which just wraps
@@ -4043,6 +4070,11 @@ html.landscape-mode #s-lobby #l-status{margin:0}
    here — the landscape grid it floats over is much shorter, and a 72px
    circle would swallow most of it. */
 html.landscape-mode #s-lobby .l-start-circle{width:56px;height:56px;font-size:.68rem}
+/* .lobby-header's h2 is nested inside .screen-header now, not a direct
+   child of .center-wrap, so it misses the generic landscape h2 override
+   above — restated here at the same values. */
+html.landscape-mode #s-lobby .lobby-header{margin-bottom:6px}
+html.landscape-mode #s-lobby .lobby-header h2{font-size:clamp(1.25rem,4vh,1.7rem) !important;margin:0}
 
 /* seat draw / dealer cut: the card row is already horizontal, it just
    needs to be sized off the short axis so all four fit */
@@ -5617,7 +5649,13 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 <!-- ═══ LOBBY ═══ -->
 <section id="s-lobby" class="screen">
   <div class="center-wrap" style="padding-top:2vh;max-width:460px">
-    <h2>Game lobby</h2>
+    <div class="screen-header lobby-header">
+      <h2>Game lobby</h2>
+      <div class="exit-row">
+        <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
+        <button class="btn btn-ghost btn-sm" onclick="askLeave(this)">Leave lobby</button>
+      </div>
+    </div>
     <!-- #l-start sits OUTSIDE #l-slots on purpose: renderLobby() rebuilds
          #l-slots' innerHTML from scratch on every render (see slotHTML),
          which would destroy a button living inside it. It's positioned
@@ -5628,21 +5666,21 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
       <button class="btn btn-primary l-start-circle" id="l-start" onclick="send('startGame')" disabled>Start</button>
     </div>
     <p id="l-status"></p>
-    <!-- Only for a real casual room (never ranked/daily — those don't
-         have open seats to invite into) and only once there's at least
-         one online friend to show, both decided in renderLobby/
-         renderLobbyFriendPicker. -->
-    <button class="btn btn-ghost btn-block" id="l-invite-btn" onclick="toggleLobbyFriendPicker()" style="display:none;margin-bottom:10px">Invite friends</button>
-    <div id="l-friend-picker" style="display:none;margin-bottom:10px"></div>
     <p id="l-wait" class="prompt wait" style="display:none">Waiting for the host to start…</p>
-    <button class="lobby-code-chip" onclick="copyLink()">
-      <span class="lcc-code">Code <b id="l-code">·····</b></span>
-      <span class="lcc-hint" id="l-hint">Tap to copy</span>
-    </button>
-    <div class="exit-row">
-      <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
-      <button class="btn btn-ghost btn-sm" onclick="askLeave(this)">Leave lobby</button>
+    <!-- Code box and Invite friends now share one row, half width each
+         (.lobby-code-row) — Invite friends is only shown for a real
+         casual room (never ranked/daily — those don't have open seats to
+         invite into) and only once there's at least one online friend to
+         show, both decided in renderLobby/renderLobbyFriendPicker. When
+         it's hidden, the code chip's flex:1 fills the row on its own. -->
+    <div class="lobby-code-row">
+      <button class="lobby-code-chip" onclick="copyLink()">
+        <span class="lcc-code">Code <b id="l-code">·····</b></span>
+        <span class="lcc-hint" id="l-hint">Tap to copy</span>
+      </button>
+      <button class="btn btn-ghost btn-block" id="l-invite-btn" onclick="toggleLobbyFriendPicker()" style="display:none">Invite friends</button>
     </div>
+    <div id="l-friend-picker" style="display:none;margin-top:10px"></div>
     <div id="err-lobby" class="note bad" style="display:none"></div>
   </div>
 </section>

@@ -2371,10 +2371,11 @@ before pushing.
   contract the rank plates (`public/ranks/<slug>/`) and scene art already
   use. **Most of the art still doesn't exist** - the CSS/inline-SVG crest
   shows through until it does. `crest_raven` (`ach_silent_dealer` /
-  "Stayed the Course") now has real 4-tier art at
-  `public/crests/raven/1-4.webp`, same 1254×1254-medallion-cropped-to-512
-  pipeline as the other populated crests. The title is granted at
-  **level 1**.
+  "Stayed the Course") and `crest_dealer_button` (`ach_the_dealer` /
+  "Cut the Deck") now have real 4-tier art, at `public/crests/raven/1-4.webp`
+  and `public/crests/dealer_button/1-4.webp` respectively - same
+  1254×1254-medallion-cropped-to-512 pipeline as the other populated
+  crests. The title is granted at **level 1**.
 - **Every pre-existing achievement id is still here, on its original
   stat.** `COSMETICS` gates the scenes, the Royal Court card front and all
   twelve titles on those ids, and unlocks are re-derived on every read -

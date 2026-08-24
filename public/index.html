@@ -1873,10 +1873,6 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
   cursor:pointer;appearance:none;
 }
 .cos-buy:disabled{opacity:.45;cursor:default}
-.cos-owned{
-  font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
-  color:var(--gold-lo);margin-top:4px;display:block;
-}
 
 /* ══════════════════════════════════════════════════════════════
    RANK COSMETICS — 8 materials
@@ -7440,9 +7436,13 @@ function goShop(){
   if(account&&!cosState) requestCosmetics();
 }
 
-// Renders only what the SERVER priced. An item with no price never appears,
-// which is what keeps crests, titles and rank sets out of the shop without
-// this function needing to know why they're excluded.
+// Renders only what the SERVER priced AND that the account doesn't
+// already have. An item with no price never appears, which is what keeps
+// crests, titles and rank sets out of the shop without this function
+// needing to know why they're excluded; an item that's unlocked — bought
+// OR earned by achievement — drops out too, rather than lingering with a
+// "Purchased"/"Earned" badge. Once you have it, it's not for sale, and
+// My Account is where equipping/reviewing what you own already lives.
 function renderShop(){
   const wrap=$('shop-panels');
   if(!wrap) return;
@@ -7452,35 +7452,31 @@ function renderShop(){
   for(const [label,list,kind] of [['Table themes',cat.tableThemes,'tableTheme'],
                                   ['Backgrounds',cat.scenes,'scene'],
                                   ['Card designs',cat.cardFronts,'cardFront']]){
-    const forSale=list.filter(c=>c.price);
+    const forSale=list.filter(c=>c.price&&!c.unlocked);
     if(!forSale.length) continue;
     h+=`<div class="sec-label">${label}</div><div class="cos-grid">`
       +forSale.map(c=>shopItemHTML(kind,c)).join('')+`</div>`;
   }
-  h+=`<p class="pick-hint">Earned items stay free &mdash; buying is just the second route to the same thing. Equip anything you own from My Account.</p>`;
-  wrap.innerHTML=h;
+  wrap.innerHTML=h||`<div class="cos-empty">You own everything in the Shop &mdash; nice collection.</div>`;
+  if(h) wrap.insertAdjacentHTML('beforeend',
+    `<p class="pick-hint">Buying unlocks it immediately &mdash; equip anything you own from My Account.</p>`);
 }
 
+// forSale already filtered out anything unlocked, so every item reaching
+// here is still purchasable — there's no "owned" state left to render.
 function shopItemHTML(kind,item){
-  // "owned" means bought; "unlocked" also covers earning it by achievement.
-  // Something earned the hard way reads as earned rather than for sale, so
-  // nobody is invited to pay for what they already have.
-  const earned=item.unlocked&&!item.owned;
-  const have=item.owned||earned;
   const afford=creditBalance>=item.price;
   const thumb=kind==='scene'
     ? `<span class="cos-thumb scene-art" data-scene="${item.id}">${sceneArtImg(item.id)}</span>`
     : kind==='tableTheme'
       ? `<span class="cos-thumb">${themeSwatchThumb(item.id)}</span>`
       : `<span class="cos-thumb">${cardFrontThumb(item.id)}</span>`;
-  const foot=have
-    ? `<span class="cos-owned">${item.owned?'Purchased':'Earned'}</span>`
-    : `<span class="cos-price${afford?'':' short'}">${creditChipHTML(13)}${fmtCredits(item.price)}</span>`
-      +`<button class="cos-buy"${afford?'':' disabled'} onclick="buyCosmetic('${item.id}')">`
-      +`${afford?'Buy':'Not enough'}</button>`;
-  return `<div class="cos-item deco-box${have?' equipped':''}">
+  return `<div class="cos-item deco-box">
     ${thumb}
-    <span class="cos-body"><span class="cos-name">${esc(item.name)}</span>${foot}</span>
+    <span class="cos-body"><span class="cos-name">${esc(item.name)}</span>
+      <span class="cos-price${afford?'':' short'}">${creditChipHTML(13)}${fmtCredits(item.price)}</span>
+      <button class="cos-buy"${afford?'':' disabled'} onclick="buyCosmetic('${item.id}')">${afford?'Buy':'Not enough'}</button>
+    </span>
   </div>`;
 }
 

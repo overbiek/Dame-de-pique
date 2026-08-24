@@ -2616,17 +2616,19 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   color:var(--gold);letter-spacing:.14em;margin-left:4px;
 }
 .lcc-hint{font-size:.6rem;color:var(--faint)}
-/* Lobby header: "Game lobby" and the How to play / Leave lobby pair now
-   share one line, top-right, instead of sitting at the bottom of the
-   screen — reuses .screen-header's flex row (space-between) with the
-   exit-row nested a level deeper than every other screen's header, which
-   is why the generic direct-child landscape selectors keyed off
-   >.center-wrap>h2/.exit-row don't reach this one and this block
-   restates the sizing itself. */
-.lobby-header{margin-bottom:10px}
-.lobby-header h2{margin:0}
-.lobby-header .exit-row{margin-top:0;flex-wrap:nowrap;gap:4px;justify-content:flex-end}
-.lobby-header .exit-row .btn{padding:5px 9px;font-size:.62rem;white-space:nowrap}
+/* Flow-screen inline header: title + exit actions share one line,
+   top-right, instead of the title sitting alone with the exit-row
+   stacked at the bottom of the screen. Used by both the lobby ("Game
+   lobby" + How to play/Leave lobby) and seat draw ("Cut for
+   dealer"/"Drawing for seats" + Leave game) — reuses .screen-header's
+   flex row (space-between) with the exit-row nested a level deeper than
+   every other screen's header, which is why the generic direct-child
+   landscape selectors keyed off >.center-wrap>h2/.exit-row don't reach
+   this one and this block restates the sizing itself. */
+.flow-header{margin-bottom:10px}
+.flow-header h2{margin:0}
+.flow-header .exit-row{margin-top:0;flex-wrap:nowrap;gap:4px;justify-content:flex-end}
+.flow-header .exit-row .btn{padding:5px 9px;font-size:.62rem;white-space:nowrap}
 /* Code + Invite friends now share one row, half width each. flex:1 on
    both is what lets the code chip alone still fill the row when Invite
    friends is hidden (no online friends, or not eligible) — a lone
@@ -2679,6 +2681,12 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    letting either replace the other. */
 #l-start.l-start-circle:active{transform:translate(-50%,-50%) scale(.97)}
 #l-status{font-size:.82rem;color:var(--faint);margin:8px 0;text-align:center}
+/* Seat draw's own Begin/Cut circle, bigger than the lobby's Start — Leave
+   game moved up into .flow-header (see its own note), which frees the
+   room at the bottom of this screen for the one action that matters here
+   to be more prominent. */
+.draw-begin{width:104px;height:104px;font-size:1rem}
+#d-begin.draw-begin:active{transform:translate(-50%,-50%) scale(.97)}
 
 /* Friends tab: friend code + add-a-friend side by side (each half width)
    instead of stacked, to free up vertical room for the friends list below.
@@ -2799,7 +2807,7 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    ellipsis if it doesn't fit), so the crests land immediately beside it
    rather than floating separately. */
 .slot-name{
-  flex:0 1 auto;min-width:16px;max-width:100%;font-size:.86rem;font-weight:600;color:var(--cream);
+  flex:0 1 auto;min-width:16px;max-width:100%;font-size:.98rem;font-weight:600;color:var(--cream);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .slot[data-material] .slot-name,.dcw[data-material] .slot-name{color:var(--rm-ink)}
@@ -2905,7 +2913,16 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
 .drawrow{
   display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(10px,3vw,20px);
   margin:16px 0;
-  --dc:clamp(64px,min(22vw,14vh),110px);
+  /* Deliberately SMALLER than the pre-redesign 64-110px range, and than
+     landscape's own --dc below, even though "bigger cards" applies to
+     both — a full lobby-size avatar plus a bigger card genuinely don't
+     both fit side by side in a half-width PORTRAIT box (see .dcw/
+     .dq-id's own notes): at 320-375px wide, anything above ~46-52px here
+     pushes the card left into the avatar. Measured against .avatar's
+     actual right edge at both 320 and 375px wide, this clamp keeps a
+     several-px gap between card and avatar at both — it's smaller on
+     purpose here, not a leftover from before this pass. */
+  --dc:clamp(40px,min(14vw,10vh),88px);
 }
 /* minmax(0,1fr) above, NOT bare 1fr — a bare 1fr track still floors at
    its content's min-content width, and a long name's .slot-name (nowrap,
@@ -2913,10 +2930,20 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    (measured 285px vs 133px at 375px wide) instead of splitting evenly.
    min-width:0 here is the matching half of that fix: without it the grid
    item itself still refuses to shrink below its own content. */
+/* Horizontal now, matching .slot's own layout exactly (avatar left,
+   identity right) rather than the old card-above-identity stack — same
+   --av value as .slot too, so a player's avatar is genuinely the same
+   size here as it is in the lobby, not just visually similar. The card
+   itself is pulled out of this flow (position:absolute, see .drawcard
+   below) so it doesn't have to compete with the identity row for width;
+   min-height instead reserves room for it off --dc, since the card is
+   usually the taller of the two. */
 .dcw{
   --av:clamp(54px,22vw,90px);
-  display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0;
-  padding:14px 10px;border-radius:var(--r);
+  position:relative;
+  display:flex;flex-direction:row;align-items:center;gap:10px;min-width:0;
+  padding:12px 10px;border-radius:var(--r);
+  min-height:calc(var(--dc)*1.43 + 24px);
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
 }
 /* The same full-strength banner gradient .slot[data-material] uses on
@@ -2945,15 +2972,39 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
    duplicated), so a player's identity looks and reads the same on both
    screens. .avatar.lg (not .md) for the same reason — .dcw's own --av
    above is what a lobby .slot would otherwise supply. */
-.dq-id{display:flex;align-items:center;gap:10px;min-width:0;max-width:100%}
+/* Capped short of the card's left edge (the card sits at the box's 75%
+   mark — see .drawcard below) so a long name/title ellipses before ever
+   running under it, rather than the card just visually clipping text
+   that's still technically there. The max() floor matters at narrow
+   portrait widths: a half-width 2x2 box plus a full lobby-size avatar
+   plus a full-size card genuinely don't all fit side by side down to
+   375px, and the plain 75%-minus-half-card figure came out SMALLER than
+   the avatar alone there (measured 58px vs an 82.5px avatar) — the
+   avatar would have overflowed its own row. The floor guarantees the
+   avatar (plus a little name) always has room; the card, painted after
+   .dq-id in source order, then simply overlaps whatever name/title text
+   doesn't fit rather than the layout breaking. Landscape's much wider
+   boxes don't hit this floor at all. */
+.dq-id{display:flex;align-items:center;gap:10px;min-width:0;
+  max-width:max(calc(var(--av) + 34px),calc(75% - (var(--dc) / 2) - 6px))}
+/* Positioned within .dcw itself now (position:absolute — .dcw is the
+   containing block, see its own note) rather than stacked in normal flow
+   below the identity row: centred along the box's height, and at the
+   box's own 75% mark horizontally — left of dead-centre would put it
+   over the identity text, flush against the right edge crowds the
+   border, 75% is the middle of that remaining room. min() caps that at
+   a fixed 6px clearance from the right edge instead whenever the card is
+   big enough relative to the box that a literal 75% would push it past
+   the edge (measured: it did, ~3px, at 375px wide before this cap) —
+   below that size threshold 75% wins outright, exactly as asked. Any
+   rule that sets its OWN transform (.tap:active, .win below) has to fold
+   this translate(-50%,-50%) in rather than replace it, same trap
+   .l-start-circle:active already documents — plain transform properties
+   don't compose across rules. */
 .drawcard{
-  position:relative;width:var(--dc);aspect-ratio:.7;border-radius:calc(var(--dc)*.11);
+  position:absolute;top:50%;left:min(75%,100% - (var(--dc) / 2) - 6px);transform:translate(-50%,-50%);
+  width:var(--dc);aspect-ratio:.7;border-radius:calc(var(--dc)*.11);
   display:grid;place-items:center;text-align:center;
-  /* Nudged off dead-centre, same reasoning as the lobby avatar's own
-     padding-left nudge — a few px of asymmetry reads as more deliberate
-     than a perfectly centred card sitting above a left-aligned identity
-     row. */
-  margin-left:8px;
   border:1px solid var(--card-edge);
   box-shadow:0 5px 14px rgba(var(--ddp-scrim-rgb),.42);
   transition:transform .2s cubic-bezier(.2,.9,.3,1.2),box-shadow .2s;
@@ -2977,7 +3028,7 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
 }
 @keyframes dc-pulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.03)}}
 @media (prefers-reduced-motion:reduce){ .drawcard.tap::before{animation:none;opacity:.9} }
-.drawcard.tap:active{transform:translateY(-6px) scale(1.03)}
+.drawcard.tap:active{transform:translate(-50%,-50%) translateY(-6px) scale(1.03)}
 /* face up: a real card face, corner index + big centre pip */
 .drawcard.flip{
   background:linear-gradient(158deg,var(--ddp-card-hi),var(--card-face) 55%,var(--ddp-card-lo));
@@ -2997,7 +3048,7 @@ html[data-cardfront="nocturne"] .card.has-art .big{display:none}
   border-color:var(--gold);
   box-shadow:0 0 0 2px var(--gold),0 0 22px rgba(var(--ddp-brass-rgb),.45),
              0 8px 20px rgba(var(--ddp-scrim-rgb),.45);
-  transform:translateY(-5px);
+  transform:translate(-50%,-50%) translateY(-5px);
 }
 /* .dcn (the old bare name caption) is retired — .slot-name inside
    .dq-id's .slot-mid carries the name now, same class the lobby cards
@@ -4060,7 +4111,7 @@ html.landscape-mode #s-final .exit-row{flex-direction:row;margin-top:10px !impor
 html.landscape-mode #s-lobby .slot{--av:55px;height:95px;gap:6px;padding:7px 5px 7px 8px}
 html.landscape-mode #s-lobby .slot-top{min-height:15px}
 html.landscape-mode #s-lobby .slot-top .tag{padding:2px 6px;font-size:.54rem}
-html.landscape-mode #s-lobby .slot-name{font-size:.66rem}
+html.landscape-mode #s-lobby .slot-name{font-size:.76rem}
 html.landscape-mode #s-lobby .slot-title{font-size:.46rem;min-height:8px}
 html.landscape-mode #s-lobby .slot-tier{font-size:.48rem;min-height:8px}
 html.landscape-mode #s-lobby .slot-footer{min-height:20px}
@@ -4070,39 +4121,40 @@ html.landscape-mode #s-lobby #l-status{margin:0}
    here — the landscape grid it floats over is much shorter, and a 72px
    circle would swallow most of it. */
 html.landscape-mode #s-lobby .l-start-circle{width:56px;height:56px;font-size:.68rem}
-/* .lobby-header's h2 is nested inside .screen-header now, not a direct
+/* .flow-header's h2 is nested inside .screen-header now, not a direct
    child of .center-wrap, so it misses the generic landscape h2 override
-   above — restated here at the same values. */
-html.landscape-mode #s-lobby .lobby-header{margin-bottom:6px}
-html.landscape-mode #s-lobby .lobby-header h2{font-size:clamp(1.25rem,4vh,1.7rem) !important;margin:0}
+   above — restated here at the same values. Shared with #s-draw's own
+   header below. */
+html.landscape-mode #s-lobby .flow-header{margin-bottom:6px}
+html.landscape-mode #s-lobby .flow-header h2{font-size:clamp(1.25rem,4vh,1.7rem) !important;margin:0}
 
 /* seat draw / dealer cut: the card row is already horizontal, it just
    needs to be sized off the short axis so all four fit */
 /* landscape is SHORT, not narrow — the binding constraint flips, so the
    card is sized off viewport height here and the row's margin collapses */
-/* Two rows of (bigger) cards no longer fit one landscape screen without
-   scrolling the way the old single-row layout did — a real tradeoff of
-   "bigger cards, one quadrant per player" on a SHORT viewport, not an
-   oversight. .center-wrap's existing overflow-y:auto (shared by every
-   game-flow screen) is what absorbs it; --dc and the row/gap padding are
-   trimmed harder here than in portrait specifically to keep that scroll
-   as small as possible rather than eliminate it. */
-html.landscape-mode #s-draw .drawrow{margin:4px 0;gap:clamp(5px,1.4vw,10px);--dc:clamp(42px,11vh,68px)}
-/* --av override, not a separate .avatar.md/.lg rule — .dcw's identity
-   card grew a title/tier/crests row this pass (see .dq-id's own note),
-   so this is cut back harder than the old avatar-only version to keep
-   the same scrolling trade-off seat draw already accepted rather than
-   letting it grow further. */
-html.landscape-mode #s-draw .dcw{--av:26px;padding:6px 5px;gap:3px}
+/* Rows are noticeably shorter now that the card sits absolutely
+   positioned inside the same horizontal row as the identity (see .dcw's
+   own note) rather than stacked above it — two full quadrant rows fit
+   one landscape screen again without scrolling, unlike the old
+   card-above-identity stack this replaced. .center-wrap's overflow-y:auto
+   (shared by every game-flow screen) is still there as a safety net if a
+   future change grows this again. */
+html.landscape-mode #s-draw .drawrow{margin:4px 0;gap:clamp(5px,1.4vw,10px);--dc:clamp(48px,13vh,76px)}
+/* --av now matches the lobby's own landscape value (55px) exactly, per
+   the "same avatars, same size" ask — no dealer-badge override needed
+   below any more either, since .avatar.lg's base badge size already
+   fits an avatar this size (that's what the lobby relies on too). */
+html.landscape-mode #s-draw .dcw{--av:55px;padding:8px;gap:8px;min-height:calc(var(--dc)*1.43 + 16px)}
 html.landscape-mode #s-draw #d-note{margin:4px 0}
-html.landscape-mode #s-draw .avatar.lg .dealer-badge{width:12px;height:12px;font-size:.4rem;right:-2px;bottom:-2px;border-width:1px}
 html.landscape-mode #s-draw .slot-title,
 html.landscape-mode #s-draw .slot-tier{font-size:.46rem;min-height:8px}
-/* Same reasoning as the lobby's own #l-start override — a full-size
-   circle floating over an already-short landscape grid eats into the
-   scroll budget seat draw already accepts as a trade-off for more than
-   it needs to. */
-html.landscape-mode #s-draw .l-start-circle{width:56px;height:56px;font-size:.68rem}
+/* Leave game moved into the header (.flow-header, same pattern as the
+   lobby's own), which is what frees the room this circle grows into
+   below — it no longer has to share the bottom of the screen with an
+   exit-row. */
+html.landscape-mode #s-draw .flow-header{margin-bottom:4px}
+html.landscape-mode #s-draw .flow-header h2{font-size:clamp(1.1rem,3.6vh,1.5rem) !important;margin:0}
+html.landscape-mode #s-draw .draw-begin{width:68px;height:68px;font-size:.78rem}
 
 /* summary / final: the score sheet is the tall part, so it keeps its own
    scroll and everything around it tightens up */
@@ -5649,7 +5701,7 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 <!-- ═══ LOBBY ═══ -->
 <section id="s-lobby" class="screen">
   <div class="center-wrap" style="padding-top:2vh;max-width:460px">
-    <div class="screen-header lobby-header">
+    <div class="screen-header flow-header">
       <h2>Game lobby</h2>
       <div class="exit-row">
         <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
@@ -5688,7 +5740,12 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 <!-- ═══ DRAW ═══ -->
 <section id="s-draw" class="screen">
   <div class="center-wrap" style="padding-top:3vh;max-width:460px">
-    <h2 id="d-title">Cut for dealer</h2>
+    <div class="screen-header flow-header">
+      <h2 id="d-title">Cut for dealer</h2>
+      <div class="exit-row">
+        <button class="btn btn-ghost btn-sm" onclick="askLeave(this)">Leave game</button>
+      </div>
+    </div>
     <p id="d-sub">Highest card deals first.</p>
     <!-- #d-begin sits OUTSIDE #d-row on purpose, same reason as the
          lobby's #l-start: renderDraw() rebuilds #d-row's innerHTML from
@@ -5697,14 +5754,11 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
          lobby's own Start button) is what centres it over the grid. -->
     <div class="draw-grid-wrap">
       <div id="d-row" class="drawrow"></div>
-      <button class="btn btn-primary l-start-circle" id="d-begin" style="display:none" onclick="send('startRound')">Begin</button>
+      <button class="btn btn-primary l-start-circle draw-begin" id="d-begin" style="display:none" onclick="send('startRound')">Begin</button>
     </div>
     <div id="d-note" class="note gold" style="display:none"></div>
     <p id="d-wait" class="prompt wait" style="display:none">Waiting for the host…</p>
     <p id="d-auto" class="autoline"></p>
-    <div class="exit-row">
-      <button class="btn btn-ghost btn-sm" onclick="askLeave(this)">Leave game</button>
-    </div>
   </div>
 </section>
 
@@ -8057,11 +8111,19 @@ function toggleLobbyFriendPicker(){
 function renderLobbyFriendPicker(){
   const btn=$('l-invite-btn'); if(!btn) return;
   const online=friendsList.filter(f=>f.online);
-  btn.style.display=(lobbyInviteEligible&&online.length)?'block':'none';
+  // The button now always sits in the code row (see .lobby-code-row),
+  // half-width beside the code chip, so it stays visible even with zero
+  // friends online — it used to hide itself in that case, which is what
+  // read as "the button is gone" once the code chip stopped being the
+  // only thing in the row. Still gated on lobbyInviteEligible (ranked/
+  // daily/guest have nothing to invite into).
+  btn.style.display=lobbyInviteEligible?'block':'none';
   if(!lobbyInviteEligible) $('l-friend-picker').style.display='none';
   const panel=$('l-friend-picker');
   if(!panel.classList.contains('open')) return;
-  panel.innerHTML=online.map(f=>friendRowHTML(f,{invite:true,remove:false,showStatus:false})).join('');
+  panel.innerHTML=online.length
+    ? online.map(f=>friendRowHTML(f,{invite:true,remove:false,showStatus:false})).join('')
+    : '<p class="codehint" style="padding:8px 4px">No friends online right now.</p>';
 }
 
 socket.on('friendCodeOk',d=>{
@@ -8901,21 +8963,19 @@ function renderDraw(G){
     ? 'Everyone draws a card to settle into their seats around the table.'
     : 'Highest card deals first.';
 
-  // Each seat is a card, bigger than the old single-row layout allowed,
-  // with the player's own IDENTITY CARD underneath it (.dq-id) instead of
-  // a bare avatar+name caption — the point of this screen is "who you're
-  // playing with", not just "whose card is whose", and .dq-id is now the
-  // same avatar-left/name+crests/title/tier layout the lobby seat cards
-  // use (.slot-mid and friends, reused directly rather than duplicated —
-  // --av on .dcw is what keeps the avatar and its crests in the same
-  // ratio as the lobby, exactly like .slot's own --av does). One
-  // quadrant per player (.drawrow is a 2x2 grid — see its own CSS note)
-  // instead of four cards squeezed into one row, so each player
-  // genuinely gets a quarter of the screen. Face-down uses the table's
-  // own blue back; face-up is a real card face with a corner index and a
-  // centre pip, both sized off --dc so one number drives the whole thing
-  // at any viewport. The dealer badge sits on the avatar (matching
-  // seatHTML's convention) rather than floating over the card.
+  // Each seat is a card, one quadrant per player (.drawrow is a 2x2 grid
+  // — see its own CSS note), with the player's own IDENTITY (.dq-id)
+  // laid out exactly like a lobby seat card — same --av avatar size, same
+  // avatar-left/name+crests/title/tier-right row (.slot-mid and friends,
+  // reused directly rather than duplicated) — so a player looks and
+  // reads identically on both screens. The drawn card itself is pulled
+  // out of that row and absolutely positioned within .dcw instead (see
+  // .drawcard's own CSS note for where and why), rather than stacked
+  // above the identity block the way it used to be. Face-down uses the
+  // table's own blue back; face-up is a real card face with a corner
+  // index and a centre pip, both sized off --dc so one number drives the
+  // whole thing at any viewport. The dealer badge sits on the avatar
+  // (matching seatHTML's convention) rather than floating over the card.
   let h='';
   for(let i=0;i<4;i++){
     const p=G.players[i], up=G.drawRevealed[i], c=G.drawCards[i];
@@ -8943,7 +9003,6 @@ function renderDraw(G){
              ${mine?'role="button" tabindex="0" aria-label="Reveal your card"':''}></div>`;
     }
     h+=`<div class="dcw${isWin?' is-win':''}${i===me?' mine':''}"${mat?` data-material="${mat}"`:''}>
-      ${card}
       <div class="dq-id">
         <span class="avatar lg${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}<span class="dealer-badge${isDealer?' on':''}">D</span></span>
         <div class="slot-mid">
@@ -8955,6 +9014,7 @@ function renderDraw(G){
           <span class="slot-tier">${set?esc(set.tier):''}</span>
         </div>
       </div>
+      ${card}
     </div>`;
   }
   $('d-row').innerHTML=h;

@@ -7975,11 +7975,20 @@ function renderCosmeticPanels(){
   // Each panel carries the full section name the one-word tab can't, and
   // the locked count its 4px dot can't — see the tab strip's comment in
   // the markup.
+  // Unlike every other picker here, a LOCKED scene isn't shown at all —
+  // on request: every non-default scene is shop-exclusive now (see
+  // COSMETICS.scenes server-side), so "what does it look like and what
+  // earns it" has nowhere to answer to except the Shop, and showing a
+  // locked card with no requirement line here would just be a dead end.
+  // secLabel still counts off the FULL catalog (not the filtered list)
+  // so the heading's "N locked" stays honest about how many exist; only
+  // the grid itself is filtered.
+  const ownedScenes=catalog.scenes.filter(s=>s.unlocked);
   panels.scene.innerHTML=
     secLabel('Backgrounds',catalog.scenes)+
-    `<div class="cos-grid">${catalog.scenes.map(s=>
+    `<div class="cos-grid">${ownedScenes.map(s=>
       cosItemHTML('scene',s,sceneArtImg(s.id),equipped.scene)).join('')}</div>`+
-    `<p class="pick-hint">Backgrounds appear behind the table while you play.</p>`;
+    `<p class="pick-hint">Backgrounds appear behind the table while you play &mdash; buy more in the Shop.</p>`;
 
   panels.cards.innerHTML=
     secLabel('Card fronts',catalog.cardFronts)+

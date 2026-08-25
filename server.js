@@ -1381,6 +1381,13 @@ const CREDIT_PRICES = { common: 600, rare: 2000, epic: 5000, legendary: 12000 };
 // the same kind of thing (a felt palette), so one flat price fits all six
 // locked ones evenly.
 const THEME_PRICE = 500;
+// Same reasoning as THEME_PRICE — two flat tiers for the fourteen
+// non-default scenes, by which batch they arrived in rather than by
+// per-item rarity: every scene is the same kind of cosmetic (a
+// background photo), so batch order is the only thing distinguishing
+// them. See the NAMING/pricing note on COSMETICS.scenes below.
+const SCENE_PRICE_1 = 500;
+const SCENE_PRICE_2 = 1000;
 const COSMETICS = {
   // Obsidienne and Émeraude are the two free/default themes (see
   // filterEquipped's fallback and applyTableTheme's client-side default);
@@ -1400,66 +1407,33 @@ const COSMETICS = {
   ],
   // REPLACED WHOLESALE — the eight original scenes (Velvet Room, Rooftop,
   // Grand Library, Winter Casino, Moon Room, Garden, Train, Observatory)
-  // are gone, art AND ids, in favour of eight real photographic rooms.
-  // Not deprecated gradually: their .webp files are deleted from
-  // public/scenes/ too, same call as the House Regulars avatar swap.
+  // are gone, art AND ids, in favour of real photographic rooms, then
+  // extended with a second batch of seven. Not deprecated gradually:
+  // their .webp files are deleted from public/scenes/ too, same call as
+  // the House Regulars avatar swap.
   //
-  // `scene_observatory` is the ONE id carried over, deliberately: it is
-  // the same room re-arted rather than a different place, so reusing the
-  // id preserves anyone who already bought or earned it. The other seven
-  // are genuinely different rooms and take new ids — which means a player
-  // who owned one of those loses that specific purchase, since
-  // player_purchases is keyed on item_id and the old id no longer resolves.
-  // Accepted rather than migrated: retiring a cosmetic is already
-  // documented as safe (filterEquipped drops an unknown id on read, so a
-  // stale equip falls back to the default instead of rendering nothing),
-  // and a purchase-id remap table would be a permanent piece of
-  // bookkeeping for a one-off art swap.
+  // `scene_observatory` is the ONE id carried over from the retired set,
+  // deliberately: it is the same room re-arted rather than a different
+  // place, so reusing the id preserves anyone who already bought it.
+  // Every other original-batch id is genuinely a different room and takes
+  // a new id — a player who owned one of those loses that specific
+  // purchase, since player_purchases is keyed on item_id and the old id no
+  // longer resolves. Accepted rather than migrated: retiring a cosmetic is
+  // already documented as safe (filterEquipped drops an unknown id on
+  // read, falling back to the default rather than rendering nothing), and
+  // a purchase-id remap table would be permanent bookkeeping for a
+  // one-off art swap.
   //
-  // Shape is position-for-position identical to the set it replaces — one
-  // free default, two shop-exclusive, five achievement-gated-and-priced —
-  // so no unlock economics changed here, only the art. The achievement
-  // pairings got MORE apt in the swap, not less: a casino for "win games"
-  // (ach_the_house) and a moonlit balcony for ach_moon_chaser both read
-  // straight off the achievement's own name.
-  // ┌──────────────────────────────────────────────────────────────────┐
-  // │ TEMPORARY — ALL EIGHT SCENES ARE UN-GATED SO THE NEW ART CAN BE  │
-  // │ PREVIEWED IN GAME. REVERT BEFORE THIS REACHES REAL PLAYERS.      │
-  // └──────────────────────────────────────────────────────────────────┘
-  // Exactly the same temporary state the previous scene set was shipped in
-  // before the shop existed (see dedf411) — `unlock:null` with no `price`
-  // is what cosmeticsFor's `unlocked` formula reads as "free to everyone".
-  //
-  // TO RESTORE, replace the array below with this — these are the real,
-  // intended gates and they are the only thing being suppressed. The
-  // second batch of seven are all shop-exclusive on purpose: there are
-  // only five scene-gating achievements and they were already spoken for,
-  // and inventing five more achievements just to gate artwork would put
-  // the cart before the horse. Shop-exclusive (unlock:null + price) is
-  // the shape cardfront_noir established for exactly this.
-  //   { id: 'scene_moulin_rouge',   name: 'The Moulin Rouge',   unlock: null },
-  //   { id: 'scene_holiday',        name: 'Holiday',            unlock: null, price: CREDIT_PRICES.rare },
-  //   { id: 'scene_victorian_room', name: 'The Victorian Room', unlock: null, price: CREDIT_PRICES.rare },
-  //   { id: 'scene_skyline',        name: 'The Skyline',        unlock: null, price: CREDIT_PRICES.rare },
-  //   { id: 'scene_waterfall',      name: 'The Waterfall',      unlock: null, price: CREDIT_PRICES.rare },
-  //   { id: 'scene_throne_room',    name: 'The Throne Room',    unlock: null, price: CREDIT_PRICES.rare },
-  //   { id: 'scene_docks',          name: 'The Docks',          unlock: null, price: CREDIT_PRICES.rare },
-  //   { id: 'scene_ashen_gate',     name: 'The Ashen Gate',     unlock: null, price: CREDIT_PRICES.rare },
-  //   { id: 'scene_arabian_nights', name: 'Arabian Nights',     unlock: null, price: CREDIT_PRICES.rare },
-  //   { id: 'scene_magic_forest',   name: 'The Magic Forest',   unlock: null, price: CREDIT_PRICES.rare },
-  //   { id: 'scene_noir_casino',    name: 'The Noir Casino',    unlock: 'ach_the_house',    price: CREDIT_PRICES.rare },
-  //   { id: 'scene_moon_balcony',   name: 'The Moon Balcony',   unlock: 'ach_moon_chaser',  price: CREDIT_PRICES.rare },
-  //   { id: 'scene_conservatory',   name: 'The Conservatory',   unlock: 'ach_heartbreaker', price: CREDIT_PRICES.rare },
-  //   { id: 'scene_theater',        name: 'The Theater',        unlock: 'ach_the_dealer',   price: CREDIT_PRICES.rare },
-  //   { id: 'scene_observatory',    name: 'The Observatory',    unlock: 'ach_high_roller',  price: CREDIT_PRICES.rare },
-  //
-  // TWO CONSEQUENCES OF RESTORING, both already documented behaviour:
-  //  1. Anyone who equipped a scene they haven't actually earned is
-  //     dropped back to the default by filterEquipped on the next read.
-  //     That is the function working as designed, not a bug.
-  //  2. With no `price`, these vanish from the Shop entirely while
-  //     un-gated — renderShop only lists priced items. They come back
-  //     the moment the prices above are restored.
+  // ALL FOURTEEN NON-DEFAULT SCENES ARE SHOP-EXCLUSIVE — no achievement
+  // route at all, on request: `unlock:null` + a price is the shape
+  // cardfront_noir already established for "purchase only". Priced in two
+  // flat tiers by which batch they arrived in, not by rarity — every scene
+  // is the same KIND of cosmetic (a background photo), so there's nothing
+  // for a per-item rarity tier to actually track. The five achievement
+  // gates the first batch briefly carried (ach_the_house, ach_moon_chaser,
+  // ach_heartbreaker, ach_the_dealer, ach_high_roller) are gone; nothing
+  // else in COSMETICS points at those ids, so no other cosmetic lost a
+  // route by this.
   //
   // NAMING: `scene_ashen_gate` is the art supplied as "Mordor". The
   // picture itself is generic dark fantasy — a lava fortress gate, no
@@ -1468,20 +1442,20 @@ const COSMETICS = {
   // the display string and the id differ; the artwork is untouched.
   scenes: [
     { id: 'scene_moulin_rouge',   name: 'The Moulin Rouge',   unlock: null },
-    { id: 'scene_holiday',        name: 'Holiday',            unlock: null },
-    { id: 'scene_victorian_room', name: 'The Victorian Room', unlock: null },
-    { id: 'scene_skyline',        name: 'The Skyline',        unlock: null },
-    { id: 'scene_waterfall',      name: 'The Waterfall',      unlock: null },
-    { id: 'scene_throne_room',    name: 'The Throne Room',    unlock: null },
-    { id: 'scene_docks',          name: 'The Docks',          unlock: null },
-    { id: 'scene_ashen_gate',     name: 'The Ashen Gate',     unlock: null },
-    { id: 'scene_arabian_nights', name: 'Arabian Nights',     unlock: null },
-    { id: 'scene_magic_forest',   name: 'The Magic Forest',   unlock: null },
-    { id: 'scene_noir_casino',    name: 'The Noir Casino',    unlock: null },
-    { id: 'scene_moon_balcony',   name: 'The Moon Balcony',   unlock: null },
-    { id: 'scene_conservatory',   name: 'The Conservatory',   unlock: null },
-    { id: 'scene_theater',        name: 'The Theater',        unlock: null },
-    { id: 'scene_observatory',    name: 'The Observatory',    unlock: null },
+    { id: 'scene_holiday',        name: 'Holiday',            unlock: null, price: SCENE_PRICE_1 },
+    { id: 'scene_victorian_room', name: 'The Victorian Room', unlock: null, price: SCENE_PRICE_1 },
+    { id: 'scene_noir_casino',    name: 'The Noir Casino',    unlock: null, price: SCENE_PRICE_1 },
+    { id: 'scene_moon_balcony',   name: 'The Moon Balcony',   unlock: null, price: SCENE_PRICE_1 },
+    { id: 'scene_conservatory',   name: 'The Conservatory',   unlock: null, price: SCENE_PRICE_1 },
+    { id: 'scene_theater',        name: 'The Theater',        unlock: null, price: SCENE_PRICE_1 },
+    { id: 'scene_observatory',    name: 'The Observatory',    unlock: null, price: SCENE_PRICE_1 },
+    { id: 'scene_skyline',        name: 'The Skyline',        unlock: null, price: SCENE_PRICE_2 },
+    { id: 'scene_waterfall',      name: 'The Waterfall',      unlock: null, price: SCENE_PRICE_2 },
+    { id: 'scene_throne_room',    name: 'The Throne Room',    unlock: null, price: SCENE_PRICE_2 },
+    { id: 'scene_docks',          name: 'The Docks',          unlock: null, price: SCENE_PRICE_2 },
+    { id: 'scene_ashen_gate',     name: 'The Ashen Gate',     unlock: null, price: SCENE_PRICE_2 },
+    { id: 'scene_arabian_nights', name: 'Arabian Nights',     unlock: null, price: SCENE_PRICE_2 },
+    { id: 'scene_magic_forest',   name: 'The Magic Forest',   unlock: null, price: SCENE_PRICE_2 },
   ],
   cardFronts: [
     { id: 'cardfront_standard',    name: 'Classic',      unlock: null },
@@ -1498,14 +1472,15 @@ const COSMETICS = {
     // cardFrontArtImg client-side for the loading contract. Takes over
     // Royal Court's old price/unlock slot in the shop.
     { id: 'cardfront_nocturne',    name: 'Nocturne Deck', unlock: 'ach_queen_hunter', price: CREDIT_PRICES.common },
-    // Shop-EXCLUSIVE, deliberately: no `unlock` string at all, priced at
-    // the epic tier. This is the first cosmetic with no free route —
-    // see the `unlocked` formula's comment above for what that required.
-    { id: 'cardfront_noir',        name: 'Noir Casino',   unlock: null, price: CREDIT_PRICES.epic },
-    // Shop-exclusive like Noir — no achievement route. Priced a tier
-    // below it (rare, not epic): a bold graphic re-skin, not a fully
-    // illustrated portrait deck like Nocturne/Noir.
-    { id: 'cardfront_bold',        name: 'Bold Deck',     unlock: null, price: CREDIT_PRICES.rare },
+    // TEMPORARY: both un-gated (no price) so the just-fixed Noir crop and
+    // the new Bold Deck can be checked in-game directly, no credits
+    // needed. Real gates, to restore before real players see this:
+    //   { id: 'cardfront_noir', name: 'Noir Casino', unlock: null, price: CREDIT_PRICES.epic },
+    //   { id: 'cardfront_bold', name: 'Bold Deck',   unlock: null, price: CREDIT_PRICES.rare },
+    // While un-gated they also don't appear in the Shop at all, since
+    // renderShop only lists priced items — equip both from My Account.
+    { id: 'cardfront_noir',        name: 'Noir Casino',   unlock: null },
+    { id: 'cardfront_bold',        name: 'Bold Deck',     unlock: null },
   ],
   // Crests are 1:1 with achievements by design (the brief's whole point:
   // a crest IS the visible proof of an achievement), so they're derived

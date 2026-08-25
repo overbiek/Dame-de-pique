@@ -1890,6 +1890,37 @@ before pushing.
   a working Buy button that emits only an id and token; the
   under-5,000-balance state correctly disables to "Not enough"; and both
   `server.js` and the inline client script still parse clean.
+- **Two things this "verified end-to-end" pass above actually got wrong,
+  both found later by the player on a real device, not by any harness:**
+  1. **The crop was geometrically correct but the wrong shape.** The
+     column-minimum/row-gutter method measured the card art's own true
+     silhouette accurately — but that silhouette is ~0.46 wide:tall
+     (roughly 110×230px per card in the source sheet), narrower than the
+     app's 5:7 card box. `.card-art{object-fit:cover}` scales *up* to
+     fill the box's width, which pushed the excess height off both the
+     top and bottom — reported as "too zoomed in, top and bottom not
+     visible". Nothing was actually lost from the crop; the box just
+     didn't match what was cropped. **Fixed at the source, not in CSS**:
+     each of the 52 cards is now padded (symmetric, near-white `(254,254,
+     254)` sampled from the sheet's own page background) to the box's own
+     5:7 ratio *before* the final resize to 500×700 — matching Bold
+     Deck's own resolution exactly, so `cover` never needs to crop
+     anything again. Files grew from ~6KB to ~18KB each accordingly.
+  2. **"the fallback glyphs hidden" above was never actually true for
+     Noir.** The CSS rule that hides `.ix`/`.big` once real art loads
+     (`html[data-cardfront="X"] .card.has-art .ix,.big{display:none}`)
+     shipped with only an `X="nocturne"` selector — there was no `X=
+     "noir"` version at all, so Noir's plain corner glyphs were painted
+     on top of its real art the entire time this card front existed.
+     Extended to list `nocturne`/`noir`/`bold` explicitly (see that rule's
+     own comment for why it can't be derived from `CARDFRONT_ART_SETS` in
+     JS — it's pure CSS). Bold Deck was added in the same session and
+     correctly included from the start; Noir was the one that had shipped
+     broken.
+  Both required an `sw.js` `CACHE` bump (v12) — see that file's own note:
+  overwriting a runtime-cached asset in place under its existing filename
+  is invisible to a returning player without one, same trap as the v8/v11
+  entries above it.
 
 - **Scenes are pure CSS gradient compositions, no image assets**, and
   that's a decision rather than a stopgap: eight full-bleed backgrounds

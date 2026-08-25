@@ -36,7 +36,17 @@
 // revalidation means a returning player who ever loaded the old
 // Observatory would keep serving it forever and never even request the
 // new one. One in-place overwrite is enough to require the bump.
-const CACHE = 'ddp-v11';
+// v12: same trap again — all 52 public/cardfronts/noir/*.webp files were
+// re-cropped in place, same filenames. The original crop measured the
+// card art's own true silhouette accurately (~0.46 aspect), but that's
+// narrower than the app's 5:7 card box, so object-fit:cover scaled it up
+// to fill the box's width and cropped the excess off the top and bottom
+// — reported as "too zoomed in". Fixed at the source instead of in CSS:
+// each card is now padded to the box's own 5:7 ratio (matching Bold's
+// 500x700) before final resize, so cover no longer needs to crop
+// anything. Any returning player who'd already loaded a Noir card face
+// needs this bump or keeps seeing the old cropped bytes forever.
+const CACHE = 'ddp-v12';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
                 '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 

@@ -2212,6 +2212,30 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
    plaque stays visible, just proportionally flatter, and reads cleanly
    at 28px tall — same call already made for the Noir card fronts. */
 .rank-plate.xs .rank-art.plate{object-fit:fill}
+/* Same overflow treatment .slot-bg-art uses in the lobby (see that rule's
+   own long note for the full story), applied here to every OTHER place
+   the plate art renders through rankPlateDressHTML — the account hero,
+   a friend's profile popup, the roster rail, the round-summary sheet,
+   the cosmetics picker's own preview. One shared definition rather than
+   duplicating it per screen, since the percentages are properties of the
+   ART alone (each material's own frame-rect vs. its full image bounds),
+   not of whatever box happens to be showing it.
+   Deliberately placed AFTER .rank-plate.xs's own object-fit:fill above —
+   both this selector and that one tie at (0,4,0), so source order is
+   what lets this win there too rather than needing a second, more
+   specific copy just for .xs. Any screen where this turns out to be the
+   wrong call (a box too tight for it, or a scrolling ancestor that clips
+   horizontal overflow into a scrollbar) gets ITS OWN narrower override —
+   see the account hero's and roster rail's own notes for the two places
+   that needed one. */
+.rank-plate[data-material="paper"]    .rank-art.plate{position:absolute;right:auto;bottom:auto;left:-1.5%;width:103.1%;top:-5.6%; height:109.1%;object-fit:fill}
+.rank-plate[data-material="ink"]      .rank-art.plate{position:absolute;right:auto;bottom:auto;left:-1.4%;width:102.7%;top:-4.1%; height:106.4%;object-fit:fill}
+.rank-plate[data-material="velvet"]   .rank-art.plate{position:absolute;right:auto;bottom:auto;left:-1.3%;width:102.6%;top:-15.1%;height:117.8%;object-fit:fill}
+.rank-plate[data-material="brass"]    .rank-art.plate{position:absolute;right:auto;bottom:auto;left:-1.1%;width:102.2%;top:-11.6%;height:113.6%;object-fit:fill}
+.rank-plate[data-material="gold"]     .rank-art.plate{position:absolute;right:auto;bottom:auto;left:-1.0%;width:101.9%;top:-16.6%;height:121.6%;object-fit:fill}
+.rank-plate[data-material="royal"]    .rank-art.plate{position:absolute;right:auto;bottom:auto;left:-1.3%;width:102.6%;top:-9.9%; height:112.7%;object-fit:fill}
+.rank-plate[data-material="obsidian"] .rank-art.plate{position:absolute;right:auto;bottom:auto;left:-1.2%;width:102.4%;top:-11.3%;height:113.7%;object-fit:fill}
+.rank-plate[data-material="diamond"]  .rank-art.plate{position:absolute;right:auto;bottom:auto;left:-1.1%;width:102.2%;top:-11.7%;height:113.9%;object-fit:fill}
 /* lg: the account hero, where the plaque is a layer BEHIND live text
    (the editable name input and the title line) rather than a label of
    its own — the sheet's own display contract. */
@@ -2975,7 +2999,26 @@ html[data-cardfront="verdant_nouveau"] .card.has-art .big{display:none}
    turn badge and note lines elsewhere in this file already follow — which
    is what keeps all 4 cards the same min-height without measuring
    anything in JS. */
-#l-slots{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+/* row-gap grew from a flat 8px (still column-gap, where the plate art's
+   left/right overflow is only ~1-1.5% of a card's width — a couple px,
+   comfortably inside the old 8px) to fit .slot-bg-art's new vertical
+   overflow: worst case (material="gold", the Ace tier's set) is 19.8px
+   above a card and 6.0px below it at the fixed 120px card height, so two
+   stacked rows need up to 19.8+6.0=25.8px between them to never collide
+   however the 4 seats' materials happen to combine — any 2 of the 8
+   materials could end up adjacent. margin follows the same top-side
+   number (the bottom side's own worst case, 6.0px, already fit inside
+   the old 8px). Landscape gets its OWN smaller number a few lines down —
+   same overflow, computed at the landscape card's own shorter 95px
+   height rather than reusing this 120px-derived one. Lobby is a
+   game-flow screen (a single scrollable body column, not one of the
+   pixel-starved table screens), so growing it a further ~20px if it
+   ever needs to is a real fallback here, not just a hope. */
+#l-slots{display:grid;grid-template-columns:1fr 1fr;row-gap:26px;column-gap:8px;margin:20px 0}
+/* Landscape's own worst case (still material="gold"), at the 95px
+   landscape card height: 15.7px above, 4.7px below, 20.4px needed
+   between rows. Same margin logic as the portrait rule above. */
+html.landscape-mode #s-lobby #l-slots{row-gap:22px;column-gap:8px;margin:17px 0}
 /* Position:relative + a set size (matching #l-slots' own footprint) is
    what lets #l-start sit dead-centre over the 4 cards via absolute
    positioning below, without needing to know the grid's own pixel
@@ -3002,10 +3045,20 @@ html[data-cardfront="verdant_nouveau"] .card.has-art .big{display:none}
    right in .slot-info. --av is the avatar's own size, read by .avatar.lg
    AND .slot-crest (half of it) — defined once here so the two can never
    drift out of the ratio the crests were explicitly asked to track. */
+/* .slot is now a thin OUTER shell: position/height/radius/background/
+   border/--av live here, but NOT overflow:hidden and NOT the flex
+   layout — those moved to the new .slot-clip inner wrapper below. The
+   split exists for one reason: .slot-bg-art is deliberately allowed to
+   overflow this box now (see its own note — the banner's frame corners
+   are meant to sit AT the card's edge with the emblem/foot-ornament/side
+   diamonds poking past it), while the avatar/name/title content still
+   needs the old hard 120px clip as a safety net against anything ever
+   running long. A single element can't have overflow:visible for one
+   child and overflow:hidden for another, so the clip moved to its own
+   wrapper instead of being dropped. */
 .slot{
   --av:clamp(54px,22vw,90px);
-  position:relative;display:flex;flex-direction:row;align-items:center;gap:10px;
-  height:120px;padding:11px 8px 11px 12px;border-radius:var(--r);overflow:hidden;
+  position:relative;height:120px;border-radius:var(--r);
   background:rgba(var(--ddp-gloss-rgb),.035);border:1px solid var(--line);
 }
 /* The box background IS the banner now — the exact same interior
@@ -3015,6 +3068,16 @@ html[data-cardfront="verdant_nouveau"] .card.has-art .big{display:none}
   background:linear-gradient(180deg,var(--rm-hi),var(--rm-lo));
   border:2px solid var(--rm-edge);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.20),inset 0 -1px 0 rgba(0,0,0,.30);
+}
+/* Everything that WAS directly on .slot before the split above — same
+   flex row, same padding, same 120px clip, just one level deeper so
+   .slot-bg-art (a preceding sibling, not a child of this) is free to
+   spill past it. border-radius:inherit rather than var(--r) again, so
+   the inner clip can never drift out of sync with the outer shell's own
+   corner radius. */
+.slot-clip{
+  position:relative;height:120px;display:flex;flex-direction:row;align-items:center;gap:10px;
+  padding:11px 8px 11px 12px;border-radius:inherit;overflow:hidden;
 }
 /* justify-content:space-between, not a uniform small gap — the previous
    version packed .slot-top/name/title/tier/.slot-footer into one tight
@@ -3095,26 +3158,70 @@ html[data-cardfront="verdant_nouveau"] .card.has-art .big{display:none}
    Sits over — doesn't replace — .slot[data-material]'s own CSS gradient,
    which stays the fallback for a missing file or no rank set at all.
 
-   object-fit:cover, not the shared .rank-art default of contain, and
-   NOT the roster rail's fill — this box's own proportions are what
-   decide it, not a house style: a lobby card is close enough to square
-   (~1.2:1 at the narrowest phones up to ~2:1 at the widest) that cover
-   only ever needs to scale by HEIGHT to fill it, since the art (~3.2:1)
-   stays wider than the box across every realistic width. That means
-   covering here is always height-limited — it crops the side ornaments,
-   never the vertical extent, so the top emblem and the bottom tier-name
-   lozenge stay fully visible at every width. (The roster rail's box is
-   flatter than the art even at its widest, which is the opposite case —
-   cover there crops the lozenge away, hence fill instead.)
+   DELIBERATELY ALLOWED TO OVERFLOW .slot now (see the .slot/.slot-clip
+   split above, and PORTRAIT-ONLY note below) — on request: "the golden
+   barrier around all should be over the edges of the box." Every one of
+   the eight plates shares one silhouette (a rectangular frame body, an
+   emblem overhanging the top edge, a tier-name lozenge overhanging the
+   bottom edge, a diamond ornament overhanging each side), and this sizes
+   each material's art so the FRAME's own corners — not the full image
+   bounds — land on the box's corners, which is what lets those three
+   overhangs spill past the card on purpose instead of being cropped
+   (the old object-fit:cover, still used below for landscape) or
+   letterboxed (object-fit:contain).
+   Per-material, not one shared rule: each exported plate has its own
+   emblem/lozenge proportions, measured off the alpha channel directly —
+   for each row, what fraction of the image WIDTH is opaque; the frame's
+   own top/bottom edge is where that fraction jumps from "narrow" (only
+   the centred emblem/lozenge is opaque) to "wide" (the full frame width
+   is opaque), and the same test run on columns instead of rows finds the
+   left/right edges. The eight are not close enough to share one number —
+   the tallest emblem overhangs roughly 3x further than the shortest —
+   so this is 8 rules, not 1, each sized from ITS OWN measured insets
+   rather than a shared average or a conservative max: a shared number
+   would either undersize some materials' overhang (landing their frame
+   edge inside the box instead of at it — a transparent gap at the
+   corner, the one outcome this effect exists to avoid) or oversize
+   others (more overflow than that material's own art actually has past
+   its frame, showing empty space instead of ornament). Per-material
+   precision avoids both failure modes for all eight at once.
+   object-fit:fill (not cover/contain) is what actually applies the
+   percentages below as a plain non-uniform stretch rather than layering
+   another aspect-ratio-preserving fit on top of them — this box's own
+   left/top/width/height already encode the exact scale+offset needed,
+   the same "the box's own proportions decide it, not object-fit" call
+   .rank-plate.xs's fill already made for the roster rail.
+   right/bottom:auto exists only to cancel .rank-art's own inset:0 —
+   left+width+right all present on the same axis is over-constrained,
+   and though the spec already resolves that in width's favour, this
+   says so explicitly rather than relying on it.
 
-   .slot-bg-scrim darkens it a fixed amount UNDER the existing text
+   BOTH ORIENTATIONS: these percentages are properties of the ART alone
+   (each material's own frame-rect vs. its full image bounds), not of the
+   box — sizing a non-uniform stretch this way is exactly what makes the
+   same 8 rules correct at ANY box size, so landscape's smaller 95px card
+   needs no separate set of numbers, only its own row-gap (see #l-slots'
+   landscape rule) sized for the smaller absolute overflow that same
+   percentage produces at that height. */
+.slot-bg-art{position:absolute;right:auto;bottom:auto;object-fit:fill;pointer-events:none}
+.slot[data-material="paper"]    .slot-bg-art{left:-1.5%;width:103.1%;top:-5.6%; height:109.1%}
+.slot[data-material="ink"]      .slot-bg-art{left:-1.4%;width:102.7%;top:-4.1%; height:106.4%}
+.slot[data-material="velvet"]   .slot-bg-art{left:-1.3%;width:102.6%;top:-15.1%;height:117.8%}
+.slot[data-material="brass"]    .slot-bg-art{left:-1.1%;width:102.2%;top:-11.6%;height:113.6%}
+.slot[data-material="gold"]     .slot-bg-art{left:-1.0%;width:101.9%;top:-16.6%;height:121.6%}
+.slot[data-material="royal"]    .slot-bg-art{left:-1.3%;width:102.6%;top:-9.9%; height:112.7%}
+.slot[data-material="obsidian"] .slot-bg-art{left:-1.2%;width:102.4%;top:-11.3%;height:113.7%}
+.slot[data-material="diamond"]  .slot-bg-art{left:-1.1%;width:102.2%;top:-11.7%;height:113.9%}
+/* .slot-bg-scrim darkens the art a fixed amount UNDER the existing text
    colours rather than retuning --rm-ink per material against real
    (busier, photographic) art — a flat darkening helps contrast in both
    directions: it only pushes dark ink further from a lightened backdrop
    and light ink further from a darkened one, never the reverse, so it
    can't make any of the eight materials worse than the flat-gradient
-   baseline they were tuned against. */
-.slot-bg-art{object-fit:cover}
+   baseline they were tuned against.
+   Deliberately stays inset:0 (the BOX's own bounds) even though the art
+   itself now overflows past them — there is no text to protect out past
+   the card edge, only inside it. */
 .slot-bg-scrim{
   position:absolute;inset:0;pointer-events:none;
   background:rgba(var(--ddp-scrim-rgb),.38);
@@ -3253,6 +3360,32 @@ html[data-cardfront="verdant_nouveau"] .card.has-art .big{display:none}
    so "this is you" and "this is your rank" both stay visible together. */
 .dcw.mine{box-shadow:0 0 0 1px rgba(var(--ddp-brass-rgb),.5)}
 .dcw.mine:not([data-material]){border-color:rgba(var(--ddp-brass-rgb),.35)}
+/* The real banner background, landscape only — see slotHTML's own note
+   on why this is always emitted but display:none by default. .dcw has
+   no overflow:hidden (unlike .slot, which needed the .slot-clip split),
+   so the art can overflow the card directly with no wrapper surgery.
+   Portrait is untouched: .slot-tier stays the only tier indicator there,
+   exactly as it's always been. */
+.dcw-bg-art{display:none}
+html.landscape-mode #s-draw .dcw-bg-art{
+  display:block;position:absolute;right:auto;bottom:auto;pointer-events:none;
+}
+html.landscape-mode #s-draw .dcw[data-material="paper"]    .dcw-bg-art{left:-1.5%;width:103.1%;top:-5.6%; height:109.1%;object-fit:fill}
+html.landscape-mode #s-draw .dcw[data-material="ink"]      .dcw-bg-art{left:-1.4%;width:102.7%;top:-4.1%; height:106.4%;object-fit:fill}
+html.landscape-mode #s-draw .dcw[data-material="velvet"]   .dcw-bg-art{left:-1.3%;width:102.6%;top:-15.1%;height:117.8%;object-fit:fill}
+html.landscape-mode #s-draw .dcw[data-material="brass"]    .dcw-bg-art{left:-1.1%;width:102.2%;top:-11.6%;height:113.6%;object-fit:fill}
+html.landscape-mode #s-draw .dcw[data-material="gold"]     .dcw-bg-art{left:-1.0%;width:101.9%;top:-16.6%;height:121.6%;object-fit:fill}
+html.landscape-mode #s-draw .dcw[data-material="royal"]    .dcw-bg-art{left:-1.3%;width:102.6%;top:-9.9%; height:112.7%;object-fit:fill}
+html.landscape-mode #s-draw .dcw[data-material="obsidian"] .dcw-bg-art{left:-1.2%;width:102.4%;top:-11.3%;height:113.7%;object-fit:fill}
+html.landscape-mode #s-draw .dcw[data-material="diamond"]  .dcw-bg-art{left:-1.1%;width:102.2%;top:-11.7%;height:113.9%;object-fit:fill}
+.dcw-bg-scrim{position:absolute;inset:0;pointer-events:none;display:none}
+html.landscape-mode #s-draw .dcw-bg-scrim{display:block;background:rgba(var(--ddp-scrim-rgb),.38)}
+/* Redundant once the real background art shows the tier visually —
+   same call the lobby's slotHTML already made (that screen dropped
+   .slot-tier from its markup entirely; this one keeps it in the markup
+   for portrait and just hides it here instead, since portrait has no
+   art to replace it with). */
+html.landscape-mode #s-draw .dcw .slot-tier{display:none}
 /* The identity card, directly under the drawn card — same avatar-left,
    name+crests/title/tier-right layout the lobby seat cards use
    (.slot-mid, .slot-name-row etc., reused directly rather than
@@ -4437,8 +4570,15 @@ html.landscape-mode #s-final .exit-row{flex-direction:row;margin-top:10px !impor
    the half-avatar crests both need more real room than before, in
    landscape too. --av is overridden here rather than .avatar.lg/
    .slot-crest directly — both read off it, so one number keeps them both
-   in proportion. */
-html.landscape-mode #s-lobby .slot{--av:55px;height:95px;gap:6px;padding:7px 5px 7px 8px}
+   in proportion.
+   Split across .slot/.slot-clip now, matching the portrait rule's own
+   split (see .slot/.slot-clip's CSS note): --av and the outer height
+   still land on .slot, gap/padding (part of the flex row) followed
+   overflow:hidden onto .slot-clip. .slot-clip's own height also needs
+   restating here — it defaults to the base rule's 120px otherwise,
+   which would make the inner clip taller than the outer shell. */
+html.landscape-mode #s-lobby .slot{--av:55px;height:95px}
+html.landscape-mode #s-lobby .slot-clip{height:95px;gap:6px;padding:7px 5px 7px 8px}
 html.landscape-mode #s-lobby .slot-top{min-height:15px}
 html.landscape-mode #s-lobby .slot-top .tag{padding:2px 6px;font-size:.54rem}
 html.landscape-mode #s-lobby .slot-name{font-size:.76rem}
@@ -4469,7 +4609,19 @@ html.landscape-mode #s-lobby .flow-header h2{font-size:clamp(1.25rem,4vh,1.7rem)
    card-above-identity stack this replaced. .center-wrap's overflow-y:auto
    (shared by every game-flow screen) is still there as a safety net if a
    future change grows this again. */
-html.landscape-mode #s-draw .drawrow{margin:4px 0;gap:clamp(5px,1.4vw,10px);--dc:clamp(48px,13vh,76px)}
+/* row-gap grew from the shared clamp(5px,1.4vw,10px) to fit .dcw-bg-art's
+   new overflow (column-gap keeps the old value — the art's horizontal
+   overflow is under 1.5%, a couple px, well inside even 5px). Computed
+   the same way as the lobby's own row-gap: worst case (material="gold")
+   overflow is ~26.1% of the card's own height above+below combined, and
+   .dcw's height is --dc*1.43+24, so needed gap scales with --dc the same
+   way --dc itself does (13vh, clamped 48-76px) rather than a flat
+   number — clamp(24px,5vh,35px) tracks that across the same range
+   (24.2px at the 48px floor, 34.6px at the 76px ceiling). */
+html.landscape-mode #s-draw .drawrow{
+  margin:4px 0;row-gap:clamp(24px,5vh,35px);column-gap:clamp(5px,1.4vw,10px);
+  --dc:clamp(48px,13vh,76px);
+}
 /* --av now matches the lobby's own landscape value (55px) exactly, per
    the "same avatars, same size" ask — no dealer-badge override needed
    below any more either, since .avatar.lg's base badge size already
@@ -9668,28 +9820,35 @@ function slotHTML(G,i){
   // Same first-child/no-z-index trick cardHTML() already uses for
   // .card-art: an unpositioned-z-index absolutely-positioned element
   // still paints below whatever normal-flow siblings come after it in
-  // DOM order, so avatarTag/.slot-info need nothing special to stay on
-  // top. object-fit:cover, not the shared .rank-art default of contain —
-  // see .slot-bg-art's own CSS note for why this box's proportions make
-  // cover the safe choice here specifically, unlike the roster rail.
+  // DOM order, so .slot-clip needs nothing special to stay on top of it.
+  // See .slot-bg-art's own CSS note for the per-material overflow sizing
+  // (portrait) / cover fit (landscape).
   const bgArt=set?rankArtImg(set.slug,'plate','slot-bg-art'):'';
+  // .slot-clip wraps everything that used to sit directly in .slot
+  // (avatarTag through .slot-footer) — .slot itself dropped its
+  // overflow:hidden so .slot-bg-art/bg above can spill past the card on
+  // purpose; .slot-clip is what keeps that same hard 120px clip as a
+  // safety net for the avatar/name/title content, which was never meant
+  // to overflow. See the CSS note on .slot/.slot-clip for the full story.
   return `<div class="slot"${mat?` data-material="${mat}"`:''}>
     ${bgArt}
     ${bgArt?'<span class="slot-bg-scrim"></span>':''}
-    ${avatarTag}
-    <div class="slot-info">
-      <div class="slot-top">
-        <span class="dot ${dot}"></span>
-        ${i===me?'<span class="tag you">you</span>':p.isAI?'<span class="tag bot">AI</span>':''}
-      </div>
-      <div class="slot-mid">
-        <div class="slot-name-row">
-          <span class="slot-name${clickable?' tap':''}"${clickable?` onclick="openPlayerProfile(${p.accountId})" role="button" tabindex="0"`:''}>${esc(p.name)}</span>
-          ${crests?`<span class="slot-crests">${crests}</span>`:''}
+    <div class="slot-clip">
+      ${avatarTag}
+      <div class="slot-info">
+        <div class="slot-top">
+          <span class="dot ${dot}"></span>
+          ${i===me?'<span class="tag you">you</span>':p.isAI?'<span class="tag bot">AI</span>':''}
         </div>
-        <span class="slot-title">${p.title?esc(p.title):''}</span>
+        <div class="slot-mid">
+          <div class="slot-name-row">
+            <span class="slot-name${clickable?' tap':''}"${clickable?` onclick="openPlayerProfile(${p.accountId})" role="button" tabindex="0"`:''}>${esc(p.name)}</span>
+            ${crests?`<span class="slot-crests">${crests}</span>`:''}
+          </div>
+          <span class="slot-title">${p.title?esc(p.title):''}</span>
+        </div>
+        <div class="slot-footer">${footer}</div>
       </div>
-      <div class="slot-footer">${footer}</div>
     </div>
   </div>`;
 }
@@ -9779,7 +9938,19 @@ function renderDraw(G){
       card=`<div class="drawcard ${mine?'tap':''}"${mine?' onclick="revealDrawClick()"':''}
              ${mine?'role="button" tabindex="0" aria-label="Reveal your card"':''}></div>`;
     }
+    // Landscape-only real banner background, same idea as the lobby's
+    // .slot-bg-art — see .dcw-bg-art's own CSS note for why this is a
+    // CSS-only display:none/block toggle rather than a JS orientation
+    // branch: portrait keeps today's plain .slot-tier text completely
+    // unchanged, landscape hides that text and shows the art instead.
+    // Always emitted (not conditioned on isLandscapeModeActive()) so a
+    // mid-screen rotation needs no re-render to pick it up — pure CSS
+    // reflow, same pattern most of this app's other portrait/landscape
+    // differences already use.
+    const bgArt=set?rankArtImg(set.slug,'plate','dcw-bg-art'):'';
     h+=`<div class="dcw${isWin?' is-win':''}${i===me?' mine':''}"${mat?` data-material="${mat}"`:''}>
+      ${bgArt}
+      ${bgArt?'<span class="dcw-bg-scrim"></span>':''}
       <div class="dq-id">
         <span class="avatar lg${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}<span class="dealer-badge${isDealer?' on':''}">D</span></span>
         <div class="slot-mid">

@@ -59,7 +59,11 @@
 // all 8, so only the top/bottom margin needed trimming. Same
 // in-place-overwrite trap as v8/v9/v10/v12/v13: bumping is what forces a
 // re-fetch under those existing URLs.
-const CACHE = 'ddp-v14';
+// v15: same 8 files, re-exported again with smaller emblem/lozenge/side-
+// diamond overhangs (on request, so the new lobby-seat-card overflow
+// treatment — see .slot-bg-art's own CSS note — doesn't need as much
+// clearance between rows). Same filenames, same in-place-overwrite trap.
+const CACHE = 'ddp-v15';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
                 '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 

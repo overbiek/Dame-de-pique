@@ -1524,6 +1524,10 @@ const COSMETICS = {
     // renderShop only lists priced items — equip both from My Account.
     { id: 'cardfront_noir',        name: 'Noir Casino',   unlock: null },
     { id: 'cardfront_bold',        name: 'Bold Deck',     unlock: null },
+    // Shop-exclusive at a flat 1500, same unlock:null+price shape
+    // cardfront_noir established — not one of the CREDIT_PRICES tiers,
+    // a specifically requested price rather than a rarity-tier fit.
+    { id: 'cardfront_stained_glass', name: 'Stained Glass Deck', unlock: null, price: 1500 },
   ],
   // Crests are 1:1 with achievements by design (the brief's whole point:
   // a crest IS the visible proof of an achievement), so they're derived

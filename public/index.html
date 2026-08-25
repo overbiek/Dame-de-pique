@@ -1578,6 +1578,12 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
   gap:10px;margin-bottom:14px;
 }
 .cos-grid.wide{grid-template-columns:repeat(auto-fit,minmax(132px,1fr))}
+/* Shop cards a notch smaller than the My Account picker's default
+   (92px), paired with the Shop's own wider 600px center-wrap (was
+   520px), so five fit across a row instead of four — one category at a
+   time now (see .cos-tabs in the Shop markup), so there's no more
+   stacked-sections height to fit under it either. */
+#s-shop .cos-grid{grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:8px}
 .cos-item{
   position:relative;display:flex;flex-direction:column;align-items:stretch;
   padding:0;overflow:hidden;border-radius:14px;text-align:left;
@@ -1608,7 +1614,15 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
   position:absolute;top:8px;left:8px;width:14px;height:14px;border-radius:50%;
   border:1.5px solid rgba(var(--ddp-gloss-rgb),.25);
 }
-.cos-body{padding:7px 8px 8px}
+/* flex+flex:1 is what lets .cos-buy below reach the bottom of every card
+   with margin-top:auto, regardless of how many lines .cos-name wraps to
+   — .cos-item is stretched to the tallest card in its grid row by CSS
+   Grid's default align-items:stretch, but without this the shorter cards'
+   buttons just sat wherever the text ended, not at that stretched bottom
+   edge. Harmless for every other .cos-item (crests, scenes, themes) that
+   has no .cos-buy: nothing there reads margin-top:auto, so the extra
+   flex space simply goes unused exactly as it did before. */
+.cos-body{padding:7px 8px 8px;display:flex;flex-direction:column;flex:1}
 .cos-name{font-size:.72rem;font-weight:600;color:var(--cream);line-height:1.25}
 .cos-req{
   font-size:.62rem;color:var(--faint);line-height:1.3;margin-top:3px;
@@ -1872,7 +1886,7 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 }
 .cos-price.short{color:var(--muted)}
 .cos-buy{
-  margin-top:6px;width:100%;padding:6px 8px;border-radius:9px;
+  margin-top:auto;width:100%;padding:6px 8px;border-radius:9px;
   border:1px solid rgba(var(--ddp-brass-rgb),.5);
   background:rgba(var(--ddp-brass-rgb),.14);color:var(--gold-hi);
   font:700 .64rem 'DM Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;
@@ -5455,12 +5469,12 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
      server actually prices (scenes, card fronts); crests, titles and
      rank sets are deliberately not for sale and never appear here. -->
 <section id="s-shop" class="screen">
-  <div class="center-wrap" style="max-width:520px">
+  <div class="center-wrap" style="max-width:600px">
     <div class="screen-header">
       <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
     </div>
     <h2>Shop</h2>
-    <p class="tagline" id="shop-balance-line">Spend credits on backgrounds and card designs.</p>
+    <p class="tagline" id="shop-balance-line">Browse a category, then spend credits on what's still locked.</p>
 
     <div id="shop-content">
       <div class="empty-state" id="shop-guest-gate" style="display:none">
@@ -5468,6 +5482,12 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
         <h3>Log in to earn and spend credits</h3>
         <p>Credits are tied to your account, so they follow you everywhere.</p>
         <button class="btn btn-primary btn-block" onclick="goPersonal()" style="margin-top:10px">Go to My Account</button>
+      </div>
+      <div class="cos-tabs" id="shop-tabs" style="display:none">
+        <button class="cos-tab active" type="button" data-shop-cat="tableTheme" onclick="switchShopCat('tableTheme')">Themes</button>
+        <button class="cos-tab" type="button" data-shop-cat="scene" onclick="switchShopCat('scene')">Backgrounds</button>
+        <button class="cos-tab" type="button" data-shop-cat="avatar" onclick="switchShopCat('avatar')">Avatars</button>
+        <button class="cos-tab" type="button" data-shop-cat="cardFront" onclick="switchShopCat('cardFront')">Cards</button>
       </div>
       <div id="shop-loading" class="cos-empty" style="display:none">Loading the shop…</div>
       <div id="shop-panels"></div>
@@ -7474,39 +7494,62 @@ function requestCredits(){
 }
 socket.on('creditsOk',d=>{ setCreditBalance(d.guest?0:d.balance); });
 
+// Which of the four top-row boxes is open. Reset to Themes every time the
+// Shop is (re)entered — same "stale sub-tab from a return visit" reasoning
+// switchAccountTab/switchCosTab already apply on My Account.
+let shopCat='tableTheme';
+const SHOP_CATS={
+  tableTheme:{label:'theme',kind:'tableTheme'},
+  scene:{label:'background',kind:'scene'},
+  cardFront:{label:'card design',kind:'cardFront'},
+};
+
 function goShop(){
   show('shop');
   $('shop-guest-gate').style.display=account?'none':'block';
   $('shop-loading').style.display=(account&&!cosState)?'block':'none';
   $('err-shop').style.display='none';
-  renderShop();
+  switchShopCat('tableTheme');
   if(account&&!cosState) requestCosmetics();
 }
 
-// Renders only what the SERVER priced AND that the account doesn't
-// already have. An item with no price never appears, which is what keeps
-// crests, titles and rank sets out of the shop without this function
-// needing to know why they're excluded; an item that's unlocked — bought
-// OR earned by achievement — drops out too, rather than lingering with a
-// "Purchased"/"Earned" badge. Once you have it, it's not for sale, and
-// My Account is where equipping/reviewing what you own already lives.
+function switchShopCat(cat){
+  shopCat=cat;
+  document.querySelectorAll('#shop-tabs .cos-tab').forEach(b=>
+    b.classList.toggle('active',b.dataset.shopCat===cat));
+  renderShop();
+}
+
+// Renders ONE category at a time (see .cos-tabs in the Shop markup) — the
+// four boxes at the top replace what used to be three stacked
+// "Table themes"/"Backgrounds"/"Card designs" sections, so there's no
+// longer a reason to loop over all of them here. Avatars are a special
+// case: they carry no price/unlock in COSMETICS at all (always free — see
+// AVATAR_COLLECTIONS), so that tab is a straight equip-from-anywhere
+// browser rather than a purchase list, the one thing this function still
+// branches on.
 function renderShop(){
   const wrap=$('shop-panels');
+  const tabs=$('shop-tabs');
   if(!wrap) return;
-  if(!account||!cosState){ wrap.innerHTML=''; return; }
-  const cat=cosState.catalog;
-  let h='';
-  for(const [label,list,kind] of [['Table themes',cat.tableThemes,'tableTheme'],
-                                  ['Backgrounds',cat.scenes,'scene'],
-                                  ['Card designs',cat.cardFronts,'cardFront']]){
-    const forSale=list.filter(c=>c.price&&!c.unlocked);
-    if(!forSale.length) continue;
-    h+=`<div class="sec-label">${label}</div><div class="cos-grid">`
-      +forSale.map(c=>shopItemHTML(kind,c)).join('')+`</div>`;
+  const ready=account&&cosState;
+  if(tabs) tabs.style.display=ready?'flex':'none';
+  if(!ready){ wrap.innerHTML=''; return; }
+
+  if(shopCat==='avatar'){
+    wrap.innerHTML=`<div class="cos-grid">`
+      +AVATAR_COLLECTIONS.flatMap(c=>c.avatars).map(([id,name])=>avatarShopItemHTML(id,name)).join('')
+      +`</div>`;
+    return;
   }
-  wrap.innerHTML=h||`<div class="cos-empty">You own everything in the Shop &mdash; nice collection.</div>`;
-  if(h) wrap.insertAdjacentHTML('beforeend',
-    `<p class="pick-hint">Buying unlocks it immediately &mdash; equip anything you own from My Account.</p>`);
+
+  const {label,kind}=SHOP_CATS[shopCat];
+  const list=cosState.catalog[shopCat==='tableTheme'?'tableThemes':shopCat==='scene'?'scenes':'cardFronts'];
+  const forSale=list.filter(c=>c.price&&!c.unlocked);
+  wrap.innerHTML=forSale.length
+    ? `<div class="cos-grid">`+forSale.map(c=>shopItemHTML(kind,c)).join('')+`</div>`
+      +`<p class="pick-hint">Buying unlocks it immediately &mdash; equip anything you own from My Account.</p>`
+    : `<div class="cos-empty">You own every ${label} in the Shop already &mdash; nice collection.</div>`;
 }
 
 // forSale already filtered out anything unlocked, so every item reaching
@@ -7525,6 +7568,35 @@ function shopItemHTML(kind,item){
       <button class="cos-buy"${afford?'':' disabled'} onclick="buyCosmetic('${item.id}')">${afford?'Buy':'Not enough'}</button>
     </span>
   </div>`;
+}
+
+// Avatars have no price or unlock in COSMETICS — they're always free (see
+// AVATAR_COLLECTIONS' own note) — so this tab isn't a purchase list like
+// the other three, it's a straight equip browser. Mirrors cosItemHTML's
+// equip-on-click shape (a <button>, an .equipped state) rather than
+// shopItemHTML's buy-button shape, since there's nothing to buy here.
+function avatarShopItemHTML(id,name){
+  const equipped=!!account&&account.avatar===id;
+  return `<button class="cos-item deco-box${equipped?' equipped':''}" type="button" onclick="equipAvatarFromShop('${id}')">
+    <span class="cos-thumb">${avatarHTML(id,name,true)}</span>
+    ${equipped?`<span class="cos-flag">✓</span>`:''}
+    <span class="cos-body"><span class="cos-name">${esc(name)}</span>
+      <span class="cos-status">${equipped?'Equipped':'Tap to equip'}</span>
+    </span>
+  </button>`;
+}
+function equipAvatarFromShop(id){
+  if(!account||!accountToken||account.avatar===id) return;
+  SFX.play('click');
+  lastAuthAction='update';
+  // Optimistic: updateProfile round-trips through authOk before the
+  // server's copy of `account` lands, and the tap should read as
+  // immediate — same reasoning savePersonal()'s account branch already
+  // has, just applied to a single field instead of the whole form.
+  account.avatar=id;
+  renderShop();
+  updateMenuProfileUI();
+  socket.emit('updateProfile',{token:accountToken,nickname:account.nickname,avatar:id});
 }
 
 function buyCosmetic(itemId){

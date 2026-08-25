@@ -2198,6 +2198,20 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 .rank-plate[data-material].xs{min-width:0}
 .rank-plate.xs .rp-text{font-size:.55rem;letter-spacing:.06em}
 .rank-plate.xs .rp-frame{inset:2px}
+/* The exported plate art is a wide banner (~3.2:1) sitting inside a MUCH
+   flatter box here (up to ~8:1 at the roster rail's full column width) —
+   .rank-art's shared object-fit:contain (right for .lg, whose box is
+   closer to the art's own proportions) left most of the row's width as
+   dead transparent space either side of a tiny centred plaque. cover
+   would fill it instead, but the box is so much flatter than the art
+   that covering the WIDTH scales the HEIGHT well past the row and crops
+   off the top emblem and the bottom tier-name lozenge — the two things
+   .rp-text was retired in favour of (see the has-art rule above), so
+   losing the lozenge would leave the row with no tier label at all.
+   fill (non-uniform stretch) is what was actually asked for: the whole
+   plaque stays visible, just proportionally flatter, and reads cleanly
+   at 28px tall — same call already made for the Noir card fronts. */
+.rank-plate.xs .rank-art.plate{object-fit:fill}
 /* lg: the account hero, where the plaque is a layer BEHIND live text
    (the editable name input and the title line) rather than a label of
    its own — the sheet's own display contract. */
@@ -3069,6 +3083,31 @@ html[data-cardfront="bold"] .card.has-art .big{display:none}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .slot[data-material] .slot-tier,.dcw[data-material] .slot-tier{color:var(--rm-orn)}
+/* The real plate art, now that it exists — swaps in for the plain-text
+   .slot-tier above wherever a seat has a rank set (AI seats included,
+   same paper-tier convention the roster rail uses). Reuses .rank-plate.xs
+   wholesale, roster-rail-sized and roster-rail-styled (including the
+   object-fit:fill stretch fix above), rather than inventing a fourth
+   plate size — this card's info column is a similar width to the
+   roster's, so the same box works without its own tuning pass. A flex
+   row of its own (mirroring .ros/.ros-plate) is what makes an
+   inline-flex, shrink-to-fit .rank-plate stretch to the column's full
+   width instead of hugging its own content. Reserves the same min-height
+   whether or not a seat has a rank set, so a bare-wrapper seat (no
+   material) doesn't leave the tier line's row shorter than its dressed
+   neighbours. */
+.slot-plate-row{display:flex;align-items:center;min-height:20px}
+/* Every OTHER .rank-plate gets its height for free from real in-flow
+   content beside the (all absolutely-positioned) dress layers — rp-text
+   in rankNameplateHTML's own markup, .ros-txt in the roster rail. This
+   one is bare rankPlateDressHTML with nothing else inside it (the
+   player's actual name/title already render above, in .slot-mid), so
+   without an explicit height it collapses to just its own padding
+   (~8px) the moment has-art removes what little flow content the six
+   CSS-fallback layers were contributing — caught by measuring the
+   rendered box, not by reading the CSS, since nothing here throws an
+   error, it just quietly renders a near-invisible sliver of art. */
+.slot-plate-row .rank-plate{flex:1 1 auto;min-width:0;height:20px}
 /* Fixed-height reserve for the host's AI toggle (the only thing left
    here now that crests moved up beside the name) — still always
    rendered, even empty, so a seat with nothing here reserves the same
@@ -9513,14 +9552,18 @@ function toggleAI(i){
 // with the roster above) so four AI seats read as dressed-down rather
 // than broken, but never carry crests — those are earned, and a computer
 // hasn't earned anything.
-// Each seat is a whole "banner" card now, not a felt row with a small
-// plate widget inside it: `data-material` goes on the card itself, and
-// .slot[data-material] paints the card in the exact same interior
-// gradient + metal border the rank plaque uses elsewhere — the card IS
-// the banner, so the separate rankNameplateHTML() plaque (frame,
-// ornaments, emblem) is retired here rather than nested inside it, which
-// would just draw the same idea twice. The tier name renders as plain
-// text instead (.slot-tier). Every row (dot/tag, name, title, tier) is
+// Each seat is a whole "banner" card: `data-material` goes on the card
+// itself, and .slot[data-material] paints the card in the exact same
+// interior gradient + metal border the rank plaque uses elsewhere, so
+// the card itself already reads as a banner before the tier line is
+// even reached. That tier line USED to be plain text (.slot-tier) on
+// the argument that nesting the actual plaque widget inside an
+// already-plaque-styled card would draw the same idea twice — true of
+// the CSS-only fallback, but not of real exported art, which the card's
+// own flat gradient can't reproduce. Now that the art exists, the tier
+// line is the genuine article (rankPlateDressHTML via .slot-plate-row,
+// reusing .rank-plate.xs — see its own CSS note), not a second plaque
+// competing with the first. Every row (dot/tag, name, title, tier) is
 // always emitted, even empty, so all 4 cards share one exact layout and
 // come out the same height with no per-card JS measuring — see
 // #l-slots/.slot's own CSS note.
@@ -9573,7 +9616,9 @@ function slotHTML(G,i){
           ${crests?`<span class="slot-crests">${crests}</span>`:''}
         </div>
         <span class="slot-title">${p.title?esc(p.title):''}</span>
-        <span class="slot-tier">${set?esc(set.tier):''}</span>
+        <span class="slot-plate-row">${set
+          ? `<span class="rank-plate xs" data-material="${set.material}" data-emblem="${set.emblem}">${rankPlateDressHTML(set.id)}</span>`
+          : ''}</span>
       </div>
       <div class="slot-footer">${footer}</div>
     </div>

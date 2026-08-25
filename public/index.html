@@ -1188,12 +1188,22 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
    pulled per the user's own request, the badge symbol is what stands
    in for it now. */
 .fp-rankmed{margin-top:10px}
-/* Empty (:empty) when friendStatus is 'self'/'friends' — margin/gap only
-   apply once there's actually a button inside, so the two states cost
-   zero extra vertical space instead of leaving a blank gap. */
-.fp-actions{display:flex;justify-content:center;gap:8px;padding:0 16px}
-.fp-actions:not(:empty){margin:14px 0 0}
-.fp-actions .btn{padding:9px 18px;font-size:.8rem}
+/* Anchored to the card's top-right corner, vertically centered against
+   the avatar rather than sitting in normal flow below the hero — 114px/
+   74px are the avatar's own measured top offset/height (.fp-banner's
+   fixed 88px height plus the hero's padding-top and margin above it),
+   not arbitrary; re-measure both if either of those ever changes.
+   Column flex because the two-button 'incoming' state (Accept + Decline)
+   stacks rather than sitting side by side — there's ~150px of empty
+   hero width to its left at the narrowest supported card, but not
+   enough to keep two pill buttons on one row this close to the edge.
+   position:absolute is also what makes an empty state (self/friends)
+   cost nothing: no box, no gap, nothing else needs to move for it. */
+.fp-actions{
+  position:absolute;top:114px;right:16px;height:74px;z-index:2;
+  display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:6px;
+}
+.fp-actions .btn{padding:7px 14px;font-size:.7rem}
 .fp-pad{padding:0 16px 16px}
 .fp-tabbar{margin-bottom:12px}
 .fp-crest-grid{
@@ -5911,8 +5921,12 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 
       <!-- Add Friend / Request Sent / Accept-Decline — filled in by
            friendProfileOk based on d.friendStatus. Empty (and takes no
-           space) for 'self' or 'friends', where there's no action to
-           offer. -->
+           space — see .fp-actions, position:absolute) for 'self' or
+           'friends', where there's no action to offer. Position in the
+           DOM doesn't matter for where it renders (it's anchored to
+           .fp-card's top-right corner, at the avatar's height, by CSS),
+           only for tab/reading order — this is fine either way since
+           it's a single optional action, not a form field. -->
       <div class="fp-actions" id="fp-actions"></div>
 
       <div class="fp-pad">

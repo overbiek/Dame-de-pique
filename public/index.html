@@ -2302,8 +2302,6 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
              0 0 0 1px rgba(var(--ddp-brass-rgb),.55),
              0 0 12px rgba(var(--ddp-brass-rgb),.35);
 }
-.pod-plate{margin-top:7px}
-
 /* ══════════════════════════════════════════════════════════════
    SCENES — cosmetic table backgrounds
    ══════════════════════════════════════════════════════════════
@@ -3350,14 +3348,58 @@ html[data-cardfront="stained_glass"] .card.has-art .big{display:none}
 .scores .tot{font-family:'Playfair Display',serif;font-weight:600;font-size:1rem}
 .d-pos{color:var(--ddp-pos)}.d-neg{color:var(--ddp-neg)}.d-neu{color:var(--faint)}
 
-.podium{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
-.pod{background:rgba(var(--ddp-gloss-rgb),.04);border:1px solid var(--line);
-  border-radius:var(--r);padding:16px 10px;text-align:center}
-.pod.win{border-color:var(--gold);background:rgba(var(--ddp-brass-rgb),.09);
+/* ══ Final standings — ranked list, first to last, top to bottom ══
+   Replaces the old 2x2 .podium grid: one row per placement instead of
+   four same-weighted boxes, since a list reads placement order at a
+   glance the way a grid never quite does. .frow gets the shared
+   .deco-box vignette/frame treatment (see that selector list) the same
+   way .slot/.pod-before-it did. */
+.final-list{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.frow{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;
+  background:rgba(var(--ddp-gloss-rgb),.04);border:1px solid var(--line);
+  border-radius:var(--r);
+}
+.frow.win{border-color:var(--gold);background:rgba(var(--ddp-brass-rgb),.09);
   box-shadow:0 0 24px rgba(var(--ddp-brass-rgb),.16)}
-.pod .n{font-family:'Playfair Display',serif;font-size:1.9rem;font-weight:700;color:var(--cream)}
-.pod .who{font-size:.78rem;color:var(--muted);margin-top:3px}
-.pod .crown{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.frow.mine{outline:1.5px solid rgba(var(--ddp-mine-rgb),.55);outline-offset:-1px}
+.frow-rank{
+  flex:0 0 auto;width:22px;text-align:center;
+  font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;
+  color:var(--faint);
+}
+.frow.win .frow-rank{color:var(--gold)}
+.avatar.md{width:40px;height:40px;font-size:1.15rem;flex:0 0 auto}
+.frow-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.frow-name-row{display:flex;align-items:center;gap:6px;min-width:0}
+.frow-name{
+  font-size:.88rem;font-weight:600;color:var(--cream);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.frow-title{
+  font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--gold-lo);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.frow-crest{flex:0 0 auto;width:18px;height:18px}
+.frow-crest .crest-art{width:100%;height:100%}
+.frow-stats{flex:0 0 auto;text-align:right}
+.frow-score{
+  display:block;font-family:'Playfair Display',serif;font-size:1.15rem;font-weight:700;
+  color:var(--cream);
+}
+.frow.win .frow-score{color:var(--gold-hi)}
+/* The credits chip — same tokens the Shop's price tags use, so a coin
+   earned here and a coin spent there read as the same currency. "…"
+   (finalRowHTML's own placeholder) until finalCreditsOk lands; .zero
+   for the real, valid answer of 0 (casual's one-game-a-day cap, or an
+   amount that rounded down to nothing) — muted, not an error state,
+   since "you already claimed today's casual credit" is completely
+   normal, not something gone wrong. */
+.frow-credits{
+  display:flex;align-items:center;justify-content:flex-end;gap:3px;margin-top:1px;
+  font-size:.72rem;font-weight:600;color:var(--gold-hi);
+}
+.frow-credits.zero{color:var(--faint)}
 
 /* ══ Connection toast ══ */
 #conn{
@@ -4477,9 +4519,13 @@ html.landscape-mode #s-draw .draw-begin{width:68px;height:68px;font-size:.78rem}
 
 html.landscape-mode #s-summary .sheet-wrap,
 html.landscape-mode #s-final .sheet-wrap{max-height:40vh;margin:.4rem 0}
-html.landscape-mode #s-final .podium{grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
-html.landscape-mode #s-final .pod{padding:9px 6px}
-html.landscape-mode #s-final .pod .n{font-size:1.35rem}
+/* Same list, just tightened — the game-flow screens' shared landscape
+   rule already makes #f-body a scrollable body panel (see that rule's
+   own note), so this is a size trim for a short viewport, not a
+   different layout. */
+html.landscape-mode #s-final .final-list{gap:6px;margin:8px 0}
+html.landscape-mode #s-final .frow{padding:7px 10px}
+html.landscape-mode #s-final .frow-score{font-size:1rem}
 
 /* ══ Landscape trick-slot captions — each player's name/score sits
    directly under the slot they play into, replacing both the seat
@@ -4514,7 +4560,7 @@ html.landscape-mode #s-final .pod .n{font-size:1.35rem}
 .num,
 .seat-score,.mystrip .tot,.tcap .sc,
 .tb-badge,.tb-line,.autoline,
-.stat-value,.pod .n,.scores .tot,.sheet td,
+.stat-value,.frow-score,.frow-credits,.scores .tot,.sheet td,
 #rank-you-bar .you-pos,#rank-you-bar .you-mmr,
 .rtable td:last-child{
   font-family:var(--font-num);
@@ -10575,6 +10621,62 @@ function renderSummary(G){
 
 /* ══════════ FINAL ══════════ */
 let finalFxPlayed=false;
+// Ranked top-to-bottom, one row per placement: avatar, rank badge
+// ("logo" — the small tier medallion, distinct from an achievement
+// crest), crest(s), name, score and what this game actually paid in
+// credits. AI seats wear the same humble paper plate the roster rail
+// and the lobby give them, for the same "four bare wrappers reads as
+// broken, not aspirational" reason those already document.
+function finalRowHTML(p,n){
+  const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
+  const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
+  const badge=mat?rankBadgeHTML(mat,null,20):'';
+  const crestIds=p.isAI?[]:[p.crest,p.crest2].filter(Boolean);
+  const crests=crestIds.map(id=>
+    `<span class="frow-crest crest-art">${crestHTML(id,id===p.crest?p.crestLevel:p.crest2Level)}</span>`
+  ).join('');
+  return `<div class="frow${n===0?' win':''}${p.i===me?' mine':''}" data-seat="${p.i}">
+    <span class="frow-rank">${n+1}</span>
+    <span class="avatar md${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>
+    <span class="frow-info">
+      <span class="frow-name-row">
+        <span class="frow-name">${esc(p.name)}${p.i===me?' &middot; you':''}</span>
+        ${badge}
+        ${crests}
+      </span>
+      ${p.title?`<span class="frow-title">${esc(p.title)}</span>`:''}
+    </span>
+    <span class="frow-stats">
+      <span class="frow-score">${p.score}</span>
+      <span class="frow-credits">&hellip;</span>
+    </span>
+  </div>`;
+}
+// null until the current final screen's own finalCreditsOk lands — see
+// renderFinal, which resets this the instant a NEW game's rows are
+// drawn so a previous game's numbers can never bleed into this one.
+let finalCreditsBySeat=null;
+function applyFinalCredits(){
+  if(!finalCreditsBySeat) return;
+  document.querySelectorAll('#f-body .frow').forEach(row=>{
+    const seat=Number(row.dataset.seat);
+    const amt=finalCreditsBySeat[seat];
+    const el=row.querySelector('.frow-credits');
+    if(!el) return;
+    if(amt===null||amt===undefined){ el.textContent=''; return; }
+    el.innerHTML=`${amt>0?'+':''}${fmtCredits(amt)}${creditChipHTML(12)}`;
+    el.classList.toggle('zero',amt<=0);
+  });
+}
+socket.on('finalCreditsOk',d=>{
+  // A stale response landing after the player has already left the final
+  // screen (new game, back to menu) must not write into whatever's there
+  // now — same screen-liveness guard the friend-profile/ranked-profile
+  // listeners already use.
+  if(!$('s-final').classList.contains('active')) return;
+  finalCreditsBySeat=d.credits;
+  applyFinalCredits();
+});
 function renderFinal(G){
   show('final');
   const isDaily=!!G.daily;
@@ -10593,22 +10695,15 @@ function renderFinal(G){
     $('f-body').innerHTML='';
   }else{
     $('f-body').style.display='block';
-    let h='<div class="podium">';
-    rows.forEach((p,n)=>{
-      // End screen is the third place the reference sheet calls for rank
-      // cosmetics. The podium has room for the full nameplate, unlike
-      // the table, so it gets one rather than just the badge.
-      const plate=p.rankMaterial
-        ? rankNameplateHTML((RANK_SETS.find(r=>r.material===p.rankMaterial)||{}).id,'sm')
-        : '';
-      h+=`<div class="pod ${n===0?'win':''}">
-        ${n===0?'<div class="crown">winner</div>':''}
-        <div class="n">${p.score}</div>
-        <div class="who">${esc(p.name)}${p.i===me?' (you)':''}${p.isAI?' · AI':''}</div>
-        ${plate?`<div class="pod-plate">${plate}</div>`:''}
-      </div>`;
-    });
-    h+='</div>'+sheetHTML(G);
+    // Credits arrive separately (finalCreditsOk, pushed once the server's
+    // actually granted them — see broadcastFinalCredits server-side), so
+    // every row starts on the "…" placeholder finalRowHTML renders below
+    // and finalCreditsBySeat is reset here — a stale value from a
+    // PREVIOUS game must never bleed into this one's rows, even for the
+    // brief window before the new event lands.
+    finalCreditsBySeat=null;
+    let h='<div class="final-list">'+rows.map((p,n)=>finalRowHTML(p,n)).join('')+'</div>';
+    h+=sheetHTML(G);
     $('f-body').innerHTML=h;
   }
   // A non-daily game must never inherit the previous game's daily card.

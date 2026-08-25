@@ -2284,16 +2284,46 @@ function placementIndexes(scores) {
 // is atomic in SQL, so two casual games finishing together can't both pay.
 async function awardGameCredits(G, acctId, placeIndex, finalScore, moons) {
   const amount = computeGameCredits(placeIndex, finalScore, G.round, moons);
-  if (amount <= 0) return;
+  if (amount <= 0) return 0;
   const ref = `${G.code}-${G.startedAt}`;
   if (!G.ranked) {
     // Passing the ref keeps this idempotent under trackStat's retries —
     // see claimCasualCreditDay. Without it a retried grant would be
     // refused by the cap it set itself on the first attempt.
     const claimed = await db.claimCasualCreditDay(acctId, dailyDateKey(), ref);
-    if (!claimed) return;               // another game already had today's casual payout
+    if (!claimed) return 0;             // another game already had today's casual payout
   }
   await db.grantCredits(acctId, amount, 'game_reward', ref);
+  // Returned (not just granted) so the final-standings screen can show
+  // exactly what each seat earned, including a real 0 for the casual
+  // daily-cap case above — not just "some positive amount" that the
+  // client would have no way to distinguish from "not paid yet".
+  return amount;
+}
+
+// The final-standings screen's own credits column. Recomputes the SAME
+// numbers awardGameCredits already wrote via the trackStat-wrapped call
+// below, rather than threading a value through it — deliberately NOT
+// itself trackStat-wrapped, since this only ever adds numbers to a
+// screen that's already showing (the 'final' phase broadcast already
+// went out by the time this resolves), so it doesn't need trackStat's
+// retry durability, and awaiting it inline would gate that broadcast on
+// a DB round trip for no reason. Calling awardGameCredits a second time
+// for the same (account, ref) pair is safe — both grantCredits and
+// claimCasualCreditDay are idempotent on that pair (see their own
+// comments), so this can't double-pay or double-claim the casual cap.
+async function broadcastFinalCredits(G, places) {
+  const credits = await Promise.all(G.players.map(async (p, i) => {
+    if (!p.accountId) return null;      // AI/guest seats never earn credits
+    const moons = (G.moonCounts && G.moonCounts[i]) || 0;
+    try {
+      return await awardGameCredits(G, p.accountId, places[i], p.score, moons);
+    } catch (e) {
+      console.error('broadcastFinalCredits error:', e.message);
+      return null;
+    }
+  }));
+  io.to(G.code).emit('finalCreditsOk', { credits });
 }
 
 function recordGameFinishedForAll(G, natural) {
@@ -2365,6 +2395,11 @@ function recordGameFinishedForAll(G, natural) {
     else if (isBlitz(G)) trackStat(() => db.recordBlitzGameFinished(acctId, finalScore, moons));
     else trackStat(() => db.recordGameFinished(acctId, finalScore, moons));
   }
+  // Not gated by DB_ENABLED here — broadcastFinalCredits checks per-seat
+  // accountId itself (all null when accounts aren't configured, so the
+  // Promise.all just resolves to a room full of nulls and the client's
+  // credits column quietly shows nothing, same as the guest case).
+  if (natural) broadcastFinalCredits(G, places).catch(e => console.error('broadcastFinalCredits error:', e.message));
 }
 
 function finishEarly(G) {

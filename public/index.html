@@ -3083,31 +3083,38 @@ html[data-cardfront="bold"] .card.has-art .big{display:none}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .slot[data-material] .slot-tier,.dcw[data-material] .slot-tier{color:var(--rm-orn)}
-/* The real plate art, now that it exists — swaps in for the plain-text
-   .slot-tier above wherever a seat has a rank set (AI seats included,
-   same paper-tier convention the roster rail uses). Reuses .rank-plate.xs
-   wholesale, roster-rail-sized and roster-rail-styled (including the
-   object-fit:fill stretch fix above), rather than inventing a fourth
-   plate size — this card's info column is a similar width to the
-   roster's, so the same box works without its own tuning pass. A flex
-   row of its own (mirroring .ros/.ros-plate) is what makes an
-   inline-flex, shrink-to-fit .rank-plate stretch to the column's full
-   width instead of hugging its own content. Reserves the same min-height
-   whether or not a seat has a rank set, so a bare-wrapper seat (no
-   material) doesn't leave the tier line's row shorter than its dressed
-   neighbours. */
-.slot-plate-row{display:flex;align-items:center;min-height:20px}
-/* Every OTHER .rank-plate gets its height for free from real in-flow
-   content beside the (all absolutely-positioned) dress layers — rp-text
-   in rankNameplateHTML's own markup, .ros-txt in the roster rail. This
-   one is bare rankPlateDressHTML with nothing else inside it (the
-   player's actual name/title already render above, in .slot-mid), so
-   without an explicit height it collapses to just its own padding
-   (~8px) the moment has-art removes what little flow content the six
-   CSS-fallback layers were contributing — caught by measuring the
-   rendered box, not by reading the CSS, since nothing here throws an
-   error, it just quietly renders a near-invisible sliver of art. */
-.slot-plate-row .rank-plate{flex:1 1 auto;min-width:0;height:20px}
+/* The real plate art, now that it exists, as the CARD'S OWN background —
+   not a widget inside it. First child, no z-index: same trick .card-art
+   already relies on (an absolutely-positioned element with no z-index
+   still paints below whatever normal-flow siblings follow it in DOM
+   order), so avatarTag/.slot-info need nothing special to stay above it.
+   Sits over — doesn't replace — .slot[data-material]'s own CSS gradient,
+   which stays the fallback for a missing file or no rank set at all.
+
+   object-fit:cover, not the shared .rank-art default of contain, and
+   NOT the roster rail's fill — this box's own proportions are what
+   decide it, not a house style: a lobby card is close enough to square
+   (~1.2:1 at the narrowest phones up to ~2:1 at the widest) that cover
+   only ever needs to scale by HEIGHT to fill it, since the art (~3.2:1)
+   stays wider than the box across every realistic width. That means
+   covering here is always height-limited — it crops the side ornaments,
+   never the vertical extent, so the top emblem and the bottom tier-name
+   lozenge stay fully visible at every width. (The roster rail's box is
+   flatter than the art even at its widest, which is the opposite case —
+   cover there crops the lozenge away, hence fill instead.)
+
+   .slot-bg-scrim darkens it a fixed amount UNDER the existing text
+   colours rather than retuning --rm-ink per material against real
+   (busier, photographic) art — a flat darkening helps contrast in both
+   directions: it only pushes dark ink further from a lightened backdrop
+   and light ink further from a darkened one, never the reverse, so it
+   can't make any of the eight materials worse than the flat-gradient
+   baseline they were tuned against. */
+.slot-bg-art{object-fit:cover}
+.slot-bg-scrim{
+  position:absolute;inset:0;pointer-events:none;
+  background:rgba(var(--ddp-scrim-rgb),.38);
+}
 /* Fixed-height reserve for the host's AI toggle (the only thing left
    here now that crests moved up beside the name) — still always
    rendered, even empty, so a seat with nothing here reserves the same
@@ -9603,7 +9610,21 @@ function slotHTML(G,i){
   const avatarTag=clickable
     ? `<span class="avatar lg tap${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''} onclick="openPlayerProfile(${p.accountId})" role="button" tabindex="0" aria-label="View ${esc(p.name)}'s profile">${avatarContent}</span>`
     : `<span class="avatar lg${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>`;
+  // The real plate art as the card's own full-bleed background — "the
+  // card IS the banner" taken literally now that there's real art to be
+  // one, rather than the flat CSS gradient .slot[data-material] still
+  // provides underneath as the fallback (art missing, or none equipped).
+  // Same first-child/no-z-index trick cardHTML() already uses for
+  // .card-art: an unpositioned-z-index absolutely-positioned element
+  // still paints below whatever normal-flow siblings come after it in
+  // DOM order, so avatarTag/.slot-info need nothing special to stay on
+  // top. object-fit:cover, not the shared .rank-art default of contain —
+  // see .slot-bg-art's own CSS note for why this box's proportions make
+  // cover the safe choice here specifically, unlike the roster rail.
+  const bgArt=set?rankArtImg(set.slug,'plate','slot-bg-art'):'';
   return `<div class="slot"${mat?` data-material="${mat}"`:''}>
+    ${bgArt}
+    ${bgArt?'<span class="slot-bg-scrim"></span>':''}
     ${avatarTag}
     <div class="slot-info">
       <div class="slot-top">
@@ -9616,9 +9637,6 @@ function slotHTML(G,i){
           ${crests?`<span class="slot-crests">${crests}</span>`:''}
         </div>
         <span class="slot-title">${p.title?esc(p.title):''}</span>
-        <span class="slot-plate-row">${set
-          ? `<span class="rank-plate xs" data-material="${set.material}" data-emblem="${set.emblem}">${rankPlateDressHTML(set.id)}</span>`
-          : ''}</span>
       </div>
       <div class="slot-footer">${footer}</div>
     </div>

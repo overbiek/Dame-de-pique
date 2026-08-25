@@ -52,7 +52,14 @@
 // (non-uniform scale) directly to 500x700 instead of padded, on request
 // — full-bleed like Bold Deck, at the cost of a slight, barely-visible
 // horizontal stretch to the art. Same in-place-overwrite trap, same bump.
-const CACHE = 'ddp-v13';
+// v14: replaced all 8 public/ranks/<slug>/plate.webp files in place with
+// updated banner art (same filenames). Cropped tight to each banner's own
+// alpha bounds (>128, few px pad) rather than a forced uniform ratio —
+// side ornaments already touched the source canvas edges horizontally on
+// all 8, so only the top/bottom margin needed trimming. Same
+// in-place-overwrite trap as v8/v9/v10/v12/v13: bumping is what forces a
+// re-fetch under those existing URLs.
+const CACHE = 'ddp-v14';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
                 '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 

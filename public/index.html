@@ -1188,6 +1188,12 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
    pulled per the user's own request, the badge symbol is what stands
    in for it now. */
 .fp-rankmed{margin-top:10px}
+/* Empty (:empty) when friendStatus is 'self'/'friends' — margin/gap only
+   apply once there's actually a button inside, so the two states cost
+   zero extra vertical space instead of leaving a blank gap. */
+.fp-actions{display:flex;justify-content:center;gap:8px;padding:0 16px}
+.fp-actions:not(:empty){margin:14px 0 0}
+.fp-actions .btn{padding:9px 18px;font-size:.8rem}
 .fp-pad{padding:0 16px 16px}
 .fp-tabbar{margin-bottom:12px}
 .fp-crest-grid{
@@ -5417,6 +5423,14 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
             </div>
             <div id="err-friends" class="note bad" style="display:none;margin-bottom:12px"></div>
 
+            <!-- Hidden entirely when empty rather than showing an empty
+                 state — a "no pending requests" message above a friends
+                 list that's usually non-empty too is noise most visits. -->
+            <div id="friend-requests-section" style="display:none">
+              <div class="sec-label">Friend requests</div>
+              <div id="friend-requests-list"></div>
+            </div>
+
             <div class="sec-label">Your friends</div>
             <div id="friends-list"></div>
             <div class="empty-state" id="friends-empty" style="display:none;padding-top:6px">
@@ -5894,6 +5908,12 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
           <div class="rank-lbl" id="fp-rank-lbl"></div>
         </div>
       </div>
+
+      <!-- Add Friend / Request Sent / Accept-Decline — filled in by
+           friendProfileOk based on d.friendStatus. Empty (and takes no
+           space) for 'self' or 'friends', where there's no action to
+           offer. -->
+      <div class="fp-actions" id="fp-actions"></div>
 
       <div class="fp-pad">
         <div class="acct-tabbar fp-tabbar">
@@ -8262,6 +8282,7 @@ function doLogout(){
 let friendsList=[];          // [{id,nickname,avatar,online}], My Account's own copy
 let friendsLoadedOnce=false; // gates the one-time lobby fetch — My Account's own goPersonal() flow always refetches on tab entry regardless
 let lobbyInviteEligible=false;
+let friendRequestsList=[];   // [{id,nickname,avatar}] — incoming requests waiting on ME
 
 function renderFriendsGate(){
   const loggedIn=!!account;
@@ -8271,6 +8292,7 @@ function renderFriendsGate(){
     friendsLoadedOnce=true;
     socket.emit('getFriendCode',{token:accountToken});
     socket.emit('getFriends',{token:accountToken});
+    socket.emit('getFriendRequests',{token:accountToken});
   }
 }
 function copyFriendCode(){
@@ -8316,6 +8338,31 @@ function renderFriendsList(){
   }
   $('friends-empty').style.display='none';
   el.innerHTML=friendsList.map(f=>friendRowHTML(f,{invite:lobbyInviteEligible&&!!room})).join('');
+}
+// Someone who asked to be YOUR friend — not on the friends list yet, so
+// its own row shape (Accept/Decline instead of Invite/Remove), reusing
+// .friend-row/.friend-main/.friend-btn wholesale. Opens via
+// openPlayerProfile, not openFriendProfile — getFriendProfile is gated on
+// friendship, and a pending requester isn't one yet.
+function friendRequestRowHTML(r){
+  const avatar=avatarHTML(r.avatar,r.nickname);
+  return `<div class="friend-row">
+    <button class="friend-main" onclick="openPlayerProfile(${r.id})">
+      <span class="friend-avatar">${avatar}</span>
+      <span class="friend-info"><div class="friend-name">${esc(r.nickname)}</div></span>
+    </button>
+    <span class="friend-actions">
+      <button class="friend-btn invite" onclick="acceptFriendRequestFrom(${r.id})">Accept</button>
+      <button class="friend-btn" onclick="declineFriendRequestFrom(${r.id})">Decline</button>
+    </span>
+  </div>`;
+}
+function renderFriendRequests(){
+  const sec=$('friend-requests-section'),list=$('friend-requests-list');
+  if(!sec||!list) return;
+  if(!friendRequestsList.length){ sec.style.display='none'; list.innerHTML=''; return; }
+  sec.style.display='block';
+  list.innerHTML=friendRequestsList.map(friendRequestRowHTML).join('');
 }
 function inviteFriendToRoom(id,btn){
   if(!room) return;
@@ -8378,6 +8425,69 @@ socket.on('friendPresence',d=>{
   renderLobbyFriendPicker();
 });
 
+/* ── Friend requests ──
+   sendFriendRequest/acceptFriendRequest/declineFriendRequest/
+   cancelFriendRequest all mirror addFriendByCode/removeFriend's calling
+   convention (token + one id, no confirmation round trip beyond the
+   ack). fpTargetId (set by friendProfileOk, cleared by
+   closeFriendProfile) is what lets friendRequestStatus/Received/Accepted
+   update an OPEN profile card live, without re-fetching the whole thing,
+   the same "don't wait for a reload" reasoning friendAdded already uses
+   for the Friends tab. */
+function sendFriendRequestTo(id,btn){
+  if(!account||!accountToken) return;
+  SFX.play('click');
+  if(btn) btn.disabled=true;
+  socket.emit('sendFriendRequest',{token:accountToken,targetId:id});
+}
+function cancelFriendRequestTo(id,btn){
+  if(!account||!accountToken) return;
+  if(btn) btn.disabled=true;
+  socket.emit('cancelFriendRequest',{token:accountToken,targetId:id});
+}
+function acceptFriendRequestFrom(id,btn){
+  if(!account||!accountToken) return;
+  SFX.play('click');
+  if(btn) btn.disabled=true;
+  socket.emit('acceptFriendRequest',{token:accountToken,requesterId:id});
+}
+function declineFriendRequestFrom(id,btn){
+  if(!account||!accountToken) return;
+  if(btn) btn.disabled=true;
+  socket.emit('declineFriendRequest',{token:accountToken,requesterId:id});
+}
+socket.on('friendRequestsOk',d=>{
+  friendRequestsList=d.requests||[];
+  if($('s-personal').classList.contains('active')) renderFriendRequests();
+});
+// The open profile card's own status, pushed after every send/cancel/
+// accept/decline that touches it — 'self'/'friends' both render to
+// nothing (see renderFpActions), so those two values are handled the
+// same way whether they arrive here or in the initial friendProfileOk.
+socket.on('friendRequestStatus',d=>{
+  if(fpTargetId===d.targetId) renderFpActions({id:d.targetId,friendStatus:d.status});
+});
+// Someone (online right now) just sent ME a request. Update the Friends
+// tab's pending list and, if their profile happens to be the one open,
+// the card's button — same live-push pattern friendAdded already uses.
+socket.on('friendRequestReceived',d=>{
+  if(!friendRequestsList.some(r=>r.id===d.id)){
+    friendRequestsList=[d,...friendRequestsList];
+    if($('s-personal').classList.contains('active')) renderFriendRequests();
+  }
+  if(fpTargetId===d.id) renderFpActions({id:d.id,friendStatus:'incoming'});
+});
+// Someone I'd sent a request to just accepted it — functionally the same
+// as friendAdded, just arriving on the requester's side of that flow.
+socket.on('friendRequestAccepted',d=>{
+  if(!friendsList.some(f=>f.id===d.id)){
+    friendsList=[...friendsList,d].sort((a,b)=>a.nickname.localeCompare(b.nickname));
+    if($('s-personal').classList.contains('active')) renderFriendsList();
+    renderLobbyFriendPicker();
+  }
+  if(fpTargetId===d.id) renderFpActions({id:d.id,friendStatus:'friends'});
+});
+
 /* ── Friend profile card ──
    A read-only counterpart to My Account's own hero + stats — same
    underlying render helpers (rankPlateDressHTML, crestHTML, sceneArtImg,
@@ -8385,8 +8495,15 @@ socket.on('friendPresence',d=>{
    with instead of the logged-in account's own cosState. Opens over
    whichever screen is active (Friends tab, or the lobby's friend picker),
    same #rules-style class toggle. */
+// Which account the open card is showing — null when closed. Lets a live
+// friendRequestStatus/Received/Accepted push update the card's Add
+// Friend/Request Sent/Accept button in place, without knowing anything
+// else about the currently-open payload.
+let fpTargetId=null;
 function openProfileCard(evt,payload){
   if(!account) return;
+  fpTargetId=null;
+  $('fp-actions').innerHTML='';
   $('friend-profile').classList.add('on');
   $('fp-loading').style.display='block';
   $('fp-error').style.display='none';
@@ -8405,6 +8522,7 @@ function openPlayerProfile(id){
   openProfileCard('getPlayerProfile',{playerId:id});
 }
 function closeFriendProfile(){
+  fpTargetId=null;
   $('friend-profile').classList.remove('on');
 }
 function switchFriendProfileTab(tab){
@@ -8470,13 +8588,32 @@ function friendRankedStatsHTML(s){
     ['Peak MMR',s.mmrHighest===null?'—':s.mmrHighest,''],
   ]);
 }
+// friendStatus is only present on getPlayerProfile's response shape (see
+// server.js's emitProfileCard) — undefined here reads the same as
+// 'friends'/'self' below (no button), which is exactly right for a
+// getFriendProfile response, since that path is friendship-gated already.
+function renderFpActions(d){
+  const el=$('fp-actions'); if(!el) return;
+  const status=d.friendStatus;
+  if(!status||status==='self'||status==='friends'){ el.innerHTML=''; return; }
+  if(status==='outgoing'){
+    el.innerHTML=`<button class="btn btn-ghost" onclick="cancelFriendRequestTo(${d.id},this)">Request Sent</button>`;
+  }else if(status==='incoming'){
+    el.innerHTML=`<button class="btn btn-primary" onclick="acceptFriendRequestFrom(${d.id},this)">Accept Request</button>`
+      +`<button class="btn btn-ghost" onclick="declineFriendRequestFrom(${d.id},this)">Decline</button>`;
+  }else{ // 'none'
+    el.innerHTML=`<button class="btn btn-primary" onclick="sendFriendRequestTo(${d.id},this)">Add Friend</button>`;
+  }
+}
 socket.on('friendProfileOk',d=>{
   // Guard against a stale response landing after the card was closed —
   // same reasoning as the ranked-profile/account-rank listeners.
   if(!$('friend-profile').classList.contains('on')) return;
+  fpTargetId=d.id;
   $('fp-loading').style.display='none';
   $('fp-error').style.display='none';
   $('fp-body').style.display='block';
+  renderFpActions(d);
 
   const scene=d.equipped.scene||'';
   $('fp-scene').setAttribute('data-scene',scene);

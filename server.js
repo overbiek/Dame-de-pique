@@ -3015,6 +3015,113 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── Friend requests ──
+  // The profile card's "Add Friend" button — unlike addFriendByCode above,
+  // this doesn't add anyone outright; it creates a pending row the TARGET
+  // has to accept. Reuses the same friendsOk/friendAdded shape addFriendByCode
+  // already emits for the mutual/auto-accept case, so the client's existing
+  // listeners for those need nothing new.
+  socket.on('sendFriendRequest', async ({ token, targetId }) => {
+    if (!DB_ENABLED || !token) return socket.emit('friendsError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
+      const tid = Number(targetId);
+      if (!Number.isInteger(tid)) return socket.emit('friendsError', { msg: 'Unknown player.' });
+      const targetAccount = await db.findAccountById(tid);
+      if (!targetAccount) return socket.emit('friendsError', { msg: 'That player no longer exists.' });
+      const res = await db.sendFriendRequest(account.id, tid);
+      if (!res.ok) {
+        return socket.emit('friendsError', { msg: res.reason === 'self' ? "That's you." : "You're already friends." });
+      }
+      if (res.autoAccepted) {
+        // They'd already sent ME one — this just completed it, same
+        // instant-mutual result as addFriendByCode.
+        const friends = await db.getFriends(account.id);
+        socket.emit('friendsOk', { friends: friends.map(f => ({ ...f, online: accountSockets.has(f.id) })) });
+        socket.emit('friendRequestStatus', { targetId: tid, status: 'friends' });
+        notifySocketsForAccount(tid, 'friendAdded', {
+          id: account.id, nickname: account.nickname, avatar: account.avatar, online: true,
+        });
+      } else {
+        socket.emit('friendRequestStatus', { targetId: tid, status: 'outgoing' });
+        notifySocketsForAccount(tid, 'friendRequestReceived', {
+          id: account.id, nickname: account.nickname, avatar: account.avatar,
+        });
+      }
+    } catch (e) {
+      console.error('sendFriendRequest error:', e.message);
+      socket.emit('friendsError', { msg: 'Could not send that request. Try again.' });
+    }
+  });
+
+  socket.on('acceptFriendRequest', async ({ token, requesterId }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
+      const rid = Number(requesterId);
+      if (!Number.isInteger(rid)) return;
+      await db.acceptFriendRequest(account.id, rid);
+      const friends = await db.getFriends(account.id);
+      socket.emit('friendsOk', { friends: friends.map(f => ({ ...f, online: accountSockets.has(f.id) })) });
+      socket.emit('friendRequestsOk', { requests: await db.getIncomingFriendRequests(account.id) });
+      socket.emit('friendRequestStatus', { targetId: rid, status: 'friends' });
+      notifySocketsForAccount(rid, 'friendRequestAccepted', {
+        id: account.id, nickname: account.nickname, avatar: account.avatar, online: true,
+      });
+    } catch (e) {
+      console.error('acceptFriendRequest error:', e.message);
+      socket.emit('friendsError', { msg: 'Could not accept that request. Try again.' });
+    }
+  });
+
+  socket.on('declineFriendRequest', async ({ token, requesterId }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
+      const rid = Number(requesterId);
+      if (!Number.isInteger(rid)) return;
+      await db.declineFriendRequest(account.id, rid);
+      socket.emit('friendRequestsOk', { requests: await db.getIncomingFriendRequests(account.id) });
+      socket.emit('friendRequestStatus', { targetId: rid, status: 'none' });
+    } catch (e) {
+      console.error('declineFriendRequest error:', e.message);
+      socket.emit('friendsError', { msg: 'Could not decline that request. Try again.' });
+    }
+  });
+
+  // The "Request Sent" button on the profile card doubles as a cancel —
+  // tapping it again withdraws the ask, same toggle-off feel as tapping
+  // an already-selected avatar in the picker.
+  socket.on('cancelFriendRequest', async ({ token, targetId }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
+      const tid = Number(targetId);
+      if (!Number.isInteger(tid)) return;
+      await db.cancelFriendRequest(account.id, tid);
+      socket.emit('friendRequestStatus', { targetId: tid, status: 'none' });
+    } catch (e) {
+      console.error('cancelFriendRequest error:', e.message);
+      socket.emit('friendsError', { msg: 'Could not cancel that request. Try again.' });
+    }
+  });
+
+  socket.on('getFriendRequests', async ({ token }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
+      socket.emit('friendRequestsOk', { requests: await db.getIncomingFriendRequests(account.id) });
+    } catch (e) {
+      console.error('getFriendRequests error:', e.message);
+      socket.emit('friendsError', { msg: 'Could not load your requests. Try again.' });
+    }
+  });
+
   // Invites a friend into the room the sender is currently seated in —
   // it deliberately does NOT create a room on the friend's behalf; that
   // keeps this from having to duplicate createRoom's seating/AI/options
@@ -3058,16 +3165,17 @@ io.on('connection', (socket) => {
   // render all of it from an id alone. titleName is the one exception,
   // resolved here via the same titleNameFor() a seat join uses, since
   // title *display strings* aren't otherwise duplicated client-side.
-  async function emitProfileCard(sock, targetId) {
+  async function emitProfileCard(sock, targetId, viewerId) {
     const fid = Number(targetId);
     if (!Number.isInteger(fid)) return sock.emit('friendProfileError', { msg: 'Unknown player.' });
     const targetAccount = await db.findAccountById(fid);
     if (!targetAccount) return sock.emit('friendProfileError', { msg: 'That player no longer exists.' });
-    const [rankedProfile, stats, rankedStats, cos] = await Promise.all([
+    const [rankedProfile, stats, rankedStats, cos, friendStatus] = await Promise.all([
       db.getOrCreateRankedProfile(fid),
       db.getStats(fid),
       db.getRankedStats(fid),
       loadPlayerCosmetics(fid),
+      db.getFriendRequestStatus(viewerId, fid),
     ]);
     const isPlacement = rankedProfile.placementGamesPlayed < 5;
     sock.emit('friendProfileOk', {
@@ -3087,6 +3195,12 @@ io.on('connection', (socket) => {
       crests: cos.achievements.filter(a => a.unlocked).map(a => ({
         id: a.id, name: a.name, crest: a.crest, level: a.level, maxLevel: a.maxLevel,
       })),
+      // Drives the Add Friend / Request Sent / Accept-Decline button on
+      // the card — always 'friends' on the getFriendProfile path below
+      // (it's gated on friendship already), the interesting values show
+      // up via getPlayerProfile, where the viewer and target have no
+      // established relationship yet.
+      friendStatus,
     });
   }
   socket.on('getFriendProfile', async ({ token, friendId }) => {
@@ -3098,7 +3212,7 @@ io.on('connection', (socket) => {
       if (!Number.isInteger(fid)) return socket.emit('friendProfileError', { msg: 'Unknown player.' });
       const isFriend = await db.areFriends(account.id, fid);
       if (!isFriend) return socket.emit('friendProfileError', { msg: 'Not on your friends list.' });
-      await emitProfileCard(socket, fid);
+      await emitProfileCard(socket, fid, account.id);
     } catch (e) {
       console.error('getFriendProfile error:', e.message);
       socket.emit('friendProfileError', { msg: 'Could not load that profile. Try again.' });
@@ -3117,7 +3231,7 @@ io.on('connection', (socket) => {
     try {
       const account = await db.findAccountByToken(token);
       if (!account) return socket.emit('friendProfileError', { msg: 'Your session expired — log in again.' });
-      await emitProfileCard(socket, playerId);
+      await emitProfileCard(socket, playerId, account.id);
     } catch (e) {
       console.error('getPlayerProfile error:', e.message);
       socket.emit('friendProfileError', { msg: 'Could not load that profile. Try again.' });

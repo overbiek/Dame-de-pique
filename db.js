@@ -283,6 +283,18 @@ async function ensureSchema() {
       PRIMARY KEY (account_id, friend_id)
     );
   `);
+  // Unlike friendships, a request has a direction — one row per pending
+  // ask, deleted on accept/decline/cancel rather than flipped to a
+  // status column, since a resolved request has nothing left worth
+  // keeping around.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS friend_requests (
+      from_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      to_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (from_id, to_id)
+    );
+  `);
 
   // ── Achievements ──
   // A THIRD, mode-agnostic counter table, deliberately not new columns on
@@ -565,6 +577,80 @@ async function getFriends(accountId) {
     [accountId]
   );
   return rows.map(r => ({ id: r.id, nickname: r.nickname, avatar: r.avatar }));
+}
+
+// ── Friend requests ──
+// accepterId/declinerId/cancelerId are always the CALLER — the account
+// whose token the socket handler already resolved — so every one of
+// these takes "me, them" in that order, never a bare (from,to) pair a
+// caller could get backwards.
+async function acceptFriendRequest(accepterId, requesterId) {
+  await pool.query(
+    `DELETE FROM friend_requests WHERE from_id = $1 AND to_id = $2`,
+    [requesterId, accepterId]
+  );
+  await addFriend(accepterId, requesterId);
+}
+
+async function declineFriendRequest(declinerId, requesterId) {
+  await pool.query(
+    `DELETE FROM friend_requests WHERE from_id = $1 AND to_id = $2`,
+    [requesterId, declinerId]
+  );
+}
+
+async function cancelFriendRequest(cancelerId, targetId) {
+  await pool.query(
+    `DELETE FROM friend_requests WHERE from_id = $1 AND to_id = $2`,
+    [cancelerId, targetId]
+  );
+}
+
+// If the target already sent ME a request, this completes it as a mutual
+// accept instead of leaving two pending rows pointed at each other —
+// same instant-result feel as addFriendByCode, just discovered from the
+// profile card instead of a typed code.
+async function sendFriendRequest(fromId, toId) {
+  if (fromId === toId) return { ok: false, reason: 'self' };
+  if (await areFriends(fromId, toId)) return { ok: false, reason: 'friends' };
+  const { rows: reverse } = await pool.query(
+    `SELECT 1 FROM friend_requests WHERE from_id = $1 AND to_id = $2`,
+    [toId, fromId]
+  );
+  if (reverse.length) {
+    await acceptFriendRequest(fromId, toId);
+    return { ok: true, autoAccepted: true };
+  }
+  await pool.query(
+    `INSERT INTO friend_requests (from_id, to_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`,
+    [fromId, toId]
+  );
+  return { ok: true, autoAccepted: false };
+}
+
+async function getIncomingFriendRequests(accountId) {
+  const { rows } = await pool.query(
+    `SELECT a.id, a.nickname, a.avatar
+     FROM friend_requests r JOIN accounts a ON a.id = r.from_id
+     WHERE r.to_id = $1
+     ORDER BY r.created_at DESC`,
+    [accountId]
+  );
+  return rows.map(r => ({ id: r.id, nickname: r.nickname, avatar: r.avatar }));
+}
+
+// The one thing the profile card needs to decide which button to show:
+// 'self' | 'friends' | 'outgoing' (I asked them) | 'incoming' (they asked
+// me) | 'none'.
+async function getFriendRequestStatus(accountId, otherId) {
+  if (accountId === otherId) return 'self';
+  if (await areFriends(accountId, otherId)) return 'friends';
+  const { rows } = await pool.query(
+    `SELECT from_id FROM friend_requests WHERE (from_id = $1 AND to_id = $2) OR (from_id = $2 AND to_id = $1)`,
+    [accountId, otherId]
+  );
+  if (!rows.length) return 'none';
+  return rows[0].from_id === accountId ? 'outgoing' : 'incoming';
 }
 
 // ── Stats ──────────────────────────────────────────────────────
@@ -1262,6 +1348,8 @@ module.exports = {
   setAccountEmail, findAccountByEmail, createPasswordReset, findValidPasswordReset,
   usePasswordReset, updatePassword, deleteSessionsForAccount,
   getOrCreateFriendCode, findAccountByFriendCode, addFriend, removeFriend, areFriends, getFriends,
+  sendFriendRequest, acceptFriendRequest, declineFriendRequest, cancelFriendRequest,
+  getIncomingFriendRequests, getFriendRequestStatus,
   recordGameStarted, recordTrick, recordRound, recordGameFinished, recordQueenTaken, getStats,
   recordBlitzGameStarted, recordBlitzGameFinished,
   recordDailyScore, getDailyScore, bumpDailyStreak, getDailyStreak,

@@ -1900,12 +1900,17 @@ before pushing.
      fill the box's width, which pushed the excess height off both the
      top and bottom — reported as "too zoomed in, top and bottom not
      visible". Nothing was actually lost from the crop; the box just
-     didn't match what was cropped. **Fixed at the source, not in CSS**:
-     each of the 52 cards is now padded (symmetric, near-white `(254,254,
-     254)` sampled from the sheet's own page background) to the box's own
-     5:7 ratio *before* the final resize to 500×700 — matching Bold
-     Deck's own resolution exactly, so `cover` never needs to crop
-     anything again. Files grew from ~6KB to ~18KB each accordingly.
+     didn't match what was cropped. First fix (v12): padded each of the
+     52 cards (symmetric, near-white `(254,254,254)` sampled from the
+     sheet's own page background) to the box's own 5:7 ratio before the
+     final resize to 500×700, matching Bold Deck's resolution. That
+     traded the top/bottom crop for visible white bars down both sides —
+     correct proportions, but reported as "not fitting" the other way.
+     **v13, current**: same tight per-card crop, but stretched
+     (non-uniform scale) directly to 500×700 instead of padded — full-
+     bleed like Bold Deck, at the cost of a slight, barely-visible
+     horizontal stretch to the art, on request. Files grew from ~6KB
+     (original) to ~18KB (v12/v13, roughly the same either way).
   2. **"the fallback glyphs hidden" above was never actually true for
      Noir.** The CSS rule that hides `.ix`/`.big` once real art loads
      (`html[data-cardfront="X"] .card.has-art .ix,.big{display:none}`)
@@ -1917,10 +1922,10 @@ before pushing.
      JS — it's pure CSS). Bold Deck was added in the same session and
      correctly included from the start; Noir was the one that had shipped
      broken.
-  Both required an `sw.js` `CACHE` bump (v12) — see that file's own note:
-  overwriting a runtime-cached asset in place under its existing filename
-  is invisible to a returning player without one, same trap as the v8/v11
-  entries above it.
+  Both required an `sw.js` `CACHE` bump (v12, then v13 for the stretch
+  re-export) — see that file's own note: overwriting a runtime-cached
+  asset in place under its existing filename is invisible to a returning
+  player without one, same trap as the v8/v11 entries above it.
 
 - **Scenes are pure CSS gradient compositions, no image assets**, and
   that's a decision rather than a stopgap: eight full-bleed backgrounds

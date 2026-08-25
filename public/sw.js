@@ -46,7 +46,13 @@
 // 500x700) before final resize, so cover no longer needs to crop
 // anything. Any returning player who'd already loaded a Noir card face
 // needs this bump or keeps seeing the old cropped bytes forever.
-const CACHE = 'ddp-v12';
+// v13: the v12 padding fix traded the top/bottom crop for visible white
+// bars down both sides instead — correct proportions, but not what was
+// wanted. Re-exported once more: same tight per-card crop, but stretched
+// (non-uniform scale) directly to 500x700 instead of padded, on request
+// — full-bleed like Bold Deck, at the cost of a slight, barely-visible
+// horizontal stretch to the art. Same in-place-overwrite trap, same bump.
+const CACHE = 'ddp-v13';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
                 '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 

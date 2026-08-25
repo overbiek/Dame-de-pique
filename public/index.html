@@ -2734,12 +2734,16 @@ html[data-cardfront="royal_court"] .card[data-r="K"]:not(.back)::before{
 .cf-mini.royal.r,.cf-mini.classic.r{color:#8C2233}
 
 /* ══════════════════════════════════════════════════════════════
-   NOCTURNE DECK card front
+   REAL-ART CARD FRONTS (Noir Casino, Bold Deck)
    ══════════════════════════════════════════════════════════════
+   Originally built for Nocturne Deck, which has since been deleted from
+   the game entirely (id, art, everything) — the architecture below
+   outlived it and is what Noir and Bold both actually run on now, driven
+   generically off CARDFRONT_ART_SETS.
    Unlike Royal Court (a pure CSS re-skin of the existing glyph markup,
-   no images at all), this front needs REAL per-card art: 52 unique
+   no images at all), these fronts need REAL per-card art: 52 unique
    illustrated faces, cropped from a reference sheet, cannot be
-   approximated in gradients. So this is the one card front where
+   approximated in gradients. So these are the card fronts where
    cardHTML() emits something extra — see cardFrontArtImg() below — and
    the art LAYERS OVER the existing card exactly like rank-set plates and
    scene photos do: a permanent, always-correct fallback (the plain
@@ -2764,20 +2768,23 @@ html[data-cardfront="royal_court"] .card[data-r="K"]:not(.back)::before{
    One rule per real-art front, not a single data-cardfront-agnostic
    selector — this shipped Nocturne-only at first (Noir and Bold were
    added later, see git history), which silently left Noir's glyphs
-   showing through its own art the whole time. List every CARDFRONT_
-   ART_SETS value here explicitly when a new real-art front is added;
-   there's no way to derive this from JS since it's pure CSS. */
-html[data-cardfront="nocturne"] .card.has-art .ix,
-html[data-cardfront="nocturne"] .card.has-art .big,
+   showing through its own art the whole time. Nocturne itself has since
+   been deleted from the game entirely (id, art, this selector) — List
+   every CARDFRONT_ART_SETS value here explicitly when a new real-art
+   front is added; there's no way to derive this from JS since it's pure
+   CSS. */
 html[data-cardfront="noir"] .card.has-art .ix,
 html[data-cardfront="noir"] .card.has-art .big,
 html[data-cardfront="bold"] .card.has-art .ix,
 html[data-cardfront="bold"] .card.has-art .big{display:none}
 /* The picker thumbnail's mini cards, same 24x34 box cf-mini already
    uses for Classic/Royal Court — real crops here instead of CSS, since
-   there's no gradient that stands in for an illustrated portrait. */
-.cf-mini.nocturne{border-radius:4px;overflow:hidden;background:#0c0c0c}
-.cf-mini.nocturne img{width:100%;height:100%;object-fit:cover;display:block}
+   there's no gradient that stands in for an illustrated portrait. Class
+   name is a holdover from Nocturne (the first real-art front, now
+   deleted) — Noir and Bold share this same rule via cardFrontThumb's
+   mini() helper, not just Nocturne originally. */
+.cf-mini.real-art{border-radius:4px;overflow:hidden;background:#0c0c0c}
+.cf-mini.real-art img{width:100%;height:100%;object-fit:cover;display:block}
 
 /* ══ Lobby ══ */
 .codebox{
@@ -6270,15 +6277,15 @@ const SCENE_IDS=['scene_moulin_rouge','scene_holiday','scene_victorian_room',
                  'scene_ashen_gate','scene_arabian_nights','scene_magic_forest',
                  'scene_noir_casino','scene_moon_balcony','scene_conservatory',
                  'scene_theater','scene_observatory'];
-const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court','cardfront_nocturne','cardfront_noir','cardfront_bold'];
+const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court','cardfront_noir','cardfront_bold'];
 // The tail of each ID is the CSS hook, so a data-cardfront value stays
 // readable in devtools ("royal_court", not the full ID).
-const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court',cardfront_nocturne:'nocturne',cardfront_noir:'noir',cardfront_bold:'bold'};
+const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court',cardfront_noir:'noir',cardfront_bold:'bold'};
 // Card fronts with REAL per-card art (as opposed to Royal Court/Classic,
 // which are pure CSS and need no image at all). cardHTML() only emits an
 // <img> when the equipped front is in this set — everyone else pays
 // nothing for this feature, not even an empty element.
-const CARDFRONT_ART_SETS={cardfront_nocturne:'nocturne',cardfront_noir:'noir',cardfront_bold:'bold'};
+const CARDFRONT_ART_SETS={cardfront_noir:'noir',cardfront_bold:'bold'};
 
 /* ── scene art loading ──
    Exact mirror of the RANK COSMETICS art-loading contract below
@@ -7921,12 +7928,12 @@ function cosItemHTML(kind,item,thumbHTML,equippedId,slot){
 // The card-front thumbnail is built from the same tokens the real card
 // face uses, so the preview can't drift from the thing it previews.
 function cardFrontThumb(id){
-  // Nocturne has real art, so its thumbnail is real crops, not glyphs —
-  // same "the picker reuses the real face" rule the comment above this
-  // block already states, just via <img> instead of CSS this time.
+  // A real-art front (Noir, Bold) gets real crops for its thumbnail, not
+  // glyphs — same "the picker reuses the real face" rule the comment
+  // above this block already states, just via <img> instead of CSS.
   const slug=CARDFRONT_ART_SETS[id];
   if(slug){
-    const mini=(suit,rank)=>`<span class="cf-mini nocturne"><img src="${cardFrontArtSrc(slug,suit,rank)}" alt="" loading="lazy"/></span>`;
+    const mini=(suit,rank)=>`<span class="cf-mini real-art"><img src="${cardFrontArtSrc(slug,suit,rank)}" alt="" loading="lazy"/></span>`;
     return `<span class="cf-preview">${mini('♠','A')}${mini('♥','Q')}${mini('♣','K')}</span>`;
   }
   const royal=id==='cardfront_royal_court';

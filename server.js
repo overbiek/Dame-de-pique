@@ -503,27 +503,36 @@ function aiSelectPass(G, i) {
   const hand = G.players[i].hand;
   const isHighHeart = c => c.suit === '♥' && RV[c.rank] >= 8;
   const lowHeartsBeside = c => hand.filter(x => x.suit === '♥' && RV[x.rank] <= 7 && !eqC(x, c)).length;
-  // Hard protections: low/mid clubs are safe, plentiful cards worth
-  // keeping all game for ducking; hearts this low cost almost nothing
-  // to hold onto; low/mid spades (2 through J) are the guards that
-  // let a spade lead be ducked safely instead of forcing a scoop of
-  // the queen; and A♦/A♣ are the trick-1 opening leads (see the
-  // `openingAce` rule in applyHardRules and heuristicChoose's own
-  // mirror of it) — passing either away throws away a guaranteed safe
-  // trick-1 lead for whichever opponent receives it. Never pass any of
-  // these away.
+  const suitCount = s => hand.filter(c => c.suit === s).length;
+
+  // Hard protections: 2♣/3♣ are only ducking-safe cover when there's a
+  // real club suit behind them (3+ clubs held) — with fewer, they're not
+  // "cover", they're the whole safe part of the suit, no different from
+  // holding a lone one (see the singleton exemption below); hearts this
+  // low cost almost nothing to hold onto; low/mid spades (2 through J)
+  // are the guards that let a spade lead be ducked safely instead of
+  // forcing a scoop of the queen; and A♦/A♣ are the trick-1 opening
+  // leads (see the `openingAce` rule in applyHardRules and
+  // heuristicChoose's own mirror of it) — passing either away throws
+  // away a guaranteed safe trick-1 lead for whichever opponent receives
+  // it. Never pass any of these away.
   const neverPass = c =>
-    (c.suit === '♣' && RV[c.rank] <= 11) ||
+    (c.suit === '♣' && (c.rank === '2' || c.rank === '3') && suitCount('♣') >= 3) ||
     (c.suit === '♥' && RV[c.rank] <= 5) ||
     (c.suit === '♠' && RV[c.rank] <= 11) ||
-    ((c.suit === '♦' || c.suit === '♣') && c.rank === 'A');
+    ((c.suit === '♦' || c.suit === '♣') && c.rank === 'A') ||
+    ((c.suit === '♣' || c.suit === '♦') && c.rank === '2' && suitCount(c.suit) === 1);
 
   // A club or diamond down to a single card is worth passing on even
   // though it would otherwise be protected: going fully void in that
   // suit is worth far more than the one card, since every future lead
-  // in it becomes a free dump for a heart or the queen of spades.
-  const suitCount = s => hand.filter(c => c.suit === s).length;
-  const mustPass = hand.filter(c => (c.suit === '♣' || c.suit === '♦') && suitCount(c.suit) === 1);
+  // in it becomes a free dump for a heart or the queen of spades. The
+  // 2 is the one exception — it's already a guaranteed-safe card to be
+  // stuck following with whenever the suit does get led, so there's
+  // nothing this particular card buys by going void that keeping it
+  // doesn't already give for free; see `neverPass` above, which protects
+  // it instead of this forcing it away.
+  const mustPass = hand.filter(c => (c.suit === '♣' || c.suit === '♦') && suitCount(c.suit) === 1 && c.rank !== '2');
   if (mustPass.length >= 2) return mustPass.slice(0, 2).map(c => ({ rank: c.rank, suit: c.suit }));
   const forced = mustPass[0] || null;
   const exempt = c => forced && eqC(c, forced);
@@ -1500,19 +1509,12 @@ const COSMETICS = {
   ],
   cardFronts: [
     { id: 'cardfront_standard',    name: 'Classic',      unlock: null },
-    // Royal Court no longer carries a `price` — it's back to
-    // achievement-only, exactly as it was before the shop existed. The
-    // shop slot (and the achievement's own unlock string) is now shared
-    // with Nocturne Deck below, so reaching ach_queen_hunter grants BOTH;
-    // this is a deliberate swap of "which deck the shop sells", not a
-    // revocation — anyone who already owns/equips Royal Court keeps it,
-    // since it's still a real, unlockable catalog entry.
+    // Royal Court is achievement-only, no price — Nocturne Deck, which
+    // briefly shared this unlock string and took the shop slot, has been
+    // deleted from the game entirely (id, art, everything). Nothing else
+    // pointed at cardfront_nocturne, so removing it needed no further
+    // cleanup here.
     { id: 'cardfront_royal_court', name: 'Royal Court',  unlock: 'ach_queen_hunter' },
-    // Real illustrated art (52 unique card faces + court portraits),
-    // cropped from a reference sheet rather than drawn in CSS — see
-    // cardFrontArtImg client-side for the loading contract. Takes over
-    // Royal Court's old price/unlock slot in the shop.
-    { id: 'cardfront_nocturne',    name: 'Nocturne Deck', unlock: 'ach_queen_hunter', price: CREDIT_PRICES.common },
     // TEMPORARY: both un-gated (no price) so the just-fixed Noir crop and
     // the new Bold Deck can be checked in-game directly, no credits
     // needed. Real gates, to restore before real players see this:

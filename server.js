@@ -1489,6 +1489,16 @@ const COSMETICS = {
     { id: 'title_grandmaster',       name: 'The Grandmaster',     rankTier: 'grandmaster' },
     { id: 'title_the_legend',        name: 'The Legend',          rankTier: 'legend' },
   ],
+  // Portrait avatars, derived from AVATAR_COLLECTIONS rather than listed
+  // twice — same reasoning as crests/rankSets above. A getter because
+  // AVATAR_COLLECTIONS/PRICED_AVATAR_IDS are defined further down the
+  // file; deferred until first read, same as those two.
+  get avatars() {
+    return AVATAR_COLLECTIONS.flatMap(c => c.avatars.map(([id, name]) => ({
+      id, name, unlock: null,
+      price: PRICED_AVATAR_IDS.has(id) ? AVATAR_PRICE : undefined,
+    })));
+  },
 };
 
 // Rank titles unlock at a tier and STAY unlocked — RANK_TABLE's order is
@@ -1574,6 +1584,15 @@ const AVATAR_COLLECTIONS = [
 const AVATAR_IDS = new Set(
   AVATAR_COLLECTIONS.flatMap(c => c.avatars.map(a => a[0]))
 );
+// The original 7 (charmer..closer) stay free, matching how they shipped.
+// The 9 added later are shop-exclusive at a flat 500 credits — no
+// achievement route, same unlock:null+price shape cardfront_noir
+// established, just cheaper since there are nine of them rather than one.
+const AVATAR_PRICE = 500;
+const PRICED_AVATAR_IDS = new Set([
+  'regular_belle', 'regular_countess', 'regular_envoy', 'regular_baron', 'regular_castaway',
+  'regular_rookie', 'regular_sheikh', 'regular_duke', 'regular_reveler',
+]);
 
 // The single evaluation point. Everything downstream — the Achievements
 // tab, every cosmetic picker, and save-time validation — reads this one
@@ -1700,6 +1719,7 @@ function cosmeticsFor(achievements, stats, purchases) {
     titles: mark(COSMETICS.titles),
     rankSets: mark(COSMETICS.rankSets),
     tableThemes: mark(COSMETICS.tableThemes),
+    avatars: mark(COSMETICS.avatars),
   };
 }
 
@@ -2821,7 +2841,19 @@ io.on('connection', (socket) => {
     try {
       const account = await db.findAccountByToken(token);
       if (!account) return socket.emit('authError', { msg: 'Your session expired — log in again.' });
-      const updated = await db.updateProfile(account.id, { nickname: nick, avatar: sanitizeAvatar(avatar) });
+      // sanitizeAvatar only checks the id is a KNOWN portrait/emoji — it
+      // doesn't know about price. A crafted message asking for a locked
+      // portrait avatar is re-validated here, same "server re-derives
+      // unlock state" rule saveCosmetics already applies to every other
+      // cosmetic: fall back to whatever they were already wearing rather
+      // than erroring out and blocking the nickname change too.
+      let finalAvatar = sanitizeAvatar(avatar);
+      if (finalAvatar) {
+        const { catalog } = await loadPlayerCosmetics(account.id);
+        const found = catalog.avatars.find(a => a.id === finalAvatar);
+        if (found && !found.unlocked) finalAvatar = account.avatar;
+      }
+      const updated = await db.updateProfile(account.id, { nickname: nick, avatar: finalAvatar });
       socket.emit('authOk', { token, account: db.toPublic(updated) });
     } catch (e) {
       console.error('updateProfile error:', e.message);
@@ -3199,9 +3231,9 @@ io.on('connection', (socket) => {
     try {
       const account = await db.findAccountByToken(token);
       if (!account) return socket.emit('shopError', { msg: 'Your session expired — log in again.' });
-      // Only the three purchasable categories are even searched, so an id
+      // Only the four purchasable categories are even searched, so an id
       // from any other category simply isn't found.
-      const item = [...COSMETICS.scenes, ...COSMETICS.cardFronts, ...COSMETICS.tableThemes].find(c => c.id === itemId);
+      const item = [...COSMETICS.scenes, ...COSMETICS.cardFronts, ...COSMETICS.tableThemes, ...COSMETICS.avatars].find(c => c.id === itemId);
       if (!item || !item.price) return socket.emit('shopError', { msg: "That item isn't for sale." });
       const res = await db.purchaseItem(account.id, item.id, item.price);
       if (!res.ok) {

@@ -1409,6 +1409,19 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
   border-color:var(--gold);background:rgba(var(--ddp-brass-rgb),.12);
   box-shadow:0 0 0 2px rgba(var(--ddp-brass-rgb),.3),0 0 14px rgba(var(--ddp-brass-rgb),.35);
 }
+/* Rendered but not selectable — same "visible, not equippable" treatment
+   as every other locked cosmetic (.cos-item.locked dims its thumb the
+   same way). Cursor stays default rather than pointer since tapping it
+   only pops a toast pointing at the Shop, not an equip. */
+.avatar-opt.locked{cursor:default}
+.avatar-opt.locked .av-img{filter:grayscale(.85) brightness(.55)}
+.avatar-opt.locked:active{transform:none}
+.avatar-opt-lock{
+  position:absolute;top:3px;right:3px;z-index:2;
+  width:16px;height:16px;border-radius:50%;display:grid;place-items:center;
+  font-size:.56rem;line-height:1;
+  background:rgba(var(--ddp-scrim-rgb),.72);border:1px solid rgba(var(--ddp-gloss-rgb),.22);
+}
 
 /* ── hero player card ── */
 .profile-hero{
@@ -6930,11 +6943,26 @@ function updateMenuProfileUI(){
    its .open rule is display:block now. `pickAvatar` and the .sel toggle
    are untouched: a portrait is selected exactly the way an emoji is,
    the stored value is just an id instead of a character. */
+// A locked avatar's info comes from cosState.catalog.avatars, the SAME
+// unlocked/price data every other cosmetic picker already reads — 9 of
+// the 16 now carry a real price (see server.js's PRICED_AVATAR_IDS). Until
+// cosState has loaded (or for a guest, who can never open this picker —
+// see toggleAvatarPicker) there's nothing to gate on, so everything reads
+// as unlocked rather than flashing every avatar locked for a moment.
+function avatarLockInfo(id){
+  const list=cosState&&cosState.catalog&&cosState.catalog.avatars;
+  const found=list&&list.find(a=>a.id===id);
+  return found?{locked:!found.unlocked,price:found.price}:{locked:false,price:0};
+}
 function renderAvatarGrid(){
   const el=$('avatar-grid'); if(!el) return;
-  const opt=(val,label,inner)=>
-    `<div class="avatar-opt${val===draftAvatar?' sel':''}" role="button" tabindex="0"`+
-    ` title="${esc(label)}" aria-label="${esc(label)}" onclick="pickAvatar('${val}')">${inner}</div>`;
+  const opt=(val,label,inner)=>{
+    const {locked,price}=avatarLockInfo(val);
+    const title=locked?`${label} — ${fmtCredits(price)} in the Shop`:label;
+    return `<div class="avatar-opt${val===draftAvatar?' sel':''}${locked?' locked':''}" role="button" tabindex="0"`+
+      ` title="${esc(title)}" aria-label="${esc(title)}" onclick="pickAvatar('${val}',${locked})">${inner}`+
+      (locked?`<span class="avatar-opt-lock">🔒</span>`:'')+`</div>`;
+  };
   let h='';
   for(const c of AVATAR_COLLECTIONS){
     h+=`<div class="sec-label av-sec">${esc(c.name)}</div><div class="av-row">`
@@ -6943,7 +6971,11 @@ function renderAvatarGrid(){
   }
   el.innerHTML=h;
 }
-function pickAvatar(a){
+function pickAvatar(a,locked){
+  // Rendered but not selectable — same "visible, not equippable" rule the
+  // rest of the app's locked cosmetics already follow (see cosItemHTML).
+  // Buying is the Shop's job; this just points there.
+  if(locked){ toast('pv-saved','Buy this avatar in the Shop first.'); return; }
   draftAvatar=(draftAvatar===a)?'':a;   // tap again to clear
   renderAvatarGrid();
   updateAvatarPreview();
@@ -7498,10 +7530,16 @@ socket.on('creditsOk',d=>{ setCreditBalance(d.guest?0:d.balance); });
 // Shop is (re)entered — same "stale sub-tab from a return visit" reasoning
 // switchAccountTab/switchCosTab already apply on My Account.
 let shopCat='tableTheme';
+// label: the empty-state noun. catalogKey: which cosState.catalog array
+// this tab reads. Avatars now carry a real price on 9 of the 16 (see
+// server.js's AVATAR_PRICE/PRICED_AVATAR_IDS) so this tab is a purchase
+// list exactly like the other three — equipping still happens from My
+// Account's own avatar picker, same as every other cosmetic category.
 const SHOP_CATS={
-  tableTheme:{label:'theme',kind:'tableTheme'},
-  scene:{label:'background',kind:'scene'},
-  cardFront:{label:'card design',kind:'cardFront'},
+  tableTheme:{label:'theme',kind:'tableTheme',catalogKey:'tableThemes'},
+  scene:{label:'background',kind:'scene',catalogKey:'scenes'},
+  avatar:{label:'avatar',kind:'avatar',catalogKey:'avatars'},
+  cardFront:{label:'card design',kind:'cardFront',catalogKey:'cardFronts'},
 };
 
 function goShop(){
@@ -7523,11 +7561,7 @@ function switchShopCat(cat){
 // Renders ONE category at a time (see .cos-tabs in the Shop markup) — the
 // four boxes at the top replace what used to be three stacked
 // "Table themes"/"Backgrounds"/"Card designs" sections, so there's no
-// longer a reason to loop over all of them here. Avatars are a special
-// case: they carry no price/unlock in COSMETICS at all (always free — see
-// AVATAR_COLLECTIONS), so that tab is a straight equip-from-anywhere
-// browser rather than a purchase list, the one thing this function still
-// branches on.
+// longer a reason to loop over all of them here.
 function renderShop(){
   const wrap=$('shop-panels');
   const tabs=$('shop-tabs');
@@ -7536,16 +7570,8 @@ function renderShop(){
   if(tabs) tabs.style.display=ready?'flex':'none';
   if(!ready){ wrap.innerHTML=''; return; }
 
-  if(shopCat==='avatar'){
-    wrap.innerHTML=`<div class="cos-grid">`
-      +AVATAR_COLLECTIONS.flatMap(c=>c.avatars).map(([id,name])=>avatarShopItemHTML(id,name)).join('')
-      +`</div>`;
-    return;
-  }
-
-  const {label,kind}=SHOP_CATS[shopCat];
-  const list=cosState.catalog[shopCat==='tableTheme'?'tableThemes':shopCat==='scene'?'scenes':'cardFronts'];
-  const forSale=list.filter(c=>c.price&&!c.unlocked);
+  const {label,kind,catalogKey}=SHOP_CATS[shopCat];
+  const forSale=cosState.catalog[catalogKey].filter(c=>c.price&&!c.unlocked);
   wrap.innerHTML=forSale.length
     ? `<div class="cos-grid">`+forSale.map(c=>shopItemHTML(kind,c)).join('')+`</div>`
       +`<p class="pick-hint">Buying unlocks it immediately &mdash; equip anything you own from My Account.</p>`
@@ -7560,7 +7586,9 @@ function shopItemHTML(kind,item){
     ? `<span class="cos-thumb scene-art" data-scene="${item.id}">${sceneArtImg(item.id)}</span>`
     : kind==='tableTheme'
       ? `<span class="cos-thumb">${themeSwatchThumb(item.id)}</span>`
-      : `<span class="cos-thumb">${cardFrontThumb(item.id)}</span>`;
+      : kind==='avatar'
+        ? `<span class="cos-thumb">${avatarHTML(item.id,item.name,true)}</span>`
+        : `<span class="cos-thumb">${cardFrontThumb(item.id)}</span>`;
   return `<div class="cos-item deco-box">
     ${thumb}
     <span class="cos-body"><span class="cos-name">${esc(item.name)}</span>
@@ -7568,35 +7596,6 @@ function shopItemHTML(kind,item){
       <button class="cos-buy"${afford?'':' disabled'} onclick="buyCosmetic('${item.id}')">${afford?'Buy':'Not enough'}</button>
     </span>
   </div>`;
-}
-
-// Avatars have no price or unlock in COSMETICS — they're always free (see
-// AVATAR_COLLECTIONS' own note) — so this tab isn't a purchase list like
-// the other three, it's a straight equip browser. Mirrors cosItemHTML's
-// equip-on-click shape (a <button>, an .equipped state) rather than
-// shopItemHTML's buy-button shape, since there's nothing to buy here.
-function avatarShopItemHTML(id,name){
-  const equipped=!!account&&account.avatar===id;
-  return `<button class="cos-item deco-box${equipped?' equipped':''}" type="button" onclick="equipAvatarFromShop('${id}')">
-    <span class="cos-thumb">${avatarHTML(id,name,true)}</span>
-    ${equipped?`<span class="cos-flag">✓</span>`:''}
-    <span class="cos-body"><span class="cos-name">${esc(name)}</span>
-      <span class="cos-status">${equipped?'Equipped':'Tap to equip'}</span>
-    </span>
-  </button>`;
-}
-function equipAvatarFromShop(id){
-  if(!account||!accountToken||account.avatar===id) return;
-  SFX.play('click');
-  lastAuthAction='update';
-  // Optimistic: updateProfile round-trips through authOk before the
-  // server's copy of `account` lands, and the tap should read as
-  // immediate — same reasoning savePersonal()'s account branch already
-  // has, just applied to a single field instead of the whole form.
-  account.avatar=id;
-  renderShop();
-  updateMenuProfileUI();
-  socket.emit('updateProfile',{token:accountToken,nickname:account.nickname,avatar:id});
 }
 
 function buyCosmetic(itemId){
@@ -8097,6 +8096,10 @@ socket.on('profileCosmeticsOk',d=>{
   renderAchievements();
   renderHeroCosmetics();
   renderShop();
+  // Avatar lock state (which of the 9 priced ones are still locked) lives
+  // in this same catalog — re-render so the picker reflects a purchase
+  // made from the Shop without needing My Account to be reopened.
+  renderAvatarGrid();
   const shopLoad=$('shop-loading');
   if(shopLoad) shopLoad.style.display='none';
   if(d.fresh&&d.fresh.length){

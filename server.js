@@ -1398,28 +1398,65 @@ const COSMETICS = {
     { id: 'theme_sable',      name: 'Sable Royale', unlock: null, price: THEME_PRICE },
     { id: 'theme_riviera',    name: 'Riviera',      unlock: null, price: THEME_PRICE },
   ],
+  // REPLACED WHOLESALE — the eight original scenes (Velvet Room, Rooftop,
+  // Grand Library, Winter Casino, Moon Room, Garden, Train, Observatory)
+  // are gone, art AND ids, in favour of eight real photographic rooms.
+  // Not deprecated gradually: their .webp files are deleted from
+  // public/scenes/ too, same call as the House Regulars avatar swap.
+  //
+  // `scene_observatory` is the ONE id carried over, deliberately: it is
+  // the same room re-arted rather than a different place, so reusing the
+  // id preserves anyone who already bought or earned it. The other seven
+  // are genuinely different rooms and take new ids — which means a player
+  // who owned one of those loses that specific purchase, since
+  // player_purchases is keyed on item_id and the old id no longer resolves.
+  // Accepted rather than migrated: retiring a cosmetic is already
+  // documented as safe (filterEquipped drops an unknown id on read, so a
+  // stale equip falls back to the default instead of rendering nothing),
+  // and a purchase-id remap table would be a permanent piece of
+  // bookkeeping for a one-off art swap.
+  //
+  // Shape is position-for-position identical to the set it replaces — one
+  // free default, two shop-exclusive, five achievement-gated-and-priced —
+  // so no unlock economics changed here, only the art. The achievement
+  // pairings got MORE apt in the swap, not less: a casino for "win games"
+  // (ach_the_house) and a moonlit balcony for ach_moon_chaser both read
+  // straight off the achievement's own name.
+  // ┌──────────────────────────────────────────────────────────────────┐
+  // │ TEMPORARY — ALL EIGHT SCENES ARE UN-GATED SO THE NEW ART CAN BE  │
+  // │ PREVIEWED IN GAME. REVERT BEFORE THIS REACHES REAL PLAYERS.      │
+  // └──────────────────────────────────────────────────────────────────┘
+  // Exactly the same temporary state the previous scene set was shipped in
+  // before the shop existed (see dedf411) — `unlock:null` with no `price`
+  // is what cosmeticsFor's `unlocked` formula reads as "free to everyone".
+  //
+  // TO RESTORE, replace the array below with this — these are the real,
+  // intended gates and they are the only thing being suppressed:
+  //   { id: 'scene_moulin_rouge',   name: 'The Moulin Rouge',   unlock: null },
+  //   { id: 'scene_holiday',        name: 'Holiday',            unlock: null, price: CREDIT_PRICES.rare },
+  //   { id: 'scene_victorian_room', name: 'The Victorian Room', unlock: null, price: CREDIT_PRICES.rare },
+  //   { id: 'scene_noir_casino',    name: 'The Noir Casino',    unlock: 'ach_the_house',    price: CREDIT_PRICES.rare },
+  //   { id: 'scene_moon_balcony',   name: 'The Moon Balcony',   unlock: 'ach_moon_chaser',  price: CREDIT_PRICES.rare },
+  //   { id: 'scene_conservatory',   name: 'The Conservatory',   unlock: 'ach_heartbreaker', price: CREDIT_PRICES.rare },
+  //   { id: 'scene_theater',        name: 'The Theater',        unlock: 'ach_the_dealer',   price: CREDIT_PRICES.rare },
+  //   { id: 'scene_observatory',    name: 'The Observatory',    unlock: 'ach_high_roller',  price: CREDIT_PRICES.rare },
+  //
+  // TWO CONSEQUENCES OF RESTORING, both already documented behaviour:
+  //  1. Anyone who equipped a scene they haven't actually earned is
+  //     dropped back to the default by filterEquipped on the next read.
+  //     That is the function working as designed, not a bug.
+  //  2. With no `price`, these vanish from the Shop entirely while
+  //     un-gated — renderShop only lists priced items. They come back
+  //     the moment the prices above are restored.
   scenes: [
-    { id: 'scene_velvet_room',   name: 'The Velvet Room',  unlock: null },
-    // The Observer (ach_observer), the achievement this used to unlock off,
-    // was removed outright — same shop-exclusive fallback as The Grand
-    // Library got when First Hand was removed (see that comment for why a
-    // dangling unlock string would have behaved identically anyway).
-    { id: 'scene_rooftop',       name: 'The Rooftop',      unlock: null,     price: CREDIT_PRICES.rare },
-    // First Hand (ach_card_master), the achievement this used to unlock
-    // off, was removed outright — no replacement stat assigned, so this
-    // reverts to shop-exclusive (unlock:null + price), the same shape
-    // cardfront_noir already established for "purchase only, no free
-    // route". Functionally this changed nothing on its own: cosmeticsFor's
-    // `unlocked` formula already required BOTH !unlock and !price to give
-    // something away for free, so a priced item with a dangling unlock
-    // string behaved identically to unlock:null — this just says so
-    // explicitly instead of leaving a reference to a deleted id.
-    { id: 'scene_grand_library', name: 'The Grand Library', unlock: null, price: CREDIT_PRICES.rare },
-    { id: 'scene_winter_casino', name: 'The Winter Casino', unlock: 'ach_the_house',   price: CREDIT_PRICES.rare },
-    { id: 'scene_moon_room',     name: 'The Moon Room',    unlock: 'ach_moon_chaser',  price: CREDIT_PRICES.rare },
-    { id: 'scene_garden',        name: 'The Garden',       unlock: 'ach_heartbreaker', price: CREDIT_PRICES.rare },
-    { id: 'scene_train',         name: 'The Train',        unlock: 'ach_the_dealer',   price: CREDIT_PRICES.rare },
-    { id: 'scene_observatory',   name: 'The Observatory',  unlock: 'ach_high_roller',  price: CREDIT_PRICES.rare },
+    { id: 'scene_moulin_rouge',   name: 'The Moulin Rouge',   unlock: null },
+    { id: 'scene_holiday',        name: 'Holiday',            unlock: null },
+    { id: 'scene_victorian_room', name: 'The Victorian Room', unlock: null },
+    { id: 'scene_noir_casino',    name: 'The Noir Casino',    unlock: null },
+    { id: 'scene_moon_balcony',   name: 'The Moon Balcony',   unlock: null },
+    { id: 'scene_conservatory',   name: 'The Conservatory',   unlock: null },
+    { id: 'scene_theater',        name: 'The Theater',        unlock: null },
+    { id: 'scene_observatory',    name: 'The Observatory',    unlock: null },
   ],
   cardFronts: [
     { id: 'cardfront_standard',    name: 'Classic',      unlock: null },
@@ -1440,6 +1477,10 @@ const COSMETICS = {
     // the epic tier. This is the first cosmetic with no free route —
     // see the `unlocked` formula's comment above for what that required.
     { id: 'cardfront_noir',        name: 'Noir Casino',   unlock: null, price: CREDIT_PRICES.epic },
+    // Shop-exclusive like Noir — no achievement route. Priced a tier
+    // below it (rare, not epic): a bold graphic re-skin, not a fully
+    // illustrated portrait deck like Nocturne/Noir.
+    { id: 'cardfront_bold',        name: 'Bold Deck',     unlock: null, price: CREDIT_PRICES.rare },
   ],
   // Crests are 1:1 with achievements by design (the brief's whole point:
   // a crest IS the visible proof of an achievement), so they're derived
@@ -1738,7 +1779,7 @@ function filterEquipped(equipped, catalog) {
   // lower set explicitly is still honoured, since ok() runs first.
   const highestRank = [...catalog.rankSets].reverse().find(r => r.unlocked);
   return {
-    scene: ok(catalog.scenes, equipped.scene) || 'scene_velvet_room',
+    scene: ok(catalog.scenes, equipped.scene) || 'scene_moulin_rouge',
     cardFront: ok(catalog.cardFronts, equipped.cardFront) || 'cardfront_standard',
     crest: ok(catalog.crests, equipped.crest),
     // Second, independent crest slot — same validation as the first, and

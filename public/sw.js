@@ -28,7 +28,15 @@
 // mark) took over, i.e. two different pictures back to back on startup.
 // Same in-place-overwrite trap as v8: bumping is what actually forces a
 // re-fetch of the new bytes under those existing filenames.
-const CACHE = 'ddp-v10';
+// v11: the eight table backgrounds were replaced wholesale. Seven landed
+// on NEW filenames (moulin_rouge/holiday/victorian_room/noir_casino/
+// moon_balcony/conservatory/theater .webp), which need no bump — a new
+// URL was never cached. But `observatory.webp` KEPT its filename with new
+// bytes, which is exactly the v8 trap again: cache-first with no
+// revalidation means a returning player who ever loaded the old
+// Observatory would keep serving it forever and never even request the
+// new one. One in-place overwrite is enough to require the bump.
+const CACHE = 'ddp-v11';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
                 '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 

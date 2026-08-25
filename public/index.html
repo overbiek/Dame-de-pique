@@ -2298,141 +2298,153 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
   object-fit:cover;object-position:center;z-index:1;pointer-events:none;
 }
 
-/* 4.1 The Velvet Room — bordeaux curtains, brass lamps, dark wood */
-.scene-art[data-scene="scene_velvet_room"]{
+/* The eight below were retuned wholesale alongside the photographic art
+   they now sit under — each ramp and glow is sampled from its own .webp
+   (band means, brightest-pixel position) rather than invented, so the
+   fallback reads as a blurred version of the real room instead of a
+   different room that happens to share a name.
+   All eight follow ONE structure, which is what keeps them predictable:
+   the base `background` carries the vertical ramp, the light sources as
+   radial glows, and any edge darkening; `::before` carries a SINGLE
+   textural layer that can therefore take a single mask cleanly. Splitting
+   it that way matters — a mask on ::before applies to every layer in it,
+   so mixing "edge columns" and "a masked band" in one pseudo-element
+   silently clips the columns too. */
+
+/* 4.1 The Moulin Rouge — crimson velvet, gold chandelier overhead, drapes
+   down both edges. The free default. */
+.scene-art[data-scene="scene_moulin_rouge"]{
   background:
-    radial-gradient(38% 46% at 8% 26%,rgba(238,208,142,.34),transparent 68%),
-    radial-gradient(38% 46% at 92% 26%,rgba(238,208,142,.34),transparent 68%),
-    linear-gradient(180deg,#321018 0%,#4A1320 42%,#241016 78%,#171411 100%);
+    radial-gradient(30% 22% at 50% 3%,rgba(238,208,142,.55),transparent 72%),
+    radial-gradient(34% 42% at 5% 44%,rgba(150,26,44,.42),transparent 70%),
+    radial-gradient(34% 42% at 95% 44%,rgba(150,26,44,.42),transparent 70%),
+    linear-gradient(180deg,#2D100B 0%,#240806 38%,#190604 72%,#300D0B 100%);
 }
-.scene-art[data-scene="scene_velvet_room"]::before{
-  background:
-    repeating-linear-gradient(90deg,rgba(23,20,17,.42) 0 2.2%,transparent 2.2% 5.4%),
-    linear-gradient(90deg,#641A2A 0 17%,transparent 17% 83%,#641A2A 83% 100%);
-  -webkit-mask-image:linear-gradient(90deg,#000 0 20%,transparent 30% 70%,#000 80% 100%);
-  mask-image:linear-gradient(90deg,#000 0 20%,transparent 30% 70%,#000 80% 100%);
-  opacity:.8;
+.scene-art[data-scene="scene_moulin_rouge"]::before{
+  /* curtain folds, masked to the two edges the drapes actually hang in */
+  background:repeating-linear-gradient(90deg,rgba(20,5,6,.5) 0 2%,rgba(94,21,34,.85) 2% 5%);
+  -webkit-mask-image:linear-gradient(90deg,#000 0 17%,transparent 29% 71%,#000 83% 100%);
+  mask-image:linear-gradient(90deg,#000 0 17%,transparent 29% 71%,#000 83% 100%);
+  opacity:.82;
 }
 
-/* 4.2 The Rooftop — Deco skyline, moon, night haze */
-.scene-art[data-scene="scene_rooftop"]{
+/* 4.2 Holiday — Riviera sunset: sun low on the left, warm terrace stone,
+   palms silhouetted at both edges. One of the two BRIGHT scenes (centre
+   luminance ~140 against the others' 6-50), which the shared ::after
+   scrim is what keeps card-safe. */
+.scene-art[data-scene="scene_holiday"]{
   background:
-    radial-gradient(14% 20% at 78% 17%,rgba(237,228,210,.85),rgba(237,228,210,.16) 62%,transparent 76%),
-    linear-gradient(180deg,#0A1424 0%,#132239 44%,#1E2C42 74%,#0C1420 100%);
+    radial-gradient(9% 11% at 19% 43%,rgba(255,247,216,.95),rgba(255,196,110,.38) 56%,transparent 74%),
+    radial-gradient(58% 32% at 26% 46%,rgba(255,148,66,.38),transparent 78%),
+    radial-gradient(22% 46% at 2% 30%,rgba(40,18,10,.55),transparent 72%),
+    radial-gradient(22% 46% at 98% 30%,rgba(40,18,10,.55),transparent 72%),
+    linear-gradient(180deg,#774544 0%,#B96B3F 36%,#AB5C37 68%,#8E4E38 100%);
 }
-.scene-art[data-scene="scene_rooftop"]::before{
-  top:auto;height:46%;
-  background:
-    repeating-linear-gradient(90deg,
-      #050A12 0 6%,transparent 6% 8%,#070E19 8% 12%,transparent 12% 15%,
-      #04080F 15% 22%,transparent 22% 24%),
-    linear-gradient(180deg,transparent 0%,#050A12 34%);
-  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 38%);
-  mask-image:linear-gradient(180deg,transparent 0,#000 38%);
+.scene-art[data-scene="scene_holiday"]::before{
+  /* the lit coastline strip along the horizon */
+  background:repeating-linear-gradient(90deg,rgba(255,206,132,.75) 0 .4%,transparent .4% 2.6%);
+  -webkit-mask-image:linear-gradient(180deg,transparent 0 45%,#000 48% 51%,transparent 55%);
+  mask-image:linear-gradient(180deg,transparent 0 45%,#000 48% 51%,transparent 55%);
 }
 
-/* 4.3 The Grand Library — symmetric shelves, green lamps */
-.scene-art[data-scene="scene_grand_library"]{
+/* 4.3 The Victorian Room — cream marble and gilt, daylight from the left.
+   The brightest scene in the set (centre luminance ~226). */
+.scene-art[data-scene="scene_victorian_room"]{
   background:
-    radial-gradient(26% 30% at 22% 34%,rgba(96,200,150,.30),transparent 70%),
-    radial-gradient(26% 30% at 78% 34%,rgba(96,200,150,.30),transparent 70%),
-    linear-gradient(180deg,#2A1D12 0%,#3A2717 46%,#241809 80%,#150E07 100%);
+    radial-gradient(42% 44% at 46% 32%,rgba(255,251,242,.85),transparent 78%),
+    radial-gradient(20% 40% at 2% 22%,rgba(255,248,232,.75),transparent 70%),
+    linear-gradient(180deg,#CAAE8F 0%,#DCC7AD 38%,#DECAB2 70%,#DAC5AE 100%);
 }
-.scene-art[data-scene="scene_grand_library"]::before{
-  background:
-    repeating-linear-gradient(90deg,
-      rgba(196,158,88,.34) 0 1.4%,rgba(100,26,42,.42) 1.4% 3%,
-      rgba(20,14,7,.5) 3% 4.4%,transparent 4.4% 6%),
-    repeating-linear-gradient(180deg,transparent 0 26%,rgba(196,158,88,.20) 26% 27.4%);
-  -webkit-mask-image:linear-gradient(90deg,#000 0 26%,transparent 40% 60%,#000 74% 100%);
-  mask-image:linear-gradient(90deg,#000 0 26%,transparent 40% 60%,#000 74% 100%);
+.scene-art[data-scene="scene_victorian_room"]::before{
+  /* gilt panel mouldings down both walls */
+  background:repeating-linear-gradient(90deg,rgba(178,142,74,.45) 0 .5%,transparent .5% 7%);
+  -webkit-mask-image:linear-gradient(90deg,#000 0 20%,transparent 32% 68%,#000 80% 100%);
+  mask-image:linear-gradient(90deg,#000 0 20%,transparent 32% 68%,#000 80% 100%);
+  opacity:.7;
 }
 
-/* 4.4 The Winter Casino — warm room, cold windows at the edges */
-.scene-art[data-scene="scene_winter_casino"]{
+/* 4.4 The Noir Casino — near-black room, chandeliers in the upper corners,
+   paired sconces on the pilasters, smoke through the middle */
+.scene-art[data-scene="scene_noir_casino"]{
   background:
-    radial-gradient(46% 52% at 50% 46%,rgba(196,158,88,.22),transparent 74%),
-    linear-gradient(180deg,#3A1420 0%,#4C1A26 40%,#2A1017 78%,#160B10 100%);
+    radial-gradient(16% 20% at 4% 14%,rgba(238,208,142,.45),transparent 74%),
+    radial-gradient(16% 20% at 96% 14%,rgba(238,208,142,.45),transparent 74%),
+    radial-gradient(40% 34% at 50% 34%,rgba(120,110,96,.14),transparent 76%),
+    linear-gradient(180deg,#100C08 0%,#16100B 40%,#0C0906 74%,#130D08 100%);
 }
-.scene-art[data-scene="scene_winter_casino"]::before{
+.scene-art[data-scene="scene_noir_casino"]::before{
   background:
-    linear-gradient(180deg,rgba(176,206,222,.55) 0 58%,transparent 58%),
-    repeating-linear-gradient(90deg,transparent 0 3%,rgba(20,11,16,.9) 3% 4%);
-  -webkit-mask-image:
-    radial-gradient(11% 30% at 7% 34%,#000 62%,transparent 70%),
-    radial-gradient(11% 30% at 27% 34%,#000 62%,transparent 70%),
-    radial-gradient(11% 30% at 73% 34%,#000 62%,transparent 70%),
-    radial-gradient(11% 30% at 93% 34%,#000 62%,transparent 70%);
-  mask-image:
-    radial-gradient(11% 30% at 7% 34%,#000 62%,transparent 70%),
-    radial-gradient(11% 30% at 27% 34%,#000 62%,transparent 70%),
-    radial-gradient(11% 30% at 73% 34%,#000 62%,transparent 70%),
-    radial-gradient(11% 30% at 93% 34%,#000 62%,transparent 70%);
-  -webkit-mask-composite:source-over;mask-composite:add;
+    radial-gradient(2.4% 8% at 11% 30%,rgba(255,226,164,.9),transparent 70%),
+    radial-gradient(2.4% 8% at 18% 30%,rgba(255,226,164,.9),transparent 70%),
+    radial-gradient(2.4% 8% at 82% 30%,rgba(255,226,164,.9),transparent 70%),
+    radial-gradient(2.4% 8% at 89% 30%,rgba(255,226,164,.9),transparent 70%);
 }
 
-/* 4.5 The Moon Room — the moon sits OFF-centre, per the brief, so it's
-   never behind the trick cross */
-.scene-art[data-scene="scene_moon_room"]{
+/* 4.5 The Moon Balcony — full moon upper right (OFF-centre, so it's never
+   behind the trick cross), lit city below the balustrade */
+.scene-art[data-scene="scene_moon_balcony"]{
   background:
-    radial-gradient(19% 26% at 80% 24%,rgba(237,228,210,.92),rgba(200,206,224,.28) 58%,transparent 72%),
-    radial-gradient(60% 44% at 80% 24%,rgba(150,175,225,.20),transparent 76%),
-    linear-gradient(180deg,#0A1230 0%,#141F4A 46%,#0B1230 82%,#060A1A 100%);
+    radial-gradient(8% 14% at 72% 10%,rgba(242,246,255,.95),rgba(190,205,235,.30) 55%,transparent 72%),
+    radial-gradient(46% 34% at 72% 10%,rgba(120,150,215,.24),transparent 76%),
+    radial-gradient(24% 50% at 2% 34%,rgba(6,12,24,.6),transparent 72%),
+    linear-gradient(180deg,#13284A 0%,#112648 42%,#0F1B31 74%,#0B1933 100%);
 }
-.scene-art[data-scene="scene_moon_room"]::before{
-  background-image:
-    radial-gradient(circle,rgba(237,228,210,.85) 0 1px,transparent 1.6px),
-    radial-gradient(circle,rgba(237,228,210,.55) 0 1px,transparent 1.6px);
-  background-size:13% 26%,21% 34%;
-  background-position:3% 7%,11% 19%;
-  opacity:.65;
+.scene-art[data-scene="scene_moon_balcony"]::before{
+  /* the lit city band in the middle distance */
+  background:repeating-linear-gradient(90deg,rgba(255,196,110,.6) 0 .5%,transparent .5% 3.2%);
+  -webkit-mask-image:linear-gradient(180deg,transparent 0 40%,#000 45% 51%,transparent 57%);
+  mask-image:linear-gradient(180deg,transparent 0 40%,#000 45% 51%,transparent 57%);
+  opacity:.75;
 }
 
-/* 4.6 The Garden — dark hedged perimeter, a fountain glow below centre */
-.scene-art[data-scene="scene_garden"]{
+/* 4.6 The Conservatory — glasshouse ribs arching overhead, foliage massed
+   at both edges, green light from the far end */
+.scene-art[data-scene="scene_conservatory"]{
   background:
-    radial-gradient(24% 22% at 50% 68%,rgba(196,158,88,.34),transparent 72%),
-    linear-gradient(180deg,#08160F 0%,#12301F 44%,#0C2016 76%,#050D09 100%);
+    radial-gradient(28% 28% at 50% 20%,rgba(120,210,140,.28),transparent 72%),
+    radial-gradient(24% 52% at 2% 40%,rgba(8,16,5,.7),transparent 70%),
+    radial-gradient(24% 52% at 98% 40%,rgba(8,16,5,.7),transparent 70%),
+    linear-gradient(180deg,#132712 0%,#203415 42%,#233116 72%,#0D1A0B 100%);
 }
-.scene-art[data-scene="scene_garden"]::before{
-  background:
-    repeating-linear-gradient(90deg,rgba(6,18,11,.85) 0 4%,rgba(24,58,38,.7) 4% 9%),
-    repeating-linear-gradient(180deg,rgba(6,18,11,.5) 0 8%,transparent 8% 17%);
-  -webkit-mask-image:radial-gradient(64% 58% at 50% 50%,transparent 42%,#000 88%);
-  mask-image:radial-gradient(64% 58% at 50% 50%,transparent 42%,#000 88%);
-}
-
-/* 4.7 The Train — perspective lines lead to the centre, velvet + brass */
-.scene-art[data-scene="scene_train"]{
-  background:
-    conic-gradient(from 210deg at 50% 50%,
-      rgba(196,158,88,.13) 0deg 12deg,transparent 12deg 30deg,
-      rgba(196,158,88,.10) 30deg 42deg,transparent 42deg 60deg),
-    linear-gradient(180deg,#2A1016 0%,#4A1A24 40%,#25121A 78%,#12090D 100%);
-}
-.scene-art[data-scene="scene_train"]::before{
-  background:
-    linear-gradient(180deg,rgba(196,158,88,.42) 0 6%,transparent 6%),
-    linear-gradient(180deg,transparent 0 30%,rgba(12,20,34,.92) 30% 62%,rgba(100,26,42,.65) 62%);
-  -webkit-mask-image:linear-gradient(90deg,#000 0 22%,transparent 34% 66%,#000 78% 100%);
-  mask-image:linear-gradient(90deg,#000 0 22%,transparent 34% 66%,#000 78% 100%);
+.scene-art[data-scene="scene_conservatory"]::before{
+  background:repeating-conic-gradient(from 180deg at 50% 6%,
+    rgba(176,140,72,.32) 0deg 1.2deg,transparent 1.2deg 9deg);
+  -webkit-mask-image:linear-gradient(180deg,#000 0 42%,transparent 64%);
+  mask-image:linear-gradient(180deg,#000 0 42%,transparent 64%);
 }
 
-/* 4.8 The Observatory — dome ribs around the upper perimeter, telescope
-   mass toward a corner */
+/* 4.7 The Theater — Deco proscenium in brass over dark teal, marquee bulbs
+   across the top, city towers at both edges */
+.scene-art[data-scene="scene_theater"]{
+  background:
+    radial-gradient(40% 18% at 50% 5%,rgba(238,196,110,.45),transparent 74%),
+    radial-gradient(18% 44% at 2% 34%,rgba(196,158,88,.20),transparent 72%),
+    radial-gradient(18% 44% at 98% 34%,rgba(196,158,88,.20),transparent 72%),
+    linear-gradient(180deg,#241A09 0%,#0A100D 32%,#0B1210 68%,#130E05 100%);
+}
+.scene-art[data-scene="scene_theater"]::before{
+  /* the marquee bulb run following the top of the arch */
+  background:repeating-linear-gradient(90deg,rgba(255,214,130,.95) 0 .6%,transparent .6% 3.4%);
+  -webkit-mask-image:linear-gradient(180deg,#000 0 8%,transparent 15%);
+  mask-image:linear-gradient(180deg,#000 0 8%,transparent 15%);
+}
+
+/* 4.8 The Observatory — the one id carried over from the retired set (same
+   room, new art). Star dome overhead, brass armillary to the left. */
 .scene-art[data-scene="scene_observatory"]{
   background:
-    radial-gradient(30% 34% at 14% 78%,rgba(196,158,88,.30),transparent 70%),
-    linear-gradient(180deg,#0B1330 0%,#14204A 42%,#0D1734 78%,#060A18 100%);
+    radial-gradient(26% 30% at 12% 38%,rgba(196,158,88,.36),transparent 70%),
+    radial-gradient(24% 28% at 90% 40%,rgba(196,158,88,.22),transparent 72%),
+    linear-gradient(180deg,#0B0F22 0%,#0E1A3C 40%,#101B3C 72%,#0D1631 100%);
 }
 .scene-art[data-scene="scene_observatory"]::before{
   background:
-    repeating-conic-gradient(from 180deg at 50% 96%,
-      rgba(196,158,88,.26) 0deg 1.6deg,transparent 1.6deg 15deg),
-    radial-gradient(circle,rgba(237,228,210,.7) 0 1px,transparent 1.6px);
-  background-size:auto,17% 30%;
-  -webkit-mask-image:radial-gradient(72% 72% at 50% 96%,transparent 46%,#000 82%);
-  mask-image:radial-gradient(72% 72% at 50% 96%,transparent 46%,#000 82%);
+    repeating-conic-gradient(from 180deg at 50% 4%,
+      rgba(196,158,88,.22) 0deg 1.4deg,transparent 1.4deg 13deg),
+    radial-gradient(circle,rgba(237,228,210,.8) 0 1px,transparent 1.7px);
+  background-size:auto,15% 26%;
+  -webkit-mask-image:linear-gradient(180deg,#000 0 34%,transparent 54%);
+  mask-image:linear-gradient(180deg,#000 0 34%,transparent 54%);
 }
 
 /* The live scene layer. Fixed and BEHIND #app (which is z-index:1), so
@@ -2623,9 +2635,19 @@ html[data-cardfront="royal_court"] .card[data-r="K"]:not(.back)::before{
    redundant (the art already draws its own corner rank+suit) and would
    double up visually — hide it. Scoped to .has-art specifically, not to
    the card-front attribute alone, so a card whose art 404s keeps its
-   glyphs exactly like every other front. */
+   glyphs exactly like every other front.
+   One rule per real-art front, not a single data-cardfront-agnostic
+   selector — this shipped Nocturne-only at first (Noir and Bold were
+   added later, see git history), which silently left Noir's glyphs
+   showing through its own art the whole time. List every CARDFRONT_
+   ART_SETS value here explicitly when a new real-art front is added;
+   there's no way to derive this from JS since it's pure CSS. */
 html[data-cardfront="nocturne"] .card.has-art .ix,
-html[data-cardfront="nocturne"] .card.has-art .big{display:none}
+html[data-cardfront="nocturne"] .card.has-art .big,
+html[data-cardfront="noir"] .card.has-art .ix,
+html[data-cardfront="noir"] .card.has-art .big,
+html[data-cardfront="bold"] .card.has-art .ix,
+html[data-cardfront="bold"] .card.has-art .big{display:none}
 /* The picker thumbnail's mini cards, same 24x34 box cf-mini already
    uses for Classic/Royal Court — real crops here instead of CSS, since
    there's no gradient that stands in for an illustrated portrait. */
@@ -6113,20 +6135,22 @@ function initTableTheme(){
    The cache is overwritten by every server response and cleared on
    logout, so it can never keep a cosmetic alive past its account. */
 const SCENE_KEY='ddp.scene', CARDFRONT_KEY='ddp.cardFront';
-const DEFAULT_SCENE='scene_velvet_room', DEFAULT_CARDFRONT='cardfront_standard';
+const DEFAULT_SCENE='scene_moulin_rouge', DEFAULT_CARDFRONT='cardfront_standard';
 // Mirrors the server's COSMETICS registry IDs. Presentation only — being
 // listed here does NOT make something equippable; the server decides.
-const SCENE_IDS=['scene_velvet_room','scene_rooftop','scene_grand_library','scene_winter_casino',
-                 'scene_moon_room','scene_garden','scene_train','scene_observatory'];
-const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court','cardfront_nocturne','cardfront_noir'];
+// Order matches the registry's (free default first, then the two
+// shop-exclusives, then the five achievement-gated).
+const SCENE_IDS=['scene_moulin_rouge','scene_holiday','scene_victorian_room','scene_noir_casino',
+                 'scene_moon_balcony','scene_conservatory','scene_theater','scene_observatory'];
+const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court','cardfront_nocturne','cardfront_noir','cardfront_bold'];
 // The tail of each ID is the CSS hook, so a data-cardfront value stays
 // readable in devtools ("royal_court", not the full ID).
-const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court',cardfront_nocturne:'nocturne',cardfront_noir:'noir'};
+const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court',cardfront_nocturne:'nocturne',cardfront_noir:'noir',cardfront_bold:'bold'};
 // Card fronts with REAL per-card art (as opposed to Royal Court/Classic,
 // which are pure CSS and need no image at all). cardHTML() only emits an
 // <img> when the equipped front is in this set — everyone else pays
 // nothing for this feature, not even an empty element.
-const CARDFRONT_ART_SETS={cardfront_nocturne:'nocturne',cardfront_noir:'noir'};
+const CARDFRONT_ART_SETS={cardfront_nocturne:'nocturne',cardfront_noir:'noir',cardfront_bold:'bold'};
 
 /* ── scene art loading ──
    Exact mirror of the RANK COSMETICS art-loading contract below

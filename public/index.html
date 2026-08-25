@@ -2447,6 +2447,131 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
   mask-image:linear-gradient(180deg,#000 0 34%,transparent 54%);
 }
 
+/* ── 4.9-4.15: a second batch of seven, added after the wholesale swap.
+   Same construction rule as the eight above (ramp + glows on the base,
+   ONE maskable texture on ::before) and same sampling method — every
+   colour below is read off its own .webp, not invented. */
+
+/* 4.9 The Skyline — night terrace over a lit city, moon high centre,
+   lanterns down both sides */
+.scene-art[data-scene="scene_skyline"]{
+  background:
+    radial-gradient(7% 11% at 52% 6%,rgba(226,236,255,.90),rgba(150,180,230,.25) 55%,transparent 74%),
+    radial-gradient(52% 24% at 50% 26%,rgba(255,180,90,.20),transparent 78%),
+    radial-gradient(20% 46% at 3% 46%,rgba(255,176,80,.26),transparent 70%),
+    radial-gradient(20% 46% at 97% 46%,rgba(255,176,80,.26),transparent 70%),
+    linear-gradient(180deg,#071321 0%,#181A1D 38%,#201F1F 70%,#14161A 100%);
+}
+.scene-art[data-scene="scene_skyline"]::before{
+  background:repeating-linear-gradient(90deg,rgba(255,196,120,.7) 0 .4%,transparent .4% 2.4%);
+  -webkit-mask-image:linear-gradient(180deg,transparent 0 19%,#000 23% 30%,transparent 34%);
+  mask-image:linear-gradient(180deg,transparent 0 19%,#000 23% 30%,transparent 34%);
+}
+
+/* 4.10 The Waterfall — jungle lagoon, teal water band across the middle
+   distance, falls right of centre */
+.scene-art[data-scene="scene_waterfall"]{
+  background:
+    radial-gradient(12% 22% at 63% 16%,rgba(190,240,245,.50),transparent 72%),
+    radial-gradient(44% 15% at 50% 33%,rgba(40,190,180,.42),transparent 78%),
+    radial-gradient(22% 48% at 2% 40%,rgba(255,186,92,.26),transparent 70%),
+    radial-gradient(22% 48% at 98% 40%,rgba(255,186,92,.26),transparent 70%),
+    linear-gradient(180deg,#0E1B1D 0%,#1A2923 38%,#2A3331 70%,#1D2322 100%);
+}
+.scene-art[data-scene="scene_waterfall"]::before{
+  background:repeating-linear-gradient(90deg,rgba(120,240,230,.5) 0 .6%,transparent .6% 3%);
+  -webkit-mask-image:linear-gradient(180deg,transparent 0 28%,#000 32% 38%,transparent 43%);
+  mask-image:linear-gradient(180deg,transparent 0 28%,#000 32% 38%,transparent 43%);
+}
+
+/* 4.11 The Throne Room — royal blue and gilt, chandelier overhead,
+   candelabra down both walls */
+.scene-art[data-scene="scene_throne_room"]{
+  background:
+    radial-gradient(16% 14% at 53% 4%,rgba(255,226,150,.75),transparent 74%),
+    radial-gradient(26% 40% at 4% 26%,rgba(255,214,140,.30),transparent 72%),
+    radial-gradient(26% 40% at 96% 26%,rgba(255,214,140,.30),transparent 72%),
+    linear-gradient(180deg,#2B1F16 0%,#34271C 30%,#1C242D 62%,#12151B 100%);
+}
+.scene-art[data-scene="scene_throne_room"]::before{
+  /* candle flames, masked to the two walls they stand against */
+  background:repeating-linear-gradient(90deg,rgba(255,232,170,.85) 0 .5%,transparent .5% 4%);
+  -webkit-mask-image:linear-gradient(90deg,#000 0 16%,transparent 28% 72%,#000 84% 100%);
+  mask-image:linear-gradient(90deg,#000 0 16%,transparent 28% 72%,#000 84% 100%);
+  opacity:.8;
+}
+
+/* 4.12 The Docks — moonlit harbour, lighthouse to the right, lantern-lit
+   quay stone */
+.scene-art[data-scene="scene_docks"]{
+  background:
+    radial-gradient(6% 10% at 39% 13%,rgba(235,242,255,.90),rgba(150,180,225,.25) 55%,transparent 74%),
+    radial-gradient(7% 7% at 66% 8%,rgba(255,222,150,.85),transparent 72%),
+    radial-gradient(22% 44% at 2% 48%,rgba(255,176,80,.22),transparent 70%),
+    radial-gradient(22% 44% at 98% 48%,rgba(255,176,80,.26),transparent 70%),
+    linear-gradient(180deg,#031222 0%,#0F2032 36%,#1D1C20 70%,#101016 100%);
+}
+.scene-art[data-scene="scene_docks"]::before{
+  /* the far shore's window lights along the waterline */
+  background:repeating-linear-gradient(90deg,rgba(255,206,132,.6) 0 .35%,transparent .35% 2.8%);
+  -webkit-mask-image:linear-gradient(180deg,transparent 0 26%,#000 30% 36%,transparent 41%);
+  mask-image:linear-gradient(180deg,transparent 0 26%,#000 30% 36%,transparent 41%);
+}
+
+/* 4.13 The Ashen Gate — the art supplied as "Mordor"; renamed, see the
+   NAMING note in server.js's scenes registry. Lava veins at both edges,
+   fortress gate at the back, cold stone floor centre. */
+.scene-art[data-scene="scene_ashen_gate"]{
+  background:
+    radial-gradient(30% 34% at 8% 54%,rgba(255,110,30,.45),transparent 70%),
+    radial-gradient(30% 34% at 92% 58%,rgba(255,110,30,.45),transparent 70%),
+    radial-gradient(46% 26% at 50% 10%,rgba(200,40,20,.40),transparent 76%),
+    linear-gradient(180deg,#250A0A 0%,#3B100A 34%,#341A15 68%,#1F0E0C 100%);
+}
+.scene-art[data-scene="scene_ashen_gate"]::before{
+  /* molten cracks, kept to the edges so the play area stays cool stone */
+  background:repeating-linear-gradient(114deg,rgba(255,120,36,.55) 0 .5%,transparent .5% 6%);
+  -webkit-mask-image:linear-gradient(90deg,#000 0 18%,transparent 32% 68%,#000 82% 100%);
+  mask-image:linear-gradient(90deg,#000 0 18%,transparent 32% 68%,#000 82% 100%);
+}
+
+/* 4.14 Arabian Nights — desert sunset through carved arches. The third
+   BRIGHT scene (centre luminance ~106), after Holiday and the Victorian
+   Room. */
+.scene-art[data-scene="scene_arabian_nights"]{
+  background:
+    radial-gradient(10% 14% at 13% 13%,rgba(255,244,200,.90),rgba(255,200,110,.35) 55%,transparent 74%),
+    radial-gradient(56% 30% at 45% 22%,rgba(255,186,90,.35),transparent 78%),
+    radial-gradient(20% 44% at 2% 44%,rgba(60,30,10,.45),transparent 72%),
+    radial-gradient(20% 44% at 98% 44%,rgba(60,30,10,.45),transparent 72%),
+    linear-gradient(180deg,#764924 0%,#6F4118 34%,#774116 68%,#5D3110 100%);
+}
+.scene-art[data-scene="scene_arabian_nights"]::before{
+  /* arcade columns framing both sides */
+  background:repeating-linear-gradient(90deg,rgba(70,38,14,.55) 0 1.2%,transparent 1.2% 9%);
+  -webkit-mask-image:linear-gradient(90deg,#000 0 20%,transparent 33% 67%,#000 80% 100%);
+  mask-image:linear-gradient(90deg,#000 0 20%,transparent 33% 67%,#000 80% 100%);
+  opacity:.75;
+}
+
+/* 4.15 The Magic Forest — lantern-lit glade, moss floor, fireflies */
+.scene-art[data-scene="scene_magic_forest"]{
+  background:
+    radial-gradient(30% 26% at 55% 22%,rgba(120,210,150,.28),transparent 74%),
+    radial-gradient(22% 46% at 3% 46%,rgba(255,186,92,.30),transparent 70%),
+    radial-gradient(22% 46% at 97% 46%,rgba(255,186,92,.30),transparent 70%),
+    linear-gradient(180deg,#1F220E 0%,#252710 36%,#2B2909 70%,#1A1807 100%);
+}
+.scene-art[data-scene="scene_magic_forest"]::before{
+  /* fireflies — same two-layer dot trick the old Moon Room used for stars */
+  background-image:
+    radial-gradient(circle,rgba(255,238,160,.85) 0 1px,transparent 1.6px),
+    radial-gradient(circle,rgba(190,255,190,.55) 0 1px,transparent 1.6px);
+  background-size:12% 24%,19% 31%;
+  background-position:4% 9%,13% 21%;
+  opacity:.7;
+}
+
 /* The live scene layer. Fixed and BEHIND #app (which is z-index:1), so
    it can never sit over a card or a control however busy a scene is —
    the brief's "no cosmetic layer captures pointer events" is enforced
@@ -6140,8 +6265,11 @@ const DEFAULT_SCENE='scene_moulin_rouge', DEFAULT_CARDFRONT='cardfront_standard'
 // listed here does NOT make something equippable; the server decides.
 // Order matches the registry's (free default first, then the two
 // shop-exclusives, then the five achievement-gated).
-const SCENE_IDS=['scene_moulin_rouge','scene_holiday','scene_victorian_room','scene_noir_casino',
-                 'scene_moon_balcony','scene_conservatory','scene_theater','scene_observatory'];
+const SCENE_IDS=['scene_moulin_rouge','scene_holiday','scene_victorian_room',
+                 'scene_skyline','scene_waterfall','scene_throne_room','scene_docks',
+                 'scene_ashen_gate','scene_arabian_nights','scene_magic_forest',
+                 'scene_noir_casino','scene_moon_balcony','scene_conservatory',
+                 'scene_theater','scene_observatory'];
 const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court','cardfront_nocturne','cardfront_noir','cardfront_bold'];
 // The tail of each ID is the CSS hook, so a data-cardfront value stays
 // readable in devtools ("royal_court", not the full ID).

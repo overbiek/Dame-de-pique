@@ -1431,10 +1431,22 @@ const COSMETICS = {
   // is what cosmeticsFor's `unlocked` formula reads as "free to everyone".
   //
   // TO RESTORE, replace the array below with this — these are the real,
-  // intended gates and they are the only thing being suppressed:
+  // intended gates and they are the only thing being suppressed. The
+  // second batch of seven are all shop-exclusive on purpose: there are
+  // only five scene-gating achievements and they were already spoken for,
+  // and inventing five more achievements just to gate artwork would put
+  // the cart before the horse. Shop-exclusive (unlock:null + price) is
+  // the shape cardfront_noir established for exactly this.
   //   { id: 'scene_moulin_rouge',   name: 'The Moulin Rouge',   unlock: null },
   //   { id: 'scene_holiday',        name: 'Holiday',            unlock: null, price: CREDIT_PRICES.rare },
   //   { id: 'scene_victorian_room', name: 'The Victorian Room', unlock: null, price: CREDIT_PRICES.rare },
+  //   { id: 'scene_skyline',        name: 'The Skyline',        unlock: null, price: CREDIT_PRICES.rare },
+  //   { id: 'scene_waterfall',      name: 'The Waterfall',      unlock: null, price: CREDIT_PRICES.rare },
+  //   { id: 'scene_throne_room',    name: 'The Throne Room',    unlock: null, price: CREDIT_PRICES.rare },
+  //   { id: 'scene_docks',          name: 'The Docks',          unlock: null, price: CREDIT_PRICES.rare },
+  //   { id: 'scene_ashen_gate',     name: 'The Ashen Gate',     unlock: null, price: CREDIT_PRICES.rare },
+  //   { id: 'scene_arabian_nights', name: 'Arabian Nights',     unlock: null, price: CREDIT_PRICES.rare },
+  //   { id: 'scene_magic_forest',   name: 'The Magic Forest',   unlock: null, price: CREDIT_PRICES.rare },
   //   { id: 'scene_noir_casino',    name: 'The Noir Casino',    unlock: 'ach_the_house',    price: CREDIT_PRICES.rare },
   //   { id: 'scene_moon_balcony',   name: 'The Moon Balcony',   unlock: 'ach_moon_chaser',  price: CREDIT_PRICES.rare },
   //   { id: 'scene_conservatory',   name: 'The Conservatory',   unlock: 'ach_heartbreaker', price: CREDIT_PRICES.rare },
@@ -1448,10 +1460,23 @@ const COSMETICS = {
   //  2. With no `price`, these vanish from the Shop entirely while
   //     un-gated — renderShop only lists priced items. They come back
   //     the moment the prices above are restored.
+  //
+  // NAMING: `scene_ashen_gate` is the art supplied as "Mordor". The
+  // picture itself is generic dark fantasy — a lava fortress gate, no
+  // Tolkien landmark in it — but "Mordor" is a Middle-earth Enterprises
+  // trademark, so the scene ships under a descriptive name instead. Only
+  // the display string and the id differ; the artwork is untouched.
   scenes: [
     { id: 'scene_moulin_rouge',   name: 'The Moulin Rouge',   unlock: null },
     { id: 'scene_holiday',        name: 'Holiday',            unlock: null },
     { id: 'scene_victorian_room', name: 'The Victorian Room', unlock: null },
+    { id: 'scene_skyline',        name: 'The Skyline',        unlock: null },
+    { id: 'scene_waterfall',      name: 'The Waterfall',      unlock: null },
+    { id: 'scene_throne_room',    name: 'The Throne Room',    unlock: null },
+    { id: 'scene_docks',          name: 'The Docks',          unlock: null },
+    { id: 'scene_ashen_gate',     name: 'The Ashen Gate',     unlock: null },
+    { id: 'scene_arabian_nights', name: 'Arabian Nights',     unlock: null },
+    { id: 'scene_magic_forest',   name: 'The Magic Forest',   unlock: null },
     { id: 'scene_noir_casino',    name: 'The Noir Casino',    unlock: null },
     { id: 'scene_moon_balcony',   name: 'The Moon Balcony',   unlock: null },
     { id: 'scene_conservatory',   name: 'The Conservatory',   unlock: null },

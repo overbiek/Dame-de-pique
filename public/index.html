@@ -6331,8 +6331,16 @@ function cardFrontArtImg(c){
   if(!slug) return '';
   const key=slug+'/'+SUIT_ART_NAME[c.suit]+'_'+c.rank;
   if(cardFrontArtMissing[key]) return '';
+  // Eager, not lazy — a card being rendered at all (hand, trick slot,
+  // last-trick peek) is on screen by definition, same reasoning
+  // avatarHTML's own lazy/eager split documents: deferring the fetch
+  // until an intersection-observer callback fires adds a frame or two
+  // even on a cache hit, which is exactly the flash-of-Classic-then-
+  // Bold-pops-in this was fixed for. See preloadCardFrontArt below for
+  // the other half — this alone doesn't help the very first time a
+  // front's art is fetched from cold.
   return `<img class="card-art" src="${cardFrontArtSrc(slug,c.suit,c.rank)}" alt="" aria-hidden="true"`+
-         ` loading="lazy" onload="cardFrontArtLoaded(this)" onerror="cardFrontArtFailed('${key}',this)"/>`;
+         ` loading="eager" onload="cardFrontArtLoaded(this)" onerror="cardFrontArtFailed('${key}',this)"/>`;
 }
 function cardFrontArtLoaded(el){
   const card=el.closest&&el.closest('.card');
@@ -6341,6 +6349,24 @@ function cardFrontArtLoaded(el){
 function cardFrontArtFailed(key,el){
   cardFrontArtMissing[key]=true;
   if(el&&el.remove) el.remove();
+}
+// The other half of the flash fix: warm all 52 files into the browser's
+// own HTTP cache the moment a real-art front is EQUIPPED, not the first
+// time each card happens to get rendered. Without this, the first card of
+// a given rank+suit played after switching decks still has to fetch over
+// the network before cardFrontArtLoaded() can add .has-art, so the plain
+// glyph fallback (or the PREVIOUS deck's art, if that file's still warm)
+// shows for a beat first — reported as "the classic card flashes before
+// Bold renders over it". new Image() never touches the DOM, so warming
+// the cache can't itself cause a layout/paint, and it's a one-time cost
+// per front per session (cardFrontArtPreloaded gates the repeat).
+const cardFrontArtPreloaded={};
+function preloadCardFrontArt(slug){
+  if(!slug||cardFrontArtPreloaded[slug]) return;
+  cardFrontArtPreloaded[slug]=true;
+  for(const suit of SUITS)
+    for(const rank of ['A','2','3','4','5','6','7','8','9','10','J','Q','K'])
+      new Image().src=cardFrontArtSrc(slug,suit,rank);
 }
 
 let equippedScene=DEFAULT_SCENE, equippedCardFront=DEFAULT_CARDFRONT;
@@ -6360,6 +6386,12 @@ function applyScene(id,persist){
 function applyCardFront(id,persist){
   equippedCardFront=CARDFRONT_IDS.includes(id)?id:DEFAULT_CARDFRONT;
   document.documentElement.setAttribute('data-cardfront',CARDFRONT_ATTR[equippedCardFront]);
+  // Single funnel — every equip path (boot from the localStorage cache,
+  // the picker, the server's own confirmation) goes through here, so
+  // this is the one place that needs to know about warming the art
+  // cache. No-ops instantly for Classic/Royal Court (no art) and for a
+  // front already warmed this session.
+  preloadCardFrontArt(CARDFRONT_ART_SETS[equippedCardFront]);
   if(persist!==false){ try{ localStorage.setItem(CARDFRONT_KEY,equippedCardFront); }catch(e){} }
 }
 // A scene is table furniture: it's revealed only on the two screens that

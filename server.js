@@ -505,13 +505,18 @@ function aiSelectPass(G, i) {
   const lowHeartsBeside = c => hand.filter(x => x.suit === '♥' && RV[x.rank] <= 7 && !eqC(x, c)).length;
   // Hard protections: low/mid clubs are safe, plentiful cards worth
   // keeping all game for ducking; hearts this low cost almost nothing
-  // to hold onto; and low/mid spades (2 through J) are the guards that
+  // to hold onto; low/mid spades (2 through J) are the guards that
   // let a spade lead be ducked safely instead of forcing a scoop of
-  // the queen — never pass any of these away.
+  // the queen; and A♦/A♣ are the trick-1 opening leads (see the
+  // `openingAce` rule in applyHardRules and heuristicChoose's own
+  // mirror of it) — passing either away throws away a guaranteed safe
+  // trick-1 lead for whichever opponent receives it. Never pass any of
+  // these away.
   const neverPass = c =>
     (c.suit === '♣' && RV[c.rank] <= 11) ||
     (c.suit === '♥' && RV[c.rank] <= 5) ||
-    (c.suit === '♠' && RV[c.rank] <= 11);
+    (c.suit === '♠' && RV[c.rank] <= 11) ||
+    ((c.suit === '♦' || c.suit === '♣') && c.rank === 'A');
 
   // A club or diamond down to a single card is worth passing on even
   // though it would otherwise be protected: going fully void in that
@@ -691,14 +696,22 @@ function heuristicChoose(G, pi) {
     // a lower spade instead, even though I technically could win.
     let restrictedWinners = winners;
     if (led === '♠' && wantToWin && !amMoonPace && penInTrick === 0) {
+      // The queen herself is a separate, unconditional case: if she's one
+      // of the winners it's because I'm already holding her, so "winning"
+      // with her means personally taking the -26, not risking scooping her
+      // from someone else the way leading/overtaking with A/K does. Strip
+      // her out regardless of position or whether she's surfaced yet —
+      // ducking under with any other loser is always better than a clean
+      // trick's +10 minus her own -26.
+      restrictedWinners = winners.filter(c => c.rank !== 'Q');
+
       const qsOut = G.players.some(p => p.tricks.some(c => c.suit === '♠' && c.rank === 'Q'))
         || trick.some(t => t.card.suit === '♠' && t.card.rank === 'Q');
       const safeToOvertake = trick.length === 3 && !qsOut;
       if (!safeToOvertake) {
-        const withoutTopSpades = winners.filter(c => c.rank !== 'A' && c.rank !== 'K');
-        if (withoutTopSpades.length) restrictedWinners = withoutTopSpades;
-        else wantToWin = false; // only A♠/K♠ would win it, and it's not safe — don't
+        restrictedWinners = restrictedWinners.filter(c => c.rank !== 'A' && c.rank !== 'K');
       }
+      if (!restrictedWinners.length) wantToWin = false; // nothing safe to win with — don't
     }
 
     if (wantToWin && restrictedWinners.length) {
@@ -1029,6 +1042,12 @@ function applyHardRules(G, pi, legal) {
 
   const led = trick[0].card.suit;
   if (led === '♠' && moonPaceOwner(G) !== pi) {
+    // Both restrictions below narrow `pool` (never `legal` directly) and
+    // compose, rather than the first one returning early — a hand holding
+    // both an unsafe A/K *and* the queen needs both filters applied, not
+    // just whichever is checked first.
+    let pool = legal;
+
     const qsInTrick = trick.some(t => t.card.suit === '♠' && t.card.rank === 'Q');
     const qsCapturedEarlier = G.players.some(p => p.tricks.some(c => c.suit === '♠' && c.rank === 'Q'));
     // Safe to play A/K only once the queen can no longer land in this
@@ -1040,11 +1059,33 @@ function applyHardRules(G, pi, legal) {
     // backwards, since that's the one case that's never safe.
     const safeToOvertake = !qsInTrick && (qsCapturedEarlier || trick.length === 3);
     if (!safeToOvertake) {
-      const topSpades = legal.filter(c => c.suit === '♠' && (c.rank === 'A' || c.rank === 'K'));
-      if (topSpades.length && topSpades.length < legal.length) {
-        return legal.filter(c => !topSpades.includes(c));
+      const topSpades = pool.filter(c => c.suit === '♠' && (c.rank === 'A' || c.rank === 'K'));
+      if (topSpades.length && topSpades.length < pool.length) {
+        pool = pool.filter(c => !topSpades.includes(c));
       }
     }
+
+    // Never voluntarily risk taking the queen herself when a spade that's
+    // guaranteed to lose this trick is also legal. A card's rank is fixed
+    // the instant it's played, so any spade already below the highest
+    // spade on the table (the led card, or an overtake played ahead of
+    // us) can never end up winning the trick no matter what's played
+    // after us — ducking under with one of those is strictly safer than
+    // risking the queen, which only avoids the -26 if someone else's
+    // spade is already higher. Mirrors the hearts rule below exactly,
+    // just against a single dangerous card instead of a whole suit.
+    const qsFollow = pool.find(c => c.suit === '♠' && c.rank === 'Q');
+    if (qsFollow) {
+      const highSpadeSoFar = [...trick].filter(t => t.card.suit === '♠')
+        .sort((a, b) => RV[b.card.rank] - RV[a.card.rank])[0];
+      if (highSpadeSoFar) {
+        const saferSpades = pool.filter(c => c.suit === '♠' && c.rank !== 'Q' &&
+          RV[c.rank] < RV[highSpadeSoFar.card.rank]);
+        if (saferSpades.length) pool = saferSpades;
+      }
+    }
+
+    if (pool.length !== legal.length) return pool;
   }
 
   // Never voluntarily win a hearts trick — every heart we capture is

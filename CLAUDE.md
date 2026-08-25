@@ -1747,86 +1747,45 @@ before pushing.
   else is CSS.** No render function is aware either exists, which is
   what keeps the hand-tuned `--cw`/`--overlap`, hit-testing and drag
   code untouched. Royal Court's skin keys entirely off the `data-r`/
-  `data-s` attributes `cardHTML()` already emits. **Nocturne Deck (below)
-  is the one exception** — real per-card art can't be conjured from
-  attributes alone, so `cardHTML()` gained one additive line for it.
-  Geometry is still untouched either way; see Nocturne's own section for
-  how it stays that way.
+  `data-s` attributes `cardHTML()` already emits. **Real-art card fronts
+  (Noir Casino, Bold Deck — see that section below) are the one
+  exception** — real per-card art can't be conjured from attributes
+  alone, so `cardHTML()` gained one additive line for it. Geometry is
+  still untouched either way; see that section for how it stays that
+  way. This mechanism was originally built for Nocturne Deck, which has
+  since been deleted from the game entirely (id, art, everything) — Noir
+  and Bold are what it actually serves now.
 - **The Royal Court frame lives on `.card::before`, not in
   `box-shadow`** — `.card.tap:active`, `.card.sel`, `.card.dragging` and
   `.card.received` all replace `box-shadow` outright, so a frame drawn
   there would vanish exactly when a card is picked up. `::after` is left
   alone; `.card.received` owns it.
 
-## Nocturne Deck card front (real illustrated art, not CSS)
-- **The first card front with actual per-card artwork.** Royal Court is
-  a pure re-skin of the existing glyph markup; a 52-portrait illustrated
-  deck can't be approximated in gradients, so this one genuinely needed
-  `cardHTML()` to emit something extra — the one exception the note
-  above calls out. Everything else about it follows the SAME art-loading
-  contract already established for rank plates and scenes (permanent
-  fallback underneath, real art layers on top the moment its file
-  exists, one 404 per missing piece per session): `cardFrontArtImg(c)`
-  is the `rankArtImg`/`sceneArtImg` equivalent, keyed by
-  `CARDFRONT_ART_SETS[equippedCardFront]` so it costs nothing — not even
-  an extra DOM node — for every other front.
-- **`cardFrontArtLoaded`/`.has-art` is the one piece scenes/ranks didn't
-  need.** A loaded card face already draws its own corner rank+suit, so
-  leaving the plain `.ix`/`.big` glyphs visible underneath would double
-  up. `html[data-cardfront="nocturne"] .card.has-art .ix,.big
-  {display:none}` hides them once the image actually loads — mirroring
-  `rankArtLoaded`/`.has-art` exactly. Until then, or if the file 404s, a
-  card is never blank: the glyphs are simply what's there.
-- **Geometry is untouched by construction, not by discipline.**
-  `.card-art` is `position:absolute;inset:0;border-radius:inherit;
-  pointer-events:none` — same safety rule as `.rank-art`/`.scene-art-img`.
-  Verified: the image sits exactly 1px inside the card's own border on
-  all sides (the border box, working as CSS always has — not a bug),
-  `object-fit:cover` fills the slot with no distortion, `.dim`'s
-  `opacity`/`filter` cascade onto the image correctly since it's a normal
-  child of `.card`, and switching the equipped front away from Nocturne
-  makes `cardHTML()` stop emitting `.card-art` entirely — zero stale art,
-  zero leftover DOM.
-- **Source: one flattened reference sheet, not 52 individual files.**
-  `nocturne deck.png` (1536×1024) is a contact-sheet preview, not the
-  "52 files at 1024×1536" the sheet's own caption describes — those
-  don't exist. The 52 cards were cropped out of that single composite by
-  measuring the grid programmatically (column pitch fit from the 9 plain
-  numeral columns, which threshold cleanly; the 4 portrait columns
-  fragment under a naive luminance threshold because dark clothing reads
-  as "background", so they're read from a thin sliver near the card's
-  TOP edge instead, still inside the frame but above where portraits get
-  dark) rather than eyeballing pixel offsets across a 13×4 grid. Row
-  heights are **not uniform** (164/164/159/149px for hearts/diamonds/
-  clubs/spades) — trust the per-row measurement over forcing consistency;
-  an early pass that forced 164px everywhere clipped into the Spades
-  row's own background and showed up as a dark sliver under the Queen.
-  Each crop is upscaled 2× (Lanczos) before saving as WebP — the source
-  is inherently low-res (~85-95px × 149-164px per card), so this reduces
-  visible pixelation at larger card sizes without pretending to add real
-  detail that isn't there. `public/cardfronts/nocturne/`, 52 files,
-  ~10KB each. Not in `sw.js`'s `ASSETS` — runtime-cached on first use,
-  same reasoning as scenes and the portrait avatars.
-- **The sheet also includes a card back, deliberately not wired in.**
-  Card backs are shared table furniture, not a per-player cosmetic —
-  Royal Court already established this (`.card:not(.back)` explicitly
-  excludes it) — so Nocturne follows the same precedent and leaves
-  `.card.back` exactly as it was for every front. The cropped back art
-  isn't even saved anywhere; if a future "card backs" cosmetic category
-  is ever added, it would need re-cropping then anyway.
-- **Took over Royal Court's shop slot, not its whole existence.**
-  `COSMETICS.cardFronts` (`server.js`) still lists `cardfront_royal_court`
-  with `unlock:'ach_queen_hunter'` — it just lost its `price`, reverting
-  to achievement-only exactly as it was before the shop existed. Nobody
-  who already owns or would earn it loses anything. `cardfront_nocturne`
-  is the new entry carrying **the same unlock string** plus the price —
-  so reaching Queen Hunter now grants both decks, and Nocturne is the one
-  that's also purchasable. That's a deliberate reading of "instead of...
-  in the shop": the shop LISTING swaps, nothing is revoked. Client-side,
-  `CARDFRONT_IDS`/`CARDFRONT_ATTR` gained the third id/slug pair, and
-  `cardFrontThumb()` gained a real-art branch (3 cropped minis — spades
-  A, hearts Q, clubs K — replacing the glyph-based `.cf-mini` preview
-  Classic/Royal Court still use).
+## Nocturne Deck card front — DELETED
+- **Removed from the game entirely, not deprecated gradually**: the
+  `cardfront_nocturne` catalog entry, `public/cardfronts/nocturne/` (52
+  files), and every client-side reference (`CARDFRONT_IDS`,
+  `CARDFRONT_ATTR`, `CARDFRONT_ART_SETS`, the `data-cardfront="nocturne"`
+  CSS rule) are all gone. Same "art AND ids, not just unlisted" call as
+  the original 20-avatar set and the first scene batch.
+- **The real-art architecture it introduced did NOT go with it.** Royal
+  Court is a pure CSS re-skin of the glyph markup; a 52-portrait
+  illustrated deck can't be approximated in gradients, so Nocturne was
+  the first card front where `cardHTML()` needed to emit something extra
+  (`.card-art`, `cardFrontArtImg()`, the `.has-art`/`.ix,.big` hide rule).
+  That mechanism now belongs to Noir Casino and Bold Deck (see below) —
+  the section documenting it lives with Royal Court's own architecture
+  note earlier in this file, retitled from "Nocturne Deck" to "real-art
+  card fronts" rather than deleted, since Noir and Bold both still run on
+  it verbatim.
+- **`cardfront_royal_court` is untouched** — still achievement-only
+  (`unlock:'ach_queen_hunter'`, no price), exactly as it's been since
+  Nocturne took over its shop slot and then itself went away. Nobody who
+  owns or would earn Royal Court loses anything.
+- If real-art crops are ever redone for Noir/Bold, the cropping notes
+  that were here (contact-sheet measurement, per-row height variance,
+  2× Lanczos upscale) are preserved in git history on this file, not
+  copied forward — they described a source sheet that no longer ships.
 
 ## Noir Casino card front (shop-exclusive, no free route)
 - **The first cosmetic with NO earn-it-for-free path at all.**
@@ -2123,14 +2082,44 @@ before pushing.
   persistence mechanism" instruction is the one that governs. `rankSet`
   IS the brief's `rankNameplate`. **`server.js` and `db.js` are untouched
   by this** — the whole feature was already wired server-side.
-- **The emblem art is not in the repo yet.** Each piece renders its CSS
-  treatment and layers `public/ranks/<slug>/{frame,plate,badge}.webp` on
-  top *if the file exists*. `rankArtMissing` records a 404 per
-  (slug, piece) for the session, so a missing asset costs exactly one
-  failed request rather than one per render, and the moment the files are
-  dropped in they appear with no code change. Verified: all 8 plate
-  images 404, are removed, the CSS plates stay intact, and a re-render
-  emits zero `<img>`.
+- **The plate art landed — one exported plaque per tier, `public/ranks/
+  <slug>/plate.webp`, all 8.** Each piece still renders its CSS
+  treatment first and layers the file on top *if it exists* —
+  `rankArtMissing` records a 404 per (slug, piece) for the session, so a
+  missing asset costs exactly one failed request rather than one per
+  render, and the badge piece (not supplied) still degrades to the CSS
+  fallback exactly as designed.
+  **Source and pipeline**: 8 reference PNGs (2172×724, one per tier,
+  named by the DISPLAY tier — Novice/Apprentice/Player/Gambler/Ace/
+  Master/Grandmaster/Legend, mapped to the slug order above), each a
+  complete plaque on a near-black page with the tier name already baked
+  into its own bottom lozenge — not a bare frame meant to be filled by
+  `.rp-text`. Background removal couldn't use a global luminance
+  threshold the way the white-page card fronts do: several materials
+  (ink, obsidian) have a genuinely DARK textured interior by design, and
+  a flat threshold would have punched transparent holes straight through
+  it. Used a **flood fill from the image border** instead
+  (`scipy.ndimage.label` on a near-black mask, keeping only the
+  components that touch an edge) — background gets removed regardless of
+  how dark it is, while any interior dark texture that isn't CONNECTED to
+  the border survives untouched. Confirmed on Grandmaster (obsidian, the
+  worst case): the black cracked-stone interior stayed fully opaque while
+  the surrounding page and the light/lightning bleeding past the frame
+  edges both went cleanly transparent. Trimmed to content and downscaled
+  to 1100px wide (`object-fit:contain` means the exact resolution isn't
+  load-bearing; this comfortably covers the `.lg` hero at real device
+  pixel ratios without the ~2MB-per-file source weight) — final files
+  56–92KB each, WebP quality 90.
+  **`.rp-text` had to be added to the `has-art` hide rule** — it wasn't
+  in scope for the six-layer CSS-fallback hide (`.rp-grain`/`.rp-frame`/
+  `.rp-side`/`.rp-em`/`.rp-foot`) because it didn't exist when that rule
+  was written for the *unartworked* plate, and the exported art's own
+  baked-in tier lozenge makes it fully redundant now: without the fix,
+  loading real art would show the tier name TWICE (once baked bottom-
+  centre, once again from `.rp-text` dead-centre). Doesn't touch the
+  account hero's separate `.nameplate-content` (the player's live name/
+  title) — that was never `.rp-text` and was always meant to sit on top
+  of the art, not be hidden by this rule.
 - The table badge's fallback is the EXISTING `public/badges/*.svg`
   medallion — same rank, same moment, already on disk.
 - **`rankBadgeHTML`'s `size` argument is optional and normally omitted.**
@@ -2498,24 +2487,17 @@ before pushing.
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across
   two match lengths would fragment a ranked population that isn't large
   enough yet)
-- **The rank emblem artwork — nameplate and table badge only, and this is
-  now a genuine "nice to have" rather than a gap.** The nameplates have
-  been built out to the reference sheet's full geometry in CSS + inline
-  SVG (six layers, per-tier emblem and mirrored corner pieces — see the
-  Rank cosmetics section), so an exported 1000×250 plate would be a
-  refinement of something already finished, not the thing that makes it
-  work. The loading contract is unchanged: drop files at
-  `public/ranks/<slug>/{plate,badge}.webp` and they layer over the CSS
-  treatment with no code change, one 404 per piece per session.
-  Note the exported art lands `object-fit:contain` on top of the CSS
-  plaque, which still draws underneath it — if a plate image is ever
-  supplied it should be authored to cover the whole plaque, or the CSS
-  emblem and corner pieces will show through around it.
-  **Correction to that section's own file-path note:** it names a third
-  piece, `frame.webp`, but no `rankArtImg(slug,'frame',…)` call exists
-  anywhere — `.rank-framed` is CSS-only (a border/glow ring on the
-  existing avatar well), so dropping a frame image in would currently do
-  nothing. Wire a fourth `rankArtImg` call before shipping frame art.
+- **The rank plate artwork is done** — see the Rank cosmetics section for
+  the full pipeline. **The table badge piece is still not supplied**
+  (only `plate.webp` exists per tier); `rankBadgeHTML` keeps falling back
+  to the existing `public/badges/*.svg` medallions, which is a perfectly
+  finished look on its own, not a gap waiting on art.
+  **Correction to the Rank cosmetics section's own file-path note:** it
+  names a third piece, `frame.webp`, but no `rankArtImg(slug,'frame',…)`
+  call exists anywhere — `.rank-framed` is CSS-only (a border/glow ring
+  on the existing avatar well), so dropping a frame image in would
+  currently do nothing. Wire a fourth `rankArtImg` call before shipping
+  frame art.
 - **Scene backgrounds — now wired, same contract as the rank art
   above.** Drop `public/scenes/<slug>.webp` (slug = the scene id with
   its `scene_` prefix stripped, e.g. `velvet_room`) and it layers over

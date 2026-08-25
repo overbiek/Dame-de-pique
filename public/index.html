@@ -1263,21 +1263,45 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
   margin-top:12px;
 }
 
-/* ══ Friend invite banner — floats above any screen ══ */
-.friend-invite-banner{
-  position:fixed;left:50%;transform:translateX(-50%);
-  bottom:calc(env(safe-area-inset-bottom) + 14px);
-  z-index:500;display:flex;align-items:center;gap:9px;
-  background:rgba(20,14,8,.96);border:1px solid rgba(var(--ddp-brass-rgb),.4);
-  border-radius:999px;padding:7px 8px 7px 14px;
-  box-shadow:0 10px 30px rgba(0,0,0,.5);
-  max-width:92vw;
+/* ══ Friend invite popup — a full modal, not a dismissible-looking
+   banner. It used to be a small bottom-anchored pill (easy to miss
+   entirely, especially with the game's own bottom-anchored #votebox
+   using the same corner) — replaced with the same centered
+   scrim+card overlay contract as #friend-profile/#crest-popup:
+   display:none by default, .on flips it to a centered flex card over
+   a blurred scrim that blocks everything behind it until the player
+   actually answers. z-index sits just above #crest-popup (230) since
+   the two can never be open at once but there's no reason not to
+   order them. */
+#friend-invite{
+  display:none;position:fixed;inset:0;z-index:240;
+  background:rgba(3,16,11,.78);backdrop-filter:blur(3px);
+  padding:calc(env(safe-area-inset-top) + 14px) 12px calc(env(safe-area-inset-bottom) + 14px);
 }
-.friend-invite-banner .fi-avatar{flex:0 0 auto;font-size:1.2rem}
-.friend-invite-banner .fi-text{
-  font-size:.8rem;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+#friend-invite.on{display:flex;align-items:center;justify-content:center}
+.fi-card{
+  position:relative;width:100%;max-width:340px;
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  padding:26px 22px 22px;
+  background:linear-gradient(170deg,var(--ddp-felt),var(--ddp-felt) 60%,var(--ddp-bg));
+  border:1px solid rgba(var(--ddp-brass-rgb),.34);border-radius:18px;
+  box-shadow:0 18px 50px rgba(var(--ddp-scrim-rgb),.6);animation:votein .22s ease;
 }
-.friend-invite-banner .btn-sm{padding:7px 12px;font-size:.74rem}
+/* Reuses .avatar-preview's own circle/ring/glow — the same element
+   every other "here's a player's avatar" surface in the app already
+   uses (the hero, the friend-profile card) — rather than a bespoke
+   one, so it renders a portrait-image avatar exactly like everywhere
+   else, not just an emoji glyph (see avatarHTML's own note on why a
+   raw .textContent assignment isn't enough for that). cursor:default
+   overrides its usual pointer/active affordance since this one isn't
+   tappable. */
+.fi-card .avatar-preview{cursor:default;margin-bottom:14px}
+.fi-card .avatar-preview:active{transform:none}
+.fi-title{font:600 1.15rem 'Playfair Display',serif;color:var(--cream);line-height:1.4}
+.fi-title b{color:var(--gold-hi)}
+.fi-sub{font-size:.8rem;color:var(--faint);margin-top:4px}
+.fi-actions{display:flex;gap:10px;margin-top:20px;width:100%}
+.fi-actions .btn{flex:1}
 
 /* ══ Empty / placeholder states (ranked, rank) ══ */
 .empty-state{text-align:center;padding:30px 6px 6px}
@@ -2048,6 +2072,15 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 .rank-plate.has-art .rp-grain,.rank-plate.has-art .rp-frame,
 .rank-plate.has-art .rp-side,.rank-plate.has-art .rp-em,
 .rank-plate.has-art .rp-foot{display:none}
+/* rankNameplateHTML's own .rp-text (the tier name, centred in the
+   middle) is ALSO redundant once real plate art has loaded — every
+   exported plate bears its own tier-name lozenge baked into the art
+   itself (bottom-centre, where .rp-foot sits in the CSS fallback), so
+   leaving .rp-text on would show the name twice. Doesn't touch the
+   account hero's OWN name/title (.nameplate-content, rendered outside
+   rankPlateDressHTML entirely) — that's live player text the art was
+   always meant to sit behind, not a second copy of the tier label. */
+.rank-plate.has-art .rp-text{display:none}
 
 /* material-textured interior */
 .rp-grain{position:absolute;inset:0;border-radius:inherit;overflow:hidden;z-index:0}
@@ -6012,18 +6045,30 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
   </div>
 </section>
 
-<!-- ═══ FRIEND INVITE BANNER ═══
+<!-- ═══ FRIEND INVITE POPUP ═══
      A plain sibling of every screen, not nested in any of them — fixed
      positioning makes its place in the DOM irrelevant for where it
      visually lands, but it DOES matter for whether it renders at all:
      inside a .screen it would inherit that screen's display:none the
      moment a different one is active. Living here means it can show up
-     no matter which screen the recipient is actually on. -->
-<div id="friend-invite" class="friend-invite-banner" style="display:none">
-  <span class="fi-avatar" id="fi-avatar">👤</span>
-  <span class="fi-text" id="fi-text"></span>
-  <button class="btn btn-primary btn-sm" onclick="acceptFriendInvite()">Join</button>
-  <button class="btn btn-ghost btn-sm" onclick="dismissFriendInvite()">✕</button>
+     no matter which screen the recipient is actually on.
+     Was a small bottom-anchored pill (easy to miss); now the same
+     centered scrim+card overlay contract as #friend-profile/#crest-popup
+     below — display:none by default, .on flips it to a centered card
+     over a blurred scrim that blocks the rest of the screen until it's
+     actually answered. Tapping the scrim declines, same as the button —
+     it's a real answer to the invite (the sender does get told), not
+     just dismissing an info popup, so that's deliberate, not a shortcut. -->
+<div id="friend-invite" onclick="if(event.target===this)dismissFriendInvite()">
+  <div class="fi-card">
+    <div class="avatar-preview" id="fi-avatar">👤</div>
+    <div class="fi-title" id="fi-text"></div>
+    <div class="fi-sub">Join their table?</div>
+    <div class="fi-actions">
+      <button class="btn btn-ghost" onclick="dismissFriendInvite()">Decline</button>
+      <button class="btn btn-primary" onclick="acceptFriendInvite()">Accept</button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ FRIEND PROFILE CARD ═══
@@ -8901,10 +8946,10 @@ socket.on('friendProfileError',d=>{
   $('fp-error').style.display='block';
   $('fp-error-msg').textContent=d.msg;
 });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeFriendProfile(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeFriendProfile(); dismissFriendInvite(); } });
 
-/* Invite banner — a plain sibling of every screen (see the markup near
-   #app's closing tag), so it can float above whichever one is active.
+/* Invite popup — a plain sibling of every screen (see the markup near
+   #app's closing tag), so it can show up over whichever one is active.
    Only ever shown when not already in a room: this app tracks one
    room/me/host triple at a time, and interrupting an active game with a
    foreign invite would mean juggling two — simplest and safest is to
@@ -8913,13 +8958,13 @@ let pendingInvite=null;
 socket.on('friendInvite',d=>{
   if(room) return;
   pendingInvite=d;
-  $('fi-avatar').textContent=d.fromAvatar||'👤';
-  $('fi-text').textContent=`${d.fromName} invited you to play`;
-  $('friend-invite').style.display='flex';
+  setAvatarInto($('fi-avatar'),d.fromAvatar||'',d.fromName);
+  $('fi-text').innerHTML=`<b>${esc(d.fromName)}</b> invited you to play`;
+  $('friend-invite').classList.add('on');
 });
 function dismissFriendInvite(){
   pendingInvite=null;
-  $('friend-invite').style.display='none';
+  $('friend-invite').classList.remove('on');
 }
 function acceptFriendInvite(){
   if(!pendingInvite) return;

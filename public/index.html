@@ -4521,8 +4521,7 @@ html.landscape-mode #s-draw .draw-begin{width:68px;height:68px;font-size:.78rem}
   background:rgba(var(--ddp-brass-rgb),.14);
 }
 
-html.landscape-mode #s-summary .sheet-wrap,
-html.landscape-mode #s-final .sheet-wrap{max-height:40vh;margin:.4rem 0}
+html.landscape-mode #s-summary .sheet-wrap{max-height:40vh;margin:.4rem 0}
 /* Same list, just tightened — the game-flow screens' shared landscape
    rule already makes #f-body a scrollable body panel (see that rule's
    own note), so this is a size trim for a short viewport, not a
@@ -6130,15 +6129,15 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
     <h2 id="f-title">Final standings</h2>
     <div id="f-body"></div>
     <div id="f-ranked" style="display:none"></div>
-    <!-- Same slot pattern as #f-ranked: the podium and scoresheet above are
+    <!-- Same slot pattern as #f-ranked: the standings list above is
          mode-agnostic, so a Daily Challenge only needs its own result
          block underneath rather than a whole separate screen. A Daily
-         Challenge is solo against three AI, so the 4-player podium/
-         scoresheet above it is hidden entirely (see renderFinal) rather
-         than showing a "standing" that doesn't mean anything — the real
-         comparison is the leaderboard back on #s-daily, not this table. -->
+         Challenge is solo against three AI, so the 4-player standings
+         list above it is hidden entirely (see renderFinal) rather than
+         showing a "standing" that doesn't mean anything — the real
+         comparison is the leaderboard back on #s-daily, not this list. -->
     <div id="f-daily" style="display:none"></div>
-    <button class="btn btn-ghost btn-block" id="f-newgame" style="margin-top:14px" onclick="newGame()">New game</button>
+    <button class="btn btn-ghost btn-block" id="f-newgame" style="margin-top:14px" onclick="newGame()">Return to menu</button>
     <button class="btn btn-ghost btn-block" id="f-daily-return" style="display:none;margin-top:14px" onclick="goDaily()">Back to Daily Challenge</button>
   </div>
 </section>
@@ -10516,50 +10515,6 @@ function summaryStandingsHTML(G){
     +cells+'</div></div>';
 }
 
-function sheetHTML(G){
-  const total=G.totalRounds;
-  const hist={};
-  (G.history||[]).forEach(h=>hist[h.round]=h);
-
-  let h='<div class="sheet-wrap"><table class="sheet"><thead><tr><th class="rd">#</th>';
-  G.players.forEach((p,i)=>{
-    h+=`<th class="${i===me?'you':''}" title="${esc(p.name)}">${esc(shortName(p.name))}</th>`;
-  });
-  h+='</tr></thead><tbody>';
-
-  for(let r=1;r<=total;r++){
-    const e=hist[r];
-    const letter=(G.passLetters&&G.passLetters[r-1])||'';
-    const cls=[e?(r===G.round?'now':''):'ahead',
-               (e&&e.moon>=0)?'moonrow':''].filter(Boolean).join(' ');
-    h+=`<tr class="${cls}"${r===G.round?' id="sheet-now"':''}>
-          <th class="rd">${r}<i>${letter}</i></th>`;
-    for(let i=0;i<4;i++){
-      if(!e){ h+='<td>·</td>'; continue; }
-      const v=e.deltas[i];
-      // The running total after this round. history[].totals has ALWAYS
-      // been broadcast and was simply never read — the sheet showed only
-      // deltas, so a bad round told you what it cost but not where it
-      // left you. Guarded anyway: a client that reconnects into an older
-      // server's state degrades to the delta alone rather than throwing.
-      const t=(e.totals&&typeof e.totals[i]==='number')?e.totals[i]:null;
-      h+=`<td class="${e.moon===i?'moon':''}"><b>${v>0?'+':''}${v}</b>`
-        +(t===null?'':`<small>${t}</small>`)+`</td>`;
-    }
-    h+='</tr>';
-  }
-
-  h+='</tbody><tfoot><tr><th>Total</th>';
-  const best=Math.max(...G.players.map(p=>p.score));
-  G.players.forEach(p=>{
-    h+=`<td class="${p.score===best?'top':''}">${p.score}</td>`;
-  });
-  h+='</tr></tfoot></table></div>';
-  h+='<p class="legend">Large figure is that round’s score, small figure the '
-    +'running total. <b>L</b> pass left · <b>R</b> right · <b>O</b> over · '
-    +'<b>K</b> keep. Gold marks a shot moon.</p>';
-  return h;
-}
 // Bring the current round's column into view inside the round strip.
 // Only bites when the strip actually overflows — 8 and 12 rounds fit
 // outright, 16 is the case that scrolls.
@@ -10605,7 +10560,9 @@ function renderSummary(G){
   // their whole round-by-round history, so the separate sheetHTML table
   // below it was re-listing the same numbers under truncated names. That
   // table is what stopped the screen fitting in one view.
-  // sheetHTML itself stays: #s-final still uses it.
+  // sheetHTML itself is gone now too — #s-final dropped its own copy of
+  // the same table for the same reason (the final-standings rows already
+  // carry each player's history), which was the last call site.
   h+=summaryStandingsHTML(G);
   $('r-body').innerHTML=h;
   scrollSummaryToNow();
@@ -10707,7 +10664,6 @@ function renderFinal(G){
     // brief window before the new event lands.
     finalCreditsBySeat=null;
     let h='<div class="final-list">'+rows.map((p,n)=>finalRowHTML(p,n)).join('')+'</div>';
-    h+=sheetHTML(G);
     $('f-body').innerHTML=h;
   }
   // A non-daily game must never inherit the previous game's daily card.
@@ -10781,7 +10737,7 @@ if('serviceWorker' in navigator){
    server-backed "tutorial room." That fake object is fed to the SAME
    render functions real play uses (renderPass/renderPassReveal/
    renderPlay/renderSummary, and everything they call — tableHTML,
-   handHTML, myStrip, cornerActions, sheetHTML...), completely
+   handHTML, myStrip, cornerActions...), completely
    unmodified. The only touches to real interaction code are the six
    `if(tutorialActive)` branches guarding the exact points a real action
    would hit the network (confirmPass, endCardDrag, releasePlayPick,

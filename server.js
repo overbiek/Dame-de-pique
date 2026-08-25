@@ -1528,6 +1528,7 @@ const COSMETICS = {
     // cardfront_noir established — not one of the CREDIT_PRICES tiers,
     // a specifically requested price rather than a rarity-tier fit.
     { id: 'cardfront_stained_glass', name: 'Stained Glass Deck', unlock: null, price: 1500 },
+    { id: 'cardfront_porcelain',     name: 'Porcelain Deck',     unlock: null, price: 2000 },
   ],
   // Crests are 1:1 with achievements by design (the brief's whole point:
   // a crest IS the visible proof of an achievement), so they're derived

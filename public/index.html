@@ -2823,7 +2823,9 @@ html[data-cardfront="noir"] .card.has-art .big,
 html[data-cardfront="bold"] .card.has-art .ix,
 html[data-cardfront="bold"] .card.has-art .big,
 html[data-cardfront="stained_glass"] .card.has-art .ix,
-html[data-cardfront="stained_glass"] .card.has-art .big{display:none}
+html[data-cardfront="stained_glass"] .card.has-art .big,
+html[data-cardfront="porcelain"] .card.has-art .ix,
+html[data-cardfront="porcelain"] .card.has-art .big{display:none}
 /* The picker thumbnail's mini cards, same 24x34 box cf-mini already
    uses for Classic/Royal Court — real crops here instead of CSS, since
    there's no gradient that stands in for an illustrated portrait. Class
@@ -6416,15 +6418,15 @@ const SCENE_IDS=['scene_moulin_rouge','scene_holiday','scene_victorian_room',
                  'scene_ashen_gate','scene_arabian_nights','scene_magic_forest',
                  'scene_noir_casino','scene_moon_balcony','scene_conservatory',
                  'scene_theater','scene_observatory'];
-const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court','cardfront_noir','cardfront_bold','cardfront_stained_glass'];
+const CARDFRONT_IDS=['cardfront_standard','cardfront_royal_court','cardfront_noir','cardfront_bold','cardfront_stained_glass','cardfront_porcelain'];
 // The tail of each ID is the CSS hook, so a data-cardfront value stays
 // readable in devtools ("royal_court", not the full ID).
-const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court',cardfront_noir:'noir',cardfront_bold:'bold',cardfront_stained_glass:'stained_glass'};
+const CARDFRONT_ATTR={cardfront_standard:'standard',cardfront_royal_court:'royal_court',cardfront_noir:'noir',cardfront_bold:'bold',cardfront_stained_glass:'stained_glass',cardfront_porcelain:'porcelain'};
 // Card fronts with REAL per-card art (as opposed to Royal Court/Classic,
 // which are pure CSS and need no image at all). cardHTML() only emits an
 // <img> when the equipped front is in this set — everyone else pays
 // nothing for this feature, not even an empty element.
-const CARDFRONT_ART_SETS={cardfront_noir:'noir',cardfront_bold:'bold',cardfront_stained_glass:'stained_glass'};
+const CARDFRONT_ART_SETS={cardfront_noir:'noir',cardfront_bold:'bold',cardfront_stained_glass:'stained_glass',cardfront_porcelain:'porcelain'};
 
 /* ── scene art loading ──
    Exact mirror of the RANK COSMETICS art-loading contract below

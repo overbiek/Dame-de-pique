@@ -5330,6 +5330,45 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
   </div>
 </div>
 
+<!-- ═══ ORIENTATION / INSTALL — first-run nudge for browser-tab players ═══
+     Same forced-overlay pattern as tutorial-welcome below (reuses its
+     CSS classes, and the same "shown once via localStorage" rule) so a
+     new player opening a shared link — not the installed app — is told
+     to rotate/install before landing on the menu. Skipped entirely for
+     anyone already standalone; see maybeShowOrientHint(). -->
+<div id="orient-welcome" class="tutorial-scrim">
+  <div class="tutorial-welcome-card">
+    <h2>Turn your phone sideways</h2>
+    <p class="tagline">Dame de Pique plays best in landscape.</p>
+    <p>Rotate your device now — and for the smoothest experience, install
+       the game to your home screen so it opens straight into landscape
+       every time, no rotating needed.</p>
+    <div class="tutorial-welcome-actions">
+      <button class="btn btn-primary" onclick="orientWelcomeInstall()">Install as an app</button>
+      <button class="btn btn-ghost" onclick="dismissOrientWelcome()">Continue in browser</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ REOPEN-APP nudge — shown on EVERY browser-tab visit once this
+     browser is known to have the app installed (a marker set the
+     moment the app itself actually runs standalone — see
+     maybeShowOrientHint()). Unlike orient-welcome/tutorial-welcome
+     above, this one is deliberately not a once-only overlay: there is
+     no API on either platform for a website to hand off to an already-
+     installed "Add to Home Screen" PWA, so repeating the nudge every
+     time is the closest honest substitute for an actual redirect. -->
+<div id="reopen-welcome" class="tutorial-scrim">
+  <div class="tutorial-welcome-card">
+    <h2>You've got the app!</h2>
+    <p class="tagline">Open it from your home screen for the full landscape experience.</p>
+    <p id="reopen-welcome-body"></p>
+    <div class="tutorial-welcome-actions">
+      <button class="btn btn-ghost" onclick="dismissReopenWelcome()">Continue in browser anyway</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ TUTORIAL — welcome overlay ═══
      Sits outside the screen-swap system (like #rules/#votebox above),
      so it can sit ON TOP of #s-menu without depending on which .screen
@@ -11119,6 +11158,73 @@ function tutorialHideCallout(){ $('tutorial-callout').classList.remove('show'); 
 function tutorialFadeCallout(){ $('tutorial-callout').classList.remove('show'); }
 
 /* ── entry / exit ── */
+// Runs before maybeShowWelcome() in the boot sequence (see the boot IIFE
+// below) so a fresh browser-tab visitor sees this first, then the
+// tutorial prompt once it's dismissed — the two never show at once.
+// Standalone (installed) players already get the best-effort landscape
+// lock (applyOrientationLock), so this has nothing to offer them and is
+// skipped outright rather than nagging every launch.
+function maybeShowOrientHint(){
+  if(isStandalone()){
+    // The one place this marker is ever set — it can only become true
+    // once the app has actually been launched standalone, not just
+    // "install" tapped (which can be cancelled, or on iOS has no
+    // programmatic confirmation at all). Written every standalone boot
+    // rather than once; setItem with the same value is a no-op cost.
+    try{ localStorage.setItem('ddp.appInstalled','1'); }catch(e){}
+    maybeShowWelcome();
+    return;
+  }
+  let installed=null;
+  try{ installed=localStorage.getItem('ddp.appInstalled'); }catch(e){}
+  if(installed){ maybeShowReopenHint(); return; }
+  let seen=null;
+  try{ seen=localStorage.getItem('ddp.orientHintSeen'); }catch(e){}
+  if(!seen){ $('orient-welcome').classList.add('show'); }
+  else{ maybeShowWelcome(); }
+}
+// Platform-specific "go find it" instructions — deliberately a separate
+// helper from doInstall()'s ua-sniffing rather than a shared one: the
+// two say different things ("here's how to install" vs "you already
+// have it, here's where to find it") and doInstall() also drives the
+// native beforeinstallprompt flow, which has no equivalent here.
+function reopenAppMessage(){
+  const ua=navigator.userAgent;
+  if(/iPhone|iPad|iPod/.test(ua))
+    return 'Find the <b>Dame de Pique</b> icon on your Home Screen and tap it there instead.';
+  if(/Android/.test(ua))
+    return 'Find the <b>Dame de Pique</b> icon on your Home Screen or app drawer and tap it there instead.';
+  return 'Reopen it from your desktop, Start Menu, or Chrome\'s app list (<b>chrome://apps</b>) instead.';
+}
+function maybeShowReopenHint(){
+  $('reopen-welcome-body').innerHTML=reopenAppMessage();
+  $('reopen-welcome').classList.add('show');
+}
+// Deliberately does NOT persist any "seen" flag — this dismissal is
+// for this pageview only, so the nudge returns next time the browser
+// tab (not the installed app) is opened, matching the "redirect every
+// time" behaviour that was actually asked for.
+function dismissReopenWelcome(){
+  $('reopen-welcome').classList.remove('show');
+  maybeShowWelcome();
+}
+function dismissOrientWelcome(){
+  try{ localStorage.setItem('ddp.orientHintSeen','1'); }catch(e){}
+  $('orient-welcome').classList.remove('show');
+  maybeShowWelcome();
+}
+function orientWelcomeInstall(){
+  try{ localStorage.setItem('ddp.orientHintSeen','1'); }catch(e){}
+  $('orient-welcome').classList.remove('show');
+  // showInstall() first: doInstall()'s manual-steps fallback writes into
+  // #install-how, a child of #install — which is display:none until
+  // showInstall() reveals it, so without this the instructions would
+  // render into an invisible box on a browser that doesn't fire
+  // beforeinstallprompt (iOS Safari, most non-Chrome browsers).
+  showInstall();
+  doInstall();
+  maybeShowWelcome();
+}
 function replayTutorial(){ startTutorial(); }
 function maybeShowWelcome(){
   let seen=null;
@@ -11680,7 +11786,7 @@ function tutorialPartBNext(){
   const s=loadSession();
   if(s&&s.room){ room=s.room; token=s.token; }
   if(resetToken){ goPersonal(); openResetNewPasswordForm(); }
-  else maybeShowWelcome();
+  else maybeShowOrientHint();
 })();
 
 /* stop pinch-zoom double taps from firing plays twice */

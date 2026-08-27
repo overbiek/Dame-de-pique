@@ -1811,6 +1811,13 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 .hero-crest-left{left:-5px}
 .hero-crest.on{display:grid}
 .hero-avatar-wrap{position:relative;display:inline-block}
+/* Wraps .hero-avatar-wrap on My Account's own hero only (not the shared
+   friend-profile popup markup). display:contents everywhere by default,
+   so it's invisible to the flex-column .profile-hero layout — it only
+   becomes a real grid row in landscape #s-personal, where the relocated
+   Menu button (see relocateAcctMenuButton()) sits beside the avatar
+   instead of on its own row above the hero. */
+.hero-id-row{display:contents}
 
 /* ── achievements list ──
    Two per row, not one full-width row each — 20 rows of the old
@@ -4478,14 +4485,18 @@ html.landscape-mode #s-daily .daily-hero{padding:10px 8px 8px}
    to. */
 html.landscape-mode #s-personal>.center-wrap{
   grid-template-columns:1fr;
-  grid-template-rows:auto 1fr;
+  grid-template-rows:1fr;
   column-gap:0;
 }
+/* The Menu button lives in .hero-id-row next to the avatar here (see
+   relocateAcctMenuButton()), so .screen-header is left empty — hide it
+   outright rather than leaving it an empty reserved row, so .acct-layout
+   reclaims that space instead of sitting a row lower than it needs to. */
 html.landscape-mode #s-personal>.center-wrap>.screen-header{
-  grid-column:1;grid-row:1;margin-bottom:6px;
+  display:none;
 }
 html.landscape-mode #s-personal>.center-wrap>.acct-layout{
-  grid-column:1;grid-row:2;
+  grid-column:1;grid-row:1;
   /* the generic rail rule put an indent, a divider and the scroll on this
      element; all three now belong to the columns inside it */
   padding-left:0;border-left:0;overflow:hidden;min-height:0;
@@ -4524,6 +4535,45 @@ html.landscape-mode #s-personal .acct-main{
    larger font scales — the ellipsis on .acct-chip-text can only do its
    job once the pill is allowed to be narrower than its content. */
 html.landscape-mode #s-personal .profile-hero .acct-chip{max-width:100%}
+/* .hero-id-row: the relocated Menu button sits here, beside the avatar,
+   instead of on its own row above the hero (see the .screen-header
+   display:none above and relocateAcctMenuButton()). A 3-column grid
+   (button | avatar | empty), not a centered flex row: flex centering
+   would center the BUTTON+AVATAR PAIR as one group, which drags the
+   avatar's own center off to the right by roughly half the button's
+   width — and the plate/name below is centered independently of this
+   row, so that reads as visibly off-center. Grid's `1fr auto 1fr` puts
+   the avatar in the middle "auto" track, which content-sizes to just
+   the avatar and sits exactly at the midpoint of the two equal flanking
+   tracks regardless of how wide the button in the first track is — so
+   the avatar stays centered above the plate no matter the button's
+   label length. The button is free to make column 1 as wide as it
+   needs (it's the ONLY thing sizing that track, so there's nothing to
+   overlap) at the cost of pushing the true midpoint of the whole row
+   slightly right of the hero column's own center; verified at 148px
+   and 204px (the column's real min/max) that this stays sub-2px, well
+   under what's noticeable next to a 74px avatar. */
+html.landscape-mode #s-personal .hero-id-row{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+}
+/* Tightened padding/font rather than the default .btn-sm size: the grid
+   above only keeps the avatar centered (column 2) as long as this
+   column's content fits inside the (row width − avatar width)/2 share
+   the empty third column mirrors — at the hero column's real rendered
+   width (204px, both 915x412 and 667x375 measured the same since the
+   column hits its max well before any realistic phone width forces it
+   toward its 148px floor) that's 52px. The default btn-sm "‹ Menu" is
+   73px and forces column 1 to grow past its share, dragging the avatar
+   21px off-center toward the tab panel — measured, not assumed, after
+   an earlier version of this rule shipped exactly that bug. At this
+   size (53px) it fits with room to spare: offset measured at 1px,
+   zero overlap with the avatar, on both breakpoints above.
+   Don't drop this back to .btn-sm dimensions without re-measuring. */
+html.landscape-mode #s-personal .hero-id-row .backlink{
+  grid-column:1;justify-self:start;margin:0;white-space:nowrap;
+  padding:4px 8px;font-size:.68rem;
+}
+html.landscape-mode #s-personal .hero-id-row .hero-avatar-wrap{grid-column:2}
 
 /* ── Game-flow screens: lobby, seat draw / dealer cut, round summary,
    final standings ──
@@ -5731,6 +5781,12 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 <section id="s-personal" class="screen">
   <div class="center-wrap acct-wrap">
     <div class="screen-header">
+      <!-- In landscape this button is physically moved (relocateAcctMenuButton())
+           into .hero-id-row, next to the avatar — see .hero-id-row in
+           <style> and the CSS block scoped to html.landscape-mode #s-personal.
+           Keeps its full "‹ Menu" label there too (unlike a bare icon
+           button) — the grid layout on .hero-id-row is what makes room
+           for that without pushing the avatar off-center. -->
       <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
     </div>
 
@@ -5935,10 +5991,12 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
         <!-- The wrapper exists purely so the equipped crest can sit on
              the avatar's corner; .avatar-preview keeps its exact id,
              class and click handler so the picker is unaffected. -->
-        <div class="hero-avatar-wrap">
-          <div class="avatar-preview" id="pv-avatar" onclick="toggleAvatarPicker()">👤</div>
-          <div class="hero-crest hero-crest-left crest-art" id="pv-crest-left"></div>
-          <div class="hero-crest hero-crest-right crest-art" id="pv-crest"></div>
+        <div class="hero-id-row">
+          <div class="hero-avatar-wrap">
+            <div class="avatar-preview" id="pv-avatar" onclick="toggleAvatarPicker()">👤</div>
+            <div class="hero-crest hero-crest-left crest-art" id="pv-crest-left"></div>
+            <div class="hero-crest hero-crest-right crest-art" id="pv-crest"></div>
+          </div>
         </div>
         <!-- RANK NAMEPLATE — a decorative layer BEHIND the live name and
              title, which is why both live inside it (see .hero-plate in
@@ -6926,6 +6984,25 @@ function updateLandscapeMode(){
   const active=LANDSCAPE_SCREENS.has(currentScreenId)&&isLandscapeModeActive();
   document.documentElement.classList.toggle('landscape-mode',active);
 }
+// My Account's ‹ Menu button physically moves between .screen-header
+// (portrait, and landscape everywhere else) and .hero-id-row, beside the
+// avatar (landscape #s-personal only) — same "move the node, don't
+// duplicate it" pattern as parkPassChrome/relocatePassChrome on the table
+// screens, so the button's one onclick handler and its DOM identity never
+// have to be kept in sync across two copies. Idempotent: safe to call
+// whether or not #s-personal is even the active screen.
+function relocateAcctMenuButton(){
+  const scope=$('s-personal'); if(!scope) return;
+  const btn=scope.querySelector('.backlink');
+  const header=scope.querySelector('.screen-header');
+  const row=scope.querySelector('.hero-id-row');
+  if(!btn||!header||!row) return;
+  if(document.documentElement.classList.contains('landscape-mode')){
+    if(btn.parentElement!==row) row.insertBefore(btn,row.firstChild);
+  }else if(btn.parentElement!==header){
+    header.insertBefore(btn,header.firstChild);
+  }
+}
 // #s-menu ships with class="active" and currentScreenId already defaults
 // to 'menu', so show() never runs for the first screen — and show() is
 // the only caller of both of these. Without them a fresh load would
@@ -6947,6 +7024,9 @@ matchMedia('(orientation:landscape)').addEventListener('change',()=>{
   // to (it's inside that rebuilt markup) — reapply it against the fresh
   // DOM. No-ops when no tutorial step is showing.
   if(tutorialActive) tutorialReapplySpotlight();
+  // Rotating while already sitting on My Account needs the Menu button
+  // moved too — goPersonal() only covers arriving at the screen.
+  if(currentScreenId==='personal') relocateAcctMenuButton();
 });
 function send(ev,extra){ socket.emit(ev,Object.assign({code:room,playerIndex:me},extra||{})); }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -7551,6 +7631,7 @@ function toggleAvatarPicker(){
 }
 function goPersonal(){
   show('personal');
+  relocateAcctMenuButton();
   const id=identity();
   $('pv-name').value=id.name||'';
   draftAvatar=id.avatar||'';

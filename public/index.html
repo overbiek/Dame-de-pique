@@ -3412,7 +3412,15 @@ html.landscape-mode #s-draw .dcw .slot-tier{display:none}
    .dq-id in source order, then simply overlaps whatever name/title text
    doesn't fit rather than the layout breaking. Landscape's much wider
    boxes don't hit this floor at all. */
-.dq-id{display:flex;align-items:center;gap:10px;min-width:0;
+/* position:relative + z-index:1 are load-bearing, not tidiness — .dcw-
+   bg-art/.dcw-bg-scrim (see their own CSS note) are absolutely positioned
+   siblings emitted BEFORE .dq-id in markup, and a non-positioned element
+   always paints underneath positioned siblings regardless of DOM order.
+   Without this, landscape's real banner art painted OVER the name/avatar/
+   title instead of under them — the same fix .slot-clip (lobby) and
+   .nameplate-content (account hero) already needed when this banner-art
+   feature was added; .dq-id was the one spot that got missed. */
+.dq-id{display:flex;align-items:center;gap:10px;min-width:0;position:relative;z-index:1;
   max-width:max(calc(var(--av) + 34px),calc(75% - (var(--dc) / 2) - 6px))}
 /* Positioned within .dcw itself now (position:absolute — .dcw is the
    containing block, see its own note) rather than stacked in normal flow

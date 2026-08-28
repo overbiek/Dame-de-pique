@@ -145,6 +145,18 @@ async function ensureSchema() {
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS blitz_worst_game INTEGER;`);
   await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS blitz_moons_total INTEGER NOT NULL DEFAULT 0;`);
 
+  // ── Casual games finished, broken down by match length ──
+  // Independent of games_finished/blitz_games_finished above (which count
+  // an early-end vote too, per recordGameFinishedForAll's own "a
+  // statistic about an abandoned game is still true" reasoning) — these
+  // four count ONLY a naturally-finished game, on request, so a length
+  // bucket can't be inflated by four players voting out early. Written by
+  // recordCasualLengthFinished, gated on `natural` at its one call site.
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS games_finished_4 INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS games_finished_8 INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS games_finished_12 INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE stats ADD COLUMN IF NOT EXISTS games_finished_16 INTEGER NOT NULL DEFAULT 0;`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS ranked_stats (
       account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
@@ -757,6 +769,25 @@ async function recordBlitzGameFinished(accountId, finalScore, moonsThisGame) {
   );
 }
 
+// ── Casual games finished, by match length (4/8/12/16 rounds) ──
+// Covers BOTH Blitz lengths (4/8/12) and the plain 16-round game — the
+// split casual/Blitz write sites above still own the aggregate figures
+// (best/worst/average), this is purely the per-length finished count, and
+// natural-only (see its one call site in recordGameFinishedForAll).
+const CASUAL_LENGTH_COLUMNS = {
+  4: 'games_finished_4', 8: 'games_finished_8',
+  12: 'games_finished_12', 16: 'games_finished_16',
+};
+async function recordCasualLengthFinished(accountId, roundsTotal) {
+  const col = CASUAL_LENGTH_COLUMNS[roundsTotal];
+  if (!col) return; // defensive: only the four offered lengths are ever valid
+  await pool.query(
+    `INSERT INTO stats (account_id, ${col}) VALUES ($1, 1)
+     ON CONFLICT (account_id) DO UPDATE SET ${col} = stats.${col} + 1, updated_at = now()`,
+    [accountId]
+  );
+}
+
 // ── Daily Challenge ────────────────────────────────────────────
 
 // ON CONFLICT DO NOTHING, not DO UPDATE: a second submission for the same
@@ -889,6 +920,11 @@ async function getStats(accountId) {
     // mutually-exclusive write sites (see isBlitz(G) in server.js), so
     // summing them can't double-count a single game either way.
     totalPointsCasual: s ? (s.points_total + s.blitz_points_total) : 0,
+    // Natural-finish-only, by match length — see recordCasualLengthFinished.
+    gamesFinished4: s ? s.games_finished_4 : 0,
+    gamesFinished8: s ? s.games_finished_8 : 0,
+    gamesFinished12: s ? s.games_finished_12 : 0,
+    gamesFinished16: s ? s.games_finished_16 : 0,
   };
 }
 
@@ -1351,7 +1387,7 @@ module.exports = {
   sendFriendRequest, acceptFriendRequest, declineFriendRequest, cancelFriendRequest,
   getIncomingFriendRequests, getFriendRequestStatus,
   recordGameStarted, recordTrick, recordRound, recordGameFinished, recordQueenTaken, getStats,
-  recordBlitzGameStarted, recordBlitzGameFinished,
+  recordBlitzGameStarted, recordBlitzGameFinished, recordCasualLengthFinished,
   recordDailyScore, getDailyScore, bumpDailyStreak, getDailyStreak,
   getDailyLeaderboard, getDailyStanding,
   getOrCreateRankedProfile, applyRankedMmr, getLeaderboard, getRankForAccount,

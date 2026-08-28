@@ -2396,6 +2396,11 @@ function recordGameFinishedForAll(G, natural) {
     // own columns rather than dragging the casual averages down.
     else if (isBlitz(G)) trackStat(() => db.recordBlitzGameFinished(acctId, finalScore, moons));
     else trackStat(() => db.recordGameFinished(acctId, finalScore, moons));
+    // Casual games played, broken down by match length — natural finishes
+    // only (an early-end vote shouldn't inflate a length bucket, same
+    // reasoning as the achievement/credit gates above), covers both Blitz
+    // lengths and the plain 16-round game alike.
+    if (natural && !G.ranked) trackStat(() => db.recordCasualLengthFinished(acctId, G.roundsTotal));
   }
   // Not gated by DB_ENABLED here — broadcastFinalCredits checks per-seat
   // accountId itself (all null when accounts aren't configured, so the

@@ -2919,18 +2919,24 @@ html[data-cardfront="verdant_nouveau"] .card.has-art .big{display:none}
    both is what lets the code chip alone still fill the row when Invite
    friends is hidden (no online friends, or not eligible) — a lone
    flex:1 item just grows to fill its container on its own. */
-.lobby-code-row{display:flex;gap:8px;align-items:stretch;margin-top:10px}
+.lobby-code-row{display:flex;gap:8px;align-items:stretch;margin-top:8px}
 /* Half the width means "Code" + the value no longer fit on the chip's
    normal single row (same problem .friends-codebox already solves for
    the friends tab's own half-width code box) — stacked instead, with
    the label/value/hint all scaled down to match. */
 .lobby-code-row .lobby-code-chip{
-  flex:1;width:auto;margin:0;padding:8px 10px;flex-direction:column;gap:2px;
+  flex:1;width:auto;margin:0;padding:5px 10px;flex-direction:column;gap:1px;
 }
 .lobby-code-row .lcc-code{font-size:.58rem}
 .lobby-code-row .lcc-code b{font-size:.82rem;letter-spacing:.1em;margin-left:3px}
 .lobby-code-row .lcc-hint{font-size:.5rem}
-.lobby-code-row .btn-block{flex:1;width:auto;margin:0;padding:10px 10px;font-size:.76rem}
+/* Both trimmed together, on request, to shave the row's height and help
+   the lobby fit one screen without scrolling — align-items:stretch on
+   .lobby-code-row already forces the invite button to match whichever
+   sibling is taller (the code chip, with its 2 lines of text), so this
+   button's own padding only matters when it's the row's sole occupant
+   (invite hidden — no online friends, or not a real casual room). */
+.lobby-code-row .btn-block{flex:1;width:auto;margin:0;padding:6px 10px;font-size:.76rem}
 /* The Start button, now a circle sitting dead-centre over the 4 seat
    cards rather than a full-width bar at the bottom of the screen.
    Absolutely positioned against .lobby-grid-wrap (which just wraps
@@ -3228,10 +3234,17 @@ html.landscape-mode #s-lobby #l-slots{row-gap:22px;column-gap:8px;margin:17px 0}
    baseline they were tuned against.
    Deliberately stays inset:0 (the BOX's own bounds) even though the art
    itself now overflows past them — there is no text to protect out past
-   the card edge, only inside it. */
+   the card edge, only inside it.
+   .20, not the original .38 — that was tuned as a safety margin before
+   the plate art ever rendered full-bleed behind a whole seat card (it
+   started life on a much smaller strip); at full-card size the same
+   alpha reads as visibly muddying the artwork itself, on request. .20
+   still darkens enough to protect the text on top (same reasoning
+   above), just by less. .dcw-bg-scrim (seat draw) mirrors this value —
+   keep the two in sync, they're the same treatment on two screens. */
 .slot-bg-scrim{
   position:absolute;inset:0;pointer-events:none;
-  background:rgba(var(--ddp-scrim-rgb),.38);
+  background:rgba(var(--ddp-scrim-rgb),.20);
 }
 /* Fixed-height reserve for the host's AI toggle (the only thing left
    here now that crests moved up beside the name) — still always
@@ -3386,7 +3399,7 @@ html.landscape-mode #s-draw .dcw[data-material="royal"]    .dcw-bg-art{left:-1.3
 html.landscape-mode #s-draw .dcw[data-material="obsidian"] .dcw-bg-art{left:-1.2%;width:102.4%;top:-11.3%;height:113.7%;object-fit:fill}
 html.landscape-mode #s-draw .dcw[data-material="diamond"]  .dcw-bg-art{left:-1.1%;width:102.2%;top:-11.7%;height:113.9%;object-fit:fill}
 .dcw-bg-scrim{position:absolute;inset:0;pointer-events:none;display:none}
-html.landscape-mode #s-draw .dcw-bg-scrim{display:block;background:rgba(var(--ddp-scrim-rgb),.38)}
+html.landscape-mode #s-draw .dcw-bg-scrim{display:block;background:rgba(var(--ddp-scrim-rgb),.20)}
 /* Redundant once the real background art shows the tier visually —
    same call the lobby's slotHTML already made (that screen dropped
    .slot-tier from its markup entirely; this one keeps it in the markup
@@ -4576,9 +4589,15 @@ html.landscape-mode #s-personal .hero-id-row{
    an earlier version of this rule shipped exactly that bug. At this
    size (53px) it fits with room to spare: offset measured at 1px,
    zero overlap with the avatar, on both breakpoints above.
-   Don't drop this back to .btn-sm dimensions without re-measuring. */
+   Don't drop this back to .btn-sm dimensions without re-measuring.
+   align-self:start (overriding .hero-id-row's own align-items:center,
+   which the avatar still needs to stay vertically centred against
+   itself) pulls the button up to the row's own top edge instead of the
+   avatar's vertical middle — on request, so it reads at roughly the
+   same height as the acct-toptab bar (Profile/Achievements/Friends)
+   over in .acct-main, rather than floating noticeably lower than it. */
 html.landscape-mode #s-personal .hero-id-row .backlink{
-  grid-column:1;justify-self:start;margin:0;white-space:nowrap;
+  grid-column:1;justify-self:start;align-self:start;margin:0;white-space:nowrap;
   padding:4px 8px;font-size:.68rem;
 }
 html.landscape-mode #s-personal .hero-id-row .hero-avatar-wrap{grid-column:2}
@@ -6120,11 +6139,30 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-value" id="st-played">0</div>
-            <div class="stat-label">Games played</div>
+            <div class="stat-label">Total games played</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="st-finished">0</div>
             <div class="stat-label">Games finished</div>
+          </div>
+          <!-- Natural finishes only, by match length — see
+               recordCasualLengthFinished in db.js/server.js. Covers both
+               Blitz lengths and the plain 16-round game. -->
+          <div class="stat-card">
+            <div class="stat-value" id="st-finished-4">0</div>
+            <div class="stat-label">4-round games finished</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-finished-8">0</div>
+            <div class="stat-label">8-round games finished</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-finished-12">0</div>
+            <div class="stat-label">12-round games finished</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="st-finished-16">0</div>
+            <div class="stat-label">16-round games finished</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="st-total-points">0</div>
@@ -9388,6 +9426,10 @@ socket.on('statsOk',d=>{
   $('stats-content').style.display='block';
   $('st-played').textContent=s.gamesPlayed;
   $('st-finished').textContent=s.gamesFinished;
+  $('st-finished-4').textContent=s.gamesFinished4||0;
+  $('st-finished-8').textContent=s.gamesFinished8||0;
+  $('st-finished-12').textContent=s.gamesFinished12||0;
+  $('st-finished-16').textContent=s.gamesFinished16||0;
   $('st-total-points').textContent=fmtStat(s.totalPointsCasual);
   $('st-worst-trick').textContent=fmtStat(s.worstTrick);
   $('st-best-round').textContent=fmtStat(s.bestRound);

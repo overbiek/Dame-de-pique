@@ -358,6 +358,23 @@ async function ensureSchema() {
     await pool.query(`ALTER TABLE achievement_stats ADD COLUMN IF NOT EXISTS ${col};`);
   }
 
+  // ── Steady Hand (ach_steady_hand) ──
+  // One boolean per casual match length (4/8/12/16 rounds), not a plain
+  // counter: each length may only ever contribute ONE step to the ladder,
+  // however many times it's re-achieved, and the order they're earned in
+  // doesn't matter — a counter alone can't express "at most once per
+  // length" or dedupe repeats, but four independent flags do for free.
+  // getAchievementStats sums however many are TRUE into cleanLengthCount,
+  // which is what ACHIEVEMENTS' tiers:[1,2,3,4] actually compares against.
+  for (const col of [
+    'clean_length_4 BOOLEAN NOT NULL DEFAULT FALSE',
+    'clean_length_8 BOOLEAN NOT NULL DEFAULT FALSE',
+    'clean_length_12 BOOLEAN NOT NULL DEFAULT FALSE',
+    'clean_length_16 BOOLEAN NOT NULL DEFAULT FALSE',
+  ]) {
+    await pool.query(`ALTER TABLE achievement_stats ADD COLUMN IF NOT EXISTS ${col};`);
+  }
+
   // ── Equipped cosmetics ──
   // One row per account holding only what's CURRENTLY equipped. What's
   // *unlocked* is never stored: it's always re-derived from
@@ -1176,6 +1193,24 @@ async function recordDealerRound(accountId) {
   );
 }
 
+// Steady Hand (ach_steady_hand) — flips ONE of the four length flags to
+// TRUE, idempotent (re-earning an already-earned length is a harmless
+// no-op, not a double-count). See the achievement_stats table comment in
+// ensureSchema for why this is 4 booleans rather than a counter.
+const CLEAN_LENGTH_COLUMNS = {
+  4: 'clean_length_4', 8: 'clean_length_8',
+  12: 'clean_length_12', 16: 'clean_length_16',
+};
+async function recordCleanLengthGame(accountId, roundsTotal) {
+  const col = CLEAN_LENGTH_COLUMNS[roundsTotal];
+  if (!col) return; // defensive: only the four offered lengths are ever valid
+  await pool.query(
+    `INSERT INTO achievement_stats (account_id, ${col}) VALUES ($1, TRUE)
+     ON CONFLICT (account_id) DO UPDATE SET ${col} = TRUE, updated_at = now()`,
+    [accountId]
+  );
+}
+
 // mmrPeak comes straight off ranked_stats rather than being mirrored into
 // achievement_stats — see the table comment in ensureSchema.
 async function getAchievementStats(accountId) {
@@ -1205,6 +1240,12 @@ async function getAchievementStats(accountId) {
     bestGame: s.best_game || 0,
     worstGame: s.worst_game || 0,
     mmrPeak: s.mmr_highest || 0,
+    // Steady Hand — how many of the 4 match lengths have ever been
+    // finished naturally with no round going negative. Summed here
+    // rather than stored as its own counter so the 4 flags stay the
+    // single source of truth (see recordCleanLengthGame).
+    cleanLengthCount: (s.clean_length_4 ? 1 : 0) + (s.clean_length_8 ? 1 : 0)
+      + (s.clean_length_12 ? 1 : 0) + (s.clean_length_16 ? 1 : 0),
   };
 }
 
@@ -1394,6 +1435,7 @@ module.exports = {
   recordRankedGameStarted, recordRankedTrick, recordRankedRound,
   recordRankedQueenTaken, recordRankedGameFinished, getRankedStats,
   recordAchievementGame, recordAchievementQueen, recordDealerRound, getAchievementStats,
+  recordCleanLengthGame,
   getCosmetics, saveCosmetics, markAchievementsSeen,
   grantCredits, getCredits, claimCasualCreditDay, purchaseItem, getPurchases,
 };

@@ -1379,6 +1379,17 @@ const ACHIEVEMENTS = [
     desc: 'Complete a whole game without ever taking the Queen of Spades.',
     crest: 'crest_veil',            title: 'title_queen_dodger' },
 
+  // One step per casual match length (4/8/12/16 rounds), order-independent
+  // — stat is a count of DISTINCT lengths ever finished naturally with
+  // every hand's own delta >= 0, not a plain tally, so re-clearing an
+  // already-cleared length can't push this past 4. See achBuf.noNegRound,
+  // recordRoundAchievements and recordCleanLengthGame for how that count
+  // is built up one length at a time.
+  { id: 'ach_steady_hand',    stat: 'cleanLengthCount',   tiers: [1, 2, 3, 4],
+    names: ['Steady Hand', 'Consistent Player', 'Ironclad', 'Flawless Record'],
+    desc: 'Finish a game at each match length (4, 8, 12 and 16 rounds) without a single hand going negative.',
+    crest: 'crest_quartet',         title: 'title_steady_hand' },
+
   // -- secret --
   // Hidden until earned, and both read a stat that moves DOWNWARD, hence
   // cmp:'lte'. A hand's floor is about -88 (the queen plus twelve hearts
@@ -1566,6 +1577,7 @@ const COSMETICS = {
     { id: 'title_the_ledger',        name: 'The Godfather',       unlock: 'ach_ledger' },
     { id: 'title_clean_sheet',       name: 'Clean Sheet',         unlock: 'ach_clean_sheet' },
     { id: 'title_queen_dodger',      name: 'Not My Queen',        unlock: 'ach_queen_dodger' },
+    { id: 'title_steady_hand',       name: 'Steady Hand',         unlock: 'ach_steady_hand' },
     { id: 'title_abyss',             name: 'Out of the Abyss',    unlock: 'ach_abyss' },
     { id: 'title_rock_bottom',       name: 'Rock Bottom',         unlock: 'ach_rock_bottom' },
     // rankTier is a SLUG, not a display name — tierReached compares
@@ -1707,6 +1719,10 @@ function achBuf(G) {
       clean: [0, 0, 0, 0],
       best: [0, 0, 0, 0],
       worst: [0, 0, 0, 0],
+      // Steady Hand (ach_steady_hand) — stays true unless some hand this
+      // game nets that player a negative delta. Checked against at the
+      // natural-finish flush; see recordGameFinishedForAll.
+      noNegRound: [true, true, true, true],
     };
   }
   return G.ach;
@@ -1725,6 +1741,7 @@ function recordRoundAchievements(G, deltas) {
     const d = deltas[i];
     if (d > b.best[i]) b.best[i] = d;
     if (d < b.worst[i]) b.worst[i] = d;
+    if (d < 0) b.noNegRound[i] = false;
     const penalties = p.tricks.filter(
       c => c.suit === '♥' || (c.suit === '♠' && c.rank === 'Q')
     ).length;
@@ -2401,6 +2418,12 @@ function recordGameFinishedForAll(G, natural) {
     // reasoning as the achievement/credit gates above), covers both Blitz
     // lengths and the plain 16-round game alike.
     if (natural && !G.ranked) trackStat(() => db.recordCasualLengthFinished(acctId, G.roundsTotal));
+    // Steady Hand: this length only counts if EVERY hand this game netted
+    // this player >= 0 (achBuf.noNegRound) — same natural-finish, casual-
+    // only gate as the length breakdown just above.
+    if (natural && !G.ranked && b.noNegRound[i]) {
+      trackStat(() => db.recordCleanLengthGame(acctId, G.roundsTotal));
+    }
   }
   // Not gated by DB_ENABLED here — broadcastFinalCredits checks per-seat
   // accountId itself (all null when accounts aren't configured, so the

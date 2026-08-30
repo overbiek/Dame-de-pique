@@ -2401,9 +2401,23 @@ function campaignLevelCredits(level, gold) {
 function submitCampaignLevelResult(G) {
   if (G.campaignResultSubmitted) return;
   G.campaignResultSubmitted = true;
-  const level = campaignLevelById(G.campaignLevelId);
-  const p = G.players[0];
-  const { cleared, gold, metric } = evaluateCampaignObjective(G);
+  // This runs synchronously off a setTimeout chain (resolveTrick ->
+  // endRound -> advanceRound, or finishEarly), with nothing upstream
+  // that catches a throw — an uncaught exception here used to be a hard
+  // process crash (see the global handlers near server.listen for why
+  // that reads as "the whole game froze"). Guarded now so a bug in this
+  // one level's result costs a clean error, not everyone's game.
+  let level, p, cleared, gold, metric;
+  try {
+    level = campaignLevelById(G.campaignLevelId);
+    p = G.players[0];
+    ({ cleared, gold, metric } = evaluateCampaignObjective(G));
+  } catch (e) {
+    console.error('submitCampaignLevelResult evaluate error:', e.stack || e.message);
+    const sid = G.players[0] && G.players[0].socketId;
+    if (sid) io.to(sid).emit('campaignError', { msg: "Couldn't score that table. Your attempt was not counted against you — please report this." });
+    return;
+  }
   const socketId = p.socketId;
   const payload = { levelId: level.id, cleared, gold, metric, score: p.score };
 
@@ -2444,6 +2458,9 @@ async function buildCampaignMapPayload(accountId) {
     chapters: CAMPAIGN_CHAPTERS,
     levels: CAMPAIGN_LEVEL_LIST.map(l => ({
       id: l.id, chapter: l.chapter, type: l.type, bossId: l.bossId || null,
+      // Sent so the client can render the level-detail popup's objective
+      // text and pass-direction line without a second round trip.
+      objective: l.objective, hands: l.hands, forcePassDir: l.forcePassDir,
       unlocked: l.id <= state.highestUnlockedLevel,
       result: resultsByLevel[l.id] || null,
     })),
@@ -2865,6 +2882,13 @@ function publicState(G) {
     // name/portrait — the seat itself is still a plain AI opponent in
     // game logic, this is purely presentational (see createCampaignRoom).
     campaignBoss: G.campaignBossId || null,
+    // So the pass/play table screens can show the same chapter background
+    // as the map, without the client needing campaignData (which may
+    // never have been fetched this session on a cold reconnect straight
+    // into a hand — see updateSceneLayer client-side).
+    campaignChapterSlug: G.campaign
+      ? (((CAMPAIGN_CHAPTERS.find(c => c.id === (campaignLevelById(G.campaignLevelId) || {}).chapter)) || {}).slug || null)
+      : null,
     // Sent rather than re-derived client-side: renderPass used to compute
     // it from (round-1)%4 itself, which is wrong for any room that pins a
     // direction (the Daily Challenge draws one from the date).
@@ -4116,12 +4140,37 @@ io.on('connection', (socket) => {
     trackStat(() => db.markCampaignCuesSeen(acct.id, ids.slice(0, 50).map(String)));
   });
 
+  // For the level-detail popup's Friends section. Guests and DB-disabled
+  // both degrade to an empty list rather than an error — same "nothing
+  // to show" pattern as getDailyStatus's guest branch.
+  socket.on('getCampaignLevelFriends', async ({ accountToken, levelId }) => {
+    const lvl = Number(levelId);
+    if (!DB_ENABLED) return socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows: [] });
+    const acct = await lookupAccountByToken(accountToken);
+    if (!acct) return socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows: [] });
+    try {
+      const rows = await db.getCampaignFriendsResults(acct.id, lvl);
+      socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows });
+    } catch (e) {
+      console.error('getCampaignLevelFriends error:', e.message);
+      socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows: [] });
+    }
+  });
+
   socket.on('startCampaignLevel', async ({ name, avatar, accountToken, levelId }) => {
     if (!DB_ENABLED) return socket.emit('campaignError', { msg: 'Campaign needs an account.' });
     const acct = await lookupAccountByToken(accountToken);
     if (!acct) return socket.emit('campaignError', { msg: 'Log in to play Campaign Mode.' });
     const level = campaignLevelById(Number(levelId));
     if (!level) return socket.emit('campaignError', { msg: 'Unknown level.' });
+    // Everything below is in one try/catch, not just the DB calls — a
+    // player reported the game freezing mid-hand, and dealRound/
+    // createCampaignRoom (deck construction, cosmetics lookup) were
+    // previously unguarded here. A throw from either used to become an
+    // unhandled rejection with nothing sent back to the client, which
+    // looks exactly like a hang from the player's side. See the global
+    // uncaughtException/unhandledRejection handlers near server.listen
+    // for the other half of this — this is the friendly-error half.
     try {
       const state = await db.getCampaignState(acct.id, CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
       if (level.id > state.highestUnlockedLevel) {
@@ -4129,15 +4178,15 @@ io.on('connection', (socket) => {
       }
       const spend = await db.consumeCampaignAttempt(acct.id, CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
       if (!spend.ok) return socket.emit('campaignError', { msg: 'Out of attempts — wait for a refill.' });
+      const clean = String(name || '').trim().slice(0, 16) || acct.nickname || 'Player';
+      const { G, token } = await createCampaignRoom(clean, sanitizeAvatar(avatar), acct.id, socket.id, level.id);
+      socket.join(G.code);
+      socket.emit('joined', { code: G.code, playerIndex: 0, token, isHost: true });
+      dealRound(G);   // no seat draw, no dealer cut for a campaign level either
     } catch (e) {
-      console.error('startCampaignLevel error:', e.message);
+      console.error('startCampaignLevel error:', e.stack || e.message);
       return socket.emit('campaignError', { msg: "Couldn't start that table. Try again." });
     }
-    const clean = String(name || '').trim().slice(0, 16) || acct.nickname || 'Player';
-    const { G, token } = await createCampaignRoom(clean, sanitizeAvatar(avatar), acct.id, socket.id, level.id);
-    socket.join(G.code);
-    socket.emit('joined', { code: G.code, playerIndex: 0, token, isHost: true });
-    dealRound(G);   // no seat draw, no dealer cut for a campaign level either
   });
 
   socket.on('createRoom', async ({ name, avatar, accountToken, roundsTotal }) => {
@@ -4433,6 +4482,25 @@ setInterval(() => {
     }
   }
 }, 20 * 1000);
+
+// A player reported the whole game freezing mid-hand. There was no
+// global safety net anywhere in this file: an uncaught synchronous throw
+// or unhandled promise rejection ANYWHERE — in a socket handler, in a
+// setTimeout callback like the ones resolveTrick/endRound schedule —
+// crashes the entire Node process, which takes down every connected
+// player's game at once (all room state is in-memory, so a crash-
+// triggered restart loses it outright) and reads exactly like "the game
+// froze" until the process comes back up. This logs instead of dying —
+// it can't undo whatever state a bug left half-written, but a real bug
+// now costs one broken game and a log line instead of the whole server.
+// MUST be registered before server.listen so it's active for the whole
+// process lifetime, not just requests after this point.
+process.on('uncaughtException', (err) => {
+  console.error('uncaughtException (process kept alive):', err && err.stack || err);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('unhandledRejection (process kept alive):', err && err.stack || err);
+});
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Dame de Pique running on port ${PORT}`));

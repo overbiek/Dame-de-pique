@@ -5227,34 +5227,108 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 .camp-dlg-scrim{
   position:fixed;inset:0;z-index:2000;
   background:rgba(var(--ddp-scrim-rgb),.45);
-  display:flex;align-items:flex-end;justify-content:center;padding:0 12px calc(env(safe-area-inset-bottom) + 14px);
+  display:flex;align-items:flex-end;justify-content:center;padding:0 16px calc(env(safe-area-inset-bottom) + 14px);
   opacity:0;pointer-events:none;transition:opacity .22s ease;
 }
 .camp-dlg-scrim.show{opacity:1;pointer-events:auto}
-.camp-dlg-card{
-  display:flex;align-items:center;gap:12px;max-width:520px;width:100%;
-  background:linear-gradient(180deg, var(--felt-0) 0%, var(--felt-1) 100%);
-  border:1px solid rgba(var(--ddp-brass-rgb),.45);border-radius:16px;
-  box-shadow:0 10px 30px rgba(var(--ddp-scrim-rgb),.6),inset 0 0 0 1px rgba(var(--ddp-scrim-rgb),.3);
-  padding:12px 14px;transform:translateY(12px);transition:transform .24s ease;
+/* The positioning context both the portrait and the card share. Bigger
+   than before (600px) since the card itself no longer has to share its
+   width with an inline portrait. margin-top leaves room for the
+   portrait to overlap the card's top edge — see .camp-dlg-portrait. */
+.camp-dlg-wrap{
+  position:relative;max-width:600px;width:100%;
+  margin-top:64px; /* clearance for the portrait overlapping upward */
+  transform:translateY(12px);transition:transform .24s ease;
 }
-.camp-dlg-scrim.show .camp-dlg-card{transform:translateY(0)}
+.camp-dlg-scrim.show .camp-dlg-wrap{transform:translateY(0)}
 @media (prefers-reduced-motion:reduce){
-  .camp-dlg-card,.camp-dlg-scrim.show .camp-dlg-card{transition:opacity .18s ease;transform:none}
+  .camp-dlg-wrap,.camp-dlg-scrim.show .camp-dlg-wrap{transition:opacity .18s ease;transform:none}
 }
-.camp-dlg-card.camp-dlg-mine{flex-direction:row-reverse;text-align:right}
-.camp-dlg-portrait{width:44px;height:44px;flex:0 0 auto}
+/* LARGE and OUTSIDE/ABOVE the card, overlapping its top corner — the
+   ask was to make it unambiguous the character is speaking TO the
+   player, the way a speech-bubble character looms over their own line,
+   not a small inline chat icon sitting beside the text. */
+.camp-dlg-portrait{
+  position:absolute;top:-58px;left:18px;z-index:2;
+  width:96px;height:96px;
+  filter:drop-shadow(0 6px 14px rgba(var(--ddp-scrim-rgb),.6));
+}
+.camp-dlg-wrap.camp-dlg-mine .camp-dlg-portrait{left:auto;right:18px}
+.camp-dlg-card{
+  display:flex;align-items:flex-end;gap:10px;
+  background:linear-gradient(180deg, var(--felt-0) 0%, var(--felt-1) 100%);
+  border:1px solid rgba(var(--ddp-brass-rgb),.45);border-radius:18px;
+  box-shadow:0 10px 30px rgba(var(--ddp-scrim-rgb),.6),inset 0 0 0 1px rgba(var(--ddp-scrim-rgb),.3);
+  padding:20px 20px 18px 128px; /* left padding clears the portrait above */
+}
+.camp-dlg-wrap.camp-dlg-mine .camp-dlg-card{
+  flex-direction:row-reverse;text-align:right;padding:20px 128px 18px 20px;
+}
 .camp-dlg-body{flex:1 1 auto;min-width:0}
-.camp-dlg-name{font-family:'Playfair Display',serif;font-weight:700;font-size:12px;
-  letter-spacing:.03em;text-transform:uppercase;color:var(--gold-hi);margin-bottom:2px}
-.camp-dlg-text{font-size:14px;line-height:1.4;color:var(--cream)}
+.camp-dlg-name{font-family:'Playfair Display',serif;font-weight:700;font-size:15px;
+  letter-spacing:.03em;text-transform:uppercase;color:var(--gold-hi);margin-bottom:5px}
+.camp-dlg-text{font-size:17px;line-height:1.5;color:var(--cream);min-height:1.5em}
 .camp-dlg-next{
-  flex:0 0 auto;width:34px;height:34px;border-radius:50%;font-size:18px;line-height:1;
+  flex:0 0 auto;width:38px;height:38px;border-radius:50%;font-size:19px;line-height:1;
   background:rgba(var(--ddp-brass-rgb),.16);border:1px solid rgba(var(--ddp-brass-rgb),.4);
   color:var(--gold-hi);cursor:pointer;
 }
 
 .camp-loading{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center}
+
+/* ── Level-detail popup ──
+   Centred modal, opened on a map node tap, before any dialogue or the
+   hand itself — objective in plain language, who's at the table, and
+   friends' results on this same level. */
+.camp-modal-scrim{
+  position:fixed;inset:0;z-index:2100;
+  background:rgba(var(--ddp-scrim-rgb),.72);
+  display:flex;align-items:center;justify-content:center;padding:16px;
+  opacity:0;pointer-events:none;transition:opacity .2s ease;
+}
+.camp-modal-scrim.show{opacity:1;pointer-events:auto}
+.camp-modal-card{
+  position:relative;max-width:440px;width:100%;max-height:88vh;overflow-y:auto;
+  background:linear-gradient(180deg, var(--felt-0) 0%, var(--felt-1) 100%);
+  border:1px solid rgba(var(--ddp-brass-rgb),.45);border-radius:18px;
+  box-shadow:0 16px 40px rgba(var(--ddp-scrim-rgb),.65);
+  padding:22px 20px 20px;
+  transform:scale(.96);transition:transform .2s ease;
+}
+.camp-modal-scrim.show .camp-modal-card{transform:scale(1)}
+@media (prefers-reduced-motion:reduce){
+  .camp-modal-card,.camp-modal-scrim.show .camp-modal-card{transition:opacity .16s ease;transform:none}
+}
+.camp-modal-close{
+  position:absolute;right:12px;top:12px;width:30px;height:30px;border-radius:50%;
+  background:rgba(var(--ddp-scrim-rgb),.4);border:1px solid rgba(var(--ddp-brass-rgb),.3);
+  color:var(--muted);font-size:13px;cursor:pointer;
+}
+.camp-modal-title{font-family:'Playfair Display',serif;font-weight:700;font-size:20px;color:var(--gold-hi)}
+.camp-modal-sub{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.camp-modal-objective{
+  margin-top:14px;padding:12px 14px;border-radius:12px;
+  background:rgba(var(--ddp-scrim-rgb),.35);border:1px solid rgba(var(--ddp-brass-rgb),.22);
+}
+.camp-obj-main{font-size:14px;color:var(--cream);line-height:1.4}
+.camp-obj-gold{font-size:12px;color:var(--gold-hi);margin-top:4px}
+.camp-obj-dir{font-size:11px;color:var(--muted);margin-top:6px}
+.camp-modal-section-label{
+  font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  margin:16px 0 8px;
+}
+.camp-modal-opponents{display:flex;gap:14px}
+.camp-modal-opp{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1 1 0;min-width:0}
+.camp-modal-opp .camp-portrait{width:52px;height:52px}
+.camp-modal-opp span{font-size:10px;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.camp-modal-friends{display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto}
+.camp-modal-friend-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.camp-mf-name{flex:1 1 auto;min-width:0;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.camp-mf-gold{color:var(--gold-hi)}
+.camp-mf-cleared{color:var(--ddp-mine)}
+.camp-mf-notplayed{color:var(--faint)}
+.camp-modal-empty{font-size:12px;color:var(--faint);padding:4px 0}
+#camp-modal-play{margin-top:18px}
 
 /* ══ Clair-only corrections ══
    A handful of accents were picked as pale text on a dark wash. On the
@@ -5431,11 +5505,17 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 [data-theme="clair"] .camp-chapter-title,
 [data-theme="clair"] .camp-node.cleared .camp-node-inner,
 [data-theme="clair"] .camp-node.boss .camp-node-label,
-[data-theme="clair"] .camp-dlg-name{color:var(--ddp-ink)}
+[data-theme="clair"] .camp-dlg-name,
+[data-theme="clair"] .camp-modal-title,
+[data-theme="clair"] .camp-obj-gold,
+[data-theme="clair"] .camp-mf-gold{color:var(--ddp-ink)}
 [data-theme="sable"] .camp-chapter-title,
 [data-theme="sable"] .camp-node.cleared .camp-node-inner,
 [data-theme="sable"] .camp-node.boss .camp-node-label,
-[data-theme="sable"] .camp-dlg-name{color:var(--ddp-ink)}
+[data-theme="sable"] .camp-dlg-name,
+[data-theme="sable"] .camp-modal-title,
+[data-theme="sable"] .camp-obj-gold,
+[data-theme="sable"] .camp-mf-gold{color:var(--ddp-ink)}
 </style>
 </head>
 <body>
@@ -6031,14 +6111,43 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
      #tutorial-callout: it needs to sit on top of whichever of the two is
      currently showing without being torn down by either one's own
      render cycle. -->
+<!-- The portrait sits OUTSIDE/ABOVE the card (not beside it, inside), and
+     large — the ask was to make it unambiguous the character is talking
+     TO the player, like a speech-bubble character looming over their own
+     line, not a small inline chat-icon. .camp-dlg-wrap is what makes that
+     possible: it's the positioning context both the portrait (absolute,
+     overlapping the card's top edge) and the card share. -->
 <div id="camp-dialogue" class="camp-dlg-scrim" aria-hidden="true">
-  <div class="camp-dlg-card" id="camp-dlg-card">
+  <div class="camp-dlg-wrap" id="camp-dlg-wrap">
     <div class="camp-dlg-portrait" id="camp-dlg-portrait"></div>
-    <div class="camp-dlg-body">
-      <div class="camp-dlg-name" id="camp-dlg-name"></div>
-      <div class="camp-dlg-text" id="camp-dlg-text"></div>
+    <div class="camp-dlg-card" id="camp-dlg-card">
+      <div class="camp-dlg-body">
+        <div class="camp-dlg-name" id="camp-dlg-name"></div>
+        <div class="camp-dlg-text" id="camp-dlg-text"></div>
+      </div>
+      <button class="camp-dlg-next" id="camp-dlg-next" onclick="campaignDialogueAdvance()" aria-label="Continue">›</button>
     </div>
-    <button class="camp-dlg-next" id="camp-dlg-next" onclick="campaignDialogueAdvance()" aria-label="Continue">›</button>
+  </div>
+</div>
+
+<!-- Level-detail popup — opens on a map node tap, BEFORE any dialogue or
+     the level itself. Shows the objective in plain language, who's at
+     the table (real character art, not "Computer 2/3/4"), and how your
+     friends did on this same table. "Play" is what actually proceeds to
+     the preLevel/bossIntro dialogue and then the hand. -->
+<div id="camp-level-modal" class="camp-modal-scrim" aria-hidden="true" onclick="if(event.target===this)campaignCloseLevelModal()">
+  <div class="camp-modal-card">
+    <button class="camp-modal-close" onclick="campaignCloseLevelModal()" aria-label="Close">&#10005;</button>
+    <div class="camp-modal-head">
+      <div class="camp-modal-title" id="camp-modal-title">Table</div>
+      <div class="camp-modal-sub" id="camp-modal-sub"></div>
+    </div>
+    <div class="camp-modal-objective" id="camp-modal-objective"></div>
+    <div class="camp-modal-section-label">At this table</div>
+    <div class="camp-modal-opponents" id="camp-modal-opponents"></div>
+    <div class="camp-modal-section-label">Friends</div>
+    <div class="camp-modal-friends" id="camp-modal-friends"></div>
+    <button class="btn btn-primary btn-block" id="camp-modal-play" onclick="campaignModalPlay()">Play</button>
   </div>
 </div>
 
@@ -7169,6 +7278,27 @@ function applyCardFront(id,persist){
 function updateSceneLayer(){
   const onTable=currentScreenId==='pass'||currentScreenId==='play';
   document.documentElement.classList.toggle('scene-on',onTable);
+  const el=$('scene-layer');
+  if(!el) return;
+  // A campaign game shows its OWN chapter background here instead of the
+  // player's equipped cosmetic scene, for exactly as long as they're
+  // sitting at that table — matches the map screen's own background, per
+  // request, so a campaign level doesn't visually context-switch to an
+  // unrelated felt. S.campaignChapterSlug comes from publicState (server
+  // side) rather than campaignData, since this has to work on a cold
+  // reconnect straight into a hand, before the map was ever fetched.
+  const campaignSlug=(onTable&&S&&S.campaign)?S.campaignChapterSlug:null;
+  const campaignImg=campaignSlug?campaignBgImg(campaignSlug):'';
+  if(campaignImg){
+    el.setAttribute('data-scene',equippedScene);
+    el.innerHTML=campaignImg;
+  }else{
+    // Either not a campaign table, or the chapter's art hasn't loaded
+    // (or 404'd) — falls back to the player's own equipped scene rather
+    // than showing nothing.
+    el.setAttribute('data-scene',equippedScene);
+    el.innerHTML=sceneArtImg(equippedScene);
+  }
 }
 function initCosmeticLook(){
   let s=null,c=null;
@@ -8002,7 +8132,7 @@ socket.on('campaignStateErr',d=>{
   $('camp-loading').style.display='none';
   toast('err-campaign',d.msg);
 });
-socket.on('campaignError',d=>{ toast('err-campaign',d.msg); });
+socket.on('campaignError',d=>{ campaignStartPending=false; toast('err-campaign',d.msg); });
 
 function campaignCuesFor(levelId,trigger){
   if(!campaignData) return [];
@@ -8042,9 +8172,33 @@ function campaignShowQueue(cues,done){
   campDlgOnDone=done;
   campaignDialogueStep();
 }
+// Typewriter state for the line currently showing. A tap while typing
+// completes the line instantly (a real reveal, still respects the
+// player's read pace) rather than being ignored or double-advancing.
+let campDlgTyping=false;
+let campDlgTypeTimer=null;
+let campDlgFullText='';
+const CAMP_TYPE_MS=22; // per character
+function campaignTypeText(text){
+  clearInterval(campDlgTypeTimer);
+  campDlgFullText=text;
+  const el=$('camp-dlg-text');
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){
+    el.textContent=text; campDlgTyping=false; return;
+  }
+  el.textContent='';
+  campDlgTyping=true;
+  let i=0;
+  campDlgTypeTimer=setInterval(()=>{
+    i++;
+    el.textContent=text.slice(0,i);
+    if(i>=text.length){ clearInterval(campDlgTypeTimer); campDlgTyping=false; }
+  },CAMP_TYPE_MS);
+}
 function campaignDialogueStep(){
   if(!campDlgQueue.length){
     $('camp-dialogue').classList.remove('show');
+    clearInterval(campDlgTypeTimer); campDlgTyping=false;
     const done=campDlgOnDone; campDlgOnDone=null;
     if(done) done();
     return;
@@ -8055,16 +8209,19 @@ function campaignDialogueStep(){
   const isPlayer=cue.speakerId==='player';
   const name=isPlayer?(identity().name||'You'):(speaker?speaker.name:'');
   $('camp-dlg-name').textContent=name;
-  $('camp-dlg-text').textContent=cue.text;
+  campaignTypeText(cue.text);
   // Same reasoning as the map's profile chip — .avatar supplies the
   // circular background avatarHTML's initials fallback doesn't carry
   // itself. campaignPortraitHTML (the SVG monogram) already draws its
   // own circular background, so only the player case needs this.
   $('camp-dlg-portrait').innerHTML=isPlayer
-    ?`<span class="avatar" style="width:44px;height:44px">${avatarHTML(account&&account.avatar,name)}</span>`
+    ?`<span class="avatar" style="width:100%;height:100%">${avatarHTML(account&&account.avatar,name)}</span>`
     :campaignPortraitHTML(cue.speakerId);
-  const card=$('camp-dlg-card');
-  card.classList.toggle('camp-dlg-mine',isPlayer);
+  // .camp-dlg-mine now lives on the WRAP, not the card — it has to move
+  // both the portrait (absolute, overlapping the card's top corner) and
+  // the card's own text alignment together, and the wrap is the only
+  // element that's a parent of both.
+  $('camp-dlg-wrap').classList.toggle('camp-dlg-mine',isPlayer);
   const scrim=$('camp-dialogue');
   // Re-trigger the fade+slide on every line, even consecutive ones from
   // different speakers in the same exchange — removing then re-adding
@@ -8072,7 +8229,19 @@ function campaignDialogueStep(){
   scrim.classList.remove('show');
   requestAnimationFrame(()=>requestAnimationFrame(()=>scrim.classList.add('show')));
 }
-function campaignDialogueAdvance(){ campaignDialogueStep(); }
+function campaignDialogueAdvance(){
+  // First tap on a still-typing line completes it instantly rather than
+  // skipping straight to the next line — the player asked for the type-
+  // on effect specifically so they can read it, so a tap shouldn't be
+  // able to blow past a line unread.
+  if(campDlgTyping){
+    clearInterval(campDlgTypeTimer);
+    $('camp-dlg-text').textContent=campDlgFullText;
+    campDlgTyping=false;
+    return;
+  }
+  campaignDialogueStep();
+}
 $('camp-dialogue').addEventListener('click',e=>{ if(e.target.id==='camp-dialogue') campaignDialogueAdvance(); });
 
 function renderCampaignMap(d){
@@ -8150,13 +8319,93 @@ function campaignUpdateRefillTimer(){
   campaignRefillTimerHandle=setTimeout(campaignUpdateRefillTimer,1000);
 }
 
+// Tapping a node opens the level-detail popup first — objective,
+// opponents, friends' results — rather than jumping straight into
+// dialogue. "Play" inside that popup (campaignModalPlay) is what
+// actually proceeds to the preLevel/bossIntro dialogue and the hand.
 function campaignTapNode(levelId){
-  $('camp-node-'+levelId).classList.add('tap-halo');
-  const level=(campaignData.levels||[]).find(l=>l.id===levelId);
+  const node=$('camp-node-'+levelId);
+  if(node) node.classList.add('tap-halo');
+  campaignOpenLevelModal(levelId);
+}
+let campaignModalLevelId=null;
+function campaignObjectiveHTML(level){
+  const o=level&&level.objective; if(!o) return '';
+  const signed=n=>(n>=0?'+':'')+n;
+  let main='',gold='';
+  if(o.type==='score'){
+    main=`Score at least <b>${signed(o.min)}</b>.`;
+    gold=`Gold: <b>${signed(o.gold)}</b> or higher.`;
+  }else if(o.type==='suitVoid'){
+    main=`Hold zero <b>${esc(o.suit)}</b> cards by trick <b>${o.voidByTrick}</b>.`;
+    gold=`Gold: void by trick <b>${o.goldByTrick}</b>.`;
+  }else if(o.type==='avoidQueen'){
+    main=`Avoid taking the <b>Q♠</b>.`;
+    gold=`Gold: avoid her <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`;
+  }
+  const dir=CAMP_PASS_DIR_TEXT[level.forcePassDir]||(level.forcePassDir?'':'Pass direction cycles as usual');
+  return `<div class="camp-obj-main">${main}</div><div class="camp-obj-gold">${gold}</div>`
+    +(dir?`<div class="camp-obj-dir">${esc(dir)}</div>`:'');
+}
+const CAMP_PASS_DIR_TEXT={left:'Pass 2 cards left',right:'Pass 2 cards right',across:'Pass 2 cards across',keep:'No passing — keep your hand'};
+// The three Regulars sit at every ordinary table; the Baron takes
+// Regular #3's seat at the boss table — matches the screenplay's own
+// "one opponent leaves, the boss takes that seat" staging.
+function campaignOpponentsHTML(level){
+  const ids=(level&&level.type==='BOSS')?['reg1','reg2','glass_baron']:['reg1','reg2','reg3'];
+  return ids.map(id=>{
+    const ch=CAMPAIGN_CHARACTERS[id]||{name:'?'};
+    return `<div class="camp-modal-opp">${campaignPortraitHTML(id)}<span>${esc(ch.name)}</span></div>`;
+  }).join('');
+}
+function campaignFriendsRowsHTML(rows){
+  if(!rows||!rows.length) return '<div class="camp-modal-empty">Add friends to see how they did here.</div>';
+  return rows.map(r=>{
+    const status=!r.played?'<span class="camp-mf-notplayed">Not played</span>'
+      :r.gold?'<span class="camp-mf-gold">&#9733; Gold</span>'
+      :r.cleared?'<span class="camp-mf-cleared">&#10003; Cleared</span>'
+      :`<span>${r.bestScore>0?'+':''}${r.bestScore}</span>`;
+    return `<div class="camp-modal-friend-row"><span class="avatar sm">${avatarHTML(r.avatar,r.nickname)}</span>`
+      +`<span class="camp-mf-name">${esc(r.nickname)}</span>${status}</div>`;
+  }).join('');
+}
+function campaignOpenLevelModal(levelId){
+  const level=(campaignData&&campaignData.levels||[]).find(l=>l.id===levelId);
+  if(!level) return;
+  campaignModalLevelId=levelId;
+  $('camp-modal-title').textContent=level.type==='BOSS'?'Boss Table':('Table '+levelId);
+  $('camp-modal-sub').textContent=level.type==='BOSS'?'The Glass Baron':(level.type==='Harder'?'A harder hand':'');
+  $('camp-modal-objective').innerHTML=campaignObjectiveHTML(level);
+  $('camp-modal-opponents').innerHTML=campaignOpponentsHTML(level);
+  $('camp-modal-friends').innerHTML='<div class="camp-modal-empty">Loading…</div>';
+  $('camp-modal-play').textContent=(level.result&&level.result.cleared)?'Play Again':'Play';
+  $('camp-level-modal').classList.add('show');
+  socket.emit('getCampaignLevelFriends',{accountToken:accountToken||'',levelId});
+}
+function campaignCloseLevelModal(){
+  $('camp-level-modal').classList.remove('show');
+  campaignModalLevelId=null;
+}
+socket.on('campaignLevelFriendsOk',d=>{
+  if(campaignModalLevelId!==d.levelId) return; // stale reply for a since-closed/changed popup
+  $('camp-modal-friends').innerHTML=campaignFriendsRowsHTML(d.rows);
+});
+function campaignModalPlay(){
+  const levelId=campaignModalLevelId;
+  if(levelId==null) return;
+  campaignCloseLevelModal();
+  const level=(campaignData&&campaignData.levels||[]).find(l=>l.id===levelId);
   const trigger=level&&level.type==='BOSS'?'bossIntro':'preLevel';
   campaignMaybeShow(levelId,trigger,()=>campaignStartLevel(levelId));
 }
+// Guards against a double-tap firing two startCampaignLevel requests
+// (which would burn two attempts for one level, or worse, race two room
+// creations for the same account) — reset on either a successful join
+// or a campaignError response, whichever arrives.
+let campaignStartPending=false;
 function campaignStartLevel(levelId){
+  if(campaignStartPending) return;
+  campaignStartPending=true;
   const id=identity();
   socket.emit('startCampaignLevel',{name:id.name,avatar:id.avatar||'',
     accountToken:accountToken||'',levelId});
@@ -8166,10 +8415,12 @@ let lastCampaignResult=null;
 socket.on('campaignResult',d=>{
   if(d.creditsAwarded) requestCredits();
   lastCampaignResult=d;
-  // A fresh unlock/clear can change what the map looks like next time —
-  // drop the cached payload so goCampaign() re-fetches rather than
-  // showing stale node states after "Back to the Map".
-  campaignData=null;
+  // NOT nulling campaignData here — renderCampaignResult (below) needs
+  // it to look up postClear/postFail/bossDefeat story cues, and this
+  // fired before that lookup ran, so the post-level dialogue silently
+  // never played. goCampaign() already re-fetches fresh state on every
+  // visit regardless (see its own socket.emit('getCampaignState',...)),
+  // so a stale map isn't actually a risk here.
   renderCampaignResult();
 });
 function renderCampaignResult(){
@@ -10126,6 +10377,7 @@ socket.on('joined',d=>{
   room=d.code; me=d.playerIndex; host=d.isHost; token=d.token;
   saveSession();
   $('l-code').textContent=room;
+  campaignStartPending=false;
 });
 
 /* ══════════ RANKED ══════════ */

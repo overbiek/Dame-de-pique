@@ -1607,6 +1607,28 @@ async function markCampaignCuesSeen(accountId, ids) {
   );
 }
 
+// For the level-detail popup's "Friends" section. Every friend is
+// listed (LEFT JOIN), even one who's never played this level — the
+// client renders those as "not played" rather than omitting them,
+// same "show the gap, don't hide it" reasoning as an empty leaderboard.
+async function getCampaignFriendsResults(accountId, levelId) {
+  const { rows } = await pool.query(
+    `SELECT a.id, a.nickname, a.avatar, r.best_score, r.cleared, r.gold
+     FROM friendships f
+     JOIN accounts a ON a.id = f.friend_id
+     LEFT JOIN campaign_level_results r ON r.account_id = a.id AND r.level_id = $2
+     WHERE f.account_id = $1
+     ORDER BY r.cleared DESC NULLS LAST, r.gold DESC NULLS LAST,
+              r.best_score DESC NULLS LAST, a.nickname ASC`,
+    [accountId, levelId]
+  );
+  return rows.map(r => ({
+    id: r.id, nickname: r.nickname, avatar: r.avatar,
+    played: r.best_score !== null, bestScore: r.best_score,
+    cleared: !!r.cleared, gold: !!r.gold,
+  }));
+}
+
 module.exports = {
   pool, ensureSchema, toPublic,
   createAccount, findAccountByUsername, findAccountById,
@@ -1628,5 +1650,5 @@ module.exports = {
   getCosmetics, saveCosmetics, markAchievementsSeen,
   grantCredits, getCredits, claimCasualCreditDay, purchaseItem, getPurchases,
   getCampaignState, consumeCampaignAttempt, upsertCampaignLevelResult,
-  advanceCampaignUnlock, markCampaignCuesSeen,
+  advanceCampaignUnlock, markCampaignCuesSeen, getCampaignFriendsResults,
 };

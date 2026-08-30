@@ -2116,6 +2116,10 @@ const CAMPAIGN_CHARACTERS = {
   reg2:        { id: 'reg2',        name: 'Regular #2' },
   reg3:        { id: 'reg3',        name: 'Regular #3' },
   glass_baron: { id: 'glass_baron', name: 'The Glass Baron' },
+  rooftop1:    { id: 'rooftop1',    name: 'Rooftop Player #1' },
+  rooftop2:    { id: 'rooftop2',    name: 'Rooftop Player #2' },
+  rooftop3:    { id: 'rooftop3',    name: 'Rooftop Player #3' },
+  the_sharp:   { id: 'the_sharp',   name: 'The Sharp' },
   player:      { id: 'player',      name: null },
 };
 
@@ -2125,23 +2129,36 @@ const CAMPAIGN_CHAPTERS = [
   // audience, so this uses its English equivalent instead. Real chapter
   // background art is at public/campaign/chapters/velvet_entrance.webp.
   { id: 1, title: 'Velvet Entrance', levelStart: 1, levelEnd: 10, slug: 'velvet_entrance', bossId: 'glass_baron' },
+  // No real art supplied for this one yet — falls back to the CSS/SVG
+  // placeholder (campaignBgImg's onerror path) exactly like every
+  // character portrait did before Chapter 1's were dropped in. Drop a
+  // file at public/campaign/chapters/rooftop.webp whenever it's ready,
+  // no code change needed.
+  { id: 2, title: 'The Rooftop', levelStart: 11, levelEnd: 20, slug: 'rooftop', bossId: 'the_sharp' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
 //   { type:'score', min, gold }
 //   { type:'suitVoid', suit, voidByTrick, goldByTrick }
 //   { type:'avoidQueen', goldScoreBar }
-// cleanHand/trickCount exist in the source design data but aren't used in
-// Chapter 1 — left out rather than half-wired; add both the case here and
-// in evaluateCampaignObjective together when a level actually needs one.
+//   { type:'cleanHand', goldScoreBar }
+//   { type:'trickCount', minTricks, goldTricks }
+// All four non-score mini-ladder types are now in use — Chapter 1 wove in
+// Suit Void and Avoid the Queen, Chapter 2 (below) completes the set with
+// Clean Hand and Trick Count — so every level in both chapters uses a
+// mechanic the game actually teaches somewhere.
 //
 // L3 and L5 deliberately do NOT use the main level-data sheet's own score
 // objective for those two slots — they're swapped for the "Suit Void" and
 // "Avoid the Queen" mini-ladders' own Level 1 (see the campaign plan doc),
 // matching those two levels' own screenplay beats ("count what is gone",
-// "the queen stays out") exactly. The dialogue was written to react to
-// play style in general rather than to a specific mechanic, so the swap
-// needed no screenplay changes.
+// "the queen stays out") exactly. L13 and L15 do the same swap in Chapter
+// 2, using each mini-ladder's Level 2 rung (Chapter 1 already spent Level
+// 1 of the other two) against "he saw it two tricks ago" (decisive trick-
+// taking) and "I have been trying to fool you... changing how you play"
+// (staying clean rather than getting baited into a penalty) respectively.
+// The dialogue was written to react to play style in general rather than
+// to a specific mechanic, so neither swap needed any screenplay changes.
 const CAMPAIGN_LEVELS = {
   1: { id: 1, chapter: 1, type: 'Normal', forcePassDir: 'keep', hands: 1,
        seed: 'ddp-main-refine-L1-c690', hand: parseHand('2♠ K♣ A♥ 7♥ 2♥ 9♦ Q♣ J♠ A♠ 5♣ 7♠ Q♦ 3♦'),
@@ -2183,6 +2200,50 @@ const CAMPAIGN_LEVELS = {
           parseHand('A♣ K♣ 10♥ 7♦ 2♦ K♦ 6♥ 6♣ 6♦ 5♥ 3♣ 7♣ A♠'),
         ],
         objective: { type: 'score', min: -11, gold: 49 } },
+
+  // Chapter 2 — every level here is 'keep' (no passing at all this
+  // chapter) — that's the source sheet's own data, not an oversight; the
+  // Rooftop table apparently doesn't pass.
+  11: { id: 11, chapter: 2, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L11-c177', hand: parseHand('Q♠ 6♣ 3♣ 2♦ 6♠ 4♦ Q♦ 8♠ Q♥ 2♥ 9♥ K♣ 8♦'),
+        objective: { type: 'score', min: -11, gold: 16 } },
+  12: { id: 12, chapter: 2, type: 'Harder', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L12-c211', hand: parseHand('K♣ 9♣ K♥ 8♠ 6♣ A♦ 3♦ 7♦ 2♦ 10♣ J♥ 7♥ Q♥'),
+        objective: { type: 'score', min: -4, gold: 31 } },
+  // Original main-sheet objective for L13 was score (min -17 / gold 6).
+  // Swapped for the Trick Count mini-ladder's own Level 2 rung.
+  13: { id: 13, chapter: 2, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-goal-tricks-refine-L2-c59', hand: parseHand('9♣ 9♠ 8♥ 10♥ Q♣ 8♦ A♥ A♣ Q♥ 2♦ J♠ 6♠ J♥'),
+        objective: { type: 'trickCount', minTricks: 3, goldTricks: 6 } },
+  14: { id: 14, chapter: 2, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L14-c97', hand: parseHand('J♦ Q♦ 7♣ 5♦ 3♥ 2♥ 6♥ 6♠ 8♣ J♠ A♥ 2♠ 2♦'),
+        objective: { type: 'score', min: -16, gold: 13 } },
+  // Original main-sheet objective for L15 was score (min 3 / gold 28).
+  // Swapped for the Clean Hand mini-ladder's own Level 2 rung.
+  15: { id: 15, chapter: 2, type: 'Harder', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-goal-clean-refine-L2-c210', hand: parseHand('4♣ 3♣ K♣ J♠ 8♦ Q♦ 6♠ 9♠ 5♥ 3♠ 4♥ J♥ 8♣'),
+        objective: { type: 'cleanHand', goldScoreBar: 20 } },
+  16: { id: 16, chapter: 2, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L16-c262', hand: parseHand('A♥ 9♦ K♣ A♦ J♦ 2♣ 5♦ 2♥ 4♠ 8♠ 6♠ 6♦ Q♣'),
+        objective: { type: 'score', min: -15, gold: 7 } },
+  17: { id: 17, chapter: 2, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L17-c31', hand: parseHand('9♠ 3♦ J♥ K♥ Q♥ 2♥ J♦ 7♣ 3♥ 3♣ 2♦ 3♠ Q♣'),
+        objective: { type: 'score', min: -14, gold: 10 } },
+  18: { id: 18, chapter: 2, type: 'Harder', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L18-c70', hand: parseHand('10♥ 5♦ 8♣ 2♠ J♥ 9♦ Q♣ 9♣ 4♠ 7♥ 5♥ 2♣ A♣'),
+        objective: { type: 'score', min: 1, gold: 18 } },
+  19: { id: 19, chapter: 2, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L19-c9', hand: parseHand('2♥ A♥ 5♠ 9♥ J♥ 6♠ Q♠ J♣ 10♥ A♣ 6♣ 7♦ Q♦'),
+        objective: { type: 'score', min: -12, gold: 20 } },
+  20: { id: 20, chapter: 2, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_sharp',
+        seed: 'ddp-boss-refine-L20-c292',
+        hands4: [
+          parseHand('9♦ 2♣ A♦ 9♥ 2♥ K♥ 8♣ J♣ 2♦ 3♣ 8♥ 4♠ J♠'),
+          parseHand('2♠ 9♣ 8♠ Q♠ Q♦ 10♦ Q♣ 4♥ 5♥ A♣ 4♦ Q♥ 10♣'),
+          parseHand('Q♠ J♣ Q♣ 8♦ 4♠ 2♥ Q♦ 6♦ 9♦ 7♣ 10♠ 5♠ 5♥'),
+          parseHand('J♣ 5♦ 10♠ 7♥ 3♣ Q♠ 2♠ 6♦ K♣ K♠ J♥ A♣ 6♣'),
+        ],
+        objective: { type: 'score', min: -6, gold: 44 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -2320,6 +2381,90 @@ const CAMPAIGN_STORY_CUES = [
   ccue(10, 'bossDefeat', 'player', 'Where?'),
   ccue(10, 'bossDefeat', 'glass_baron', 'Rooftop. Higher rollers. Sharper eyes.'),
   ccue(10, 'chapterExit', 'glass_baron', 'Come. I want to see what they make of you.'),
+
+  // ── Chapter 2 — The Rooftop, Boss: The Sharp ──
+  // Level 11 — Higher Up
+  ccue(11, 'preLevel', 'glass_baron', 'Everyone here earned their chair. They will not underestimate you for long.'),
+  ccue(11, 'preLevel', 'the_sharp', 'Five hundred thirty-seven... five hundred thirty-eight...'),
+  ccue(11, 'preLevel', 'rooftop1', 'Do not ask.'),
+  ccue(11, 'preLevel', 'rooftop2', 'He likes an audience.'),
+  ccue(11, 'postClear', 'glass_baron', 'The rooftop suits you.'),
+
+  // Level 12 — Do Not Waste Motion
+  ccue(12, 'preLevel', 'the_sharp', 'You took one trick you did not need.'),
+  ccue(12, 'preLevel', 'player', 'Hello to you too.'),
+  ccue(12, 'preLevel', 'the_sharp', 'Greetings are also unnecessary motion.'),
+  ccue(12, 'preLevel', 'rooftop3', 'That was him being friendly.'),
+  ccue(12, 'postClear', 'rooftop1', 'He is irritating. He is also usually right.'),
+
+  // Level 13 — Two Tricks Ahead (Trick Count)
+  ccue(13, 'postClear', 'rooftop2', 'I thought you would take that.'),
+  ccue(13, 'postClear', 'rooftop3', 'He saw it two tricks ago.'),
+  ccue(13, 'postClear', 'the_sharp', 'Thirty-nine... forty...'),
+  ccue(13, 'postClear', 'rooftop1', 'Show-off.'),
+
+  // Level 14 — Razor Comment
+  ccue(14, 'postClear', 'rooftop1', 'That was good.'),
+  ccue(14, 'postClear', 'the_sharp', 'It was adequate.'),
+  ccue(14, 'postClear', 'the_sharp', 'Good would have cost fewer points two tricks earlier.'),
+  ccue(14, 'postClear', 'player', 'Do you ever compliment anyone?'),
+  ccue(14, 'postClear', 'the_sharp', 'When necessary.'),
+  ccue(14, 'postClear', 'rooftop2', 'I would take "adequate." That is practically a standing ovation from him.'),
+
+  // Level 15 — Make Them Change (Clean Hand)
+  ccue(15, 'postClear', 'rooftop3', 'I have been trying to fool you for three rounds.'),
+  ccue(15, 'postClear', 'rooftop1', 'And now you are changing how you play because of it.'),
+  ccue(15, 'postClear', 'glass_baron', 'That is usually the moment a table becomes interesting.'),
+  ccue(15, 'postClear', 'rooftop3', 'Fine. I need a new plan.'),
+
+  // Level 16 — The Cut
+  ccue(16, 'postClear', 'the_sharp', 'You showed them too much.'),
+  ccue(16, 'postClear', 'player', 'I passed.'),
+  ccue(16, 'postClear', 'the_sharp', 'Passing does not make the mistake disappear.'),
+  ccue(16, 'postClear', 'the_sharp', 'Next time, make them discover it. Do not announce it.'),
+  ccue(16, 'postClear', 'rooftop2', 'See? Knife first. Advice second.'),
+
+  // Level 17 — Close Still Counts
+  ccue(17, 'postClear', 'rooftop1', 'Close.'),
+  ccue(17, 'postClear', 'player', 'Close still counts.'),
+  ccue(17, 'postClear', 'the_sharp', 'Only if you learn why it was close.'),
+  ccue(17, 'postClear', 'player', 'You really cannot help yourself, can you?'),
+  ccue(17, 'postClear', 'the_sharp', 'No.'),
+
+  // Level 18 — He Stops Moving
+  ccue(18, 'preLevel', 'rooftop3', 'That is worse.'),
+  ccue(18, 'preLevel', 'rooftop2', 'Much worse.'),
+  ccue(18, 'postClear', 'the_sharp', 'You counted the void.'),
+  ccue(18, 'postClear', 'player', 'You sound surprised.'),
+  ccue(18, 'postClear', 'the_sharp', 'I am not.'),
+
+  // Level 19 — Sharp Eyes
+  ccue(19, 'preLevel', 'rooftop3', 'You planning to stand there all night?'),
+  ccue(19, 'preLevel', 'the_sharp', 'No.'),
+  ccue(19, 'postClear', 'the_sharp', 'You remember cards. You read people. You recover from imperfect hands.'),
+  ccue(19, 'postClear', 'player', 'Is that a compliment?'),
+  ccue(19, 'postClear', 'the_sharp', 'It is an assessment.'),
+  ccue(19, 'postClear', 'the_sharp', 'Your seat.'),
+  ccue(19, 'postClear', 'rooftop3', 'There it is.'),
+  ccue(19, 'postClear', 'glass_baron', 'I told you: sharper eyes.'),
+
+  // Level 20 — BOSS: The Sharp
+  ccue(20, 'bossIntro', 'the_sharp', 'The Baron says you understand cards.'),
+  ccue(20, 'bossIntro', 'player', 'And you disagree?'),
+  ccue(20, 'bossIntro', 'the_sharp', 'Cards are easy. People leak information.'),
+  ccue(20, 'bossIntro', 'the_sharp', 'Let us see whether you notice before they do.'),
+  ccue(20, 'bossMidpoint', 'the_sharp', 'Better. You changed after one mistake instead of defending it.'),
+  ccue(20, 'bossMidpoint', 'player', 'That almost sounded kind.'),
+  ccue(20, 'bossMidpoint', 'the_sharp', 'Do not ruin it.'),
+  ccue(20, 'postFail', 'the_sharp', 'Again. You saw the card. You missed the person.', { pick: 'random' }),
+  ccue(20, 'postFail', 'the_sharp', 'Too much motion. Too little purpose.', { pick: 'random' }),
+  ccue(20, 'postFail', 'the_sharp', 'You knew what was gone. You did not ask what that forced them to hold.', { pick: 'random' }),
+  ccue(20, 'bossDefeat', 'the_sharp', 'You adapt.'),
+  ccue(20, 'bossDefeat', 'player', 'Interesting?'),
+  ccue(20, 'bossDefeat', 'the_sharp', 'Annoyingly.'),
+  ccue(20, 'bossDefeat', 'the_sharp', 'There is someone downstairs who believes every decision can be explained.'),
+  ccue(20, 'bossDefeat', 'glass_baron', 'You two will either get along beautifully or not at all.'),
+  ccue(20, 'chapterExit', 'the_sharp', 'Come. The library is quieter.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);
@@ -2398,6 +2543,18 @@ function evaluateCampaignObjective(G) {
     const tookQueen = p.tricks.some(c => c.suit === '♠' && c.rank === 'Q');
     const avoided = !tookQueen;
     return { cleared: avoided, gold: avoided && score >= obj.goldScoreBar, metric: score };
+  }
+  if (obj.type === 'cleanHand') {
+    // Same penalty-card check recordRoundAchievements already uses for
+    // the Clean Hand achievement stat (server.js's achBuf.clean) — zero
+    // hearts and no Q♠ among this player's captured tricks this round.
+    const penalties = p.tricks.filter(c => c.suit === '♥' || (c.suit === '♠' && c.rank === 'Q')).length;
+    const clean = penalties === 0;
+    return { cleared: clean, gold: clean && score >= obj.goldScoreBar, metric: score };
+  }
+  if (obj.type === 'trickCount') {
+    const tricksWon = p.tricks.length / 4;
+    return { cleared: tricksWon >= obj.minTricks, gold: tricksWon >= obj.goldTricks, metric: tricksWon };
   }
   return { cleared: false, gold: false, metric: score };
 }

@@ -5135,6 +5135,14 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
   position:absolute;left:50%;top:6px;transform:translateX(-50%);
   z-index:15;padding:6px 18px;border-radius:12px;text-align:center;min-width:180px;
 }
+.camp-chapter-nav{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;
+  padding:0 2px;pointer-events:none}
+.camp-chapter-arrow{
+  pointer-events:auto;flex:0 0 auto;width:22px;height:22px;border-radius:50%;
+  background:rgba(var(--ddp-scrim-rgb),.5);border:1px solid rgba(var(--ddp-brass-rgb),.3);
+  color:var(--gold-hi);font-size:13px;line-height:1;cursor:pointer;
+}
+.camp-chapter-arrow:disabled{opacity:.25;cursor:default}
 .camp-chapter-title{font-family:'Playfair Display',serif;font-weight:700;font-size:13px;
   letter-spacing:.03em;text-transform:uppercase;color:var(--gold-hi)}
 .camp-chapter-range{font-size:9px;letter-spacing:.08em;text-transform:uppercase;
@@ -6078,6 +6086,7 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
     <div class="camp-corner-tl deco-box" id="camp-profile"></div>
 
     <div class="camp-corner-tc deco-box">
+      <div class="camp-chapter-nav" id="camp-chapter-nav"></div>
       <div class="camp-chapter-title" id="camp-chapter-title">—</div>
       <div class="camp-chapter-range" id="camp-chapter-range">—</div>
       <div class="camp-progress-bar"><div class="camp-progress-fill" id="camp-progress-fill" style="width:0%"></div></div>
@@ -8061,7 +8070,18 @@ const CAMPAIGN_CHARACTERS={
   reg2:{name:'Regular #2',initial:'2'},
   reg3:{name:'Regular #3',initial:'3'},
   glass_baron:{name:'The Glass Baron',initial:'GB'},
+  rooftop1:{name:'Rooftop Player #1',initial:'1'},
+  rooftop2:{name:'Rooftop Player #2',initial:'2'},
+  rooftop3:{name:'Rooftop Player #3',initial:'3'},
+  the_sharp:{name:'The Sharp',initial:'S'},
   player:{name:null,initial:null},
+};
+// Which three characters sit at an ordinary (non-boss) table per chapter,
+// and who the boss replaces — used by campaignOpponentsHTML so the
+// level-detail popup shows the right cast instead of always Chapter 1's.
+const CAMPAIGN_CHAPTER_ROSTER={
+  1:{regulars:['reg1','reg2','reg3'],bossSeat:2},
+  2:{regulars:['rooftop1','rooftop2','rooftop3'],bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/
@@ -8244,35 +8264,32 @@ function campaignDialogueAdvance(){
 }
 $('camp-dialogue').addEventListener('click',e=>{ if(e.target.id==='camp-dialogue') campaignDialogueAdvance(); });
 
+// Which chapter the map is currently showing. Independent of progress —
+// once a second chapter unlocks, the player still needs to get back to
+// Chapter 1 to replay/chase Gold there, so this is a real nav state, not
+// just "whichever chapter is current".
+let campaignViewChapterId=null;
 function renderCampaignMap(d){
-  const ch=d.chapters[0];
-  $('camp-chapter-title').textContent=ch.title;
-  $('camp-chapter-range').textContent=`Levels ${ch.levelStart}–${ch.levelEnd}`;
-  const levels=d.levels.filter(l=>l.chapter===ch.id);
-  const clearedCount=levels.filter(l=>l.result&&l.result.cleared).length;
-  $('camp-progress-fill').style.width=Math.round(clearedCount/levels.length*100)+'%';
+  // Sets the module-level campaignData itself rather than trusting the
+  // caller to have already done so — campaignRenderChapterView (and
+  // campaignSwitchChapter, campaignTapNode, etc.) all read the global,
+  // not this parameter, so a caller that passed fresh data without also
+  // assigning campaignData would silently render nothing further down.
+  campaignData=d;
+  // Defaults to whichever chapter contains the current frontier (falls
+  // back to the LAST chapter if every level in the data is already
+  // cleared, e.g. both chapters done and there's no chapter 3 yet).
+  const current=d.chapters.find(c=>d.highestUnlockedLevel>=c.levelStart&&d.highestUnlockedLevel<=c.levelEnd);
+  campaignViewChapterId=(current||d.chapters[d.chapters.length-1]).id;
 
-  $('camp-bg').innerHTML=campaignBgImg(ch.slug);
-
-  // Revealed progressively rather than from level 1 — the screenplay's
-  // own pacing has the Baron first glimpsed at Level 4 ("The Man With
-  // The Glass"), so the teaser panel stays empty until the player has
-  // actually reached that beat, matching "early levels: distant glimpse"
-  // from the brief rather than spoiling the boss on day one.
-  const boss=ch.bossId&&CAMPAIGN_CHARACTERS[ch.bossId];
-  const bossGlimpsed=d.highestUnlockedLevel>=4;
-  $('camp-boss-teaser').innerHTML=(boss&&bossGlimpsed)
-    ?`${campaignPortraitHTML(ch.bossId)}<div class="camp-boss-name">${esc(boss.name)}</div>`
-    :'';
-
-  // Reuses the real .avatar class (not a bespoke wrapper) specifically
-  // so the initials fallback gets its circular background for free —
+  // Chapter-independent chrome — set once here, not on every chapter switch.
+  // Reuses the real .avatar class (not a bespoke wrapper) specifically so
+  // the initials fallback gets its circular background for free —
   // avatarHTML's plain-text fallback has no background of its own by
   // design, it always relies on a host element like .avatar to supply one.
   const id=identity();
   $('camp-profile').innerHTML=`<span class="avatar sm">${avatarHTML(account&&account.avatar,id.name||'You')}</span>`
     +`<span class="camp-profile-name">${esc(id.name||'You')}</span>`;
-
   // A numeric pool (24 by default), not a small row of hearts — same
   // gold-chip visual language as the credits box, since attempts are
   // presented as a currency/counter rather than lives-as-icons.
@@ -8283,10 +8300,66 @@ function renderCampaignMap(d){
     +`<span class="camp-refill" id="camp-refill-timer"${a.nextRefillAt?` data-until="${a.nextRefillAt}"`:''}></span>`;
   campaignUpdateRefillTimer();
 
+  campaignRenderChapterView();
+}
+// Re-renders just the chapter-specific parts of the map (title, progress,
+// background, boss teaser, route) for whichever chapter campaignViewChapterId
+// currently points at — called both on first load and after switching
+// chapters, neither of which needs a server round trip since campaignData
+// already holds every chapter/level the account has data for.
+function campaignRenderChapterView(){
+  const d=campaignData; if(!d) return;
+  const ch=d.chapters.find(c=>c.id===campaignViewChapterId)||d.chapters[0];
+  $('camp-chapter-title').textContent=ch.title;
+  $('camp-chapter-range').textContent=`Levels ${ch.levelStart}–${ch.levelEnd}`;
+  const levels=d.levels.filter(l=>l.chapter===ch.id);
+  const clearedCount=levels.filter(l=>l.result&&l.result.cleared).length;
+  $('camp-progress-fill').style.width=Math.round(clearedCount/levels.length*100)+'%';
+
+  $('camp-bg').innerHTML=campaignBgImg(ch.slug);
+
+  // Revealed progressively rather than from the chapter's first level —
+  // the screenplay's own pacing has each boss first glimpsed a few
+  // levels in (the Baron at Level 4, i.e. 3 levels into Chapter 1), so
+  // the teaser panel stays empty until the player has actually reached
+  // that beat, matching "early levels: distant glimpse" from the brief
+  // rather than spoiling the boss on day one. Relative to the chapter's
+  // OWN start, not a hard-coded "4", so this scales to any chapter.
+  const boss=ch.bossId&&CAMPAIGN_CHARACTERS[ch.bossId];
+  const bossGlimpsed=d.highestUnlockedLevel>=ch.levelStart+3;
+  $('camp-boss-teaser').innerHTML=(boss&&bossGlimpsed)
+    ?`${campaignPortraitHTML(ch.bossId)}<div class="camp-boss-name">${esc(boss.name)}</div>`
+    :'';
+
   $('camp-route').innerHTML=levels.map(l=>campaignNodeHTML(l,d.highestUnlockedLevel)).join('');
-  const currentId=Math.min(d.highestUnlockedLevel,levels[levels.length-1].id);
+  const currentId=Math.min(Math.max(d.highestUnlockedLevel,levels[0].id),levels[levels.length-1].id);
   const currentEl=$('camp-node-'+currentId);
   if(currentEl) currentEl.scrollIntoView({inline:'center',block:'nearest'});
+
+  campaignRenderChapterNav(d);
+}
+// Prev/next chapter arrows — only enabled toward a chapter the player has
+// actually reached (levelStart <= highestUnlockedLevel), so this never
+// offers a peek at content that isn't unlocked yet.
+function campaignRenderChapterNav(d){
+  const idx=d.chapters.findIndex(c=>c.id===campaignViewChapterId);
+  const prev=d.chapters[idx-1];
+  const next=d.chapters[idx+1];
+  const nextReachable=next&&d.highestUnlockedLevel>=next.levelStart;
+  const el=$('camp-chapter-nav');
+  if(!el) return;
+  el.innerHTML=
+    `<button class="camp-chapter-arrow" ${prev?'':'disabled'} onclick="campaignSwitchChapter(-1)" aria-label="Previous chapter">‹</button>`
+    +`<button class="camp-chapter-arrow" ${nextReachable?'':'disabled'} onclick="campaignSwitchChapter(1)" aria-label="Next chapter">›</button>`;
+}
+function campaignSwitchChapter(delta){
+  const d=campaignData; if(!d) return;
+  const idx=d.chapters.findIndex(c=>c.id===campaignViewChapterId);
+  const target=d.chapters[idx+delta];
+  if(!target) return;
+  if(delta>0&&d.highestUnlockedLevel<target.levelStart) return; // not reached yet
+  campaignViewChapterId=target.id;
+  campaignRenderChapterView();
 }
 function campaignNodeHTML(l,highestUnlocked){
   const unlocked=l.id<=highestUnlocked;
@@ -8342,17 +8415,28 @@ function campaignObjectiveHTML(level){
   }else if(o.type==='avoidQueen'){
     main=`Avoid taking the <b>Q♠</b>.`;
     gold=`Gold: avoid her <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`;
+  }else if(o.type==='cleanHand'){
+    main=`Finish with <b>zero</b> penalty points — no hearts, no Q♠.`;
+    gold=`Gold: clean <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`;
+  }else if(o.type==='trickCount'){
+    main=`Win at least <b>${o.minTricks}</b> tricks.`;
+    gold=`Gold: win <b>${o.goldTricks}</b> or more.`;
   }
   const dir=CAMP_PASS_DIR_TEXT[level.forcePassDir]||(level.forcePassDir?'':'Pass direction cycles as usual');
   return `<div class="camp-obj-main">${main}</div><div class="camp-obj-gold">${gold}</div>`
     +(dir?`<div class="camp-obj-dir">${esc(dir)}</div>`:'');
 }
 const CAMP_PASS_DIR_TEXT={left:'Pass 2 cards left',right:'Pass 2 cards right',across:'Pass 2 cards across',keep:'No passing — keep your hand'};
-// The three Regulars sit at every ordinary table; the Baron takes
-// Regular #3's seat at the boss table — matches the screenplay's own
-// "one opponent leaves, the boss takes that seat" staging.
+// The three chapter regulars sit at every ordinary table in that
+// chapter; the boss takes one of their seats at the boss table —
+// matches the screenplay's own "one opponent leaves, the boss takes
+// that seat" staging. Falls back to Chapter 1's roster if a level's
+// chapter isn't in the table yet (shouldn't happen, but degrades to
+// something sensible rather than an empty popup).
 function campaignOpponentsHTML(level){
-  const ids=(level&&level.type==='BOSS')?['reg1','reg2','glass_baron']:['reg1','reg2','reg3'];
+  const roster=CAMPAIGN_CHAPTER_ROSTER[level&&level.chapter]||CAMPAIGN_CHAPTER_ROSTER[1];
+  const ids=roster.regulars.slice();
+  if(level&&level.type==='BOSS'&&level.bossId) ids[roster.bossSeat]=level.bossId;
   return ids.map(id=>{
     const ch=CAMPAIGN_CHARACTERS[id]||{name:'?'};
     return `<div class="camp-modal-opp">${campaignPortraitHTML(id)}<span>${esc(ch.name)}</span></div>`;
@@ -8373,8 +8457,9 @@ function campaignOpenLevelModal(levelId){
   const level=(campaignData&&campaignData.levels||[]).find(l=>l.id===levelId);
   if(!level) return;
   campaignModalLevelId=levelId;
+  const bossName=level.bossId&&CAMPAIGN_CHARACTERS[level.bossId]?CAMPAIGN_CHARACTERS[level.bossId].name:'';
   $('camp-modal-title').textContent=level.type==='BOSS'?'Boss Table':('Table '+levelId);
-  $('camp-modal-sub').textContent=level.type==='BOSS'?'The Glass Baron':(level.type==='Harder'?'A harder hand':'');
+  $('camp-modal-sub').textContent=level.type==='BOSS'?bossName:(level.type==='Harder'?'A harder hand':'');
   $('camp-modal-objective').innerHTML=campaignObjectiveHTML(level);
   $('camp-modal-opponents').innerHTML=campaignOpponentsHTML(level);
   $('camp-modal-friends').innerHTML='<div class="camp-modal-empty">Loading…</div>';
@@ -8453,7 +8538,9 @@ function renderCampaignResult(){
 // renders. Kept intentionally tiny — just enough to know if Table 10 was
 // a boss clear for the result heading and the bossDefeat/chapterExit cues.
 const CAMPAIGN_LEVEL_META={1:{type:'Normal'},2:{type:'Normal'},3:{type:'Harder'},4:{type:'Normal'},
-  5:{type:'Normal'},6:{type:'Harder'},7:{type:'Normal'},8:{type:'Normal'},9:{type:'Harder'},10:{type:'BOSS'}};
+  5:{type:'Normal'},6:{type:'Harder'},7:{type:'Normal'},8:{type:'Normal'},9:{type:'Harder'},10:{type:'BOSS'},
+  11:{type:'Normal'},12:{type:'Harder'},13:{type:'Normal'},14:{type:'Normal'},15:{type:'Harder'},
+  16:{type:'Normal'},17:{type:'Normal'},18:{type:'Harder'},19:{type:'Normal'},20:{type:'BOSS'}};
 
 // Drives every "roll the number upward" moment (Campaign's credit/score
 // counters) — no prior counter animation existed anywhere in this

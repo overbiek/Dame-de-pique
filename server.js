@@ -2254,12 +2254,26 @@ const CAMPAIGN_STORY_CUES = [
   ccue(5, 'postClear', 'player', 'I saw thirteen reasons not to take it.'),
   ccue(5, 'postClear', 'reg3', 'That was almost clever.'),
   ccue(5, 'postClear', 'reg1', 'Almost? That was annoyingly clever.'),
+  // Added buildup (not in the source screenplay, written to match it): an
+  // ambient sighting rather than a line FROM him — "distant glimpse" is
+  // the brief's own pacing for early levels, and Level 4 already spent
+  // the direct-glimpse beat, so this one stays at arm's length. First
+  // appearance of the glass-swirl detail that recurs at Level 6 and in
+  // his Level 10 introduction art (he's holding the same tumbler there).
+  ccue(5, 'postClear', 'reg2', 'He is still by the rail. Same glass, still full — I do not think he has taken one sip all night.'),
 
   // Level 6 — Good Enough To Pass
   ccue(6, 'postClear', 'reg2', 'There we go. Human after all.'),
   ccue(6, 'postClear', 'reg1', 'You stopped trying to make it pretty.'),
   ccue(6, 'postClear', 'player', 'Pretty was not the target.'),
   ccue(6, 'postClear', 'reg3', 'That might be the first smart thing anybody has said in this room tonight.'),
+  // Added buildup: his first WORD since Level 4, and it's one word — the
+  // brief's "middle levels: one or two short interactions" beat. Said to
+  // nobody in particular, which is the point; Regular #1 flags how out
+  // of character even that much is, seeding why Level 9's actual line to
+  // the PLAYER later lands as a bigger moment.
+  ccue(6, 'postClear', 'glass_baron', 'Interesting.'),
+  ccue(6, 'postClear', 'reg1', 'He does not usually say even that much.'),
 
   // Level 7 — Maybe You Know The Game
   ccue(7, 'postClear', 'reg1', 'You counted that.'),
@@ -2284,6 +2298,10 @@ const CAMPAIGN_STORY_CUES = [
   ccue(9, 'postClear', 'glass_baron', 'Good. Now we can stop guessing.'),
 
   // Level 10 — BOSS: The Glass Baron
+  // Payoff for the Level 5/6 buildup (the glass he never drinks from) —
+  // added alongside that buildup, not in the source screenplay.
+  ccue(10, 'bossIntro', 'player', 'You never actually drink that, do you?'),
+  ccue(10, 'bossIntro', 'glass_baron', 'It gives my hands something respectable to do while I watch.'),
   ccue(10, 'bossIntro', 'glass_baron', 'I have been watching you since your fourth hand.'),
   ccue(10, 'bossIntro', 'player', 'That sounds unhealthy.'),
   ccue(10, 'bossIntro', 'glass_baron', 'It is a casino. We have worse habits.'),

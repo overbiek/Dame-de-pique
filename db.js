@@ -406,6 +406,51 @@ async function ensureSchema() {
   // into a real shop-gated cosmetic — same NULL-means-"use the default"
   // convention as rank_set, resolved by filterEquipped to theme_obsidienne.
   await pool.query(`ALTER TABLE player_cosmetics ADD COLUMN IF NOT EXISTS table_theme TEXT;`);
+
+  // ── Campaign Mode ("The Hundred Tables") ────────────────────────
+  // A THIRD, separate progression track from ranked MMR and casual/daily
+  // credits — a one-row-per-account state table, same shape as
+  // daily_stats above. highest_unlocked_level cannot be re-derived from
+  // anything else (unlike cosmetic unlocks, which are recomputed fresh
+  // from achievement_stats every read), so it has to be its own stored
+  // column. attempts_current/attempts_last_refill_at are a leaky-bucket
+  // pair read at query time exactly like daily_stats' streak liveness —
+  // no cron job refills them, the getter computes what should have
+  // accrued since last_refill_at. story_cues_seen follows the
+  // seen_achievements precedent above: a comma-joined TEXT list, not
+  // jsonb, since it's never queried by element either.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS campaign_progress (
+      account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+      highest_unlocked_level INTEGER NOT NULL DEFAULT 1,
+      -- Starts full. Must track CAMPAIGN_MAX_ATTEMPTS in server.js — this
+      -- is only the DEFAULT for a brand-new row, not read elsewhere as
+      -- the cap; getCampaignState/consumeCampaignAttempt both take the
+      -- real max as a parameter from server.js every call.
+      attempts_current INTEGER NOT NULL DEFAULT 24,
+      attempts_last_refill_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      story_cues_seen TEXT,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  // Per-level best result. times_played is a plain additive counter safe
+  // under trackStat's retries because the CALLER (submitCampaignLevelResult
+  // in server.js) guards with an in-memory one-shot flag before ever
+  // invoking the write — trackStat's 3 retries are for transient DB
+  // failures of that one logical call, not for de-duplicating the event
+  // itself, same reasoning as every other trackStat-wrapped write here.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS campaign_level_results (
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      level_id INTEGER NOT NULL,
+      best_score INTEGER NOT NULL DEFAULT 0,
+      cleared BOOLEAN NOT NULL DEFAULT FALSE,
+      gold BOOLEAN NOT NULL DEFAULT FALSE,
+      times_played INTEGER NOT NULL DEFAULT 0,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (account_id, level_id)
+    );
+  `);
 }
 
 function toPublic(row) {
@@ -1418,6 +1463,150 @@ async function getPurchases(accountId) {
   return rows.map(r => r.item_id);
 }
 
+// ── Campaign Mode ────────────────────────────────────────────────
+async function ensureCampaignProgressRow(accountId) {
+  await pool.query(
+    `INSERT INTO campaign_progress (account_id) VALUES ($1) ON CONFLICT (account_id) DO NOTHING`,
+    [accountId]
+  );
+}
+
+// Assembles everything the map screen needs in one round trip, same
+// composition style as getAchievementStats: one row per table, defaulted
+// in JS rather than requiring a prior row to exist (ensureCampaignProgressRow
+// guarantees campaign_progress has one; campaign_level_results legitimately
+// has zero rows for a fresh account, which is fine — an empty list).
+// Attempts are computed here at READ time from attempts_last_refill_at,
+// the same leaky-bucket liveness pattern getDailyStreak uses for streaks —
+// no background refill job, the getter just computes what should have
+// accrued since the stored timestamp.
+async function getCampaignState(accountId, maxAttempts, refillMs) {
+  await ensureCampaignProgressRow(accountId);
+  const { rows: prows } = await pool.query(
+    `SELECT highest_unlocked_level, attempts_current, attempts_last_refill_at, story_cues_seen
+     FROM campaign_progress WHERE account_id = $1`,
+    [accountId]
+  );
+  const p = prows[0];
+  const { rows: results } = await pool.query(
+    `SELECT level_id, best_score, cleared, gold, times_played
+     FROM campaign_level_results WHERE account_id = $1`,
+    [accountId]
+  );
+  const now = Date.now();
+  const lastRefill = new Date(p.attempts_last_refill_at).getTime();
+  const elapsedRefills = Math.max(0, Math.floor((now - lastRefill) / refillMs));
+  const available = Math.min(maxAttempts, p.attempts_current + elapsedRefills);
+  return {
+    highestUnlockedLevel: p.highest_unlocked_level,
+    attempts: {
+      available, max: maxAttempts,
+      nextRefillAt: available >= maxAttempts ? null : lastRefill + refillMs * (elapsedRefills + 1),
+    },
+    storyCuesSeen: p.story_cues_seen ? p.story_cues_seen.split(',').filter(Boolean) : [],
+    results: results.map(r => ({
+      levelId: r.level_id, bestScore: r.best_score, cleared: r.cleared, gold: r.gold, timesPlayed: r.times_played,
+    })),
+  };
+}
+
+// Row-locked read-modify-write so two rapid level-starts from the same
+// account can't both spend the same last attempt. elapsedRefills only
+// advances attempts_last_refill_at by whole intervals, so partial progress
+// toward the next refill is never lost on consumption — same reasoning
+// bumpDailyStreak's single-statement CASE uses to stay race-safe.
+async function consumeCampaignAttempt(accountId, maxAttempts, refillMs) {
+  await ensureCampaignProgressRow(accountId);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT attempts_current, attempts_last_refill_at FROM campaign_progress WHERE account_id = $1 FOR UPDATE`,
+      [accountId]
+    );
+    const row = rows[0];
+    const now = Date.now();
+    const lastRefill = new Date(row.attempts_last_refill_at).getTime();
+    const elapsedRefills = Math.max(0, Math.floor((now - lastRefill) / refillMs));
+    const available = Math.min(maxAttempts, row.attempts_current + elapsedRefills);
+    if (available < 1) { await client.query('ROLLBACK'); return { ok: false, available: 0 }; }
+    const newAttempts = available - 1;
+    const newRefillAt = elapsedRefills > 0 ? new Date(lastRefill + elapsedRefills * refillMs) : row.attempts_last_refill_at;
+    await client.query(
+      `UPDATE campaign_progress SET attempts_current = $2, attempts_last_refill_at = $3, updated_at = now() WHERE account_id = $1`,
+      [accountId, newAttempts, newRefillAt]
+    );
+    await client.query('COMMIT');
+    return { ok: true, available: newAttempts };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw e;
+  } finally { client.release(); }
+}
+
+// best_score/cleared/gold are records (GREATEST / OR), safe to re-apply.
+// times_played is a plain +1 — safe under trackStat's retries only because
+// the CALLER guards with an in-memory one-shot flag before ever invoking
+// this (see submitCampaignLevelResult in server.js), same as every other
+// trackStat-wrapped write in this codebase.
+async function upsertCampaignLevelResult(accountId, levelId, score, cleared, gold) {
+  const { rows } = await pool.query(
+    `INSERT INTO campaign_level_results (account_id, level_id, best_score, cleared, gold, times_played)
+     VALUES ($1, $2, $3, $4, $5, 1)
+     ON CONFLICT (account_id, level_id) DO UPDATE SET
+       best_score = GREATEST(campaign_level_results.best_score, $3),
+       cleared = campaign_level_results.cleared OR $4,
+       gold = campaign_level_results.gold OR $5,
+       times_played = campaign_level_results.times_played + 1,
+       updated_at = now()
+     RETURNING cleared, gold, times_played`,
+    [accountId, levelId, score, !!cleared, !!gold]
+  );
+  return rows[0];
+}
+
+// Never moves the frontier backward — a replay of an already-cleared
+// earlier level can't un-unlock anything past it. Reports whether this
+// call actually moved the frontier (not just GREATEST's post-update
+// value, which would say "yes" even when replaying a level whose next
+// level was already unlocked) so the client only fires the "new level
+// unlocked" fanfare on a genuine first clear of the current frontier.
+async function advanceCampaignUnlock(accountId, levelId) {
+  await ensureCampaignProgressRow(accountId);
+  const { rows: before } = await pool.query(
+    `SELECT highest_unlocked_level FROM campaign_progress WHERE account_id = $1`, [accountId]);
+  const prev = before[0].highest_unlocked_level;
+  const target = levelId + 1;
+  if (target <= prev) return { highestUnlockedLevel: prev, advanced: false };
+  const { rows } = await pool.query(
+    `UPDATE campaign_progress SET highest_unlocked_level = $2, updated_at = now()
+     WHERE account_id = $1 RETURNING highest_unlocked_level`,
+    [accountId, target]
+  );
+  return { highestUnlockedLevel: rows[0].highest_unlocked_level, advanced: true };
+}
+
+// Same union-on-write approach as markAchievementsSeen, so two tabs open
+// on the same account can't clobber each other's seen-cue markers.
+async function markCampaignCuesSeen(accountId, ids) {
+  if (!ids || !ids.length) return;
+  await ensureCampaignProgressRow(accountId);
+  const joined = ids.join(',');
+  await pool.query(
+    `UPDATE campaign_progress SET
+       story_cues_seen = (
+         SELECT string_agg(DISTINCT x, ',')
+         FROM unnest(string_to_array(
+           COALESCE(NULLIF(story_cues_seen, ''), $2) || ',' || $2, ','
+         )) AS x
+         WHERE x <> ''
+       ),
+       updated_at = now()
+     WHERE account_id = $1`,
+    [accountId, joined]
+  );
+}
+
 module.exports = {
   pool, ensureSchema, toPublic,
   createAccount, findAccountByUsername, findAccountById,
@@ -1438,4 +1627,6 @@ module.exports = {
   recordCleanLengthGame,
   getCosmetics, saveCosmetics, markAchievementsSeen,
   grantCredits, getCredits, claimCasualCreditDay, purchaseItem, getPurchases,
+  getCampaignState, consumeCampaignAttempt, upsertCampaignLevelResult,
+  advanceCampaignUnlock, markCampaignCuesSeen,
 };

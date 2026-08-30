@@ -2089,6 +2089,377 @@ function submitDailyResult(G) {
   });
 }
 
+// ── Campaign Mode ("The Hundred Tables") ────────────────────────────
+// A single-player story mode: the human plays the SAME card engine every
+// other mode runs, against 3 AI seats, through a fixed sequence of
+// pre-authored hands — same "reuse createRoom/dealRound wholesale"
+// approach Daily Challenge already established. Chapter 1 only in this
+// build (Levels 1-10, boss The Glass Baron); every shape below is
+// written generically so Chapters 2-10 can be dropped in later without
+// touching engine code, the same "drop the data in, no code change"
+// contract this codebase already uses for achievements/cosmetics.
+const CAMPAIGN_MAX_ATTEMPTS = 24;
+const CAMPAIGN_ATTEMPT_REFILL_MS = 20 * 60 * 1000; // placeholder — no economy spec existed, tune freely
+const CAMPAIGN_CREDITS_BY_TYPE = { Normal: 15, Harder: 22, BOSS: 60 }; // placeholder, same reason
+
+function parseCardStr(s) { return { rank: s.slice(0, -1), suit: s.slice(-1) }; }
+function parseHand(str) { return str.trim().split(/\s+/).map(parseCardStr); }
+
+// Presentation data (name only) lives here; real portrait art is a
+// drop-in-later asset on the client (campaignPortraitImg), same contract
+// as scene/rank art. 'player' is a placeholder — the client always
+// renders the PLAYER'S OWN live name/avatar for that speaker, never this
+// entry, since campaign is account-gated and the identity is already known.
+const CAMPAIGN_CHARACTERS = {
+  concierge:   { id: 'concierge',   name: 'The Concierge' },
+  reg1:        { id: 'reg1',        name: 'Regular #1' },
+  reg2:        { id: 'reg2',        name: 'Regular #2' },
+  reg3:        { id: 'reg3',        name: 'Regular #3' },
+  glass_baron: { id: 'glass_baron', name: 'The Glass Baron' },
+  player:      { id: 'player',      name: null },
+};
+
+const CAMPAIGN_CHAPTERS = [
+  // The screenplay's own chapter name ("De Fluwelen Entree") is Dutch —
+  // inconsistent with ROADMAP.md's decided English/international
+  // audience, so this uses its English equivalent instead. Real chapter
+  // background art is at public/campaign/chapters/velvet_entrance.webp.
+  { id: 1, title: 'Velvet Entrance', levelStart: 1, levelEnd: 10, slug: 'velvet_entrance', bossId: 'glass_baron' },
+];
+
+// Objective shapes (evaluated by evaluateCampaignObjective):
+//   { type:'score', min, gold }
+//   { type:'suitVoid', suit, voidByTrick, goldByTrick }
+//   { type:'avoidQueen', goldScoreBar }
+// cleanHand/trickCount exist in the source design data but aren't used in
+// Chapter 1 — left out rather than half-wired; add both the case here and
+// in evaluateCampaignObjective together when a level actually needs one.
+//
+// L3 and L5 deliberately do NOT use the main level-data sheet's own score
+// objective for those two slots — they're swapped for the "Suit Void" and
+// "Avoid the Queen" mini-ladders' own Level 1 (see the campaign plan doc),
+// matching those two levels' own screenplay beats ("count what is gone",
+// "the queen stays out") exactly. The dialogue was written to react to
+// play style in general rather than to a specific mechanic, so the swap
+// needed no screenplay changes.
+const CAMPAIGN_LEVELS = {
+  1: { id: 1, chapter: 1, type: 'Normal', forcePassDir: 'keep', hands: 1,
+       seed: 'ddp-main-refine-L1-c690', hand: parseHand('2♠ K♣ A♥ 7♥ 2♥ 9♦ Q♣ J♠ A♠ 5♣ 7♠ Q♦ 3♦'),
+       objective: { type: 'score', min: -27, gold: 8 } },
+  2: { id: 2, chapter: 1, type: 'Normal', forcePassDir: 'keep', hands: 1,
+       seed: 'ddp-main-refine-L2-c134', hand: parseHand('Q♦ Q♠ 8♣ A♥ J♥ 5♠ 7♥ 10♠ 2♣ 4♦ J♣ 6♠ A♣'),
+       objective: { type: 'score', min: -26, gold: 19 } },
+  3: { id: 3, chapter: 1, type: 'Harder', forcePassDir: 'keep', hands: 1,
+       seed: 'ddp-goal-void-refine-L1-c25', hand: parseHand('9♥ Q♠ A♦ A♣ 6♥ 5♥ J♠ 6♠ 7♥ 7♦ 3♣ 8♦ 2♦'),
+       objective: { type: 'suitVoid', suit: '♣', voidByTrick: 10, goldByTrick: 3 } },
+  4: { id: 4, chapter: 1, type: 'Normal', forcePassDir: 'keep', hands: 1,
+       seed: 'ddp-main-refine-L4-c742', hand: parseHand('4♥ 10♣ 5♦ 2♣ Q♠ A♠ K♦ K♥ J♥ A♣ 8♣ 7♠ 8♦'),
+       objective: { type: 'score', min: -15, gold: 9 } },
+  5: { id: 5, chapter: 1, type: 'Normal', forcePassDir: 'keep', hands: 1,
+       seed: 'ddp-goal-queen-refine-L1-c277', hand: parseHand('10♥ 3♣ 6♦ A♥ J♥ A♣ 9♥ 6♥ 8♥ J♠ 2♥ 7♥ 5♦'),
+       objective: { type: 'avoidQueen', goldScoreBar: 20 } },
+  6: { id: 6, chapter: 1, type: 'Harder', forcePassDir: 'left', hands: 1,
+       seed: 'ddp-main-refine-L6-c573', hand: parseHand('6♠ 2♦ 3♣ 2♥ J♣ 9♠ Q♦ K♠ 10♦ 10♠ 8♠ 4♠ 6♣'),
+       objective: { type: 'score', min: -14, gold: 8 } },
+  7: { id: 7, chapter: 1, type: 'Normal', forcePassDir: 'left', hands: 1,
+       seed: 'ddp-main-refine-L7-c337', hand: parseHand('2♦ 10♣ 10♠ 6♠ J♦ 8♥ 9♦ 8♠ 4♣ 9♥ Q♦ K♦ 3♥'),
+       objective: { type: 'score', min: -22, gold: 5 } },
+  8: { id: 8, chapter: 1, type: 'Normal', forcePassDir: 'left', hands: 1,
+       seed: 'ddp-main-refine-L8-c63', hand: parseHand('8♠ A♦ 4♦ 7♠ 10♠ K♣ K♦ 9♥ 2♠ 5♥ J♦ 3♦ 9♣'),
+       objective: { type: 'score', min: -12, gold: 12 } },
+  9: { id: 9, chapter: 1, type: 'Harder', forcePassDir: 'left', hands: 1,
+       seed: 'ddp-main-refine-L9-c122', hand: parseHand('K♦ 4♥ A♥ A♦ 9♥ 3♦ 2♦ 5♦ A♠ 3♠ 7♥ Q♦ 5♠'),
+       objective: { type: 'score', min: -1, gold: 22 } },
+  // Boss levels are a 4-hand mini-match, pass cycling Left→Right→Across→
+  // Keep naturally (forcePassDir stays null — round 1-4 already lands on
+  // exactly that cycle via the ordinary passDir(round) formula, see
+  // roundPassDir). `hands4[i]` is the fixed player hand for round i+1.
+  10: { id: 10, chapter: 1, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'glass_baron',
+        seed: 'ddp-boss-refine-L10-c8',
+        hands4: [
+          parseHand('Q♦ 6♣ J♣ 7♥ 8♦ 8♥ 10♠ K♦ 2♥ 8♠ 2♠ 2♣ 7♣'),
+          parseHand('7♣ 3♥ Q♦ J♥ K♠ 3♦ K♥ 4♣ 6♠ 3♣ 5♠ A♥ Q♣'),
+          parseHand('J♥ 9♣ 4♥ 2♠ K♠ 4♠ 5♦ A♠ Q♦ 10♣ 7♥ 3♣ 7♣'),
+          parseHand('A♣ K♣ 10♥ 7♦ 2♦ K♦ 6♥ 6♣ 6♦ 5♥ 3♣ 7♣ A♠'),
+        ],
+        objective: { type: 'score', min: -11, gold: 49 } },
+};
+const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
+function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
+
+// Story cues, fed in verbatim from the screenplay per the brief's own
+// instruction not to paraphrase or hard-code score numbers into the
+// lines. `order` sequences multiple lines sharing one (levelId, trigger)
+// bucket so the client's dialogue overlay steps through them as one
+// conversation; it's a running counter across the whole array, which is
+// fine because it's only ever used to sort a filtered subset. `pick:
+// 'random'` marks a bucket where the screenplay itself says "randomize
+// between these lines" (only Level 10's failure lines, in this chapter)
+// — the client picks ONE from that bucket instead of sequencing through
+// all of them. Triggers used here: chapterEnter, preLevel, postClear,
+// postFail, bossIntro, bossMidpoint, bossDefeat, chapterExit — postGold
+// is deliberately unused in Chapter 1 (no gold-specific line exists in
+// the screenplay; the client's own gold flourish covers it, see the
+// brief's "additional restrained gold flourish" note) and bossTease is
+// left for a later chapter's more clearly separable boss-glimpse beats
+// rather than fragmenting Chapter 1's own regular-table banter across
+// two trigger buckets.
+let _campaignCueSeq = 0;
+function ccue(levelId, trigger, speakerId, text, extra) {
+  _campaignCueSeq++;
+  return { id: `ch1-l${levelId}-${trigger}-${_campaignCueSeq}`, levelId, trigger, speakerId, text,
+            order: _campaignCueSeq, ...extra };
+}
+const CAMPAIGN_STORY_CUES = [
+  // Prologue, fires once on first ever campaign-map entry.
+  ccue(1, 'chapterEnter', 'concierge', 'First time here?'),
+  ccue(1, 'chapterEnter', 'player', 'Is it that obvious?'),
+  ccue(1, 'chapterEnter', 'concierge', 'Only to people who remember their first time.'),
+  ccue(1, 'chapterEnter', 'concierge', 'Your seat is ready.'),
+
+  // Level 1 — First Hand
+  ccue(1, 'preLevel', 'concierge', 'This one is yours.'),
+  ccue(1, 'preLevel', 'reg1', 'First night?'),
+  ccue(1, 'preLevel', 'reg2', 'Go easy. First hands tell on people.'),
+  ccue(1, 'postClear', 'reg3', 'Huh.'),
+  ccue(1, 'postClear', 'reg1', 'You actually played that out properly.'),
+  ccue(1, 'postClear', 'reg2', 'Most first-timers collect half the table before they understand what happened.'),
+  ccue(1, 'postClear', 'concierge', 'One hand. Do not build a legend out of it yet.'),
+
+  // Level 2 — Not An Accident
+  ccue(2, 'preLevel', 'reg1', 'All right. Do it twice.'),
+  ccue(2, 'postClear', 'reg2', 'You knew not to take that.'),
+  ccue(2, 'postClear', 'reg3', 'Either lucky or you know the game.'),
+  ccue(2, 'postClear', 'player', 'Maybe I know when I do not want a trick.'),
+  ccue(2, 'postClear', 'reg1', 'That answer worries me more.'),
+  ccue(2, 'postClear', 'reg2', 'Twice is harder to call luck.'),
+
+  // Level 3 — Count What Is Gone (Suit Void)
+  ccue(3, 'preLevel', 'reg3', "You are watching what is left, aren't you?"),
+  ccue(3, 'postClear', 'reg1', 'There. You knew exactly when that suit was dead for you.'),
+  ccue(3, 'postClear', 'reg2', 'Counting cards already? In the entrance room?'),
+  ccue(3, 'postClear', 'concierge', 'Counting is not cheating when the cards were played in front of everyone.'),
+  ccue(3, 'postClear', 'reg3', 'Fine. I am officially paying attention.'),
+
+  // Level 4 — The Man With The Glass
+  ccue(4, 'preLevel', 'reg2', 'Do not turn around.'),
+  ccue(4, 'preLevel', 'player', 'That usually makes people turn around.'),
+  ccue(4, 'preLevel', 'reg2', 'The Glass Baron is watching this table.'),
+  ccue(4, 'preLevel', 'reg1', 'Now you have done it.'),
+
+  // Level 5 — The Queen Stays Out (Avoid ♠Q)
+  ccue(5, 'preLevel', 'reg1', 'There she is somewhere.'),
+  ccue(5, 'preLevel', 'reg3', 'And nobody wants to ask where.'),
+  ccue(5, 'postClear', 'reg2', 'You saw that trap.'),
+  ccue(5, 'postClear', 'player', 'I saw thirteen reasons not to take it.'),
+  ccue(5, 'postClear', 'reg3', 'That was almost clever.'),
+  ccue(5, 'postClear', 'reg1', 'Almost? That was annoyingly clever.'),
+
+  // Level 6 — Good Enough To Pass
+  ccue(6, 'postClear', 'reg2', 'There we go. Human after all.'),
+  ccue(6, 'postClear', 'reg1', 'You stopped trying to make it pretty.'),
+  ccue(6, 'postClear', 'player', 'Pretty was not the target.'),
+  ccue(6, 'postClear', 'reg3', 'That might be the first smart thing anybody has said in this room tonight.'),
+
+  // Level 7 — Maybe You Know The Game
+  ccue(7, 'postClear', 'reg1', 'You counted that.'),
+  ccue(7, 'postClear', 'reg2', 'He counted all of it.'),
+  ccue(7, 'postClear', 'reg3', 'Maybe our first-timer actually knows how this game works.'),
+  ccue(7, 'postClear', 'glass_baron', 'Maybe.'),
+  ccue(7, 'postClear', 'reg2', 'Well. Now I am definitely not relaxing.'),
+
+  // Level 8 — He Is Still Watching
+  ccue(8, 'preLevel', 'reg3', 'He has watched three full hands now.'),
+  ccue(8, 'preLevel', 'player', 'Who?'),
+  ccue(8, 'preLevel', 'reg3', 'Very funny.'),
+  ccue(8, 'postClear', 'reg1', 'That was clean.'),
+  ccue(8, 'postClear', 'reg2', 'I think he is waiting for something.'),
+
+  // Level 9 — An Empty Chair
+  ccue(9, 'preLevel', 'reg3', 'That my cue?'),
+  ccue(9, 'preLevel', 'concierge', 'It is.'),
+  ccue(9, 'preLevel', 'reg1', 'Oh, no.'),
+  ccue(9, 'preLevel', 'reg2', 'Congratulations. You have been noticed.'),
+  ccue(9, 'preLevel', 'glass_baron', 'Finish this one first.'),
+  ccue(9, 'postClear', 'glass_baron', 'Good. Now we can stop guessing.'),
+
+  // Level 10 — BOSS: The Glass Baron
+  ccue(10, 'bossIntro', 'glass_baron', 'I have been watching you since your fourth hand.'),
+  ccue(10, 'bossIntro', 'player', 'That sounds unhealthy.'),
+  ccue(10, 'bossIntro', 'glass_baron', 'It is a casino. We have worse habits.'),
+  ccue(10, 'bossIntro', 'glass_baron', 'You play your cards well. You remember what is gone. You know when a trick is not worth taking.'),
+  ccue(10, 'bossIntro', 'glass_baron', 'Let us see if you can beat me.'),
+  ccue(10, 'bossMidpoint', 'glass_baron', 'Still keeping the damage low. Sensible.'),
+  ccue(10, 'bossMidpoint', 'player', 'You sound disappointed.'),
+  ccue(10, 'bossMidpoint', 'glass_baron', 'No. Interested.'),
+  ccue(10, 'postFail', 'glass_baron', 'Again. Same hand. Better answer.', { pick: 'random' }),
+  ccue(10, 'postFail', 'glass_baron', 'You saw the danger. You simply saw it one trick too late.', { pick: 'random' }),
+  ccue(10, 'postFail', 'glass_baron', 'Do not chase the hand you wanted. Play the hand that is here.', { pick: 'random' }),
+  ccue(10, 'bossDefeat', 'glass_baron', 'All right.'),
+  ccue(10, 'bossDefeat', 'player', 'That is all I get?'),
+  ccue(10, 'bossDefeat', 'glass_baron', 'No. You get an invitation.'),
+  ccue(10, 'bossDefeat', 'glass_baron', 'There is another table where I would like you to join me.'),
+  ccue(10, 'bossDefeat', 'player', 'Where?'),
+  ccue(10, 'bossDefeat', 'glass_baron', 'Rooftop. Higher rollers. Sharper eyes.'),
+  ccue(10, 'chapterExit', 'glass_baron', 'Come. I want to see what they make of you.'),
+];
+function campaignCuesFor(levelId, trigger) {
+  return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);
+}
+
+// Mirrors createDailyRoom: no lobby, no seat draw, player at 0, AI at
+// 1-3. G.dealer is fixed at 3 rather than drawn — campaign has no
+// draw/cut ceremony — so the player (seat 0) always leads trick 1, which
+// matches the screenplay framing every level opens on the player's own
+// play. Boss seat gets no different AI logic, only different presented
+// identity (campaignBoss in publicState) — see the plan doc.
+async function createCampaignRoom(name, avatar, accountId, socketId, levelId) {
+  const level = campaignLevelById(levelId);
+  const G = createRoom(name, avatar, accountId, { forcePassDir: level.forcePassDir });
+  // Set directly, exactly like createDailyRoom does for its own
+  // roundsTotal=1 — a single-hand level's roundsTotal (1) isn't one of
+  // the offered ROUND_OPTIONS values, so it has to bypass createRoom's
+  // opts-driven sanitizeRoundsTotal entirely.
+  G.roundsTotal = level.hands;
+  G.campaign = true;
+  G.campaignLevelId = level.id;
+  G.campaignObjective = level.objective;
+  G.campaignBossId = level.bossId || null;
+  G.campaignResultSubmitted = false;
+  G.campaignVoidTrick = null;
+  G.dealer = 3;
+  const token = makeToken();
+  Object.assign(G.players[0], { socketId, connected: true, token });
+  if (accountId) Object.assign(G.players[0], await lookupSeatCosmetics(accountId));
+  G.hostSocket = socketId;
+  G.hostToken = token;
+  for (let i = 1; i < 4; i++) {
+    Object.assign(G.players[i], {
+      name: level.bossId && i === 1 ? CAMPAIGN_CHARACTERS[level.bossId].name : `Computer ${i + 1}`,
+      avatar: null, accountId: null, isAI: true, connected: true, socketId: null, token: null,
+    });
+  }
+  return { G, token };
+}
+
+// dealRound's deck-selection hook (see the G.campaign branch added there):
+// returns a full 52-card deck with the level's exact fixed player hand at
+// indices 0-12 and the remaining 39 cards seeded-shuffled across the
+// other three seats — reproducible retry-to-retry. See the plan doc for
+// why this doesn't attempt to reproduce the source spreadsheet's own
+// generation seed byte-for-byte.
+function buildCampaignDeck(G) {
+  const level = campaignLevelById(G.campaignLevelId);
+  const playerHand = level.hands === 4 ? level.hands4[G.round - 1] : level.hand;
+  const rest = makeDeck().filter(c => !playerHand.some(h => h.rank === c.rank && h.suit === c.suit));
+  return [...playerHand, ...seededShuffle(rest, level.seed + '-r' + G.round)];
+}
+
+// Reads seat 0's final state for the level and reports clear/gold against
+// its objective. cleanHand/trickCount aren't wired here since no Chapter
+// 1 level uses them yet — add both a case here and an entry in the
+// objective-shape comment above together if a later chapter needs one.
+function evaluateCampaignObjective(G) {
+  const level = campaignLevelById(G.campaignLevelId);
+  const obj = level.objective;
+  const p = G.players[0];
+  const score = p.score;
+  if (obj.type === 'score') {
+    return { cleared: score >= obj.min, gold: score >= obj.gold, metric: score };
+  }
+  if (obj.type === 'suitVoid') {
+    // G.campaignVoidTrick is set live in resolveTrick the first time the
+    // player's hand has zero cards of the target suit; null if it never
+    // happened. See resolveTrick for the write side.
+    const voidTrick = G.campaignVoidTrick;
+    const cleared = voidTrick != null && voidTrick <= obj.voidByTrick;
+    const gold = voidTrick != null && voidTrick <= obj.goldByTrick;
+    return { cleared, gold, metric: voidTrick };
+  }
+  if (obj.type === 'avoidQueen') {
+    const tookQueen = p.tricks.some(c => c.suit === '♠' && c.rank === 'Q');
+    const avoided = !tookQueen;
+    return { cleared: avoided, gold: avoided && score >= obj.goldScoreBar, metric: score };
+  }
+  return { cleared: false, gold: false, metric: score };
+}
+
+function campaignLevelCredits(level, gold) {
+  const base = CAMPAIGN_CREDITS_BY_TYPE[level.type] || CAMPAIGN_CREDITS_BY_TYPE.Normal;
+  return gold ? Math.round(base * 1.5) : base;
+}
+
+// Called once, from recordGameFinishedForAll, when a campaign level's
+// hand(s) are done. Mirrors submitDailyResult's shape closely: an
+// in-memory one-shot guard, a guest branch that reports the result
+// without persisting anything, and a trackStat-wrapped write for real
+// accounts. Credits are granted ONCE EVER per level (first clear only,
+// via db.grantCredits' own idempotent (account,type,reference) — a
+// replay that clears again simply grants nothing, `granted` comes back
+// null) — a third, deliberately different economy shape from casual's
+// once/day and ranked's uncapped, so infinite retries can't farm credits.
+function submitCampaignLevelResult(G) {
+  if (G.campaignResultSubmitted) return;
+  G.campaignResultSubmitted = true;
+  const level = campaignLevelById(G.campaignLevelId);
+  const p = G.players[0];
+  const { cleared, gold, metric } = evaluateCampaignObjective(G);
+  const socketId = p.socketId;
+  const payload = { levelId: level.id, cleared, gold, metric, score: p.score };
+
+  if (!DB_ENABLED || !p.accountId) {
+    // Guests can't reach this at all today (campaign requires login — see
+    // the startCampaignLevel handler), but this mirrors submitDailyResult's
+    // own guest branch defensively rather than assuming that gate can
+    // never change.
+    if (socketId) io.to(socketId).emit('campaignResult', { ...payload, guest: true, creditsAwarded: 0, newUnlock: null });
+    return;
+  }
+
+  trackStat(async () => {
+    await db.upsertCampaignLevelResult(p.accountId, level.id, p.score, cleared, gold);
+    let creditsAwarded = 0;
+    if (cleared) {
+      const amount = campaignLevelCredits(level, gold);
+      const granted = await db.grantCredits(p.accountId, amount, 'campaign_reward', 'campaign-' + level.id);
+      if (granted) creditsAwarded = amount;
+    }
+    let newUnlock = null;
+    if (cleared) {
+      const unlock = await db.advanceCampaignUnlock(p.accountId, level.id);
+      if (unlock.advanced) newUnlock = unlock.highestUnlockedLevel;
+    }
+    if (socketId) io.to(socketId).emit('campaignResult', { ...payload, creditsAwarded, newUnlock });
+  });
+}
+
+// Assembles everything the map screen needs in one round trip — chapter/
+// level static data plus the account's live progress — same "compose
+// once, send once" style as loadPlayerCosmetics.
+async function buildCampaignMapPayload(accountId) {
+  const state = await db.getCampaignState(accountId, CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
+  const resultsByLevel = {};
+  for (const r of state.results) resultsByLevel[r.levelId] = r;
+  return {
+    chapters: CAMPAIGN_CHAPTERS,
+    levels: CAMPAIGN_LEVEL_LIST.map(l => ({
+      id: l.id, chapter: l.chapter, type: l.type, bossId: l.bossId || null,
+      unlocked: l.id <= state.highestUnlockedLevel,
+      result: resultsByLevel[l.id] || null,
+    })),
+    // The client has no other way to know what a character actually says
+    // — cues are only ever authored here — so the whole (small, Chapter-1-
+    // only) cue list ships with every map load rather than being fetched
+    // per level. Trigger/sequencing logic lives client-side; this is pure
+    // content.
+    storyCues: CAMPAIGN_STORY_CUES,
+    characters: CAMPAIGN_CHARACTERS,
+    highestUnlockedLevel: state.highestUnlockedLevel,
+    attempts: state.attempts,
+    storyCuesSeen: state.storyCuesSeen,
+  };
+}
+
 // ── Ranked matchmaking ────────────────────────────────────────────
 // Ranked is a FIXED 8 rounds — it no longer inherits DEFAULT_ROUNDS (16)
 // the way every other createRoom call site does. Casual keeps the full
@@ -2346,9 +2717,13 @@ async function broadcastFinalCredits(G, places) {
 }
 
 function recordGameFinishedForAll(G, natural) {
-  // The Daily Challenge finishes through its own pipeline
-  // (submitDailyResult) — it must never touch casual or ranked stats.
+  // The Daily Challenge and Campaign Mode each finish through their own
+  // pipeline — neither may touch casual/ranked stats or the achievement
+  // buffer (achBuf still accumulates during their rounds, harmlessly,
+  // since the flush code below that would ever read it is exactly what
+  // this early return skips).
   if (G.daily) { submitDailyResult(G); return; }
+  if (G.campaign) { submitCampaignLevelResult(G); return; }
   applyRankedResult(G);
   // Highest score wins. A tie counts as a win for everyone tied — the
   // game has no tiebreak rule, so inventing one here just to deny an
@@ -2483,6 +2858,13 @@ function publicState(G) {
       connected: p.connected, cardCount: p.hand.length, hasPassed: p.hasPassed,
     })),
     daily: !!G.daily,
+    campaign: !!G.campaign,
+    campaignLevel: G.campaignLevelId || null,
+    campaignObjective: G.campaignObjective || null,
+    // The boss's identity, for the client to swap seat 1's presented
+    // name/portrait — the seat itself is still a plain AI opponent in
+    // game logic, this is purely presentational (see createCampaignRoom).
+    campaignBoss: G.campaignBossId || null,
     // Sent rather than re-derived client-side: renderPass used to compute
     // it from (round-1)%4 itself, which is wrong for any room that pins a
     // direction (the Daily Challenge draws one from the date).
@@ -2594,11 +2976,15 @@ function revealDrawCard(G, i) {
 function dealRound(G) {
   clearAuto(G);
   // The Daily Challenge's single hand comes off a deck seeded from the UTC
-  // date, so everyone playing that day gets exactly the same deal. Every
-  // other room shuffles for real.
-  const deck = G.daily
-    ? seededShuffle(makeDeck(), 'ddp-daily-' + G.dailyDate)
-    : shuffle(makeDeck());
+  // date, so everyone playing that day gets exactly the same deal. A
+  // campaign level's deck comes off its own fixed hand (see
+  // buildCampaignDeck) so a retry replays the same setup. Every other
+  // room shuffles for real.
+  const deck = G.campaign
+    ? buildCampaignDeck(G)
+    : G.daily
+      ? seededShuffle(makeDeck(), 'ddp-daily-' + G.dailyDate)
+      : shuffle(makeDeck());
   for (let i = 0; i < 4; i++) {
     G.players[i].hand = deck.slice(i * 13, (i + 1) * 13);
     G.players[i].tricks = [];
@@ -2614,6 +3000,9 @@ function dealRound(G) {
   G.lastTrickMsg = '';
   G.playLog = [];
   G.roundBefore = G.players.map(p => p.score);
+  // Reset per round — see resolveTrick for where this gets set, and
+  // evaluateCampaignObjective for how a Suit Void level reads it.
+  if (G.campaign) G.campaignVoidTrick = null;
 
   // The Dealer achievement. Counted here, once per hand actually dealt,
   // rather than per game — a 16-round game deals 16 hands and a Blitz
@@ -2737,7 +3126,7 @@ function resolveTrick(G) {
   const ledSuit = G.currentTrick[0].card.suit;
   if (!G.players[winner].suitsWon.includes(ledSuit)) G.players[winner].suitsWon.push(ledSuit);
   const gotQueen = G.currentTrick.some(t => t.card.suit === '♠' && t.card.rank === 'Q');
-  if (G.players[winner].accountId && !G.daily) {
+  if (G.players[winner].accountId && !G.daily && !G.campaign) {
     const acctId = G.players[winner].accountId;
     if (G.ranked) {
       trackStat(() => db.recordRankedTrick(acctId, trickScore));
@@ -2754,6 +3143,14 @@ function resolveTrick(G) {
   // at the flush, so a seat that changes hands mid-game can't misattribute
   // what the previous occupant did.
   if (gotQueen) achBuf(G).queens[winner]++;
+  // Suit Void objective: the first trick after which seat 0 holds zero
+  // cards of the target suit. Checked here (hand already shrunk by the
+  // card just played) rather than reconstructed after the fact — trickNum
+  // still refers to the trick that just resolved, since it's incremented
+  // below.
+  if (G.campaign && G.campaignObjective && G.campaignObjective.type === 'suitVoid' && G.campaignVoidTrick == null) {
+    if (!G.players[0].hand.some(c => c.suit === G.campaignObjective.suit)) G.campaignVoidTrick = G.trickNum;
+  }
   G.lastTrickMsg = `${G.players[winner].name} wins trick ${G.trickNum} · +10${penPts !== 0 ? ' ' + penPts : ''}`;
   if (!G.playLog) G.playLog = [];
   G.playLog.push(G.currentTrick.map(t => ({ player: t.player, card: t.card })));
@@ -2820,9 +3217,10 @@ function endRound(G) {
     // Per-round records are match-length-agnostic (a round is 13 tricks in
     // every mode), so Blitz rounds blend into the same bucket quite
     // correctly — only *game*-level totals need splitting out, below in
-    // recordGameFinishedForAll. The Daily Challenge is excluded entirely:
-    // it has its own table and shouldn't move casual numbers at all.
-    if (!G.daily) {
+    // recordGameFinishedForAll. The Daily Challenge and Campaign are both
+    // excluded entirely: each has its own result pipeline and shouldn't
+    // move casual/ranked numbers at all.
+    if (!G.daily && !G.campaign) {
       for (let i = 0; i < 4; i++) {
         const acctId = G.players[i].accountId;
         if (!acctId) continue;
@@ -3693,6 +4091,55 @@ io.on('connection', (socket) => {
     dealRound(G);   // no seat draw, no dealer cut, no pass phase — straight into the hand
   });
 
+  // ── Campaign Mode ────────────────────────────────────────────────
+  // Account-gated, no guest path — a campaign level's whole point is
+  // persisted progress (unlocks, best results, attempts, story seen),
+  // which a guest session can't carry, unlike Daily Challenge's "guest
+  // can play, nothing saves" pattern.
+  socket.on('getCampaignState', async ({ accountToken }) => {
+    if (!DB_ENABLED) return socket.emit('campaignStateErr', { msg: 'Campaign needs an account.' });
+    const acct = await lookupAccountByToken(accountToken);
+    if (!acct) return socket.emit('campaignStateErr', { msg: 'Log in to play Campaign Mode.' });
+    try {
+      const payload = await buildCampaignMapPayload(acct.id);
+      socket.emit('campaignStateOk', payload);
+    } catch (e) {
+      console.error('getCampaignState error:', e.message);
+      socket.emit('campaignStateErr', { msg: "Couldn't load Campaign. Try again." });
+    }
+  });
+
+  socket.on('markCampaignCuesSeen', async ({ accountToken, ids }) => {
+    if (!DB_ENABLED || !Array.isArray(ids) || !ids.length) return;
+    const acct = await lookupAccountByToken(accountToken);
+    if (!acct) return;
+    trackStat(() => db.markCampaignCuesSeen(acct.id, ids.slice(0, 50).map(String)));
+  });
+
+  socket.on('startCampaignLevel', async ({ name, avatar, accountToken, levelId }) => {
+    if (!DB_ENABLED) return socket.emit('campaignError', { msg: 'Campaign needs an account.' });
+    const acct = await lookupAccountByToken(accountToken);
+    if (!acct) return socket.emit('campaignError', { msg: 'Log in to play Campaign Mode.' });
+    const level = campaignLevelById(Number(levelId));
+    if (!level) return socket.emit('campaignError', { msg: 'Unknown level.' });
+    try {
+      const state = await db.getCampaignState(acct.id, CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
+      if (level.id > state.highestUnlockedLevel) {
+        return socket.emit('campaignError', { msg: 'That table is still locked.' });
+      }
+      const spend = await db.consumeCampaignAttempt(acct.id, CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
+      if (!spend.ok) return socket.emit('campaignError', { msg: 'Out of attempts — wait for a refill.' });
+    } catch (e) {
+      console.error('startCampaignLevel error:', e.message);
+      return socket.emit('campaignError', { msg: "Couldn't start that table. Try again." });
+    }
+    const clean = String(name || '').trim().slice(0, 16) || acct.nickname || 'Player';
+    const { G, token } = await createCampaignRoom(clean, sanitizeAvatar(avatar), acct.id, socket.id, level.id);
+    socket.join(G.code);
+    socket.emit('joined', { code: G.code, playerIndex: 0, token, isHost: true });
+    dealRound(G);   // no seat draw, no dealer cut for a campaign level either
+  });
+
   socket.on('createRoom', async ({ name, avatar, accountToken, roundsTotal }) => {
     const clean = String(name || '').trim().slice(0, 16) || 'Player';
     const acct = await lookupAccountByToken(accountToken);
@@ -3840,10 +4287,13 @@ io.on('connection', (socket) => {
     const G = findRoom(code);
     if (!G || !isHostSocket(G, socket)) return;
     if (G.phase === 'lobby' || G.phase === 'final') return;
-    // Daily Challenge is a single hand with a leaderboard behind it —
-    // there's no "end early" that could bank a partial score. Leaving
-    // abandons the attempt instead (leaveRoom closes the room outright).
-    if (G.daily) return;
+    // Daily Challenge and Campaign are both single-hand-or-short attempts
+    // with no partial-credit path — there's no "end early" that could
+    // bank a partial score. Leaving abandons the attempt instead
+    // (leaveRoom closes the room outright). Also moot for campaign in
+    // practice since it's solo-vs-AI (votersNeeded is always empty), but
+    // explicit here rather than relying on that.
+    if (G.daily || G.campaign) return;
     if (G.endVote) return;
 
     const by = G.players.findIndex(p => p.socketId === socket.id);
@@ -3959,12 +4409,13 @@ setInterval(() => {
   for (const code in rooms) {
     const G = rooms[code];
 
-    // A Daily Challenge room is deliberately NOT covered by the
-    // solo-vs-AI exemption below: it's a single five-minute hand, the
-    // result is already banked in Postgres the moment it ends, and there's
-    // nothing to come back to — so let it close on the normal timers
-    // instead of lingering for the life of the process.
-    if (!G.ranked && !G.daily && G.players.filter(p => !p.isAI).length === 1) {
+    // A Daily Challenge or Campaign room is deliberately NOT covered by
+    // the solo-vs-AI exemption below: each is a short attempt (a single
+    // hand, or up to 4 for a boss), the result is already banked in
+    // Postgres the moment it ends, and there's nothing to come back to —
+    // so let it close on the normal timers instead of lingering for the
+    // life of the process.
+    if (!G.ranked && !G.daily && !G.campaign && G.players.filter(p => !p.isAI).length === 1) {
       G.emptySince = null;
       continue;
     }

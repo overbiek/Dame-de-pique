@@ -4322,9 +4322,17 @@ html.landscape-mode #s-menu #install{margin-top:0}
    height of the column rather than clustering in the middle and leaving
    dead space above and below. The tiles are the content of this screen;
    they should own the space. */
+/* Row 1 is `auto`, not another 1fr — that's the Campaign hero banner
+   (.tile.campaign-tile below), added later than the original 6-tile 2x3
+   this comment block otherwise still describes. Markup order (Campaign,
+   Casual, Daily, Ranked, Rank, Statistics, My Account) is exactly the
+   reading order this produces: auto-placement drops Campaign into row 1
+   spanning both columns, then the original six fall into the unchanged
+   2x3 below it exactly as before — same pairings, same auto-placement,
+   no explicit grid-column/row on any of the original six. */
 html.landscape-mode #s-menu .menu-tiles{
   grid-column:2;grid-row:1 / -1;align-self:stretch;
-  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8px;
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto repeat(3,1fr);gap:8px;
   margin-top:0;padding-left:18px;min-height:0;
   border-left:1px solid rgba(var(--ddp-brass-rgb),.28);
 }
@@ -4337,6 +4345,21 @@ html.landscape-mode #s-menu .menu-tiles{
    being overflow:hidden that clipped the tagline by ~2px rather than
    scrolling. This buys 4px, which clears it with room to spare. */
 html.landscape-mode #s-menu .tile{min-height:0;padding:10px 12px}
+/* The Campaign hero banner spans both columns in row 1 (auto height, not
+   1fr) rather than taking a grid cell like the other six — it's a
+   feature launch, not a seventh equal tile, and a spanning hero costs
+   real height the already-tight 2x3 below can't spare. So it trades the
+   centred icon/title/subtitle STACK every other tile uses for a short
+   horizontal banner instead: icon left, title+subtitle stacked right,
+   single compact row. Kept to base .tile's shared background/border/hover
+   treatment — only the internal layout direction changes. */
+html.landscape-mode #s-menu .tile.campaign-tile{
+  grid-column:1 / -1;flex-direction:row;justify-content:flex-start;
+  text-align:left;padding:7px 14px;gap:10px;min-height:0;
+}
+html.landscape-mode #s-menu .tile.campaign-tile .tile-icon{font-size:19px}
+html.landscape-mode #s-menu .tile.campaign-tile .tile-title{font-size:12px}
+html.landscape-mode #s-menu .tile.campaign-tile .tile-sub{margin-top:1px}
 
 /* ══ Landscape content screens — casual, ranked, rank, statistics ══
    All four share one shape in portrait: a .center-wrap holding a header
@@ -5035,6 +5058,204 @@ html.landscape-mode #tutorial-callout{
   padding:12px 14px;
 }
 
+/* ══ CAMPAIGN MODE ("The Hundred Tables") ══
+   A 4th distinct landscape layout family (not Table, not Rail, not the
+   Daily 50/50 split) — a full-bleed scene with absolutely-positioned
+   chrome, closest in spirit to the table screens' own .table structure.
+   Landscape-only for this pass, deliberately — see CLAUDE.md. Portrait
+   gets a plain "rotate your device" notice instead of a real alternate
+   layout; this one screen is the documented exception to the rest of
+   the app's "portrait is always a real fallback" policy. */
+.camp-portrait-notice{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  max-width:320px;margin:18vh auto 0;padding:24px;text-align:center;
+}
+.camp-portrait-notice-icon{font-size:40px;color:var(--gold-hi);animation:camp-rotate-hint 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.camp-portrait-notice-icon{animation:none}}
+@keyframes camp-rotate-hint{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-90deg)}}
+/* #s-campaign has no .center-wrap, so the shared
+   `.screen.active:has(>.center-wrap){height:100%}` rule doesn't match it
+   — same reason the table screens (#s-pass/#s-play) need their own
+   identical height rule instead of relying on that one. */
+html.landscape-mode #s-campaign.active{height:100%;overflow:hidden}
+#s-campaign .camp-scene{display:none}
+html.landscape-mode #s-campaign .camp-scene{
+  display:block;position:relative;width:100%;height:100%;overflow:hidden;
+  background:linear-gradient(180deg,var(--felt-0) 0%,var(--felt-1) 55%,var(--felt-2) 100%);
+}
+html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
+
+.camp-bg{position:absolute;inset:0;z-index:0;opacity:.9}
+/* Placeholder chapter art: a Deco gradient composition built from the
+   SAME tokens the rest of the app's felt/brass system already uses, so
+   it re-tints per theme for free. A real photographed/illustrated
+   background drops in at public/campaign/chapters/<slug>.webp with zero
+   code change (campaignBgImg above) and layers on top of this via the
+   plain <img>, object-fit:cover. */
+.camp-bg::before{
+  content:"";position:absolute;inset:0;
+  background:
+    radial-gradient(60% 50% at 20% 15%, rgba(var(--ddp-brass-rgb),.16), transparent 60%),
+    radial-gradient(50% 45% at 85% 80%, rgba(var(--ddp-brass-rgb),.10), transparent 65%),
+    repeating-linear-gradient(115deg, rgba(var(--ddp-brass-rgb),.05) 0 2px, transparent 2px 46px),
+    linear-gradient(180deg, var(--felt-0) 0%, var(--ddp-bg) 100%);
+}
+.campaign-bg-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+/* Plain px offsets, deliberately no env(safe-area-inset-*) here — this
+   whole scene sits inside #app, whose OWN landscape padding already
+   consumes the inset (see html.landscape-mode #app above). Adding it
+   again here would double-count it, the exact bug CLAUDE.md warns about
+   for the menu's .menu-wrap; the table screens' .corner-lt/.rt-stack
+   are the reference for this same "already handled by the parent"
+   convention. */
+.camp-home{position:absolute;left:8px;top:8px;z-index:20;
+  width:36px;height:36px;padding:0;border-radius:50%;font-size:18px;line-height:1}
+
+/* Dark translucent panel + fine gold border, per the brief's own visual
+   language — same rgba(scrim)/rgba(brass) pair the table screens'
+   .corner-rt already uses, needed here more than anywhere else in the
+   app: this sits directly over a busy PHOTOGRAPHED background (not a
+   flat felt gradient), so text has no readability guarantee without an
+   explicit backing panel. */
+.camp-corner-tl,.camp-corner-tc,.camp-corner-tr,.camp-attempts{
+  background:rgba(var(--ddp-scrim-rgb),.6);
+  border:1px solid rgba(var(--ddp-brass-rgb),.28);
+  box-shadow:inset 0 0 0 1px rgba(var(--ddp-scrim-rgb),.3);
+}
+.camp-corner-tl{
+  position:absolute;left:54px;top:6px;z-index:15;
+  display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:999px;
+  max-width:44vw;
+}
+.camp-profile-name{font-family:'Playfair Display',serif;font-weight:600;font-size:12px;
+  color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.camp-corner-tc{
+  position:absolute;left:50%;top:6px;transform:translateX(-50%);
+  z-index:15;padding:6px 18px;border-radius:12px;text-align:center;min-width:180px;
+}
+.camp-chapter-title{font-family:'Playfair Display',serif;font-weight:700;font-size:13px;
+  letter-spacing:.03em;text-transform:uppercase;color:var(--gold-hi)}
+.camp-chapter-range{font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin-top:2px}
+.camp-progress-bar{width:100%;height:3px;border-radius:3px;margin-top:5px;
+  background:rgba(var(--ddp-scrim-rgb),.4);overflow:hidden}
+.camp-progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-hi));
+  border-radius:3px;transition:width .4s ease}
+
+.camp-corner-tr{
+  position:absolute;right:8px;top:6px;z-index:15;
+  display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:12px;
+  max-width:42vw;
+}
+.camp-corner-tr:empty{display:none}
+.camp-boss-name{font-family:'Playfair Display',serif;font-weight:600;font-size:11px;
+  color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.camp-attempts{
+  position:absolute;left:8px;top:48px;z-index:15;
+  display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
+}
+.camp-attempts-num{
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:12px;font-weight:600;color:var(--cream);
+}
+.camp-refill{font-size:9px;letter-spacing:.04em;color:var(--muted);margin-left:2px;white-space:nowrap}
+
+.camp-route-wrap{
+  position:absolute;left:0;right:0;bottom:14px;
+  z-index:10;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+  scroll-snap-type:x proximity;padding:8px 0;
+}
+.camp-route{
+  display:flex;align-items:flex-end;gap:22px;padding:6px 40vw;
+  /* generous side padding so the first/last node can still scroll to
+     the visual center — see CLAUDE.md's "current node stays near center"
+     requirement */
+}
+.camp-node{
+  scroll-snap-align:center;flex:0 0 auto;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  background:none;border:none;padding:0;cursor:pointer;touch-action:manipulation;
+}
+.camp-node-inner{
+  width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:'Playfair Display',serif;font-weight:700;font-size:18px;color:var(--cream);
+  background:radial-gradient(120% 120% at 35% 25%, rgba(var(--ddp-brass-rgb),.22), var(--felt-1) 70%);
+  border:2px solid rgba(var(--ddp-brass-rgb),.4);
+  box-shadow:0 4px 10px rgba(var(--ddp-scrim-rgb),.5);
+  transition:transform .15s,box-shadow .2s,border-color .2s;
+}
+.camp-node-label{font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.camp-node:active .camp-node-inner{transform:scale(.94)}
+.camp-node.locked{cursor:default}
+.camp-node.locked .camp-node-inner{
+  border-color:rgba(var(--ddp-scrim-rgb),.5);color:var(--faint);
+  background:var(--felt-2);box-shadow:none;
+}
+.camp-node.cleared .camp-node-inner{border-color:var(--gold);color:var(--gold-hi)}
+.camp-node.current .camp-node-inner{
+  border-color:var(--gold-hi);box-shadow:0 0 0 4px rgba(var(--ddp-brass-rgb),.22),0 4px 14px rgba(var(--ddp-scrim-rgb),.55);
+  animation:camp-node-pulse 2.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion:reduce){.camp-node.current .camp-node-inner{animation:none}}
+@keyframes camp-node-pulse{
+  0%,100%{box-shadow:0 0 0 4px rgba(var(--ddp-brass-rgb),.22),0 4px 14px rgba(var(--ddp-scrim-rgb),.55)}
+  50%{box-shadow:0 0 0 8px rgba(var(--ddp-brass-rgb),.12),0 4px 14px rgba(var(--ddp-scrim-rgb),.55)}
+}
+.camp-node.tap-halo .camp-node-inner{box-shadow:0 0 0 10px rgba(var(--ddp-brass-rgb),.3)}
+.camp-node.boss .camp-node-inner{
+  width:66px;height:66px;font-size:22px;
+  background:radial-gradient(120% 120% at 35% 25%, rgba(var(--ddp-brass-rgb),.32), var(--felt-1) 70%);
+}
+.camp-node.boss .camp-node-label{color:var(--gold-hi)}
+
+.camp-portrait{position:relative;display:inline-block;border-radius:50%;overflow:hidden;flex:0 0 auto}
+.camp-portrait-svg{display:block;width:100%;height:100%}
+.camp-portrait-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
+.camp-corner-tr .camp-portrait{width:30px;height:30px}
+.camp-boss-teaser>.camp-portrait{width:30px;height:30px}
+
+/* ── Story dialogue popup ──
+   Extends the Tutorial callout's fade+slide/scrim approach with what it
+   lacks — a portrait+name slot — since a story beat needs to show WHO is
+   speaking (CLAUDE.md's own requirement), not just an instruction line.
+   Deliberately a dim wash, not opaque black — "keep the map recognizable"
+   per the brief. Works in both orientations: it also appears on the
+   ordinary (portrait-capable) #s-final result screen. */
+.camp-dlg-scrim{
+  position:fixed;inset:0;z-index:2000;
+  background:rgba(var(--ddp-scrim-rgb),.45);
+  display:flex;align-items:flex-end;justify-content:center;padding:0 12px calc(env(safe-area-inset-bottom) + 14px);
+  opacity:0;pointer-events:none;transition:opacity .22s ease;
+}
+.camp-dlg-scrim.show{opacity:1;pointer-events:auto}
+.camp-dlg-card{
+  display:flex;align-items:center;gap:12px;max-width:520px;width:100%;
+  background:linear-gradient(180deg, var(--felt-0) 0%, var(--felt-1) 100%);
+  border:1px solid rgba(var(--ddp-brass-rgb),.45);border-radius:16px;
+  box-shadow:0 10px 30px rgba(var(--ddp-scrim-rgb),.6),inset 0 0 0 1px rgba(var(--ddp-scrim-rgb),.3);
+  padding:12px 14px;transform:translateY(12px);transition:transform .24s ease;
+}
+.camp-dlg-scrim.show .camp-dlg-card{transform:translateY(0)}
+@media (prefers-reduced-motion:reduce){
+  .camp-dlg-card,.camp-dlg-scrim.show .camp-dlg-card{transition:opacity .18s ease;transform:none}
+}
+.camp-dlg-card.camp-dlg-mine{flex-direction:row-reverse;text-align:right}
+.camp-dlg-portrait{width:44px;height:44px;flex:0 0 auto}
+.camp-dlg-body{flex:1 1 auto;min-width:0}
+.camp-dlg-name{font-family:'Playfair Display',serif;font-weight:700;font-size:12px;
+  letter-spacing:.03em;text-transform:uppercase;color:var(--gold-hi);margin-bottom:2px}
+.camp-dlg-text{font-size:14px;line-height:1.4;color:var(--cream)}
+.camp-dlg-next{
+  flex:0 0 auto;width:34px;height:34px;border-radius:50%;font-size:18px;line-height:1;
+  background:rgba(var(--ddp-brass-rgb),.16);border:1px solid rgba(var(--ddp-brass-rgb),.4);
+  color:var(--gold-hi);cursor:pointer;
+}
+
+.camp-loading{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center}
+
 /* ══ Clair-only corrections ══
    A handful of accents were picked as pale text on a dark wash. On the
    light theme that's pale-on-pale, so they're re-grounded on the ink
@@ -5196,6 +5417,25 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
              0 0 0 1px rgba(var(--ddp-scrim-rgb),.62);
 }
 html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
+
+/* Campaign Mode — Clair/Sable correction. Measured, not guessed: on
+   Clair, --gold-hi (#C7A45C) on --felt-1 (#EDE5D6, the .camp-node
+   background) is 1.89:1, and on the page background behind
+   .camp-corner-tc it's 2.12:1 — both badly under AA. Same "pale text on
+   a pale ground" failure mode as everything else in this correction
+   section, same fix: fall back to --ddp-ink, which the boss-teaser/
+   profile-name text right next to it already uses safely (14.70:1).
+   Two mirrored blocks rather than one coupled to [data-theme="clair"],
+   matching this file's own "Sable gets its own equivalent, not coupled
+   to Clair" convention above. */
+[data-theme="clair"] .camp-chapter-title,
+[data-theme="clair"] .camp-node.cleared .camp-node-inner,
+[data-theme="clair"] .camp-node.boss .camp-node-label,
+[data-theme="clair"] .camp-dlg-name{color:var(--ddp-ink)}
+[data-theme="sable"] .camp-chapter-title,
+[data-theme="sable"] .camp-node.cleared .camp-node-inner,
+[data-theme="sable"] .camp-node.boss .camp-node-label,
+[data-theme="sable"] .camp-dlg-name{color:var(--ddp-ink)}
 </style>
 </head>
 <body>
@@ -5488,6 +5728,19 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
     </button>
 
     <div class="menu-tiles">
+      <!-- First in markup order on purpose: it's what lands this tile in
+           row 1 of the landscape grid's `auto repeat(3,1fr)` rows, ahead
+           of the unchanged 6-tile 2x3 that follows — see .tile.campaign-tile
+           below for why it spans full width there instead of taking a cell. -->
+      <button class="tile campaign-tile" onclick="goCampaign()">
+        <div class="tile-icon">&#9820;&#65038;</div>
+        <div class="tile-body">
+          <div class="tile-title">Campaign<span class="tile-dot" id="menu-campaign-dot"></span></div>
+          <div class="tile-sub">The Hundred Tables &middot; a story campaign</div>
+        </div>
+        <div class="tile-arrow">›</div>
+      </button>
+
       <button class="tile primary" onclick="goCasual()">
         <div class="tile-icon">♠︎</div>
         <div class="tile-body">
@@ -5724,6 +5977,70 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
     <div id="err-daily" class="note bad" style="display:none"></div>
   </div>
 </section>
+
+<!-- ═══ CAMPAIGN MODE ("The Hundred Tables") ═══
+     Landscape-only for this pass (see CLAUDE.md) — a 4th distinct
+     landscape layout family, not the rail screens' left-chrome/right-body
+     split. A full-bleed scene with absolutely-positioned chrome, closest
+     in spirit to the table screens' own .table structure. Portrait shows
+     a plain "rotate your device" notice instead of a real alternate
+     layout (see .camp-portrait-notice below) — deliberately not the same
+     "portrait is a real fallback everywhere" policy the rest of the app
+     holds itself to; this one screen is the documented exception.
+     The hand itself is played on the ordinary pass/play table screens,
+     completely unmodified, exactly like Daily Challenge — this screen is
+     a front door plus a map, not a table. -->
+<section id="s-campaign" class="screen">
+  <div class="camp-scene">
+    <div class="camp-bg" id="camp-bg"></div>
+    <button class="btn btn-ghost btn-sm camp-home" onclick="show('menu')" aria-label="Back to menu">‹</button>
+
+    <div class="camp-corner-tl deco-box" id="camp-profile"></div>
+
+    <div class="camp-corner-tc deco-box">
+      <div class="camp-chapter-title" id="camp-chapter-title">—</div>
+      <div class="camp-chapter-range" id="camp-chapter-range">—</div>
+      <div class="camp-progress-bar"><div class="camp-progress-fill" id="camp-progress-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="camp-corner-tr deco-box" id="camp-boss-teaser"></div>
+
+    <div class="camp-attempts deco-box" id="camp-attempts"></div>
+
+    <div class="camp-route-wrap">
+      <div class="camp-route" id="camp-route"></div>
+    </div>
+
+    <div class="camp-loading" id="camp-loading">
+      <div class="empty-state"><div class="empty-icon">⏳</div><h3>Opening the doors&hellip;</h3></div>
+    </div>
+  </div>
+
+  <div class="camp-portrait-notice">
+    <div class="camp-portrait-notice-icon" aria-hidden="true">⟳</div>
+    <h3>Campaign Mode is landscape only, for now</h3>
+    <p>Rotate your device to play The Hundred Tables.</p>
+    <button class="btn btn-ghost btn-sm" onclick="show('menu')">‹ Back to Menu</button>
+  </div>
+
+  <div id="err-campaign" class="note bad" style="display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:600"></div>
+</section>
+
+<!-- Story dialogue popup — shared by the campaign map and the campaign
+     result screen. Outside every .screen on purpose, same reasoning as
+     #tutorial-callout: it needs to sit on top of whichever of the two is
+     currently showing without being torn down by either one's own
+     render cycle. -->
+<div id="camp-dialogue" class="camp-dlg-scrim" aria-hidden="true">
+  <div class="camp-dlg-card" id="camp-dlg-card">
+    <div class="camp-dlg-portrait" id="camp-dlg-portrait"></div>
+    <div class="camp-dlg-body">
+      <div class="camp-dlg-name" id="camp-dlg-name"></div>
+      <div class="camp-dlg-text" id="camp-dlg-text"></div>
+    </div>
+    <button class="camp-dlg-next" id="camp-dlg-next" onclick="campaignDialogueAdvance()" aria-label="Continue">›</button>
+  </div>
+</div>
 
 <!-- ═══ RANKED MULTIPLAYER ═══ -->
 <section id="s-ranked" class="screen">
@@ -6435,8 +6752,11 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
          showing a "standing" that doesn't mean anything — the real
          comparison is the leaderboard back on #s-daily, not this list. -->
     <div id="f-daily" style="display:none"></div>
+    <!-- Same slot pattern again, for Campaign. -->
+    <div id="f-campaign" style="display:none"></div>
     <button class="btn btn-ghost btn-block" id="f-newgame" style="margin-top:14px" onclick="newGame()">Return to menu</button>
     <button class="btn btn-ghost btn-block" id="f-daily-return" style="display:none;margin-top:14px" onclick="goDaily()">Back to Daily Challenge</button>
+    <button class="btn btn-ghost btn-block" id="f-campaign-return" style="display:none;margin-top:14px" onclick="goCampaign()">Back to the Map</button>
   </div>
 </section>
 
@@ -7004,8 +7324,13 @@ function show(id){
 // documents that the coverage is complete — if a screen is ever added
 // without a landscape layout, leaving it out of here is the escape
 // hatch.
+// 'campaign' is landscape-only for now, deliberately — see #s-campaign's
+// own portrait rule (the "rotate your device" notice) instead of a real
+// alternate layout. Still belongs in this set: it's what lets the
+// landscape CSS apply when the device genuinely IS in landscape, the
+// same as everything else here.
 const LANDSCAPE_SCREENS=new Set(['menu','landing','daily','ranked','rank','stats','personal','shop',
-                                 'lobby','draw','summary','final','pass','play']);
+                                 'lobby','draw','summary','final','pass','play','campaign']);
 // Best-effort only. screen.orientation.lock() reliably works only in an
 // installed/standalone Android Chrome PWA; it's silently unavailable in
 // plain browser tabs and on iOS, and an OS-level rotation lock overrides
@@ -7588,6 +7913,315 @@ function renderDailyResult(){
   el.innerHTML=h;
   el.style.display='block';
   lastDailyResult=null;
+}
+
+/* ══════════ CAMPAIGN MODE ("The Hundred Tables") ══════════
+   A menu/map screen plus a dialogue overlay — the hand itself plays on
+   the ordinary pass/play table screens completely unmodified, exactly
+   like Daily Challenge. Landscape only for this pass (see CLAUDE.md). */
+
+// Presentation-only, hardcoded rather than trusting the server payload to
+// have arrived first: the boss-substitution rewrite in the gameState
+// handler needs a name available the instant a campaignBoss field shows
+// up, even on a cold reconnect straight into a boss hand that never
+// routed through goCampaign() this session.
+const CAMPAIGN_CHARACTERS={
+  concierge:{name:'The Concierge',initial:'C'},
+  reg1:{name:'Regular #1',initial:'1'},
+  reg2:{name:'Regular #2',initial:'2'},
+  reg3:{name:'Regular #3',initial:'3'},
+  glass_baron:{name:'The Glass Baron',initial:'GB'},
+  player:{name:null,initial:null},
+};
+
+/* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/
+   SVG placeholder is the permanent fallback, a real file layers on top
+   the moment it exists at the drop-in path, and a missing file costs one
+   404 per id for the session. */
+const campaignArtMissing={};
+function campaignBgImg(slug){
+  if(campaignArtMissing['bg:'+slug]) return '';
+  return `<img class="campaign-bg-img" src="/campaign/chapters/${slug}.webp" alt="" aria-hidden="true"`+
+         ` loading="lazy" onerror="campaignArtFailed('bg:${slug}',this)"/>`;
+}
+function campaignPortraitImg(id){
+  if(campaignArtMissing['pf:'+id]) return '';
+  return `<img class="camp-portrait-img" src="/campaign/characters/${id}.webp" alt="" aria-hidden="true"`+
+         ` loading="lazy" onerror="campaignArtFailed('pf:${id}',this)"/>`;
+}
+function campaignArtFailed(key,el){ campaignArtMissing[key]=true; if(el&&el.remove) el.remove(); }
+
+// Inline SVG monogram badge — the placeholder for every character
+// portrait until real art exists. Built from the shared gold tokens,
+// same technique as creditChipSVG/CREST_ART, so it re-tints per theme
+// automatically. Unique gradient id per call for the same reason
+// creditChipSVG needs one — two portraits on screen at once (map corner
+// + dialogue card) must not share a <radialGradient> fragment id.
+let _campPortraitSeq=0;
+function campaignPortraitSVG(id){
+  _campPortraitSeq++;
+  const ch=CAMPAIGN_CHARACTERS[id]||{initial:'?'};
+  const gid='cp-metal-'+_campPortraitSeq;
+  return `<svg viewBox="0 0 64 64" class="camp-portrait-svg" aria-hidden="true">
+    <defs><radialGradient id="${gid}" cx="35%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="var(--gold-hi)"/><stop offset="100%" stop-color="var(--felt-2)"/>
+    </radialGradient></defs>
+    <circle cx="32" cy="32" r="30" fill="url(#${gid})" stroke="var(--gold)" stroke-width="2"/>
+    <text x="32" y="40" text-anchor="middle" font-family="'Playfair Display',serif"
+      font-size="20" font-weight="700" fill="var(--cream)">${esc((ch.initial||'?').slice(0,2))}</text>
+  </svg>`;
+}
+function campaignPortraitHTML(id){
+  return `<span class="camp-portrait">${campaignPortraitSVG(id)}${campaignPortraitImg(id)}</span>`;
+}
+
+let campaignData=null;        // last campaignStateOk payload
+let campaignSeenCues=new Set();
+let campaignPendingLevel=null; // level id waiting behind the current dialogue queue, if any
+
+function goCampaign(){
+  const id=identity();
+  if(!id.name){ goPersonal(); return; }
+  if(!account){ toast('err-menu','Log in to play Campaign Mode.'); goPersonal(); return; }
+  show('campaign');
+  $('camp-loading').style.display='flex';
+  $('camp-route').innerHTML='';
+  socket.emit('getCampaignState',{accountToken:accountToken||''});
+}
+
+socket.on('campaignStateOk',d=>{
+  campaignData=d;
+  campaignSeenCues=new Set(d.storyCuesSeen||[]);
+  if(!$('s-campaign').classList.contains('active')) return;
+  $('camp-loading').style.display='none';
+  renderCampaignMap(d);
+  campaignMaybeShow(1,'chapterEnter',()=>{});
+});
+socket.on('campaignStateErr',d=>{
+  if(!$('s-campaign').classList.contains('active')){ toast('err-menu',d.msg); return; }
+  $('camp-loading').style.display='none';
+  toast('err-campaign',d.msg);
+});
+socket.on('campaignError',d=>{ toast('err-campaign',d.msg); });
+
+function campaignCuesFor(levelId,trigger){
+  if(!campaignData) return [];
+  return campaignData.storyCues.filter(c=>c.levelId===levelId&&c.trigger===trigger)
+    .sort((a,b)=>a.order-b.order);
+}
+// Shows a (levelId,trigger) bucket if it has content and hasn't been seen
+// before (a "pick:random" bucket, like Level 10's failure lines, counts
+// as seen after any one of its lines has been shown — the screenplay
+// treats them as interchangeable, not as three separate beats). Calls
+// `done` immediately if there's nothing to show, or once the player has
+// stepped through what there is.
+function campaignMaybeShow(levelId,trigger,done){
+  let cues=campaignCuesFor(levelId,trigger);
+  if(!cues.length){ done(); return; }
+  const isRandomPick=cues.some(c=>c.pick==='random');
+  if(isRandomPick){
+    const already=cues.some(c=>campaignSeenCues.has(c.id));
+    if(already){ done(); return; }
+    cues=[cues[Math.floor(Math.random()*cues.length)]];
+  }else if(cues.every(c=>campaignSeenCues.has(c.id))){
+    done(); return;
+  }
+  campaignShowQueue(cues,done);
+}
+function campaignMarkSeen(ids){
+  const fresh=ids.filter(id=>!campaignSeenCues.has(id));
+  if(!fresh.length) return;
+  fresh.forEach(id=>campaignSeenCues.add(id));
+  socket.emit('markCampaignCuesSeen',{accountToken:accountToken||'',ids:fresh});
+}
+
+let campDlgQueue=[];
+let campDlgOnDone=null;
+function campaignShowQueue(cues,done){
+  campDlgQueue=cues.slice();
+  campDlgOnDone=done;
+  campaignDialogueStep();
+}
+function campaignDialogueStep(){
+  if(!campDlgQueue.length){
+    $('camp-dialogue').classList.remove('show');
+    const done=campDlgOnDone; campDlgOnDone=null;
+    if(done) done();
+    return;
+  }
+  const cue=campDlgQueue.shift();
+  campaignMarkSeen([cue.id]);
+  const speaker=CAMPAIGN_CHARACTERS[cue.speakerId];
+  const isPlayer=cue.speakerId==='player';
+  const name=isPlayer?(identity().name||'You'):(speaker?speaker.name:'');
+  $('camp-dlg-name').textContent=name;
+  $('camp-dlg-text').textContent=cue.text;
+  // Same reasoning as the map's profile chip — .avatar supplies the
+  // circular background avatarHTML's initials fallback doesn't carry
+  // itself. campaignPortraitHTML (the SVG monogram) already draws its
+  // own circular background, so only the player case needs this.
+  $('camp-dlg-portrait').innerHTML=isPlayer
+    ?`<span class="avatar" style="width:44px;height:44px">${avatarHTML(account&&account.avatar,name)}</span>`
+    :campaignPortraitHTML(cue.speakerId);
+  const card=$('camp-dlg-card');
+  card.classList.toggle('camp-dlg-mine',isPlayer);
+  const scrim=$('camp-dialogue');
+  // Re-trigger the fade+slide on every line, even consecutive ones from
+  // different speakers in the same exchange — removing then re-adding
+  // .show on the next frame restarts the CSS transition cleanly.
+  scrim.classList.remove('show');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>scrim.classList.add('show')));
+}
+function campaignDialogueAdvance(){ campaignDialogueStep(); }
+$('camp-dialogue').addEventListener('click',e=>{ if(e.target.id==='camp-dialogue') campaignDialogueAdvance(); });
+
+function renderCampaignMap(d){
+  const ch=d.chapters[0];
+  $('camp-chapter-title').textContent=ch.title;
+  $('camp-chapter-range').textContent=`Levels ${ch.levelStart}–${ch.levelEnd}`;
+  const levels=d.levels.filter(l=>l.chapter===ch.id);
+  const clearedCount=levels.filter(l=>l.result&&l.result.cleared).length;
+  $('camp-progress-fill').style.width=Math.round(clearedCount/levels.length*100)+'%';
+
+  $('camp-bg').innerHTML=campaignBgImg(ch.slug);
+
+  // Revealed progressively rather than from level 1 — the screenplay's
+  // own pacing has the Baron first glimpsed at Level 4 ("The Man With
+  // The Glass"), so the teaser panel stays empty until the player has
+  // actually reached that beat, matching "early levels: distant glimpse"
+  // from the brief rather than spoiling the boss on day one.
+  const boss=ch.bossId&&CAMPAIGN_CHARACTERS[ch.bossId];
+  const bossGlimpsed=d.highestUnlockedLevel>=4;
+  $('camp-boss-teaser').innerHTML=(boss&&bossGlimpsed)
+    ?`${campaignPortraitHTML(ch.bossId)}<div class="camp-boss-name">${esc(boss.name)}</div>`
+    :'';
+
+  // Reuses the real .avatar class (not a bespoke wrapper) specifically
+  // so the initials fallback gets its circular background for free —
+  // avatarHTML's plain-text fallback has no background of its own by
+  // design, it always relies on a host element like .avatar to supply one.
+  const id=identity();
+  $('camp-profile').innerHTML=`<span class="avatar sm">${avatarHTML(account&&account.avatar,id.name||'You')}</span>`
+    +`<span class="camp-profile-name">${esc(id.name||'You')}</span>`;
+
+  // A numeric pool (24 by default), not a small row of hearts — same
+  // gold-chip visual language as the credits box, since attempts are
+  // presented as a currency/counter rather than lives-as-icons.
+  const a=d.attempts;
+  $('camp-attempts').innerHTML=
+    creditChipHTML(20)
+    +`<span class="camp-attempts-num">${a.available}/${a.max}</span>`
+    +`<span class="camp-refill" id="camp-refill-timer"${a.nextRefillAt?` data-until="${a.nextRefillAt}"`:''}></span>`;
+  campaignUpdateRefillTimer();
+
+  $('camp-route').innerHTML=levels.map(l=>campaignNodeHTML(l,d.highestUnlockedLevel)).join('');
+  const currentId=Math.min(d.highestUnlockedLevel,levels[levels.length-1].id);
+  const currentEl=$('camp-node-'+currentId);
+  if(currentEl) currentEl.scrollIntoView({inline:'center',block:'nearest'});
+}
+function campaignNodeHTML(l,highestUnlocked){
+  const unlocked=l.id<=highestUnlocked;
+  const cleared=l.result&&l.result.cleared;
+  const gold=l.result&&l.result.gold;
+  const isCurrent=unlocked&&l.id===highestUnlocked;
+  const isBoss=l.type==='BOSS';
+  let cls='camp-node';
+  if(isBoss) cls+=' boss';
+  if(!unlocked) cls+=' locked';
+  if(cleared) cls+=' cleared';
+  if(isCurrent) cls+=' current';
+  const inner=!unlocked?'&#128274;':cleared?(gold?'&#9733;':'&#10003;'):String(l.id);
+  return `<button class="${cls}" id="camp-node-${l.id}"`
+    +(unlocked?` onclick="campaignTapNode(${l.id})"`:' disabled')+`>`
+    +`<span class="camp-node-inner">${inner}</span>`
+    +`<span class="camp-node-label">${isBoss?'Boss':'Table '+l.id}</span>`
+    +`</button>`;
+}
+let campaignRefillTimerHandle=null;
+function campaignUpdateRefillTimer(){
+  clearTimeout(campaignRefillTimerHandle);
+  const el=$('camp-refill-timer'); if(!el) return;
+  const until=Number(el.dataset.until||0);
+  if(!until){ el.textContent=''; return; }
+  const left=Math.max(0,until-Date.now());
+  if(left<=0){ el.textContent='Refilling…'; socket.emit('getCampaignState',{accountToken:accountToken||''}); return; }
+  const m=Math.floor(left/60000), s=Math.floor((left%60000)/1000);
+  el.textContent=`Next in ${m}:${String(s).padStart(2,'0')}`;
+  campaignRefillTimerHandle=setTimeout(campaignUpdateRefillTimer,1000);
+}
+
+function campaignTapNode(levelId){
+  $('camp-node-'+levelId).classList.add('tap-halo');
+  const level=(campaignData.levels||[]).find(l=>l.id===levelId);
+  const trigger=level&&level.type==='BOSS'?'bossIntro':'preLevel';
+  campaignMaybeShow(levelId,trigger,()=>campaignStartLevel(levelId));
+}
+function campaignStartLevel(levelId){
+  const id=identity();
+  socket.emit('startCampaignLevel',{name:id.name,avatar:id.avatar||'',
+    accountToken:accountToken||'',levelId});
+}
+
+let lastCampaignResult=null;
+socket.on('campaignResult',d=>{
+  if(d.creditsAwarded) requestCredits();
+  lastCampaignResult=d;
+  // A fresh unlock/clear can change what the map looks like next time —
+  // drop the cached payload so goCampaign() re-fetches rather than
+  // showing stale node states after "Back to the Map".
+  campaignData=null;
+  renderCampaignResult();
+});
+function renderCampaignResult(){
+  const el=$('f-campaign');
+  if(!el||!lastCampaignResult) return;
+  const d=lastCampaignResult;
+  const level=CAMPAIGN_LEVEL_META[d.levelId]||{id:d.levelId,type:'Normal'};
+  let h='<div class="empty-state" style="padding-top:14px">';
+  h+=`<div class="empty-icon">${d.gold?'★':d.cleared?'✓':'↻'}</div>`;
+  h+=`<h3>Table ${d.levelId}${level.type==='BOSS'?' — Boss Cleared':''} ${d.gold?'— Gold':d.cleared?'— Cleared':'— Not this time'}</h3>`;
+  h+=`<p>Score <span class="cb-figure" id="camp-result-score">0</span>`
+    +(d.creditsAwarded?` &middot; +<span class="cb-figure" id="camp-result-credits">0</span> credits`:'')+'</p>';
+  if(d.guest) h+='<p>Log in to keep your progress and earn credits.</p>';
+  h+='</div>';
+  el.innerHTML=h;
+  el.style.display='block';
+  animateNumber($('camp-result-score'),0,d.score,650);
+  if(d.creditsAwarded) animateNumber($('camp-result-credits'),0,d.creditsAwarded,650);
+
+  const queue=d.cleared?['postClear']:['postFail'];
+  if(d.cleared&&level.type==='BOSS') queue.push('bossDefeat','chapterExit');
+  const runNext=()=>{
+    if(!queue.length){ lastCampaignResult=null; return; }
+    campaignMaybeShow(d.levelId,queue.shift(),runNext);
+  };
+  runNext();
+}
+// Static id->type lookup for the result screen, since campaignData may
+// already have been cleared (see campaignResult above) by the time this
+// renders. Kept intentionally tiny — just enough to know if Table 10 was
+// a boss clear for the result heading and the bossDefeat/chapterExit cues.
+const CAMPAIGN_LEVEL_META={1:{type:'Normal'},2:{type:'Normal'},3:{type:'Harder'},4:{type:'Normal'},
+  5:{type:'Normal'},6:{type:'Harder'},7:{type:'Normal'},8:{type:'Normal'},9:{type:'Harder'},10:{type:'BOSS'}};
+
+// Drives every "roll the number upward" moment (Campaign's credit/score
+// counters) — no prior counter animation existed anywhere in this
+// codebase to reuse; every existing figure just swaps textContent
+// directly. Respects prefers-reduced-motion by jumping straight to the
+// end value.
+function animateNumber(el,from,to,ms){
+  if(!el) return;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){
+    el.textContent=to; return;
+  }
+  const start=performance.now();
+  function tick(now){
+    const t=Math.min(1,(now-start)/ms);
+    const eased=1-Math.pow(1-t,3);
+    el.textContent=Math.round(from+(to-from)*eased);
+    if(t<1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
 }
 
 /* ══════════ PERSONAL (account: nickname & avatar, shared by every mode) ══════════ */
@@ -9884,6 +10518,20 @@ function handleSfxForState(G){
 
 /* ══════════ ROUTER ══════════ */
 socket.on('gameState',G=>{
+  // Boss substitution is purely presentational: the boss seat is already
+  // a plain AI opponent in game logic (see createCampaignRoom
+  // server-side), so rewriting its presented identity here, once, before
+  // any render function ever sees it, is what lets EVERY existing render
+  // path (table captions, roster rail, final standings) show the boss
+  // correctly with zero changes to any of them. Seat 1 is always the
+  // boss seat for a boss level. avatar stays null on purpose — no real
+  // portrait art exists yet, so avatarHTML's own initials fallback
+  // (from the boss's name) is the placeholder, same as any other
+  // undressed AI seat.
+  if(G.campaignBoss){
+    const boss=CAMPAIGN_CHARACTERS[G.campaignBoss];
+    if(boss&&G.players[1]){ G.players[1].name=boss.name; G.players[1].title='Chapter Boss'; }
+  }
   S=G; me=G.myIndex; host=G.isHost;
   renderVote(G);
   syncCountdown(G);
@@ -10996,17 +11644,19 @@ socket.on('finalCreditsOk',d=>{
 function renderFinal(G){
   show('final');
   const isDaily=!!G.daily;
+  const isCampaign=!!G.campaign;
   const rows=G.players.map((p,i)=>({...p,i})).sort((a,b)=>b.score-a.score);
 
-  // Daily is solo against three AI — a "final standings" podium against
-  // opponents who don't matter isn't the comparison that means anything
-  // here, so it's hidden entirely in favor of #f-daily's own score card
-  // (renderDailyResult) and a button straight back to the real
-  // comparison: the leaderboard on #s-daily.
-  $('f-title').style.display=isDaily?'none':'block';
-  $('f-newgame').style.display=isDaily?'none':'block';
+  // Daily and Campaign are both solo against three AI — a "final
+  // standings" podium against opponents who don't matter isn't the
+  // comparison that means anything here, so it's hidden entirely in
+  // favor of each mode's own result card and a button back to where it
+  // actually belongs (the daily leaderboard, or the campaign map).
+  $('f-title').style.display=(isDaily||isCampaign)?'none':'block';
+  $('f-newgame').style.display=(isDaily||isCampaign)?'none':'block';
   $('f-daily-return').style.display=isDaily?'block':'none';
-  if(isDaily){
+  $('f-campaign-return').style.display=isCampaign?'block':'none';
+  if(isDaily||isCampaign){
     $('f-body').style.display='none';
     $('f-body').innerHTML='';
   }else{
@@ -11021,10 +11671,12 @@ function renderFinal(G){
     let h='<div class="final-list">'+rows.map((p,n)=>finalRowHTML(p,n)).join('')+'</div>';
     $('f-body').innerHTML=h;
   }
-  // A non-daily game must never inherit the previous game's daily card.
-  // (The dailyResult event can land either side of this render, so the
-  // block is only ever cleared here, never populated.)
+  // A non-daily/non-campaign game must never inherit the previous game's
+  // card. (The dailyResult/campaignResult events can land either side of
+  // this render, so each block is only ever cleared here, never
+  // populated — renderCampaignResult owns actually filling #f-campaign.)
   if(!isDaily) $('f-daily').style.display='none';
+  if(!isCampaign) $('f-campaign').style.display='none';
   clearSession();
 
   if(!finalFxPlayed){

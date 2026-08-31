@@ -426,8 +426,10 @@ async function ensureSchema() {
       -- Starts full. Must track CAMPAIGN_MAX_ATTEMPTS in server.js — this
       -- is only the DEFAULT for a brand-new row, not read elsewhere as
       -- the cap; getCampaignState/consumeCampaignAttempt both take the
-      -- real max as a parameter from server.js every call.
-      attempts_current INTEGER NOT NULL DEFAULT 24,
+      -- real max as a parameter from server.js every call. (A row created
+      -- under an older, higher default is clamped down on read, so
+      -- lowering the cap needs no migration.)
+      attempts_current INTEGER NOT NULL DEFAULT 15,
       attempts_last_refill_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       story_cues_seen TEXT,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()

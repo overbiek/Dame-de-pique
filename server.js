@@ -2098,7 +2098,12 @@ function submitDailyResult(G) {
 // written generically so Chapters 2-10 can be dropped in later without
 // touching engine code, the same "drop the data in, no code change"
 // contract this codebase already uses for achievements/cosmetics.
-const CAMPAIGN_MAX_ATTEMPTS = 24;
+// Keep in step with campaign_progress.attempts_current's DEFAULT in
+// db.js (that default only seeds a brand-new row; this constant is the
+// real cap, passed into every getCampaignState/consumeCampaignAttempt
+// call). Lowering this is safe for existing accounts — getCampaignState
+// clamps whatever is stored down to the new max on read.
+const CAMPAIGN_MAX_ATTEMPTS = 15;
 const CAMPAIGN_ATTEMPT_REFILL_MS = 20 * 60 * 1000; // placeholder — no economy spec existed, tune freely
 const CAMPAIGN_CREDITS_BY_TYPE = { Normal: 15, Harder: 22, BOSS: 60 }; // placeholder, same reason
 

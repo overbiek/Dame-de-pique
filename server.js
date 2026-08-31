@@ -2130,6 +2130,12 @@ const CAMPAIGN_CHARACTERS = {
   // Regulars, so his campaign appearance and his avatar are the same
   // person and should look it.
   the_sharp:   { id: 'the_sharp',   name: 'The Sharp', seatAvatar: 'regular_sharp' },
+  lib1:        { id: 'lib1',        name: 'Library Player #1' },
+  lib2:        { id: 'lib2',        name: 'Library Player #2' },
+  lib3:        { id: 'lib3',        name: 'Library Player #3' },
+  // Same deal as The Sharp — already a House Regular, so campaign and
+  // avatar are the same person and share the one piece of art.
+  the_scholar: { id: 'the_scholar', name: 'The Scholar', seatAvatar: 'regular_scholar' },
   player:      { id: 'player',      name: null },
 };
 
@@ -2144,6 +2150,11 @@ const CAMPAIGN_CHARACTERS = {
 const CAMPAIGN_CHAPTER_ROSTER = {
   1: { regulars: ['reg1', 'reg2', 'reg3'], bossSeat: 2 },
   2: { regulars: ['glass_baron', 'rooftop1', 'rooftop2'], bossSeat: 2 },
+  // Chapter 3 needs no carried-over guest: The Scholar watches from a
+  // reading desk rather than a chair, so the three library players hold
+  // all three seats until he taps #3 out at Level 30 — exactly the
+  // screenplay's staging, no reattribution needed.
+  3: { regulars: ['lib1', 'lib2', 'lib3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2166,6 +2177,9 @@ const CAMPAIGN_CHAPTERS = [
   // file at public/campaign/chapters/rooftop.webp whenever it's ready,
   // no code change needed.
   { id: 2, title: 'The Rooftop', levelStart: 11, levelEnd: 20, slug: 'rooftop', bossId: 'the_sharp' },
+  // No background art supplied yet — falls back to the CSS/SVG
+  // placeholder until public/campaign/chapters/grand_library.webp exists.
+  { id: 3, title: 'The Grand Library', levelStart: 21, levelEnd: 30, slug: 'grand_library', bossId: 'the_scholar' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -2275,6 +2289,51 @@ const CAMPAIGN_LEVELS = {
           parseHand('J♣ 5♦ 10♠ 7♥ 3♣ Q♠ 2♠ 6♦ K♣ K♠ J♥ A♣ 6♣'),
         ],
         objective: { type: 'score', min: -6, gold: 44 } },
+
+  // Chapter 3 — also all 'keep' per the source sheet.
+  21: { id: 21, chapter: 3, type: 'Harder', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L21-c168', hand: parseHand('5♥ 2♦ 7♦ 9♥ K♠ J♣ 2♣ 3♣ 5♣ K♥ 7♥ 4♦ 5♠'),
+        objective: { type: 'score', min: 3, gold: 13 } },
+  22: { id: 22, chapter: 3, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L22-c159', hand: parseHand('5♦ 2♠ J♣ K♦ 7♥ 9♣ A♥ 4♠ 2♥ Q♥ K♥ 3♣ 9♥'),
+        objective: { type: 'score', min: -10, gold: 22 } },
+  // Original main-sheet objective for L23 was score (min -9 / gold 29).
+  // Swapped for the Avoid-the-Queen ladder's rung 2 — Chapter 1 spent
+  // rung 1 — against this level's own "Where the Queen Lands" beat.
+  23: { id: 23, chapter: 3, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-goal-queen-refine-L2-c495', hand: parseHand('A♦ J♠ 6♣ 7♣ K♣ 6♦ 2♠ 5♦ 10♥ A♣ Q♦ K♥ Q♥'),
+        objective: { type: 'avoidQueen', goldScoreBar: 23 } },
+  24: { id: 24, chapter: 3, type: 'Harder', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L24-c13', hand: parseHand('7♠ 2♠ 7♦ 7♥ 10♣ Q♠ 5♦ K♣ 2♣ 4♠ 2♦ J♦ 3♥'),
+        objective: { type: 'score', min: 0, gold: 23 } },
+  25: { id: 25, chapter: 3, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L25-c0', hand: parseHand('A♣ K♣ 9♦ A♦ 2♣ 8♦ 6♥ 5♦ 9♣ J♦ Q♣ 3♣ J♥'),
+        objective: { type: 'score', min: -7, gold: 68 } },
+  26: { id: 26, chapter: 3, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L26-c294', hand: parseHand('9♠ 4♥ 6♠ 3♣ A♠ 2♣ 7♣ J♣ A♥ 5♥ K♠ J♥ 8♠'),
+        objective: { type: 'score', min: 7, gold: 25 } },
+  27: { id: 27, chapter: 3, type: 'Harder', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L27-c121', hand: parseHand('2♣ 3♣ 5♣ Q♦ 8♥ 7♦ 5♥ 7♠ 10♣ K♦ 2♦ J♣ K♥'),
+        objective: { type: 'score', min: 8, gold: 19 } },
+  28: { id: 28, chapter: 3, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L28-c443', hand: parseHand('9♠ 8♦ J♥ 2♠ 5♦ A♣ K♦ 3♥ 2♣ 3♠ 10♥ 4♥ 4♠'),
+        objective: { type: 'score', min: -5, gold: 12 } },
+  // Original main-sheet objective for L29 was score (min -10 / gold 27).
+  // Swapped for the Suit Void ladder's rung 2 — this level's own beat is
+  // "tracking a late void and unloading the dangerous card at the only
+  // safe moment", which is precisely what that objective measures.
+  29: { id: 29, chapter: 3, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-goal-void-refine-L2-c60', hand: parseHand('9♦ 6♣ 7♠ 10♣ J♣ 2♣ Q♦ 6♥ K♣ 2♥ 7♦ 4♣ 10♠'),
+        objective: { type: 'suitVoid', suit: '♦', voidByTrick: 10, goldByTrick: 5 } },
+  30: { id: 30, chapter: 3, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_scholar',
+        seed: 'ddp-boss-refine-L30-c570',
+        hands4: [
+          parseHand('8♠ 7♦ 6♣ A♦ A♣ 7♠ 5♠ K♣ Q♥ 4♠ Q♠ J♣ 3♥'),
+          parseHand('J♣ 4♦ 6♦ 3♠ 7♦ 5♦ 6♥ 6♠ 5♥ 7♣ 3♣ 9♥ 9♣'),
+          parseHand('10♦ 4♦ 8♠ 10♥ 9♥ K♥ K♦ 7♥ 2♥ 6♦ Q♣ 5♦ 3♥'),
+          parseHand('5♣ 5♦ J♠ 10♠ Q♥ K♥ 4♦ 7♣ 6♣ 9♥ K♠ 8♦ K♦'),
+        ],
+        objective: { type: 'score', min: -1, gold: 16 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -2496,6 +2555,87 @@ const CAMPAIGN_STORY_CUES = [
   ccue(20, 'bossDefeat', 'the_sharp', 'There is someone downstairs who believes every decision can be explained.'),
   ccue(20, 'bossDefeat', 'glass_baron', 'You two will either get along beautifully or not at all.'),
   ccue(20, 'chapterExit', 'the_sharp', 'Come. The library is quieter.'),
+
+  // ── Chapter 3 — The Grand Library, Boss: The Scholar ──
+  // Level 21 — The Reader
+  ccue(21, 'preLevel', 'the_scholar', 'Woof.'),
+  ccue(21, 'preLevel', 'player', 'Did he just—'),
+  ccue(21, 'preLevel', 'lib1', 'Yes.'),
+  ccue(21, 'preLevel', 'player', 'Why?'),
+  ccue(21, 'preLevel', 'lib1', 'We stopped asking.'),
+
+  // Level 22 — One Line In The Margin
+  ccue(22, 'postClear', 'lib2', 'Most people need two tricks to see that.'),
+  ccue(22, 'postClear', 'lib3', 'You needed one.'),
+  ccue(22, 'postClear', 'player', 'Is he taking notes on us?'),
+  ccue(22, 'postClear', 'lib1', 'Probably on you.'),
+
+  // Level 23 — Where The Queen Lands (Avoid the Queen)
+  ccue(23, 'preLevel', 'lib3', 'Nobody wants to open that door.'),
+  ccue(23, 'postClear', 'lib2', 'You knew where she could land.'),
+  ccue(23, 'postClear', 'the_scholar', 'Woof.'),
+  ccue(23, 'postClear', 'lib1', 'That might be approval.'),
+
+  // Level 24 — Sacrifice The Trick
+  ccue(24, 'postClear', 'lib1', 'You let that go on purpose.'),
+  ccue(24, 'postClear', 'player', 'It was cheaper.'),
+  ccue(24, 'postClear', 'lib2', 'Most people hate losing a trick even when winning it hurts them.'),
+  ccue(24, 'postClear', 'lib3', 'He noticed that one.'),
+
+  // Level 25 — Luck Is The Excuse
+  ccue(25, 'preLevel', 'lib2', 'People downstairs call this luck.'),
+  ccue(25, 'preLevel', 'lib1', 'People downstairs are downstairs.'),
+  ccue(25, 'postClear', 'lib3', 'That is the difference. You stop fighting the hand before the hand punishes you for it.'),
+
+  // Level 26 — Rewrite The Plan
+  ccue(26, 'postClear', 'lib1', 'You changed everything in one trick.'),
+  ccue(26, 'postClear', 'player', 'The table changed first.'),
+  ccue(26, 'postClear', 'the_scholar', 'Correct.'),
+  // Deliberately its own card, not appended to the line above — the beat
+  // between "Correct." and this IS the joke.
+  ccue(26, 'postClear', 'the_scholar', 'Woof.'),
+  ccue(26, 'postClear', 'player', 'I was almost taking you seriously.'),
+
+  // Level 27 — The Book Is Not The Game
+  ccue(27, 'preLevel', 'lib3', 'He has not read a line in five minutes.'),
+  ccue(27, 'preLevel', 'lib2', 'He is reading something else now.'),
+  ccue(27, 'postClear', 'the_scholar', 'Patterns are useful until the opponent knows you prefer them.'),
+  ccue(27, 'postClear', 'player', 'That advice free?'),
+  ccue(27, 'postClear', 'the_scholar', 'For now.'),
+
+  // Level 28 — Book Closed
+  ccue(28, 'preLevel', 'lib1', 'That is new.'),
+  ccue(28, 'postClear', 'the_scholar', 'You no longer need the obvious answer.'),
+  ccue(28, 'postClear', 'player', 'Neither do you, apparently.'),
+
+  // Level 29 — Studying You (Suit Void)
+  ccue(29, 'preLevel', 'lib3', 'You are making this very comfortable.'),
+  ccue(29, 'preLevel', 'the_scholar', 'Good.'),
+  ccue(29, 'postClear', 'the_scholar', 'Enough.'),
+  ccue(29, 'postClear', 'lib3', 'My seat?'),
+  ccue(29, 'postClear', 'the_scholar', 'Your seat.'),
+  ccue(29, 'postClear', 'lib1', 'He likes you. I think.'),
+
+  // Level 30 — BOSS: The Scholar
+  ccue(30, 'bossIntro', 'the_scholar', 'Woof.'),
+  ccue(30, 'bossIntro', 'the_scholar', 'I have read every game you played in this building tonight.'),
+  ccue(30, 'bossIntro', 'player', 'Read?'),
+  ccue(30, 'bossIntro', 'the_scholar', 'Cards are text. Decisions are annotations. Mistakes are revisions.'),
+  ccue(30, 'bossIntro', 'the_scholar', 'Let us add one more chapter.'),
+  ccue(30, 'bossMidpoint', 'the_scholar', 'Interesting. You are not following the pattern I wrote down.'),
+  ccue(30, 'bossMidpoint', 'player', 'Then your notes are wrong.'),
+  ccue(30, 'bossMidpoint', 'the_scholar', 'No. They are becoming useful.'),
+  ccue(30, 'postFail', 'the_scholar', 'Again. The result changed before your plan did.', { pick: 'random' }),
+  ccue(30, 'postFail', 'the_scholar', 'You remembered the cards. You forgot the reason they mattered.', { pick: 'random' }),
+  ccue(30, 'postFail', 'the_scholar', 'A mistake is only expensive if you insist on repeating it.', { pick: 'random' }),
+  ccue(30, 'bossDefeat', 'the_scholar', 'You do not merely follow patterns.'),
+  ccue(30, 'bossDefeat', 'player', 'No?'),
+  ccue(30, 'bossDefeat', 'the_scholar', 'You create new ones.'),
+  ccue(30, 'bossDefeat', 'the_scholar', 'Knowledge brought you this far.'),
+  ccue(30, 'chapterExit', 'the_scholar', 'The next room is less respectful of knowledge.'),
+  ccue(30, 'chapterExit', 'player', 'You are not coming?'),
+  ccue(30, 'chapterExit', 'the_scholar', 'Of course I am coming.'),
+  ccue(30, 'chapterExit', 'the_scholar', 'Woof.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

@@ -8117,6 +8117,10 @@ const CAMPAIGN_CHARACTERS={
   rooftop1:{name:'Rooftop Player #1',initial:'1'},
   rooftop2:{name:'Rooftop Player #2',initial:'2'},
   the_sharp:{name:'The Sharp',initial:'S'},
+  lib1:{name:'Library Player #1',initial:'1'},
+  lib2:{name:'Library Player #2',initial:'2'},
+  lib3:{name:'Library Player #3',initial:'3'},
+  the_scholar:{name:'The Scholar',initial:'Sc'},
   player:{name:null,initial:null},
 };
 // Which three characters sit at an ordinary (non-boss) table per chapter,
@@ -8130,6 +8134,7 @@ const CAMPAIGN_CHARACTERS={
 const CAMPAIGN_CHAPTER_ROSTER={
   1:{regulars:['reg1','reg2','reg3'],bossSeat:2},
   2:{regulars:['glass_baron','rooftop1','rooftop2'],bossSeat:2},
+  3:{regulars:['lib1','lib2','lib3'],bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/
@@ -8147,7 +8152,10 @@ function campaignBgImg(slug){
 // /campaign/characters/ — The Sharp is literally one of the House
 // Regulars, so the two should never be able to drift apart. Anyone not
 // listed here uses the normal per-character path.
-const CAMPAIGN_PORTRAIT_SRC={ the_sharp:'/avatars/house-regulars/sharp.webp' };
+const CAMPAIGN_PORTRAIT_SRC={
+  the_sharp:'/avatars/house-regulars/sharp.webp',
+  the_scholar:'/avatars/house-regulars/scholar.webp',
+};
 function campaignPortraitImg(id){
   if(campaignArtMissing['pf:'+id]) return '';
   const src=CAMPAIGN_PORTRAIT_SRC[id]||`/campaign/characters/${id}.webp`;
@@ -8620,7 +8628,9 @@ function renderCampaignResult(){
 const CAMPAIGN_LEVEL_META={1:{type:'Normal'},2:{type:'Normal'},3:{type:'Harder'},4:{type:'Normal'},
   5:{type:'Normal'},6:{type:'Harder'},7:{type:'Normal'},8:{type:'Normal'},9:{type:'Harder'},10:{type:'BOSS'},
   11:{type:'Normal'},12:{type:'Harder'},13:{type:'Normal'},14:{type:'Normal'},15:{type:'Harder'},
-  16:{type:'Normal'},17:{type:'Normal'},18:{type:'Harder'},19:{type:'Normal'},20:{type:'BOSS'}};
+  16:{type:'Normal'},17:{type:'Normal'},18:{type:'Harder'},19:{type:'Normal'},20:{type:'BOSS'},
+  21:{type:'Harder'},22:{type:'Normal'},23:{type:'Normal'},24:{type:'Harder'},25:{type:'Normal'},
+  26:{type:'Normal'},27:{type:'Harder'},28:{type:'Normal'},29:{type:'Normal'},30:{type:'BOSS'}};
 
 // Drives every "roll the number upward" moment (Campaign's credit/score
 // counters) — no prior counter animation existed anywhere in this

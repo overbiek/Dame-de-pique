@@ -395,19 +395,31 @@ function isGuaranteedWinner(G, card, myHand) {
   );
 }
 
+// A single penalty card is too weak a signal of an actual moon attempt —
+// it's routinely just an unavoidable early trick, not the start of a run.
+// Below this, moonPaceOwner reports "no one" so the hard-rule defenses in
+// applyHardRules/heuristicChoose don't relax around a false alarm; two
+// people can't yet have crossed it and be picked as owner in the same
+// call, since the second one to appear kills the moon outright below.
+const MOON_PACE_MIN_CARDS = 2;
+
 // Which player currently owns every heart/Q♠ trick captured so far this
 // round — i.e. who (if anyone) is on pace to shoot the moon. -1 once two
 // different players have each banked at least one penalty card, since
-// the moon is then mathematically dead for the round.
+// the moon is then mathematically dead for the round. Also -1 while the
+// sole holder is still under MOON_PACE_MIN_CARDS (see its own note).
 function moonPaceOwner(G) {
   let owner = -1;
+  let ownerPenaltyCards = 0;
   for (let i = 0; i < 4; i++) {
-    const hasPenalty = G.players[i].tricks.some(c => c.suit === '♥' || (c.suit === '♠' && c.rank === 'Q'));
-    if (hasPenalty) {
+    const penaltyCards = G.players[i].tricks.filter(c => c.suit === '♥' || (c.suit === '♠' && c.rank === 'Q'));
+    if (penaltyCards.length) {
       if (owner !== -1 && owner !== i) return -1;
       owner = i;
+      ownerPenaltyCards = penaltyCards.length;
     }
   }
+  if (owner !== -1 && ownerPenaltyCards < MOON_PACE_MIN_CARDS) return -1;
   return owner;
 }
 

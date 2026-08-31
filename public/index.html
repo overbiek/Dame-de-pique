@@ -5329,12 +5329,37 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 .camp-modal-opp{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1 1 0;min-width:0}
 .camp-modal-opp .camp-portrait{width:52px;height:52px}
 .camp-modal-opp span{font-size:10px;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.camp-modal-friends{display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto}
+/* padding-right clears the scrollbar, which otherwise sits on top of the
+   right-aligned score column once the list overflows. */
+.camp-modal-friends{display:flex;flex-direction:column;gap:6px;max-height:132px;overflow-y:auto;padding-right:8px}
 .camp-modal-friend-row{display:flex;align-items:center;gap:8px;font-size:12px}
 .camp-mf-name{flex:1 1 auto;min-width:0;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Badge and score are fixed-width columns so they line up down the list
+   rather than jittering with name length. */
+.camp-mf-badge{flex:0 0 auto;min-width:66px;text-align:right;font-size:11px}
+.camp-mf-score{
+  flex:0 0 auto;min-width:38px;text-align:right;
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:12px;color:var(--muted);
+}
+/* Same themed accents .seat-score.up/.down already uses, so they're
+   proven on both light themes as well as the dark ones. */
+.camp-mf-pos{color:var(--ddp-pos)}
+.camp-mf-neg{color:var(--ddp-neg)}
 .camp-mf-gold{color:var(--gold-hi)}
 .camp-mf-cleared{color:var(--ddp-mine)}
+.camp-mf-failed{color:var(--faint)}
 .camp-mf-notplayed{color:var(--faint)}
+/* Your own pinned row: separated from the friends list by a hairline,
+   and bolded rather than gold-tinted — gold on this card would need its
+   own Clair/Sable correction for no real gain. */
+/* Matches .camp-modal-friends' own padding-right so the badge/score
+   columns line up between the pinned row and the list below it. On the
+   real target (a phone) scrollbars are overlays and take no space, so
+   they align exactly; on a desktop browser with classic scrollbars the
+   list can sit a scrollbar-width further in, which is cosmetic only. */
+.camp-modal-you{padding-right:8px}
+.camp-mf-me{padding-bottom:7px;margin-bottom:5px;border-bottom:1px solid rgba(var(--ddp-brass-rgb),.25)}
+.camp-mf-me .camp-mf-name{font-weight:700}
 .camp-modal-empty{font-size:12px;color:var(--faint);padding:4px 0}
 #camp-modal-play{margin-top:18px}
 
@@ -5524,6 +5549,19 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 [data-theme="sable"] .camp-modal-title,
 [data-theme="sable"] .camp-obj-gold,
 [data-theme="sable"] .camp-mf-gold{color:var(--ddp-ink)}
+/* The +/- best-score figures. --ddp-pos/--ddp-neg are tuned for the dark
+   felt they normally sit on and go pale-on-pale against the level
+   popup's card, which on these two themes is a light ground: measured
+   against that card, pos/neg come out 4.24/5.07 on Clair and a much
+   worse 2.72/3.25 on Sable (Sable's card is rgb(208,182,143), lighter
+   still). Darkened until BOTH themes clear AA — #15522C gives 7.38
+   (Clair) / 4.73 (Sable) and #7E241B gives 7.79 / 5.00. Kept red/green
+   rather than re-grounded on the ink like the rules above, because the
+   sign of the score is the whole point of the colour here. */
+[data-theme="clair"] .camp-mf-pos,
+[data-theme="sable"] .camp-mf-pos{color:#15522C}
+[data-theme="clair"] .camp-mf-neg,
+[data-theme="sable"] .camp-mf-neg{color:#7E241B}
 </style>
 </head>
 <body>
@@ -6154,7 +6192,13 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
     <div class="camp-modal-objective" id="camp-modal-objective"></div>
     <div class="camp-modal-section-label">At this table</div>
     <div class="camp-modal-opponents" id="camp-modal-opponents"></div>
-    <div class="camp-modal-section-label">Friends</div>
+    <div class="camp-modal-section-label">Best scores</div>
+    <!-- Your own row is OUTSIDE the scrolling list on purpose, so it
+         stays visible however many friends are listed — same "pin the
+         player's own row" pattern as .daily-you on the Daily Challenge
+         leaderboard. It also needs no server round trip: your result for
+         this level is already in campaignData. -->
+    <div class="camp-modal-you" id="camp-modal-you"></div>
     <div class="camp-modal-friends" id="camp-modal-friends"></div>
     <button class="btn btn-primary btn-block" id="camp-modal-play" onclick="campaignModalPlay()">Play</button>
   </div>
@@ -8453,16 +8497,40 @@ function campaignOpponentsHTML(level){
     return `<div class="camp-modal-opp">${campaignPortraitHTML(id)}<span>${esc(ch.name)}</span></div>`;
   }).join('');
 }
+// One row shape for both you and your friends, so the two can't drift
+// apart visually. The badge (Gold / Cleared / Not cleared) and the raw
+// +/- score are now shown TOGETHER — the score used to be suppressed
+// whenever a badge was showing, which hid exactly the number you'd want
+// to compare against.
+function campaignResultRowHTML(o){
+  const badge=!o.played?'<span class="camp-mf-badge camp-mf-notplayed">Not played</span>'
+    :o.gold?'<span class="camp-mf-badge camp-mf-gold">&#9733; Gold</span>'
+    :o.cleared?'<span class="camp-mf-badge camp-mf-cleared">&#10003; Cleared</span>'
+    :'<span class="camp-mf-badge camp-mf-failed">Not cleared</span>';
+  let score='<span class="camp-mf-score">&mdash;</span>';
+  if(o.played){
+    const s=o.bestScore;
+    const cls=s>0?' camp-mf-pos':(s<0?' camp-mf-neg':'');
+    score=`<span class="camp-mf-score${cls}">${s>0?'+':''}${s}</span>`;
+  }
+  return `<div class="camp-modal-friend-row${o.me?' camp-mf-me':''}">`
+    +`<span class="avatar sm">${avatarHTML(o.avatar,o.nickname)}</span>`
+    +`<span class="camp-mf-name">${esc(o.nickname)}${(o.me&&o.nickname!=='You')?' (you)':''}</span>`
+    +badge+score+`</div>`;
+}
+// Built from campaignData, which already holds this account's own result
+// for every level — no server round trip, so it can render immediately
+// while the friends list is still loading.
+function campaignMyResultRowHTML(level){
+  const r=level&&level.result;
+  return campaignResultRowHTML({
+    me:true, avatar:account&&account.avatar, nickname:(identity().name||'You'),
+    played:!!r, bestScore:r?r.bestScore:null, cleared:!!(r&&r.cleared), gold:!!(r&&r.gold),
+  });
+}
 function campaignFriendsRowsHTML(rows){
   if(!rows||!rows.length) return '<div class="camp-modal-empty">Add friends to see how they did here.</div>';
-  return rows.map(r=>{
-    const status=!r.played?'<span class="camp-mf-notplayed">Not played</span>'
-      :r.gold?'<span class="camp-mf-gold">&#9733; Gold</span>'
-      :r.cleared?'<span class="camp-mf-cleared">&#10003; Cleared</span>'
-      :`<span>${r.bestScore>0?'+':''}${r.bestScore}</span>`;
-    return `<div class="camp-modal-friend-row"><span class="avatar sm">${avatarHTML(r.avatar,r.nickname)}</span>`
-      +`<span class="camp-mf-name">${esc(r.nickname)}</span>${status}</div>`;
-  }).join('');
+  return rows.map(r=>campaignResultRowHTML(r)).join('');
 }
 function campaignOpenLevelModal(levelId){
   const level=(campaignData&&campaignData.levels||[]).find(l=>l.id===levelId);
@@ -8473,6 +8541,7 @@ function campaignOpenLevelModal(levelId){
   $('camp-modal-sub').textContent=level.type==='BOSS'?bossName:(level.type==='Harder'?'A harder hand':'');
   $('camp-modal-objective').innerHTML=campaignObjectiveHTML(level);
   $('camp-modal-opponents').innerHTML=campaignOpponentsHTML(level);
+  $('camp-modal-you').innerHTML=campaignMyResultRowHTML(level);
   $('camp-modal-friends').innerHTML='<div class="camp-modal-empty">Loading…</div>';
   $('camp-modal-play').textContent=(level.result&&level.result.cleared)?'Play Again':'Play';
   $('camp-level-modal').classList.add('show');

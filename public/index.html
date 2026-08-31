@@ -8304,6 +8304,19 @@ const CAMPAIGN_CHARACTERS={
   cons3:{name:'Conservatory Player #3',initial:'3'},
   the_optimist:{name:'The Optimist',initial:'O'},
   cons_guest:{name:'A Guest',initial:'G'},
+  cabaret1:{name:'Cabaret Player #1',initial:'1'},
+  cabaret2:{name:'Cabaret Player #2',initial:'2'},
+  cabaret3:{name:'Cabaret Player #3',initial:'3'},
+  the_jester:{name:'The Jester',initial:'J'},
+  ballroom1:{name:'Ballroom Player #1',initial:'1'},
+  ballroom2:{name:'Ballroom Player #2',initial:'2'},
+  ballroom3:{name:'Ballroom Player #3',initial:'3'},
+  the_charmer:{name:'The Charmer',initial:'C'},
+  vault1:{name:'Vault Player #1',initial:'1'},
+  vault2:{name:'Vault Player #2',initial:'2'},
+  vault3:{name:'Vault Player #3',initial:'3'},
+  nervous_player:{name:'Nervous Player',initial:'N'},
+  the_closer:{name:'The Closer',initial:'C'},
   player:{name:null,initial:null},
 };
 // Which three characters sit at an ordinary (non-boss) table per chapter,
@@ -8320,6 +8333,9 @@ const CAMPAIGN_CHAPTER_ROSTER={
   3:{regulars:['lib1','lib2','lib3'],bossSeat:2},
   4:{regulars:['lounge1','lounge2','lounge3'],bossSeat:2},
   5:{regulars:['cons1','cons2','cons3'],bossSeat:2},
+  6:{regulars:['cabaret1','cabaret2','cabaret3'],bossSeat:2},
+  7:{regulars:['ballroom1','ballroom2','ballroom3'],bossSeat:2},
+  8:{regulars:['vault1','vault2','vault3'],bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/
@@ -8350,6 +8366,9 @@ const CAMPAIGN_PORTRAIT_SRC={
   // The Optimist's recurring rejection — reuses an existing avatar so a
   // one-note walk-on needs no art of her own.
   cons_guest:'/avatars/house-regulars/belle.webp',
+  the_jester:'/avatars/house-regulars/jester.webp',
+  the_charmer:'/avatars/house-regulars/charmer.webp',
+  the_closer:'/avatars/house-regulars/closer.webp',
 };
 // NOT lazy — same call as campaignGoldImg's, for a different reason.
 // campaignDialogueStep() replaces #camp-dlg-portrait's innerHTML on

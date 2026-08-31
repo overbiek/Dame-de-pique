@@ -2890,6 +2890,234 @@ before pushing.
   already-cached ones, so the cache-first fetch handler just fetches
   them fresh the first time any of Levels 11-50 is cleared at Gold.
 
+## Chapter 6 — The Cabaret of Oddities (Levels 51-60, Boss: The Jester)
+- **Built from a spreadsheet, not guessed** —
+  `Dame-de-Pique-Campaign-Levels.xlsx`'s "Levels 1-100" sheet already had
+  every mechanical value for 51-60 (Type Normal/Harder/BOSS, pass
+  Direction, Hands, Min/Gold Target, the exact fixed 13-card hand, even
+  the boss's 4 hands) — this is the same source the original 1-50 build
+  used, it simply already went further than the campaign did. No
+  fixed-hand values were invented for this chapter.
+- **Deliberately kept as plain `score` objectives for all of 51-59** —
+  chapters 1-5 each swap a couple of levels onto the suitVoid/avoidQueen/
+  trickCount/cleanHand mini-ladders (see the objective-shapes comment
+  above `CAMPAIGN_CHAPTERS`), picking whichever calibrated "rung" hadn't
+  been used yet and matching it to a level whose own dialogue beat fits.
+  Introducing a new rung needs its own clear-rate calibration pass this
+  session didn't have a request to make, so Chapter 6 stays pure score
+  rather than guessing at a swap — a natural next step if variety is
+  ever wanted here.
+- **The Jester already had real art** — `regular_jester` has existed in
+  `AVATAR_COLLECTIONS`/`public/avatars/house-regulars/jester.webp` since
+  the original House Regulars set, so `the_jester` gets a `seatAvatar`
+  exactly like the_sharp/the_scholar/the_wildcard/the_optimist did
+  before it — no new art needed for the boss himself.
+- **A handful of lines carried a "From across the room:"/"From somewhere
+  unseen:" staging prefix in the source doc** — stripped before storing,
+  the same treatment the earlier chapters' "- O.S." tag already got,
+  since it describes where he's calling out from rather than something
+  he'd actually say aloud.
+- **"RANDOM REGULAR" (Level 53) resolved to `cabaret2` specifically** —
+  Cabaret Players #1 and #3 already have their own lines later in that
+  same level, so this is the assignment that gives all three regulars
+  exactly one line each rather than leaving one silent.
+- **Two "BOSS MIDPOINT STINGER" blocks in the source (one for avoiding a
+  trap, one a random "strange fact") play in sequence off the ONE
+  `bossMidpoint` trigger** — unlike Level 50's own two-alternative case,
+  nothing here marks them as mutually exclusive, so both six lines fire
+  together rather than picking one.
+- Verified structurally (every speaker id used resolves in both the
+  server and client `CAMPAIGN_CHARACTERS` tables, every level correctly
+  tagged `chapter: 6`) and live: the map renders "The Cabaret of
+  Oddities" with The Jester's real photo in the boss-teaser corner, and
+  three representative sequences (Level 51's `preLevel`, Level 60's
+  `bossIntro`/`bossMidpoint`, and its `postFail` random-pick) were driven
+  through the actual `campaignMaybeShow`/`campaignDialogueStep` renderer
+  and matched the intended narrator/speaker order and text exactly.
+- **Chapter background and the three regulars' portraits arrived
+  shortly after and are in** — `public/campaign/chapters/
+  cabaret_of_oddities.webp` (1400×788, resized straight from the
+  1672×941 source, whose aspect ratio already matched almost exactly —
+  no crop needed) and `public/campaign/characters/cabaret1/2/3.webp`.
+  **The three portraits needed a different crop method than the earlier
+  chapters' source art, and this is worth knowing for whatever art
+  arrives next**: their 1254×1254 source medallions carry ornate
+  diagonal corner scrollwork OUTSIDE the circular ring itself (the
+  earlier Conservatory/Lounge/Library source art never had this), so
+  the flood-fill-background-removal method the gold medallions and rank
+  plates use would have kept those corner flourishes as opaque
+  content — measured on Cabaret 1's source, the ring's own cardinal
+  radius is ~627px (i.e. almost exactly half the 1254px canvas) while
+  the diagonal corner flourish reaches ~749px, well past it. Fixed with
+  a plain circular mask at radius = width/2 (4x supersampled for a
+  smooth anti-aliased edge before downsampling to the existing 480px
+  convention) — that radius keeps the ring, including whatever
+  decorative studs are built into it, while geometrically excluding
+  anything in the corners. Gold medallions for Levels 51-60 are still
+  the one piece not yet supplied.
+
+## Chapter 7 — The Grand Ballroom (Levels 61-70, Boss: The Charmer)
+- **Same spreadsheet source as Chapter 6** —
+  `Dame-de-Pique-Campaign-Levels.xlsx`'s "Levels 1-100" sheet rows 62-71
+  had every mechanical value for 61-70 already worked out (Type, pass
+  Direction, Hands, Min/Gold Target, the exact fixed hands, the boss's 4
+  hands) — no fixed-hand values were invented for this chapter either.
+- **Plain `score` objectives for the whole chapter, same call as
+  Chapter 6** — no suitVoid/avoidQueen/trickCount/cleanHand rung was
+  requested for 61-70, so none was introduced; a natural follow-up if
+  variety is ever wanted here, exactly like Chapter 6's own note.
+- **The Charmer already had real art** — `regular_charmer` has existed
+  in `AVATAR_COLLECTIONS`/`public/avatars/house-regulars/charmer.webp`
+  since the original House Regulars set, so `the_charmer` gets a
+  `seatAvatar` exactly like the_sharp/the_scholar/the_wildcard/
+  the_optimist/the_jester did before him — no new art needed for the
+  boss himself.
+- **The Charmer roams the ballroom rather than holding a seat until
+  Level 69**, the same one-level-early tease every other chapter's boss
+  uses: Level 69's `postClear` has Ballroom Player #3 give up their
+  chair ("Only if our guest clears." / "Shall we?") and Level 70's
+  `bossIntro` is where he actually sits down and claims seat #3
+  (`CAMPAIGN_CHAPTER_ROSTER[7].bossSeat`).
+- **Level 70's `bossMidpoint` runs two beats in sequence off the one
+  trigger**, same pattern as Chapter 6's two-block midpoint: a short
+  "reading your tells" exchange followed immediately by a second,
+  distinct exchange on the same theme — nothing marks them mutually
+  exclusive, so both fire together rather than picking one.
+- Verified structurally (every speaker id used — `ballroom1/2/3`,
+  `the_charmer` — resolves in both the server and client
+  `CAMPAIGN_CHARACTERS` tables via a Python cross-check of all 117
+  `ccue()` calls tagged 61-70, and every one of the 10 levels correctly
+  tagged `chapter: 7`) and live: a stubbed-`io` copy of `index.html` was
+  driven through `renderCampaignMap`/`campaignRenderChapterView` with a
+  synthetic `campaignData` unlocking through Level 70, confirming the
+  map renders "The Grand Ballroom" / "Levels 61–70" with The Charmer's
+  real photo in the boss-teaser corner and Table 70 marked BOSS. Three
+  representative sequences — Level 61's `preLevel` (10 lines, narration
+  interleaved with ballroom1/2/3 and a player exchange, correctly ending
+  the queue and firing `done`), Level 70's `bossIntro` (5 lines) and
+  `postFail` (a `pick:'random'` bucket confirmed to show exactly one of
+  its three lines, then correctly no-op on a second call since the
+  bucket was already marked seen) and `bossDefeat` (4 lines) — were
+  driven through the actual `campaignMaybeShow`/`campaignDialogueStep`
+  renderer (a byte-identical `ccue()` re-implementation, per-bucket
+  counter included, fed the real extracted call text) and matched the
+  intended narrator/speaker order, names, and portraits exactly — the
+  player line correctly resolved to the logged-in identity's display
+  name, and The Charmer's lines correctly carried his real portrait
+  `<img>` pointing at the existing avatar file, not the SVG-monogram
+  fallback the still-unreleased ballroom1/2/3 portraits fell back to.
+- **Chapter background arrived and is in** — `public/campaign/chapters/
+  grand_ballroom.webp`, from `The ballroom.png` (1672×941, the same
+  source resolution as Cabaret's background), resized to the same
+  1400×788 / quality-85 convention with no crop needed, same as Cabaret.
+  Verified live: `campaignRenderChapterView` renders it full-bleed
+  behind the chapter title, route and boss teaser with no legibility
+  loss (the shared `.scene-art`-style vignette scrim does its job here
+  too).
+- **The three Ballroom Player portraits arrived and are in** —
+  `public/campaign/characters/ballroom1/2/3.webp`, from 1254×1254 source
+  medallions (`Ballroom 1/2/3.png`). Measured before choosing a crop
+  method rather than assuming Cabaret's: computed the true Euclidean max
+  distance from center over every non-background pixel and compared it
+  to the ring's own horizontal-axis radius — Cabaret's diagonal corner
+  flourish had exceeded its ring radius by ~122px (627→749), but these
+  three only exceed theirs by ~54px (568→621), and critically the excess
+  sits on the vertical axis (a top fleur-de-lis, a bottom crest), not in
+  a diagonal corner. A plain circular mask at radius = width/2 (627px)
+  comfortably contains the actual max reach (621px) with margin to
+  spare, so the same method Cabaret needed for a different reason
+  (rather than Conservatory/Lounge/Library's flood-fill) works cleanly
+  here too, just for a different underlying reason — always measure
+  per-batch rather than assuming the last batch's method transfers.
+  Verified live via `campaignPortraitHTML` at real in-game size: all
+  three load with no clipping.
+- Gold medallions for Levels 61-70 are deferred along with 51-60's, by
+  the user's own choice, to be done once every remaining level is built
+  rather than chapter by chapter.
+
+## Chapter 8 — The Vault (Levels 71-80, Boss: The Closer)
+- **Same spreadsheet source as Chapters 6-7** —
+  `Dame-de-Pique-Campaign-Levels.xlsx`'s "Levels 1-100" sheet rows for
+  71-80 had every mechanical value already worked out — no fixed-hand
+  values invented here either. Plain `score` objectives throughout, same
+  call as the two chapters before it.
+- **The Closer already had real art** — `regular_closer` has existed in
+  `AVATAR_COLLECTIONS`/`public/avatars/house-regulars/closer.webp` since
+  the original House Regulars set, so `the_closer` gets a `seatAvatar`
+  exactly like every other boss who doubles as a House Regular — no new
+  art needed for him.
+- **`nervous_player` is the first genuinely ONE-OFF named character in
+  the whole campaign.** Every earlier walk-on either recurs (`cons_guest`,
+  The Optimist's running rejection) or is one of a chapter's three
+  regulars; this one appears in his own aside at a neighboring table for
+  exactly Level 74 and never again. Added to `CAMPAIGN_CHARACTERS` like
+  any other speaker (name only, no `seatAvatar` — he never sits at the
+  PLAYER's own table, so there's no seat to dress); falls back to the
+  plain SVG-monogram portrait like any character with no art.
+- **The Closer roams the Vault rather than sitting, same one-level-early
+  tease as every other chapter boss** — Level 79's `postClear` has Vault
+  Player #3 give up the chair ("That means me." / "It does.") and Level
+  80's `bossIntro` is where he actually sits down and claims seat #3.
+- **Confirmed the "nothing after ON CLEAR → no postClear cue" rule
+  against the raw source text before writing these**, rather than
+  guessing: checked Chapter 7's Level 61/62 source directly — Level 61
+  has a real narration line physically AFTER the `ON CLEAR`/SYSTEM
+  marker (postClear), Level 62 has nothing there at all (no postClear
+  bucket). Applied the same reading to Chapter 8: only Levels 75, 78 and
+  79 have real content after the marker; the other seven have none, so
+  they carry only a `preLevel` bucket.
+- **`"Without turning:"` at Level 72 is a stage direction glued to the
+  line, not spoken text** — stripped before storing, same treatment as
+  Cabaret's "From across the room:"/"From somewhere unseen:" prefixes.
+- **Level 80's `bossDefeat`/`chapterExit` split follows the exact
+  precedent set by Level 70's raw text** (checked directly rather than
+  guessed): the immediate table-side reaction to the win — the score
+  locking in, the short "Closed."/"That is it?"/"That is the point."/
+  "You earned those." exchange — is `bossDefeat`; the moment the
+  conversation turns to what's next ("Where is the next door?" onward,
+  including the lift and the tease of a chapter-9 character) is
+  `chapterExit`.
+- **`bossMidpoint` runs two stinger blocks in sequence off the one
+  trigger**, same pattern as every earlier boss level's combined
+  midpoint — nothing marks "AFTER HESITATION" and "AFTER DEFENSIVE PLAY"
+  as mutually exclusive, so both six lines fire together.
+- Verified structurally (every speaker id — `vault1/2/3`,
+  `nervous_player`, `the_closer` — resolves in both the server and
+  client `CAMPAIGN_CHARACTERS` tables via a Python cross-check of all
+  120 `ccue()` calls tagged 71-80, and every one of the 10 levels
+  correctly tagged `chapter: 8`) and live: a stubbed-`io` copy of
+  `index.html` was driven through `renderCampaignMap`/
+  `campaignRenderChapterView` with a synthetic `campaignData` unlocking
+  through Level 80, confirming the map renders "The Vault" / "Levels
+  71–80" with The Closer's real photo in the boss-teaser corner and
+  Table 80 marked BOSS. Three representative sequences — Level 71's
+  `preLevel` (10 lines), Level 74's `preLevel` (the Nervous Player aside,
+  9 lines, correctly resolving the player's own name and The Closer's
+  real portrait) and Level 80's full boss sequence (`bossIntro`,
+  `postFail`'s random-pick bucket confirmed to show exactly one of its
+  three lines and correctly no-op on replay, `bossDefeat`, and
+  `chapterExit`) — were driven through the actual
+  `campaignMaybeShow`/`campaignDialogueStep` renderer (a byte-identical
+  `ccue()` re-implementation, per-bucket counter included, fed the real
+  extracted call text) and matched the intended narrator/speaker order,
+  names, and portraits exactly.
+- **Chapter background arrived the same session and is in** —
+  `public/campaign/chapters/vault.webp`, from `The vault background.png`
+  (1672×941, the same source resolution as Cabaret's and the Ballroom's
+  backgrounds), resized to the same 1400×788 / quality-85 convention
+  with no crop needed. Verified live rendering full-bleed behind the
+  chapter title, route and boss teaser.
+- **The three Vault Player portraits arrived and are in** —
+  `public/campaign/characters/vault1/2/3.webp`, same 1254×1254-source,
+  circular-mask-at-radius-width/2 pipeline as the Ballroom three (see
+  that section's own note on why the method was re-measured rather than
+  assumed): these medallions' bottom-only wheel/shield ornament exceeds
+  the ring's own radius by only 14-23px, comfortably inside the 627px
+  mask radius. Verified live via `campaignPortraitHTML` at real in-game
+  size alongside the Ballroom three: all six load with no clipping.
+- Gold medallions for Levels 71-80 are deferred along with 51-70's, by
+  the user's own choice.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

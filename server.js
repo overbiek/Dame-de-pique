@@ -2164,6 +2164,27 @@ const CAMPAIGN_CHARACTERS = {
   // monogrammed strangers with one line each — and "Still no." lands
   // better from someone he has already asked.
   cons_guest:  { id: 'cons_guest',  name: 'A Guest' },
+  cabaret1:    { id: 'cabaret1',    name: 'Cabaret Player #1' },
+  cabaret2:    { id: 'cabaret2',    name: 'Cabaret Player #2' },
+  cabaret3:    { id: 'cabaret3',    name: 'Cabaret Player #3' },
+  // Same deal as The Sharp/Scholar/Wildcard/Optimist — already a House
+  // Regular, so campaign and avatar are the same person.
+  the_jester:  { id: 'the_jester',  name: 'The Jester', seatAvatar: 'regular_jester' },
+  ballroom1:   { id: 'ballroom1',   name: 'Ballroom Player #1' },
+  ballroom2:   { id: 'ballroom2',   name: 'Ballroom Player #2' },
+  ballroom3:   { id: 'ballroom3',   name: 'Ballroom Player #3' },
+  // Same deal again — already a House Regular.
+  the_charmer: { id: 'the_charmer', name: 'The Charmer', seatAvatar: 'regular_charmer' },
+  vault1:      { id: 'vault1',      name: 'Vault Player #1' },
+  vault2:      { id: 'vault2',      name: 'Vault Player #2' },
+  vault3:      { id: 'vault3',      name: 'Vault Player #3' },
+  // A true one-off — appears in his own aside at a neighboring table for
+  // exactly one level (74) and never again, unlike every other named
+  // walk-on so far (cons_guest recurs). No seatAvatar: he never sits at
+  // the PLAYER's own table, so there's no seat to dress.
+  nervous_player: { id: 'nervous_player', name: 'Nervous Player' },
+  // Same deal as every other boss who's already a House Regular.
+  the_closer:  { id: 'the_closer',  name: 'The Closer', seatAvatar: 'regular_closer' },
   player:      { id: 'player',      name: null },
 };
 
@@ -2188,6 +2209,21 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // ("Recess." / "That means my seat, does it?").
   4: { regulars: ['lounge1', 'lounge2', 'lounge3'], bossSeat: 2 },
   5: { regulars: ['cons1', 'cons2', 'cons3'], bossSeat: 2 },
+  // The Jester also roams rather than sitting — Cabaret Player #3 "stays
+  // seated for the hand but looks resigned" through Level 59 and only
+  // actually stands at the Level 59→60 transition (postClear, after the
+  // chair-claim threat lands), the same one-level-early tease every
+  // other chapter's boss uses before claiming seat #3 at the x0 level.
+  6: { regulars: ['cabaret1', 'cabaret2', 'cabaret3'], bossSeat: 2 },
+  // The Charmer mingles rather than sitting, same as every other roaming
+  // boss — he claims seat #3 at the Level 69→70 transition (postClear,
+  // "Only if our guest clears." / "Shall we?"), the same one-level-early
+  // tease every other chapter's boss uses before the x0 level.
+  7: { regulars: ['ballroom1', 'ballroom2', 'ballroom3'], bossSeat: 2 },
+  // The Closer roams too, right up until Level 79's postClear ("That
+  // means me." / "It does.") — the same one-level-early tease as every
+  // other chapter boss before he takes seat #3 for Level 80.
+  8: { regulars: ['vault1', 'vault2', 'vault3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2218,6 +2254,11 @@ const CAMPAIGN_CHAPTERS = [
   // client points this slug at /scenes/conservatory.webp rather than a
   // duplicated file — see CAMPAIGN_BG_SRC.
   { id: 5, title: 'The Conservatory', levelStart: 41, levelEnd: 50, slug: 'conservatory', bossId: 'the_optimist' },
+  { id: 6, title: 'The Cabaret of Oddities', levelStart: 51, levelEnd: 60, slug: 'cabaret_of_oddities', bossId: 'the_jester' },
+  { id: 7, title: 'The Grand Ballroom', levelStart: 61, levelEnd: 70, slug: 'grand_ballroom', bossId: 'the_charmer' },
+  // No background art supplied yet — falls back to the CSS/SVG
+  // placeholder until public/campaign/chapters/vault.webp exists.
+  { id: 8, title: 'The Vault', levelStart: 71, levelEnd: 80, slug: 'vault', bossId: 'the_closer' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -2477,6 +2518,128 @@ const CAMPAIGN_LEVELS = {
           parseHand('10♦ 4♣ 7♠ K♥ 5♠ 8♥ 3♦ 4♠ J♠ K♠ A♠ 8♠ Q♣'),
         ],
         objective: { type: 'score', min: 6, gold: 41 } },
+
+  // Chapter 6 — plain score objectives throughout, straight off the main
+  // level-data sheet's own Min/Gold Target columns for every level
+  // (51-59) — unlike chapters 1-5, none of these are swapped for the
+  // suitVoid/avoidQueen/trickCount/cleanHand mini-ladders. Introducing a
+  // new ladder rung wasn't asked for here and needs its own calibration
+  // pass to pick correctly, so this chapter is deliberately left as pure
+  // score levels rather than guessing at one.
+  51: { id: 51, chapter: 6, type: 'Harder', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L51-c350', hand: parseHand('J♠ A♠ 8♦ Q♥ 8♠ Q♦ 2♦ 4♦ 6♦ 2♥ 2♠ 10♥ Q♣'),
+        objective: { type: 'score', min: 18, gold: 45 } },
+  52: { id: 52, chapter: 6, type: 'Normal', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L52-c735', hand: parseHand('7♦ 9♥ 2♣ 2♦ 10♠ 3♣ A♠ 8♥ 8♦ 5♦ 4♣ Q♦ A♣'),
+        objective: { type: 'score', min: 15, gold: 29 } },
+  53: { id: 53, chapter: 6, type: 'Normal', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L53-c284', hand: parseHand('4♥ 4♠ 6♣ 3♣ 7♥ J♣ 6♠ 5♥ 6♥ 7♦ 10♦ 3♥ A♠'),
+        objective: { type: 'score', min: 8, gold: 22 } },
+  54: { id: 54, chapter: 6, type: 'Harder', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L54-c821', hand: parseHand('J♠ 3♣ 7♦ Q♣ J♥ 2♠ K♦ 8♦ 4♠ 3♠ A♣ 5♦ J♦'),
+        objective: { type: 'score', min: 11, gold: 21 } },
+  55: { id: 55, chapter: 6, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L55-c475', hand: parseHand('3♣ 7♠ 2♠ J♥ Q♦ 5♥ 5♠ 6♣ K♦ 10♦ 7♣ A♦ Q♣'),
+        objective: { type: 'score', min: 18, gold: 36 } },
+  56: { id: 56, chapter: 6, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L56-c339', hand: parseHand('2♥ 5♣ 9♦ 10♠ K♣ 8♠ 7♠ 4♥ Q♦ 5♥ 5♠ A♣ J♣'),
+        objective: { type: 'score', min: 17, gold: 54 } },
+  57: { id: 57, chapter: 6, type: 'Harder', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L57-c25', hand: parseHand('Q♠ 2♣ 6♥ 2♥ K♣ 9♠ J♦ Q♥ K♠ 10♣ 10♦ J♣ A♦'),
+        objective: { type: 'score', min: 13, gold: 27 } },
+  58: { id: 58, chapter: 6, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L58-c187', hand: parseHand('A♠ A♥ J♣ 10♠ 2♦ 7♣ J♥ 2♣ 3♦ 4♥ 4♠ 6♥ 10♣'),
+        objective: { type: 'score', min: -2, gold: 12 } },
+  59: { id: 59, chapter: 6, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L59-c522', hand: parseHand('K♣ 8♦ 2♣ J♠ 6♠ 7♣ 8♠ 6♦ 2♦ A♣ 10♥ J♣ 7♥'),
+        objective: { type: 'score', min: 12, gold: 42 } },
+  60: { id: 60, chapter: 6, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_jester',
+        seed: 'ddp-boss-refine-L60-c208',
+        hands4: [
+          parseHand('3♣ 2♦ 6♥ 7♥ 2♠ 6♦ 6♠ 4♠ 4♥ 5♣ 10♠ 9♥ 9♦'),
+          parseHand('Q♣ 3♠ 10♥ 7♦ 5♥ 2♦ 4♣ 4♥ 3♣ 6♠ K♥ 6♦ 9♠'),
+          parseHand('3♥ 2♣ A♦ 4♥ 8♦ J♦ 9♣ 3♣ J♣ 4♣ 10♣ 3♠ Q♠'),
+          parseHand('6♠ 4♦ 2♠ J♣ 5♣ 6♣ 5♠ K♦ 7♦ Q♠ K♣ 9♠ 9♥'),
+        ],
+        objective: { type: 'score', min: 1, gold: 17 } },
+
+  // Chapter 7 — plain score objectives throughout, same call as Chapter
+  // 6: straight off the main sheet, no mini-ladder swaps.
+  61: { id: 61, chapter: 7, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L61-c287', hand: parseHand('3♥ Q♣ J♣ 3♦ J♥ 4♦ K♣ A♥ 9♠ K♠ 4♥ 9♦ 7♥'),
+        objective: { type: 'score', min: 5, gold: 19 } },
+  62: { id: 62, chapter: 7, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L62-c47', hand: parseHand('K♦ 10♣ J♠ 6♦ 4♣ A♦ 5♠ A♣ Q♠ 8♠ 3♣ 10♥ 2♠'),
+        objective: { type: 'score', min: 14, gold: 31 } },
+  63: { id: 63, chapter: 7, type: 'Harder', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L63-c155', hand: parseHand('3♦ 5♣ A♣ 6♣ 7♥ A♦ 9♦ 8♥ 8♣ J♣ Q♦ 7♠ K♠'),
+        objective: { type: 'score', min: 26, gold: 46 } },
+  64: { id: 64, chapter: 7, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L64-c315', hand: parseHand('6♦ J♦ K♦ 5♦ 2♣ 7♠ 3♣ 10♥ 3♠ 6♥ A♣ 4♥ 5♥'),
+        objective: { type: 'score', min: 8, gold: 22 } },
+  65: { id: 65, chapter: 7, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L65-c329', hand: parseHand('4♣ J♠ 3♦ 5♠ Q♥ J♣ 10♥ 7♥ 7♣ 5♥ 2♥ 6♥ A♣'),
+        objective: { type: 'score', min: 16, gold: 38 } },
+  66: { id: 66, chapter: 7, type: 'Harder', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L66-c1093', hand: parseHand('6♥ 4♠ 10♥ 6♠ 9♥ Q♠ 4♦ 2♥ 6♣ J♦ A♦ 9♠ Q♣'),
+        objective: { type: 'score', min: 19, gold: 22 } },
+  67: { id: 67, chapter: 7, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L67-c824', hand: parseHand('9♦ 10♠ 7♥ J♠ 9♣ 6♥ 3♣ 9♥ 6♦ 8♣ 5♥ K♦ Q♦'),
+        objective: { type: 'score', min: 18, gold: 44 } },
+  68: { id: 68, chapter: 7, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L68-c805', hand: parseHand('K♦ A♥ 9♣ 8♥ 10♣ J♥ 10♥ 8♦ J♦ 9♥ 2♠ Q♦ A♦'),
+        objective: { type: 'score', min: 18, gold: 77 } },
+  69: { id: 69, chapter: 7, type: 'Harder', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L69-c98', hand: parseHand('9♦ 3♥ 5♠ Q♠ A♦ 2♣ K♥ Q♣ 4♣ J♠ 10♥ 3♣ 4♦'),
+        objective: { type: 'score', min: 20, gold: 40 } },
+  70: { id: 70, chapter: 7, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_charmer',
+        seed: 'ddp-boss-refine-L70-c654',
+        hands4: [
+          parseHand('7♠ 6♦ 4♠ 2♠ 8♦ Q♣ J♣ 3♠ 5♣ 7♦ 10♠ 10♦ 5♠'),
+          parseHand('K♥ 9♠ 7♣ 10♠ 6♥ 5♦ J♥ 6♦ Q♥ 8♠ 4♥ 9♦ Q♣'),
+          parseHand('3♦ J♥ J♠ 7♠ 5♦ K♥ 10♣ K♠ 7♥ 3♠ Q♥ 8♠ A♣'),
+          parseHand('3♠ Q♥ K♠ J♥ 7♠ J♠ 3♦ 9♥ Q♦ 4♦ 4♣ 6♣ 3♥'),
+        ],
+        objective: { type: 'score', min: 14, gold: 37 } },
+
+  // Chapter 8 — plain score objectives throughout, same call as Chapters
+  // 6-7: straight off the main sheet, no mini-ladder swaps.
+  71: { id: 71, chapter: 8, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L71-c31', hand: parseHand('7♠ K♦ 4♦ 4♥ 3♠ 7♣ 9♥ J♦ A♣ 6♣ 4♣ 2♣ 4♠'),
+        objective: { type: 'score', min: 20, gold: 31 } },
+  72: { id: 72, chapter: 8, type: 'Harder', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L72-c742', hand: parseHand('5♠ 10♠ 6♠ 10♣ K♣ J♠ K♦ 7♣ Q♦ 9♥ Q♥ A♣ 7♥'),
+        objective: { type: 'score', min: 33, gold: 57 } },
+  73: { id: 73, chapter: 8, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L73-c371', hand: parseHand('5♦ 3♥ J♦ 10♠ 2♠ 5♠ J♥ 3♣ 4♠ Q♣ Q♦ Q♠ K♠'),
+        objective: { type: 'score', min: 13, gold: 32 } },
+  74: { id: 74, chapter: 8, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L74-c232', hand: parseHand('5♠ 5♣ A♣ K♣ 4♣ 8♠ 7♦ K♠ 7♣ 4♥ 10♥ A♥ 4♦'),
+        objective: { type: 'score', min: 29, gold: 50 } },
+  75: { id: 75, chapter: 8, type: 'Harder', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L75-c646', hand: parseHand('J♣ 8♠ Q♥ Q♣ 10♠ 4♣ 2♠ 8♦ K♠ J♥ A♣ 3♣ 5♣'),
+        objective: { type: 'score', min: 48, gold: 68 } },
+  76: { id: 76, chapter: 8, type: 'Normal', forcePassDir: 'right', hands: 1,
+        seed: 'ddp-main-refine-L76-c225', hand: parseHand('8♦ A♣ Q♠ K♦ 4♠ 8♥ K♥ 5♣ J♥ 2♣ 9♠ 3♣ 9♣'),
+        objective: { type: 'score', min: 15, gold: 36 } },
+  77: { id: 77, chapter: 8, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L77-c302', hand: parseHand('A♣ 9♠ A♦ 10♥ 3♦ 6♣ 7♠ 6♦ Q♣ 3♠ K♥ 5♥ 5♣'),
+        objective: { type: 'score', min: 16, gold: 37 } },
+  78: { id: 78, chapter: 8, type: 'Harder', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L78-c814', hand: parseHand('9♠ J♠ 10♣ 10♥ 6♦ 5♠ A♠ K♣ 9♥ 3♥ 5♥ 8♥ J♣'),
+        objective: { type: 'score', min: 25, gold: 33 } },
+  79: { id: 79, chapter: 8, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L79-c758', hand: parseHand('8♣ Q♣ K♦ 4♠ 10♥ 10♠ J♠ 2♥ J♣ 3♥ 2♦ 8♠ K♠'),
+        objective: { type: 'score', min: 16, gold: 37 } },
+  80: { id: 80, chapter: 8, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_closer',
+        seed: 'ddp-boss-refine-L80-c278',
+        hands4: [
+          parseHand('6♠ A♠ 7♥ 9♠ 9♣ 6♣ 5♦ K♥ J♥ J♠ 8♦ J♦ K♣'),
+          parseHand('6♥ A♦ 10♥ 3♥ 10♠ 6♣ 7♠ 9♥ 8♣ 7♦ 4♥ 5♠ 3♠'),
+          parseHand('3♦ Q♠ 5♣ 10♥ 10♦ 3♥ K♠ 2♥ J♠ 8♣ 2♦ 9♣ 7♠'),
+          parseHand('J♦ J♥ 8♦ J♠ K♦ A♣ K♥ Q♦ 8♥ 7♠ 6♥ 10♣ 9♣'),
+        ],
+        objective: { type: 'score', min: 21, gold: 63 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -3166,6 +3329,459 @@ const CAMPAIGN_STORY_CUES = [
   ccue(50, 'chapterExit', 'the_optimist', 'Worth a try.'),
   ccue(50, 'chapterExit', null, 'He turns back to the PLAYER, still smiling.'),
   ccue(50, 'chapterExit', 'the_optimist', 'Onward.'),
+
+  // ── Chapter 6 — The Cabaret of Oddities, Boss: The Jester ──
+  // A handful of lines carry a "From across the room:"/"From somewhere
+  // unseen:" staging prefix in the source doc — stripped here exactly
+  // like the earlier chapters' "- O.S." tag, since it describes WHERE
+  // he's calling out from rather than something he'd actually say.
+  // "RANDOM REGULAR" (Level 53) is assigned to cabaret2 specifically
+  // because #1 and #3 already have their own lines later in that same
+  // level — this way all three regulars get exactly one line each.
+  // Level 51 — The Laugh Ahead
+  ccue(51, 'preLevel', null, 'The glass doors of the conservatory close behind the PLAYER. The light changes from garden-bright to amber and red. Somewhere deeper in the room, someone laughs so hard that two nearby tables start laughing with him without knowing why.'),
+  ccue(51, 'preLevel', 'the_optimist', 'That laugh is your next problem.'),
+  ccue(51, 'preLevel', 'player', 'Problem?'),
+  ccue(51, 'preLevel', 'the_optimist', 'Very friendly problem. Which is sometimes worse.'),
+  ccue(51, 'preLevel', null, 'A playing card sails over the crowd, vanishes behind a lamp, then appears in the hand of a man across the room. THE JESTER bows to a table full of regulars.'),
+  ccue(51, 'preLevel', 'cabaret1', 'He has been here all night.'),
+  ccue(51, 'preLevel', 'cabaret2', 'He is here every night.'),
+  ccue(51, 'preLevel', 'cabaret3', 'And somehow still has new material.'),
+  ccue(51, 'preLevel', null, 'The PLAYER sits. Three opponents complete the four-player table. The hand begins.'),
+  ccue(51, 'preLevel', 'the_jester', 'Nice recovery! Completely accidental-looking. My favorite kind.'),
+  ccue(51, 'preLevel', 'cabaret1', 'Do not encourage him.'),
+  ccue(51, 'postClear', null, 'THE JESTER raises both hands as if the PLAYER has just completed a stage act, then returns to his friends.'),
+
+  // Level 52 — Berries
+  ccue(52, 'preLevel', null, 'Before the next hand, THE JESTER wanders past while shuffling a deck one-handed.'),
+  ccue(52, 'preLevel', 'the_jester', 'Bananas are berries. Strawberries are not.'),
+  ccue(52, 'preLevel', 'cabaret2', 'No.'),
+  ccue(52, 'preLevel', 'the_jester', 'Excellent argument. Very confident. Still wrong.'),
+  ccue(52, 'preLevel', null, 'He keeps walking.'),
+  ccue(52, 'preLevel', 'player', 'Does he just say things?'),
+  ccue(52, 'preLevel', 'cabaret3', 'Constantly.'),
+  ccue(52, 'preLevel', 'cabaret1', 'The irritating part is checking later.'),
+  ccue(52, 'preLevel', null, 'The hand starts. The PLAYER remembers which dangerous cards have already appeared and avoids taking unnecessary penalty points.'),
+  ccue(52, 'preLevel', 'cabaret2', 'You keep a lot in your head.'),
+  ccue(52, 'preLevel', 'player', 'Only the things that matter.'),
+  ccue(52, 'preLevel', 'the_jester', 'That is what everybody says right before forgetting something important!'),
+
+  // Level 53 — Older Than Trees
+  ccue(53, 'preLevel', null, 'THE JESTER is now sitting backward on a chair at another table, beer-free and somehow holding three decks at once.'),
+  ccue(53, 'preLevel', 'the_jester', 'Sharks existed before trees.'),
+  ccue(53, 'preLevel', 'cabaret2', 'That cannot be true.'),
+  ccue(53, 'preLevel', 'the_jester', 'It is. Which means somewhere in history a shark could complain there was not enough shade.'),
+  ccue(53, 'preLevel', null, 'The room laughs.'),
+  ccue(53, 'preLevel', 'cabaret1', 'Why do I learn more biology here than at school?'),
+  ccue(53, 'preLevel', 'the_jester', 'Because school rarely lets you lose credits while learning.'),
+  ccue(53, 'preLevel', null, 'The PLAYER clears an awkward hand by refusing a tempting trick.'),
+  ccue(53, 'preLevel', 'cabaret3', 'You ignored the obvious play.'),
+  ccue(53, 'preLevel', 'player', 'It was obvious. That did not make it good.'),
+  ccue(53, 'preLevel', 'the_jester', 'Exactly! Most true things look strange before they look obvious.'),
+
+  // Level 54 — He Calls It
+  ccue(54, 'preLevel', null, 'Midway through the hand, THE JESTER passes behind the table without stopping.'),
+  ccue(54, 'preLevel', 'the_jester', 'Three tricks from now, somebody over there is going to hate that heart.'),
+  ccue(54, 'preLevel', 'cabaret2', 'What heart?'),
+  ccue(54, 'preLevel', null, 'THE JESTER points at nothing in particular and disappears into the crowd.'),
+  ccue(54, 'preLevel', null, 'Three tricks later, CABARET PLAYER #2 is forced to take a painful heart-heavy trick.'),
+  ccue(54, 'preLevel', 'cabaret2', 'I hate him.'),
+  ccue(54, 'preLevel', 'cabaret1', 'You hate the heart.'),
+  ccue(54, 'preLevel', 'cabaret2', 'I can hate both.'),
+  ccue(54, 'preLevel', 'player', 'He saw the suit distribution.'),
+  ccue(54, 'preLevel', 'cabaret3', 'Or he is a witch.'),
+  ccue(54, 'preLevel', 'player', 'Those are not equally likely.'),
+  ccue(54, 'preLevel', 'the_jester', 'Thank you!'),
+
+  // Level 55 — Wrong Mystery
+  ccue(55, 'preLevel', null, 'The PLAYER catches THE JESTER staring from behind a crooked mirror. The reflection makes his grin look twice as wide.'),
+  ccue(55, 'preLevel', 'player', 'You have been watching my table.'),
+  ccue(55, 'preLevel', 'the_jester', 'Of course.'),
+  ccue(55, 'preLevel', 'player', 'Why?'),
+  ccue(55, 'preLevel', 'the_jester', 'Because you are trying very hard to understand me.'),
+  ccue(55, 'preLevel', null, 'He steps out from behind the mirror.'),
+  ccue(55, 'preLevel', 'the_jester', 'Wrong mystery. Understand your cards first.'),
+  ccue(55, 'preLevel', 'player', 'And then you?'),
+  ccue(55, 'preLevel', 'the_jester', 'Terrible use of an evening.'),
+  ccue(55, 'preLevel', null, 'He laughs and leaves. The hand begins.'),
+  ccue(55, 'preLevel', 'cabaret1', 'That sounded like nonsense.'),
+  ccue(55, 'preLevel', 'player', 'It was not.'),
+  ccue(55, 'preLevel', null, 'The PLAYER focuses on the table rather than the distraction around it and clears.'),
+
+  // Level 56 — Three Hearts
+  ccue(56, 'preLevel', null, 'THE JESTER has gathered half a dozen regulars around a tiny aquarium built into the bar.'),
+  ccue(56, 'preLevel', 'the_jester', 'Octopuses have three hearts.'),
+  ccue(56, 'preLevel', 'cabaret2', 'Why do you know that?'),
+  ccue(56, 'preLevel', 'the_jester', 'Because one heart sounds stressful enough and I needed perspective.'),
+  ccue(56, 'preLevel', null, 'He notices the PLAYER taking a seat.'),
+  ccue(56, 'preLevel', 'the_jester', 'Speaking of hearts: do not collect them.'),
+  ccue(56, 'preLevel', 'player', 'That one was almost useful.'),
+  ccue(56, 'preLevel', 'the_jester', 'Do not get used to it.'),
+  ccue(56, 'preLevel', null, 'During the hand, an opponent tries to push danger toward the PLAYER. The PLAYER reads the setup and returns it elsewhere.'),
+  ccue(56, 'preLevel', 'cabaret3', 'You saw that coming.'),
+  ccue(56, 'preLevel', 'player', 'I saw enough.'),
+  ccue(56, 'postClear', null, 'THE JESTER applauds with exaggerated seriousness.'),
+
+  // Level 57 — Everybody Knows Him
+  ccue(57, 'preLevel', null, "As the PLAYER crosses to the next table, three different people greet THE JESTER by name. He remembers all of theirs, asks about a birthday, a broken wrist and somebody's dog without missing a beat."),
+  ccue(57, 'preLevel', 'player', 'You know everyone.'),
+  ccue(57, 'preLevel', 'the_jester', 'Almost. Give me time.'),
+  ccue(57, 'preLevel', 'cabaret1', 'He was at my wedding.'),
+  ccue(57, 'preLevel', 'cabaret2', 'He was at my divorce party.'),
+  ccue(57, 'preLevel', 'the_jester', 'Both excellent buffets.'),
+  ccue(57, 'preLevel', null, 'The table laughs. The hand starts a little too casually. One opponent makes a careless mistake.'),
+  ccue(57, 'preLevel', 'the_jester', 'Ah. Laughter lowers the guard. Useful thing to remember.'),
+  ccue(57, 'preLevel', 'cabaret2', 'You did that on purpose?'),
+  ccue(57, 'preLevel', 'the_jester', 'I do many things on purpose after they happen.'),
+
+  // Level 58 — The Laugh Stops
+  ccue(58, 'preLevel', null, 'For the first time, THE JESTER does not roam the room. He stands behind CABARET PLAYER #3 and watches the entire hand.'),
+  ccue(58, 'preLevel', null, 'No tricks. No facts. No jokes.'),
+  ccue(58, 'preLevel', 'cabaret1', 'This is unsettling.'),
+  ccue(58, 'preLevel', 'player', 'The silence?'),
+  ccue(58, 'preLevel', 'cabaret1', 'Him being serious.'),
+  ccue(58, 'preLevel', null, 'The PLAYER works through a difficult sequence and clears without taking the bait of a flashy play.'),
+  ccue(58, 'preLevel', 'the_jester', 'Good.'),
+  ccue(58, 'preLevel', 'player', 'That is all?'),
+  ccue(58, 'preLevel', 'the_jester', 'Do not worry. I am saving the nonsense.'),
+  ccue(58, 'postClear', null, 'He remains near the table.'),
+
+  // Level 59 — One Seat Short
+  ccue(59, 'preLevel', null, 'THE JESTER arrives before the PLAYER and is already speaking with CABARET PLAYER #3.'),
+  ccue(59, 'preLevel', 'the_jester', 'You like that chair?'),
+  ccue(59, 'preLevel', 'cabaret3', 'Very much.'),
+  ccue(59, 'preLevel', 'the_jester', 'Wonderful. Stand up.'),
+  ccue(59, 'preLevel', 'cabaret3', 'I knew this was coming.'),
+  ccue(59, 'preLevel', null, 'CABARET PLAYER #3 stays seated for the hand but looks resigned. THE JESTER watches from directly behind.'),
+  ccue(59, 'preLevel', 'the_jester', 'Last free observation: the PLAYER has stopped playing the room and started playing the table.'),
+  ccue(59, 'preLevel', 'cabaret2', 'That sounds almost serious.'),
+  ccue(59, 'preLevel', 'the_jester', 'Do not spread it around.'),
+  ccue(59, 'preLevel', null, 'The PLAYER clears.'),
+  ccue(59, 'postClear', null, 'CABARET PLAYER #3 stands and offers the chair.'),
+  ccue(59, 'postClear', 'cabaret3', 'Try not to make me look bad.'),
+  ccue(59, 'postClear', 'the_jester', 'No promises.'),
+
+  // Level 60 — BOSS: The Jester
+  ccue(60, 'bossIntro', null, 'THE JESTER drops into the open seat, spins once, stops perfectly aligned with the table and places both hands flat on the felt.'),
+  ccue(60, 'bossIntro', 'the_jester', 'Finally. A serious game.'),
+  ccue(60, 'bossIntro', null, 'A beat.'),
+  ccue(60, 'bossIntro', 'the_jester', 'That was a joke. Please never make me say that again.'),
+  ccue(60, 'bossIntro', 'player', 'You have been watching since I walked in.'),
+  ccue(60, 'bossIntro', 'the_jester', 'I watch everybody. You were simply harder to distract.'),
+  ccue(60, 'bossIntro', null, 'The boss match begins.'),
+  // The screenplay gives two separate midpoint stingers (one for avoiding
+  // a trap, one a random "strange fact") rather than alternatives to pick
+  // between — unlike Level 50's case, nothing marks them as mutually
+  // exclusive, so both play in sequence off the one bossMidpoint trigger.
+  ccue(60, 'bossMidpoint', 'the_jester', 'There it is. You laughed with the game without laughing away the information.'),
+  ccue(60, 'bossMidpoint', 'player', 'That sentence should not make sense.'),
+  ccue(60, 'bossMidpoint', 'the_jester', 'The best ones rarely do on the first pass.'),
+  ccue(60, 'bossMidpoint', 'the_jester', 'One last fact: an octopus has three hearts, sharks are older than trees, and somehow you are still the strangest thing at this table.'),
+  ccue(60, 'bossMidpoint', 'player', 'That is not a fact.'),
+  ccue(60, 'bossMidpoint', 'the_jester', 'Give history time.'),
+  ccue(60, 'postFail', 'the_jester', 'Excellent! Catastrophic, but excellent. Again.', { pick: 'random' }),
+  ccue(60, 'postFail', 'the_jester', 'You found a completely new way to be wrong. I respect the creativity. Deal again.', { pick: 'random' }),
+  ccue(60, 'postFail', 'the_jester', 'That one hurt. Good. Pain is memorable. Next hand.', { pick: 'random' }),
+  ccue(60, 'bossDefeat', null, 'The final score settles.'),
+  ccue(60, 'bossDefeat', null, 'THE JESTER stares at the result for half a second, then throws his head back and laughs until the nearby tables join in.'),
+  ccue(60, 'bossDefeat', 'the_jester', 'That was fun.'),
+  ccue(60, 'bossDefeat', 'player', 'You lost.'),
+  ccue(60, 'bossDefeat', 'the_jester', 'Yes. Still fun. People keep confusing those two things.'),
+  ccue(60, 'chapterExit', null, 'He stands and offers the PLAYER a theatrical bow.'),
+  ccue(60, 'chapterExit', 'the_jester', 'You are going upstairs.'),
+  ccue(60, 'chapterExit', 'player', 'Who is there?'),
+  ccue(60, 'chapterExit', 'the_jester', 'Everybody loves him.'),
+  ccue(60, 'chapterExit', 'player', 'That sounds reassuring.'),
+  ccue(60, 'chapterExit', 'the_jester', 'It should not.'),
+  ccue(60, 'chapterExit', null, 'He points toward tall double doors where warm music can already be heard.'),
+  ccue(60, 'chapterExit', 'the_jester', 'Laugh with him. Enjoy the stories. Just do not let the charm play your cards for you.'),
+  ccue(60, 'chapterExit', 'the_jester', 'Play the table, not the smile.'),
+  ccue(60, 'chapterExit', null, 'He opens the doors.'),
+
+  // ── Chapter 7 — The Grand Ballroom, Boss: The Charmer ──
+  // Same two staging-prefix strips as Chapter 6 ("From nearby:",
+  // "Without looking over:") — kept out of the displayed line for the
+  // same reason: they describe where/how he's speaking, not something
+  // he'd say aloud.
+  // Level 61 — Everyone Knows His Name
+  ccue(61, 'preLevel', null, "The PLAYER enters to a completely different kind of noise: warm conversation instead of laughter. THE CHARMER stands near the bar, greeting a server by name, then a couple at a table, then a woman crossing the room."),
+  ccue(61, 'preLevel', 'ballroom1', 'He remembers everybody.'),
+  ccue(61, 'preLevel', 'ballroom2', 'Names, birthdays, dogs, children, favorite drink.'),
+  ccue(61, 'preLevel', 'ballroom3', 'Do not ask me how.'),
+  ccue(61, 'preLevel', null, "THE CHARMER looks across the room and meets the PLAYER's eyes."),
+  ccue(61, 'preLevel', 'the_charmer', 'Welcome. I heard the Jester laughed for real.'),
+  ccue(61, 'preLevel', 'player', 'Does news travel that fast?'),
+  ccue(61, 'preLevel', 'the_charmer', 'Good news does.'),
+  ccue(61, 'preLevel', null, 'He smiles and returns to his conversation. The PLAYER sits with three opponents.'),
+  ccue(61, 'postClear', null, 'At the end of the hand, THE CHARMER raises his glass in quiet acknowledgment.'),
+
+  // Level 62 — A Small Compliment
+  ccue(62, 'preLevel', null, 'THE CHARMER passes the table just as the PLAYER chooses a restrained line.'),
+  ccue(62, 'preLevel', 'the_charmer', 'Interesting style.'),
+  ccue(62, 'preLevel', 'player', 'Good interesting or bad interesting?'),
+  ccue(62, 'preLevel', 'the_charmer', 'If I told you, the compliment would become advice.'),
+  ccue(62, 'preLevel', null, 'He keeps walking.'),
+  ccue(62, 'preLevel', 'ballroom1', 'He does that.'),
+  ccue(62, 'preLevel', 'player', 'What?'),
+  ccue(62, 'preLevel', 'ballroom1', 'Leaves you feeling good and thinking too much.'),
+  ccue(62, 'preLevel', null, 'The hand continues. The PLAYER clears.'),
+
+  // Level 63 — He Remembers
+  ccue(63, 'preLevel', null, 'Before the next hand, THE CHARMER approaches with a quiet smile.'),
+  ccue(63, 'preLevel', 'the_charmer', 'You prefer watching the first few tricks before you commit, do you not?'),
+  ccue(63, 'preLevel', 'player', 'You got that from two hands?'),
+  ccue(63, 'preLevel', 'the_charmer', 'Three.'),
+  ccue(63, 'preLevel', 'player', 'You counted.'),
+  ccue(63, 'preLevel', 'the_charmer', 'I remember people. The cards are attached to them.'),
+  ccue(63, 'preLevel', null, 'He turns to BALLROOM PLAYER #2.'),
+  ccue(63, 'preLevel', 'the_charmer', 'How is Milo?'),
+  ccue(63, 'preLevel', 'ballroom2', 'The dog? Better. Vet says the leg is fine.'),
+  ccue(63, 'preLevel', 'the_charmer', 'Good. Tell him I asked.'),
+  ccue(63, 'preLevel', null, 'He leaves before the PLAYER can ask another question.'),
+
+  // Level 64 — The Geese
+  ccue(64, 'preLevel', null, "THE CHARMER joins a conversation beside the PLAYER's table while the next hand is being dealt."),
+  ccue(64, 'preLevel', 'the_charmer', 'Do you know why geese fly in a V?'),
+  ccue(64, 'preLevel', 'ballroom3', 'Aerodynamics.'),
+  ccue(64, 'preLevel', 'the_charmer', 'Exactly. The birds behind benefit from the air moved by the ones in front. When the leader tires, another takes the front.'),
+  ccue(64, 'preLevel', 'player', 'Is this about cards?'),
+  ccue(64, 'preLevel', 'the_charmer', 'Everything is about cards if you wait long enough.'),
+  ccue(64, 'preLevel', null, 'During the hand, the PLAYER uses the pressure created by one opponent to avoid carrying the danger personally.'),
+  ccue(64, 'preLevel', 'the_charmer', 'See? Let somebody else take the wind.'),
+
+  // Level 65 — Comfort
+  ccue(65, 'preLevel', null, 'THE CHARMER sits at the edge of a neighboring table, not playing, simply talking. The players around him loosen visibly.'),
+  ccue(65, 'preLevel', 'ballroom1', 'That is his real trick.'),
+  ccue(65, 'preLevel', 'player', 'What is?'),
+  ccue(65, 'preLevel', 'ballroom1', 'Everybody relaxes.'),
+  ccue(65, 'preLevel', 'ballroom2', 'Then everybody talks.'),
+  ccue(65, 'preLevel', 'player', 'And gives things away.'),
+  ccue(65, 'preLevel', 'the_charmer', 'Only if they were trying too hard to hide them.'),
+  ccue(65, 'preLevel', null, 'The PLAYER smiles despite themself. The hand begins.'),
+
+  // Level 66 — The Heron
+  ccue(66, 'preLevel', null, 'The PLAYER reaches a difficult point and hesitates. THE CHARMER is standing near a tall window, watching birds at the garden fountain below.'),
+  ccue(66, 'preLevel', 'the_charmer', 'Ever watch a heron hunt?'),
+  ccue(66, 'preLevel', 'player', 'Not during a card game.'),
+  ccue(66, 'preLevel', 'the_charmer', 'It can stand still for a very long time. Then one movement. Done.'),
+  ccue(66, 'preLevel', 'player', 'You are telling me to wait.'),
+  ccue(66, 'preLevel', 'the_charmer', 'I am talking about birds.'),
+  ccue(66, 'preLevel', null, 'The PLAYER waits. The later opening is better.'),
+  ccue(66, 'preLevel', 'ballroom3', 'He was telling you to wait.'),
+  ccue(66, 'preLevel', 'the_charmer', 'I would never.'),
+
+  // Level 67 — The Room Likes Him
+  ccue(67, 'preLevel', null, 'THE CHARMER crosses the ballroom and seems to improve the mood everywhere he passes. A server laughs. Two tense players unclench. Someone calls him over from another table.'),
+  ccue(67, 'preLevel', 'player', 'Do you ever get tired of people?'),
+  ccue(67, 'preLevel', 'the_charmer', 'Never. People are the interesting part.'),
+  ccue(67, 'preLevel', 'player', 'Not the game?'),
+  ccue(67, 'preLevel', 'the_charmer', 'Cards repeat. People improvise.'),
+  ccue(67, 'preLevel', null, "He looks at the PLAYER's three opponents in turn."),
+  ccue(67, 'preLevel', 'the_charmer', 'One of you is already worried. One is pretending not to be. One is having a lovely evening.'),
+  ccue(67, 'preLevel', 'ballroom2', 'Which am I?'),
+  ccue(67, 'preLevel', 'the_charmer', 'You tell me.'),
+  ccue(67, 'preLevel', null, 'He walks away. Nobody answers.'),
+
+  // Level 68 — Trees Do Not Hurry
+  ccue(68, 'preLevel', null, "THE CHARMER now stays within sight of the PLAYER's table for the whole hand."),
+  ccue(68, 'preLevel', 'the_charmer', 'I like old trees.'),
+  ccue(68, 'preLevel', 'player', 'Of course you do.'),
+  ccue(68, 'preLevel', 'the_charmer', 'They never look rushed, but somehow they keep growing.'),
+  ccue(68, 'preLevel', 'player', 'That one is definitely advice.'),
+  ccue(68, 'preLevel', 'the_charmer', 'Maybe you are getting to know me.'),
+  ccue(68, 'preLevel', null, 'The PLAYER refuses to rush a bad position and clears late.'),
+  ccue(68, 'preLevel', 'the_charmer', 'Exactly.'),
+  ccue(68, 'postClear', null, 'His smile is the same as before, but now the PLAYER notices how carefully he watches reactions after every comment.'),
+
+  // Level 69 — The Smile Is Watching
+  ccue(69, 'preLevel', null, 'THE CHARMER stands directly behind BALLROOM PLAYER #3. He chats casually while watching every card.'),
+  ccue(69, 'preLevel', 'the_charmer', 'Beautiful room, is it not?'),
+  ccue(69, 'preLevel', 'player', 'You are not looking at the room.'),
+  ccue(69, 'preLevel', 'the_charmer', 'No.'),
+  ccue(69, 'preLevel', 'player', 'You are looking at me.'),
+  ccue(69, 'preLevel', 'the_charmer', 'Finally noticed.'),
+  ccue(69, 'preLevel', null, 'BALLROOM PLAYER #3 sighs and begins gathering personal items before the hand is even over.'),
+  ccue(69, 'preLevel', 'ballroom3', 'That means my chair, does it not?'),
+  ccue(69, 'preLevel', 'the_charmer', 'Only if our guest clears.'),
+  ccue(69, 'preLevel', null, 'The PLAYER clears.'),
+  ccue(69, 'postClear', 'ballroom3', 'Of course.'),
+  ccue(69, 'postClear', null, 'BALLROOM PLAYER #3 stands. THE CHARMER rests one hand on the empty chair.'),
+  ccue(69, 'postClear', 'the_charmer', 'Shall we?'),
+
+  // Level 70 — BOSS: The Charmer
+  ccue(70, 'bossIntro', null, 'THE CHARMER sits. The music continues. Nothing about the room announces danger, which makes the table feel more dangerous.'),
+  ccue(70, 'bossIntro', 'the_charmer', 'I am glad we finally get to play.'),
+  ccue(70, 'bossIntro', 'player', 'You have been playing for ten levels.'),
+  ccue(70, 'bossIntro', 'the_charmer', 'Good. The Jester did warn you.'),
+  ccue(70, 'bossIntro', null, 'The cards are dealt.'),
+  // Same call as Level 60 — two midpoint stingers, not alternatives, so
+  // both play in sequence off the one bossMidpoint trigger.
+  ccue(70, 'bossMidpoint', 'the_charmer', 'There. That little pause.'),
+  ccue(70, 'bossMidpoint', 'player', 'What about it?'),
+  ccue(70, 'bossMidpoint', 'the_charmer', 'Nothing. Unless you make the same pause again.'),
+  ccue(70, 'bossMidpoint', 'the_charmer', 'Better. You changed the rhythm.'),
+  ccue(70, 'bossMidpoint', 'player', 'You were reading me.'),
+  ccue(70, 'bossMidpoint', 'the_charmer', 'I was enjoying the conversation.'),
+  ccue(70, 'bossMidpoint', 'player', 'Same thing to you?'),
+  ccue(70, 'bossMidpoint', 'the_charmer', 'Often.'),
+  ccue(70, 'postFail', 'the_charmer', 'You played my expression instead of the table. Again.', { pick: 'random' }),
+  ccue(70, 'postFail', 'the_charmer', 'You trusted the comfortable line. Comfort is not evidence.', { pick: 'random' }),
+  ccue(70, 'postFail', 'the_charmer', 'Still smiling? Good. Deal again.', { pick: 'random' }),
+  ccue(70, 'bossDefeat', null, 'The final score settles.'),
+  ccue(70, 'bossDefeat', 'the_charmer', 'Well played.'),
+  ccue(70, 'bossDefeat', 'player', 'No trick?'),
+  ccue(70, 'bossDefeat', 'the_charmer', 'The trick was getting you to look for one.'),
+  ccue(70, 'chapterExit', null, 'He stands and straightens the empty chair.'),
+  ccue(70, 'chapterExit', 'the_charmer', 'Friendship opens doors.'),
+  ccue(70, 'chapterExit', 'player', 'And the next one?'),
+  ccue(70, 'chapterExit', 'the_charmer', 'He closes them.'),
+  ccue(70, 'chapterExit', null, 'He gestures toward a heavy steel lift at the far end of the ballroom.'),
+  ccue(70, 'chapterExit', 'the_charmer', 'The Vault. Do not expect warmth down there.'),
+  ccue(70, 'chapterExit', 'player', 'What should I expect?'),
+  ccue(70, 'chapterExit', 'the_charmer', 'A man who spent years knowing exactly when a deal was already done.'),
+  ccue(70, 'chapterExit', null, 'The lift doors open with a metallic tone.'),
+  ccue(70, 'chapterExit', 'the_charmer', 'He does not waste energy. Make sure you are worth his.'),
+
+  // Chapter 8 — The Vault. Nothing follows "ON CLEAR" in the source for
+  // most of these levels (just the SYSTEM/NOT SHOWN credit-counter note,
+  // never turned into a cue — same skip as every earlier chapter), so
+  // most levels here have no postClear bucket at all; only 75, 78 and 79
+  // have a real line after the marker.
+  ccue(71, 'preLevel', null, 'The lift descends. When the doors open, the music is gone. Steel walls. Dark stone. A row of illuminated credit totals behind thick glass.'),
+  ccue(71, 'preLevel', 'vault1', 'First time down here?'),
+  ccue(71, 'preLevel', 'player', 'Is it obvious?'),
+  ccue(71, 'preLevel', 'vault2', 'You are looking around.'),
+  ccue(71, 'preLevel', 'vault3', 'Regulars stop doing that.'),
+  ccue(71, 'preLevel', null, 'At the far end of the room, THE CLOSER speaks quietly with a man in a dark coat. The man signs a paper. THE CLOSER does not celebrate.'),
+  ccue(71, 'preLevel', 'vault1', 'He used to close deals for a living.'),
+  ccue(71, 'preLevel', 'vault2', 'Still does, depending who you ask.'),
+  ccue(71, 'preLevel', 'vault3', 'He can tell who will sign before they know.'),
+  ccue(71, 'preLevel', null, 'The PLAYER sits. The hand begins.'),
+
+  ccue(72, 'preLevel', null, 'THE CLOSER crosses the room, passes two active tables without looking, and stops at a third for exactly five seconds.'),
+  ccue(72, 'preLevel', 'player', 'Why that table?'),
+  ccue(72, 'preLevel', 'vault1', 'Because something changed.'),
+  ccue(72, 'preLevel', 'player', 'What?'),
+  ccue(72, 'preLevel', 'vault1', 'Ask him.'),
+  // "Without turning:" is a stage direction glued to the line, not
+  // something he says — stripped, same treatment as Cabaret's "From
+  // across the room:"/"From somewhere unseen:" prefixes.
+  ccue(72, 'preLevel', 'the_closer', 'You would not understand it yet.'),
+  ccue(72, 'preLevel', null, 'He keeps walking.'),
+  ccue(72, 'preLevel', 'vault2', 'That is about as friendly as he gets.'),
+  ccue(72, 'preLevel', null, 'The PLAYER clears a hand by resisting a useless fight for control.'),
+  ccue(72, 'preLevel', 'vault3', 'You let that go.'),
+  ccue(72, 'preLevel', 'player', 'Was not worth the energy.'),
+  ccue(72, 'preLevel', null, 'Across the room, THE CLOSER glances over once.'),
+
+  ccue(73, 'preLevel', null, 'The PLAYER studies a difficult hand. THE CLOSER appears beside the table as if he has been there all along.'),
+  ccue(73, 'preLevel', 'the_closer', 'You are protecting a weak position.'),
+  ccue(73, 'preLevel', 'player', 'Which one?'),
+  ccue(73, 'preLevel', 'the_closer', 'If I tell you, I am protecting it too.'),
+  ccue(73, 'preLevel', null, 'He walks away.'),
+  ccue(73, 'preLevel', 'vault2', 'He used to do that in meetings.'),
+  ccue(73, 'preLevel', 'player', 'Insult people and leave?'),
+  ccue(73, 'preLevel', 'vault2', 'Tell them exactly where the deal was dying. Then leave.'),
+  ccue(73, 'preLevel', null, 'The PLAYER changes the plan and clears.'),
+
+  ccue(74, 'preLevel', null, 'At a neighboring table, a nervous player is talking quickly to THE CLOSER.'),
+  ccue(74, 'preLevel', 'nervous_player', 'I am still thinking about it.'),
+  ccue(74, 'preLevel', 'the_closer', 'No, you are not.'),
+  ccue(74, 'preLevel', 'nervous_player', 'Excuse me?'),
+  ccue(74, 'preLevel', 'the_closer', 'You decided two minutes ago. Now you are looking for permission.'),
+  ccue(74, 'preLevel', null, 'The nervous player goes quiet.'),
+  ccue(74, 'preLevel', 'player', 'You do that with cards too?'),
+  ccue(74, 'preLevel', 'the_closer', 'Cards are easier. They do not pretend to be undecided.'),
+  ccue(74, 'preLevel', null, 'He leaves. The PLAYER watches the table more carefully than the cards alone.'),
+
+  ccue(75, 'preLevel', null, 'THE CLOSER stands behind the PLAYER for one trick, then speaks.'),
+  ccue(75, 'preLevel', 'the_closer', 'People show you their decision by where their attention goes.'),
+  ccue(75, 'preLevel', 'player', 'And mine?'),
+  ccue(75, 'preLevel', 'the_closer', 'Still divided.'),
+  ccue(75, 'preLevel', 'player', 'Between what?'),
+  ccue(75, 'preLevel', 'the_closer', 'Winning the hand and avoiding the mistake.'),
+  ccue(75, 'preLevel', 'player', 'Those are different?'),
+  ccue(75, 'preLevel', 'the_closer', 'Very.'),
+  ccue(75, 'preLevel', null, 'The PLAYER commits to the better line instead of merely avoiding danger.'),
+  ccue(75, 'postClear', 'the_closer', 'Better.'),
+
+  ccue(76, 'preLevel', null, 'A VAULT PLAYER loses a painful trick and immediately becomes aggressive.'),
+  ccue(76, 'preLevel', 'vault3', 'I am getting that back.'),
+  ccue(76, 'preLevel', 'the_closer', 'No.'),
+  ccue(76, 'preLevel', 'vault3', 'No?'),
+  ccue(76, 'preLevel', 'the_closer', 'You are about to spend three tricks recovering one feeling.'),
+  ccue(76, 'preLevel', null, 'The table falls silent.'),
+  ccue(76, 'preLevel', 'player', 'You never chase?'),
+  ccue(76, 'preLevel', 'the_closer', 'I chase outcomes. Not pride.'),
+  ccue(76, 'preLevel', null, 'The PLAYER clears by letting a previous loss remain irrelevant.'),
+
+  ccue(77, 'preLevel', null, 'THE CLOSER watches the three opponents before looking at the PLAYER.'),
+  ccue(77, 'preLevel', 'the_closer', 'In sales, the first mistake is trying to close everyone.'),
+  ccue(77, 'preLevel', 'player', 'And the second?'),
+  ccue(77, 'preLevel', 'the_closer', 'Spending equal energy on unequal chances.'),
+  ccue(77, 'preLevel', 'vault1', 'He is going to turn this into a lecture.'),
+  ccue(77, 'preLevel', 'the_closer', 'No. Lectures are poor conversion tools.'),
+  ccue(77, 'preLevel', null, 'He gestures toward the table.'),
+  ccue(77, 'preLevel', 'the_closer', 'Know where pressure can move something. Ignore the rest.'),
+  ccue(77, 'preLevel', null, 'The PLAYER uses that principle to choose which opponent to pressure and clears.'),
+
+  ccue(78, 'preLevel', null, "For the first time, THE CLOSER remains beside the PLAYER's table from the deal to the final card."),
+  ccue(78, 'preLevel', 'vault2', 'That is new.'),
+  ccue(78, 'preLevel', 'player', 'He is watching.'),
+  ccue(78, 'preLevel', 'the_closer', 'Obviously.'),
+  ccue(78, 'preLevel', null, 'The hand develops badly. The PLAYER hesitates, then commits to a difficult but coherent line.'),
+  ccue(78, 'preLevel', 'the_closer', 'There.'),
+  ccue(78, 'preLevel', 'player', 'What?'),
+  ccue(78, 'preLevel', 'the_closer', 'You decided.'),
+  ccue(78, 'postClear', null, 'He does not praise the result. He simply stays for the next table assignment.'),
+
+  ccue(79, 'preLevel', null, 'The three VAULT PLAYERS take their seats. THE CLOSER stands behind VAULT PLAYER #3.'),
+  ccue(79, 'preLevel', 'the_closer', 'One more.'),
+  ccue(79, 'preLevel', 'player', 'Then you sit?'),
+  ccue(79, 'preLevel', 'the_closer', 'If you give me a reason.'),
+  ccue(79, 'preLevel', null, 'The hand begins. The PLAYER has an opening to play defensively but instead chooses the line that best controls the final outcome.'),
+  ccue(79, 'preLevel', 'vault1', 'That was committed.'),
+  ccue(79, 'preLevel', 'the_closer', 'Yes.'),
+  ccue(79, 'preLevel', null, 'The PLAYER clears.'),
+  ccue(79, 'postClear', 'the_closer', 'All right.'),
+  ccue(79, 'postClear', 'vault3', 'That means me.'),
+  ccue(79, 'postClear', 'the_closer', 'It does.'),
+  ccue(79, 'postClear', null, 'VAULT PLAYER #3 stands. THE CLOSER takes the chair without another word.'),
+
+  ccue(80, 'bossIntro', null, 'The steel doors seal. THE CLOSER sits opposite the PLAYER. No music. No audience noise. Only cards and the soft click of the credit display.'),
+  ccue(80, 'bossIntro', 'the_closer', 'I spent years closing deals.'),
+  ccue(80, 'bossIntro', 'player', 'I heard.'),
+  ccue(80, 'bossIntro', 'the_closer', 'Most people think closing means convincing someone.'),
+  ccue(80, 'bossIntro', 'player', 'It does not?'),
+  ccue(80, 'bossIntro', 'the_closer', 'It means recognizing when they have already decided - and not ruining it.'),
+  ccue(80, 'bossIntro', null, 'The boss match begins.'),
+  // Two stinger blocks fire in sequence off the one trigger, same pattern
+  // as Level 70's and Level 60's combined bossMidpoint blocks — nothing
+  // marks them mutually exclusive.
+  ccue(80, 'bossMidpoint', 'the_closer', 'You are hesitating.'),
+  ccue(80, 'bossMidpoint', 'player', 'I am thinking.'),
+  ccue(80, 'bossMidpoint', 'the_closer', 'No. Thinking looks forward. Hesitation looks backward.'),
+  ccue(80, 'bossMidpoint', 'the_closer', 'Now you are playing not to lose.'),
+  ccue(80, 'bossMidpoint', 'player', 'Is that wrong?'),
+  ccue(80, 'bossMidpoint', 'the_closer', 'Only if winning requires a decision.'),
+  ccue(80, 'postFail', 'the_closer', 'You knew the right line and did not close it. Again.', { pick: 'random' }),
+  ccue(80, 'postFail', 'the_closer', 'Too much energy after the decision point. Reset.', { pick: 'random' }),
+  ccue(80, 'postFail', 'the_closer', 'That hand was over before you admitted it. Deal again.', { pick: 'random' }),
+  ccue(80, 'bossDefeat', null, 'The final score locks in.'),
+  ccue(80, 'bossDefeat', null, 'THE CLOSER looks at the total, then at the PLAYER.'),
+  ccue(80, 'bossDefeat', 'the_closer', 'Closed.'),
+  ccue(80, 'bossDefeat', 'player', 'That is it?'),
+  ccue(80, 'bossDefeat', 'the_closer', 'That is the point.'),
+  ccue(80, 'bossDefeat', 'the_closer', 'You earned those.'),
+  ccue(80, 'chapterExit', 'player', 'Where is the next door?'),
+  ccue(80, 'chapterExit', null, 'THE CLOSER looks toward the lift the PLAYER used to enter.'),
+  ccue(80, 'chapterExit', 'the_closer', 'Behind you.'),
+  ccue(80, 'chapterExit', 'player', 'I go back?'),
+  ccue(80, 'chapterExit', 'the_closer', 'The Vault is not a destination. It is where people store what they already won.'),
+  ccue(80, 'chapterExit', null, 'The lift opens.'),
+  ccue(80, 'chapterExit', 'the_closer', 'Go back upstairs.'),
+  ccue(80, 'chapterExit', 'player', 'And then?'),
+  ccue(80, 'chapterExit', 'the_closer', 'Someone has been waiting longer than you know.'),
 
   // Prologue cinematic — the screenplay's opening EXT. CITY STREET beat
   // (motorcar, envelope, facade), fed in verbatim like every other cue.

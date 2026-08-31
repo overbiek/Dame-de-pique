@@ -2863,6 +2863,33 @@ before pushing.
   modal, and a non-campaign game (`S.campaign` false) still gets the
   original "Tap again to leave" two-tap button behavior unchanged.
 
+## Gold medallion art now covers all 50 built levels, not just 1-10
+- `public/campaign/gold/<levelId>.webp` — Levels 11-50 added alongside
+  the existing 1-10, all 40 processed from the same 1254×1254
+  black-page medallion source art via the identical pipeline the rank
+  plates and Noir card front already use: flood-fill background removal
+  from the border (`scipy.ndimage.label` on a near-black mask, keeping
+  only components that touch an edge — so a genuinely dark interior,
+  like several of these medallions' deep red backgrounds, survives
+  untouched while only the true black margin goes transparent), trimmed
+  to content, resized to 160×160 (matching the existing 1-10 exactly).
+  ~14-16KB each, three outliers (32/40/49, whose medallions use a
+  lighter interior pattern with more color variation to encode) at
+  ~26-27KB — still trivial for a runtime-cached asset.
+- **`campaignGoldImg(levelId)` needed zero code changes** — it already
+  builds `/campaign/gold/${levelId}.webp` generically for any level id
+  (see its own `onerror` fallback-to-star contract); this was purely an
+  asset drop-in;
+  Levels 51-100 have no medallion source art yet since those chapters
+  don't exist in `CAMPAIGN_LEVELS` at all — same "nothing to add it to
+  yet" reasoning as the story-box narration pass above.
+- Not added to `sw.js`'s `ASSETS` — runtime-cached on first use, same
+  as every other campaign art (chapter backgrounds, character
+  portraits). No `CACHE` bump needed either: these are brand-new
+  filenames (`11.webp`…`50.webp`), not an in-place overwrite of
+  already-cached ones, so the cache-first fetch handler just fetches
+  them fresh the first time any of Levels 11-50 is cleared at Gold.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

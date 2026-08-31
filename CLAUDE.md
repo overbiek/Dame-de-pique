@@ -2686,6 +2686,51 @@ before pushing.
   screen, which is landscape-only, so the extra width is never fighting
   a narrow portrait viewport.
 
+## STORY BOX narration cues (inline, not the prologue's cinematic)
+- **A second, much smaller kind of narration than the prologue
+  cinematic** — sourced from a separate reference doc
+  (`Dame_de_Pique_Story_Boxes_..._Insert_Guide.md`, not checked into the
+  repo) that maps narration lines the original screenplay pass missed,
+  each anchored to an exact `INSERT AFTER` / `INSERT BEFORE` position
+  relative to the existing spoken lines. Unlike the prologue, these
+  don't get their own background stills or full-bleed overlay — they're
+  narration inserted INLINE into the ordinary per-level cue sequence
+  (`preLevel`/`postClear`/`chapterEnter`/etc.), shown in the same
+  `#camp-dialogue` card the spoken lines already use.
+- **Still just `ccue(levelId, trigger, null, text)`** — the exact same
+  `speakerId: null` convention the prologue cues already established,
+  now reused for something structurally different. What's new is
+  `campaignDialogueStep` itself: it computes `isNarration = !cue.
+  speakerId` and, when true, empties `#camp-dlg-portrait`, skips the
+  name, and toggles `.camp-dlg-narration` on `#camp-dlg-wrap` — CSS then
+  hides the (now-empty) portrait slot and the name line, and italicizes
+  the text, all within the SAME card markup a spoken line uses. No new
+  DOM, no new overlay.
+- **Only Chapter 1's Prologue and Level 1 are done as of this pass** —
+  one gap in the prologue (a narration beat between "Only to people who
+  remember their first time." and "Your seat is ready.") plus three in
+  Level 1 (one before "This one is yours.", two before "Huh."). The
+  reference doc covers all 100 levels; the rest are follow-up work, not
+  scoped into this pass.
+- **`ccue()`'s id/order scheme had to change FIRST, before any of this
+  could be inserted safely.** It used to embed a single counter running
+  over the ENTIRE file (`_campaignCueSeq`), so a cue's id depended on
+  every `ccue()` call before it in source order — inserting a STORY BOX
+  anywhere but the literal end of the array (which is exactly why the
+  prologue cues were appended there rather than woven into Chapter 1's
+  early cues) would shift every later cue's id and silently replay
+  already-seen dialogue for real accounts. Both Level 1 insertions
+  needed to land in the middle of the file, at the very TOP of the cue
+  list, which would have renumbered essentially every cue in the game.
+  Fixed by keying the counter (and therefore `order`) per `(levelId,
+  trigger)` bucket instead of globally (`_campaignCueSeqByBucket`) —
+  `order` was already only ever compared within one filtered bucket
+  (`campaignCuesFor`), so this changes nothing functionally. **This was
+  a one-time mass id change** (every existing cue's id shifted once,
+  since the scheme itself changed) but makes every FUTURE insertion,
+  in any level, safe — it can now only ever renumber cues in that one
+  level+trigger bucket, never anything outside it.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

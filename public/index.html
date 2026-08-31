@@ -5307,6 +5307,18 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
   background:rgba(var(--ddp-brass-rgb),.16);border:1px solid rgba(var(--ddp-brass-rgb),.4);
   color:var(--gold-hi);cursor:pointer;
 }
+/* STORY BOX — a narration cue (speakerId:null) in the same card, minus
+   the portrait/name a spoken line gets. .camp-dlg-portrait is emptied
+   (not just hidden) by campaignDialogueStep, so hiding it here is only
+   about reclaiming the layout space; the card's own left padding is
+   what actually clears room for a portrait that no longer exists.
+   Italic is the one deliberate departure from spoken dialogue's styling,
+   the same cue this file's other narrator surface (the prologue
+   cinematic's .camp-prol-text) already uses. */
+.camp-dlg-wrap.camp-dlg-narration .camp-dlg-portrait{display:none}
+.camp-dlg-wrap.camp-dlg-narration .camp-dlg-name{display:none}
+.camp-dlg-wrap.camp-dlg-narration .camp-dlg-card{padding:20px}
+.camp-dlg-wrap.camp-dlg-narration .camp-dlg-text{font-style:italic}
 
 /* Prologue cinematic — full-bleed photographed stills for the
    screenplay's opening EXT. CITY STREET beat, shown once ever per
@@ -8478,6 +8490,11 @@ function campaignDialogueStep(){
   }
   const cue=campDlgQueue.shift();
   campaignMarkSeen([cue.id]);
+  // A STORY BOX — narration inserted inline in the same bucket as the
+  // spoken lines around it (speakerId: null), not a separate list. Shown
+  // in the same card, minus the portrait and name: "the CONCIERGE stops
+  // beside a table" is nobody's LINE, so it gets no speech-bubble owner.
+  const isNarration=!cue.speakerId;
   const speaker=CAMPAIGN_CHARACTERS[cue.speakerId];
   const isPlayer=cue.speakerId==='player';
   const name=isPlayer?(identity().name||'You'):(speaker?speaker.name:'');
@@ -8487,14 +8504,15 @@ function campaignDialogueStep(){
   // circular background avatarHTML's initials fallback doesn't carry
   // itself. campaignPortraitHTML (the SVG monogram) already draws its
   // own circular background, so only the player case needs this.
-  $('camp-dlg-portrait').innerHTML=isPlayer
-    ?`<span class="avatar" style="width:100%;height:100%">${avatarHTML(account&&account.avatar,name)}</span>`
+  $('camp-dlg-portrait').innerHTML=isNarration?''
+    :isPlayer?`<span class="avatar" style="width:100%;height:100%">${avatarHTML(account&&account.avatar,name)}</span>`
     :campaignPortraitHTML(cue.speakerId);
   // .camp-dlg-mine now lives on the WRAP, not the card — it has to move
   // both the portrait (absolute, overlapping the card's top corner) and
   // the card's own text alignment together, and the wrap is the only
   // element that's a parent of both.
   $('camp-dlg-wrap').classList.toggle('camp-dlg-mine',isPlayer);
+  $('camp-dlg-wrap').classList.toggle('camp-dlg-narration',isNarration);
   const scrim=$('camp-dialogue');
   // Re-trigger the fade+slide on every line, even consecutive ones from
   // different speakers in the same exchange — removing then re-adding

@@ -2485,36 +2485,56 @@ function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
 // instruction not to paraphrase or hard-code score numbers into the
 // lines. `order` sequences multiple lines sharing one (levelId, trigger)
 // bucket so the client's dialogue overlay steps through them as one
-// conversation; it's a running counter across the whole array, which is
-// fine because it's only ever used to sort a filtered subset. `pick:
-// 'random'` marks a bucket where the screenplay itself says "randomize
-// between these lines" (only Level 10's failure lines, in this chapter)
-// — the client picks ONE from that bucket instead of sequencing through
-// all of them. Triggers used here: chapterEnter, preLevel, postClear,
-// postFail, bossIntro, bossMidpoint, bossDefeat, chapterExit — postGold
-// is deliberately unused in Chapter 1 (no gold-specific line exists in
-// the screenplay; the client's own gold flourish covers it, see the
-// brief's "additional restrained gold flourish" note) and bossTease is
-// left for a later chapter's more clearly separable boss-glimpse beats
-// rather than fragmenting Chapter 1's own regular-table banter across
-// two trigger buckets.
-let _campaignCueSeq = 0;
+// conversation; it only needs to be consistent WITHIN that bucket, since
+// it's only ever used to sort a filtered subset (campaignCuesFor).
+// `pick: 'random'` marks a bucket where the screenplay itself says
+// "randomize between these lines" (only Level 10's failure lines, in
+// this chapter) — the client picks ONE from that bucket instead of
+// sequencing through all of them. Triggers used here: chapterEnter,
+// preLevel, postClear, postFail, bossIntro, bossMidpoint, bossDefeat,
+// chapterExit — postGold is deliberately unused in Chapter 1 (no
+// gold-specific line exists in the screenplay; the client's own gold
+// flourish covers it, see the brief's "additional restrained gold
+// flourish" note) and bossTease is left for a later chapter's more
+// clearly separable boss-glimpse beats rather than fragmenting Chapter
+// 1's own regular-table banter across two trigger buckets.
+// `speakerId: null` marks a STORY BOX — narration rather than spoken
+// dialogue (see campaignDialogueStep client-side, which renders these
+// without a portrait or name). They live inline in the SAME bucket as
+// the dialogue lines they're inserted between, not a separate list, so
+// `order` alone decides where a narration beat falls relative to the
+// speech around it.
+// `id` is keyed by (levelId, trigger, a counter LOCAL to that one
+// bucket) rather than a running counter over the whole file — the id
+// used to embed a global sequence number, which meant inserting a cue
+// anywhere but the very end of the file shifted every later cue's id
+// and silently replayed already-seen dialogue for real accounts. A
+// per-bucket counter means inserting a new STORY BOX into, say, Level
+// 1's postClear only ever renumbers Level 1's OWN postClear cues after
+// the insertion point — every other level and trigger is untouched, so
+// this is now safe to do for any level, not just the last one written.
+const _campaignCueSeqByBucket = {};
 function ccue(levelId, trigger, speakerId, text, extra) {
-  _campaignCueSeq++;
-  return { id: `ch1-l${levelId}-${trigger}-${_campaignCueSeq}`, levelId, trigger, speakerId, text,
-            order: _campaignCueSeq, ...extra };
+  const bucketKey = levelId + ':' + trigger;
+  const n = (_campaignCueSeqByBucket[bucketKey] = (_campaignCueSeqByBucket[bucketKey] || 0) + 1);
+  return { id: `ch1-l${levelId}-${trigger}-${n}`, levelId, trigger, speakerId, text,
+            order: n, ...extra };
 }
 const CAMPAIGN_STORY_CUES = [
   // Prologue, fires once on first ever campaign-map entry.
   ccue(1, 'chapterEnter', 'concierge', 'First time here?'),
   ccue(1, 'chapterEnter', 'player', 'Is it that obvious?'),
   ccue(1, 'chapterEnter', 'concierge', 'Only to people who remember their first time.'),
+  ccue(1, 'chapterEnter', null, 'The CONCIERGE turns toward the gaming floor.'),
   ccue(1, 'chapterEnter', 'concierge', 'Your seat is ready.'),
 
   // Level 1 — First Hand
+  ccue(1, 'preLevel', null, 'The CONCIERGE stops beside a four-seat card table. Three regulars are already seated. The fourth chair is empty.'),
   ccue(1, 'preLevel', 'concierge', 'This one is yours.'),
   ccue(1, 'preLevel', 'reg1', 'First night?'),
   ccue(1, 'preLevel', 'reg2', 'Go easy. First hands tell on people.'),
+  ccue(1, 'postClear', null, 'The PLAYER sits. The hand begins. The PLAYER does not chase tricks, keeps the dangerous cards moving and finishes with few enough penalty points to clear the minimum.'),
+  ccue(1, 'postClear', null, 'For a moment, nobody says anything.'),
   ccue(1, 'postClear', 'reg3', 'Huh.'),
   ccue(1, 'postClear', 'reg1', 'You actually played that out properly.'),
   ccue(1, 'postClear', 'reg2', 'Most first-timers collect half the table before they understand what happened.'),

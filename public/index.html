@@ -8079,9 +8079,14 @@ const CAMPAIGN_CHARACTERS={
 // Which three characters sit at an ordinary (non-boss) table per chapter,
 // and who the boss replaces — used by campaignOpponentsHTML so the
 // level-detail popup shows the right cast instead of always Chapter 1's.
+// Mirrors CAMPAIGN_CHAPTER_ROSTER in server.js — keep the two in step.
+// The Glass Baron holds a chair on the Rooftop (he escorted the PLAYER
+// up and keeps speaking through Chapter 2), and The Sharp takes Rooftop
+// Player #3's seat at Level 20, which is whose seat the screenplay has
+// him claim.
 const CAMPAIGN_CHAPTER_ROSTER={
   1:{regulars:['reg1','reg2','reg3'],bossSeat:2},
-  2:{regulars:['rooftop1','rooftop2','rooftop3'],bossSeat:2},
+  2:{regulars:['glass_baron','rooftop2','rooftop3'],bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/
@@ -8094,9 +8099,16 @@ function campaignBgImg(slug){
   return `<img class="campaign-bg-img" src="/campaign/chapters/${slug}.webp" alt="" aria-hidden="true"`+
          ` loading="lazy" onerror="campaignArtFailed('bg:${slug}',this)"/>`;
 }
+// A campaign character who is ALSO an existing in-game avatar points
+// straight at that avatar's art instead of a duplicated copy under
+// /campaign/characters/ — The Sharp is literally one of the House
+// Regulars, so the two should never be able to drift apart. Anyone not
+// listed here uses the normal per-character path.
+const CAMPAIGN_PORTRAIT_SRC={ the_sharp:'/avatars/house-regulars/sharp.webp' };
 function campaignPortraitImg(id){
   if(campaignArtMissing['pf:'+id]) return '';
-  return `<img class="camp-portrait-img" src="/campaign/characters/${id}.webp" alt="" aria-hidden="true"`+
+  const src=CAMPAIGN_PORTRAIT_SRC[id]||`/campaign/characters/${id}.webp`;
+  return `<img class="camp-portrait-img" src="${src}" alt="" aria-hidden="true"`+
          ` loading="lazy" onerror="campaignArtFailed('pf:${id}',this)"/>`;
 }
 function campaignArtFailed(key,el){ campaignArtMissing[key]=true; if(el&&el.remove) el.remove(); }
@@ -10857,20 +10869,12 @@ function handleSfxForState(G){
 
 /* ══════════ ROUTER ══════════ */
 socket.on('gameState',G=>{
-  // Boss substitution is purely presentational: the boss seat is already
-  // a plain AI opponent in game logic (see createCampaignRoom
-  // server-side), so rewriting its presented identity here, once, before
-  // any render function ever sees it, is what lets EVERY existing render
-  // path (table captions, roster rail, final standings) show the boss
-  // correctly with zero changes to any of them. Seat 1 is always the
-  // boss seat for a boss level. avatar stays null on purpose — no real
-  // portrait art exists yet, so avatarHTML's own initials fallback
-  // (from the boss's name) is the placeholder, same as any other
-  // undressed AI seat.
-  if(G.campaignBoss){
-    const boss=CAMPAIGN_CHARACTERS[G.campaignBoss];
-    if(boss&&G.players[1]){ G.players[1].name=boss.name; G.players[1].title='Chapter Boss'; }
-  }
+  // NOTE: campaign seat identities (the chapter's cast, the boss's own
+  // seat and its "Chapter Boss" title, and any seat avatar art) are now
+  // set SERVER-side in createCampaignRoom and arrive through publicState
+  // like any other seat data — there used to be a client-side rewrite
+  // here that assumed the boss always sat at seat 1, which stopped being
+  // true once each chapter's roster decided which chair he takes.
   S=G; me=G.myIndex; host=G.isHost;
   renderVote(G);
   syncCountdown(G);

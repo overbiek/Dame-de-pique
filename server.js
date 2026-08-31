@@ -2119,9 +2119,35 @@ const CAMPAIGN_CHARACTERS = {
   rooftop1:    { id: 'rooftop1',    name: 'Rooftop Player #1' },
   rooftop2:    { id: 'rooftop2',    name: 'Rooftop Player #2' },
   rooftop3:    { id: 'rooftop3',    name: 'Rooftop Player #3' },
-  the_sharp:   { id: 'the_sharp',   name: 'The Sharp' },
+  // seatAvatar: an existing in-game avatar id (AVATAR_IDS) to dress this
+  // character's SEAT with during the hand itself, so the table shows a
+  // real face instead of initials. Only set where the character already
+  // has avatar art in the game — The Sharp is literally one of the House
+  // Regulars, so his campaign appearance and his avatar are the same
+  // person and should look it.
+  the_sharp:   { id: 'the_sharp',   name: 'The Sharp', seatAvatar: 'regular_sharp' },
   player:      { id: 'player',      name: null },
 };
+
+// Who sits at an ordinary (non-boss) table per chapter, and which of
+// those three seats the chapter boss takes over at the x0 level. The
+// Glass Baron stays on at the Rooftop table after escorting the PLAYER
+// up there — he keeps speaking through Chapter 2 in the screenplay, so
+// he holds a real chair rather than hovering behind one. The Sharp then
+// takes Rooftop Player #3's seat at Level 20, which is exactly whose
+// seat the screenplay has him claim ("Your seat." / "There it is.").
+const CAMPAIGN_CHAPTER_ROSTER = {
+  1: { regulars: ['reg1', 'reg2', 'reg3'], bossSeat: 2 },
+  2: { regulars: ['glass_baron', 'rooftop2', 'rooftop3'], bossSeat: 2 },
+};
+// The three AI seats (1..3) for a level, boss substitution applied.
+function campaignSeatCharacters(level) {
+  const chapter = (CAMPAIGN_CHAPTERS.find(c => c.id === level.chapter) || {}).id;
+  const roster = CAMPAIGN_CHAPTER_ROSTER[chapter] || CAMPAIGN_CHAPTER_ROSTER[1];
+  const ids = roster.regulars.slice();
+  if (level.type === 'BOSS' && level.bossId) ids[roster.bossSeat] = level.bossId;
+  return ids;
+}
 
 const CAMPAIGN_CHAPTERS = [
   // The screenplay's own chapter name ("De Fluwelen Entree") is Dutch —
@@ -2496,10 +2522,23 @@ async function createCampaignRoom(name, avatar, accountId, socketId, levelId) {
   if (accountId) Object.assign(G.players[0], await lookupSeatCosmetics(accountId));
   G.hostSocket = socketId;
   G.hostToken = token;
+  // Seats 1-3 are the chapter's own cast (boss substituted in at an x0
+  // level), not "Computer 2/3/4" — the whole point of a story mode is
+  // that you're playing these specific people. seatAvatar dresses the
+  // seat with real avatar art where that character has some; the rest
+  // fall back to the initials treatment every undressed seat already uses.
+  const seatIds = campaignSeatCharacters(level);
   for (let i = 1; i < 4; i++) {
+    const cid = seatIds[i - 1];
+    const ch = CAMPAIGN_CHARACTERS[cid] || {};
     Object.assign(G.players[i], {
-      name: level.bossId && i === 1 ? CAMPAIGN_CHARACTERS[level.bossId].name : `Computer ${i + 1}`,
-      avatar: null, accountId: null, isAI: true, connected: true, socketId: null, token: null,
+      name: ch.name || `Computer ${i + 1}`,
+      avatar: ch.seatAvatar ? sanitizeAvatar(ch.seatAvatar) : null,
+      // Marks the boss's seat wherever it lands (it is NOT always seat 1 —
+      // each chapter's roster decides which chair the boss takes over).
+      // Set here rather than client-side for exactly that reason.
+      title: (level.type === 'BOSS' && cid === level.bossId) ? 'Chapter Boss' : null,
+      accountId: null, isAI: true, connected: true, socketId: null, token: null,
     });
   }
   return { G, token };

@@ -2141,6 +2141,10 @@ const CAMPAIGN_CHARACTERS = {
   // Same deal as The Sharp — already a House Regular, so campaign and
   // avatar are the same person and share the one piece of art.
   the_scholar: { id: 'the_scholar', name: 'The Scholar', seatAvatar: 'regular_scholar' },
+  lounge1:     { id: 'lounge1',     name: 'Lounge Player #1' },
+  lounge2:     { id: 'lounge2',     name: 'Lounge Player #2' },
+  lounge3:     { id: 'lounge3',     name: 'Lounge Player #3' },
+  the_wildcard:{ id: 'the_wildcard',name: 'The Wildcard', seatAvatar: 'regular_wildcard' },
   player:      { id: 'player',      name: null },
 };
 
@@ -2160,6 +2164,10 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // all three seats until he taps #3 out at Level 30 — exactly the
   // screenplay's staging, no reattribution needed.
   3: { regulars: ['lib1', 'lib2', 'lib3'], bossSeat: 2 },
+  // The Wildcard roams the room rather than sitting, so again all three
+  // chairs are the chapter's own players until he claims #3's at Level 39
+  // ("Recess." / "That means my seat, does it?").
+  4: { regulars: ['lounge1', 'lounge2', 'lounge3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2185,6 +2193,7 @@ const CAMPAIGN_CHAPTERS = [
   // No background art supplied yet — falls back to the CSS/SVG
   // placeholder until public/campaign/chapters/grand_library.webp exists.
   { id: 3, title: 'The Grand Library', levelStart: 21, levelEnd: 30, slug: 'grand_library', bossId: 'the_scholar' },
+  { id: 4, title: 'The Carnival Lounge', levelStart: 31, levelEnd: 40, slug: 'carnival_lounge', bossId: 'the_wildcard' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -2339,6 +2348,59 @@ const CAMPAIGN_LEVELS = {
           parseHand('5♣ 5♦ J♠ 10♠ Q♥ K♥ 4♦ 7♣ 6♣ 9♥ K♠ 8♦ K♦'),
         ],
         objective: { type: 'score', min: -1, gold: 16 } },
+
+  // Chapter 4 — the first chapter that MIXES pass directions (31-32 keep,
+  // 33-39 left, 40 cycles). Worth noting for the two objective swaps
+  // below: a mini-ladder hand was calibrated under its own direction, so
+  // dropping one onto a level with a different direction would invalidate
+  // that calibration (the pass changes the hand). Both swaps here keep
+  // their ladder's direction — see L35's note.
+  31: { id: 31, chapter: 4, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L31-c314', hand: parseHand('10♠ 5♠ K♠ 2♦ Q♦ A♥ A♦ 5♣ 2♠ Q♠ A♠ 7♦ 4♥'),
+        objective: { type: 'score', min: -2, gold: 21 } },
+  // Original main-sheet objective was score (min -1 / gold 14). Swapped
+  // for the Trick Count ladder's rung 3 — already 'keep', so no
+  // direction change and the calibration carries over intact.
+  32: { id: 32, chapter: 4, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-goal-tricks-refine-L3-c73', hand: parseHand('5♦ J♣ 10♦ A♣ 4♠ A♥ Q♣ 5♣ Q♦ A♠ J♦ 6♣ 7♥'),
+        objective: { type: 'trickCount', minTricks: 5, goldTricks: 9 } },
+  33: { id: 33, chapter: 4, type: 'Harder', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L33-c51', hand: parseHand('Q♠ 10♦ 10♠ 5♦ 9♠ 5♠ 3♠ J♣ Q♣ 4♥ Q♦ A♦ K♥'),
+        objective: { type: 'score', min: 6, gold: 19 } },
+  34: { id: 34, chapter: 4, type: 'Normal', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L34-c66', hand: parseHand('10♠ K♥ 8♦ J♣ 5♠ 9♥ 2♣ A♦ 2♠ K♠ 3♣ 6♥ 7♦'),
+        objective: { type: 'score', min: 1, gold: 24 } },
+  // Original main-sheet objective was score (min 1 / gold 41) at
+  // direction 'left'. Swapped for the Clean Hand ladder's rung 3 against
+  // this level's own beat ("How are you still clean?"), and the
+  // direction is pinned to that ladder's 'keep' rather than the
+  // chapter's 'left' — the hand's measured clear rate assumes no pass,
+  // and passing 2 cards away would make it a different hand entirely.
+  // The one direction anomaly in the chapter, and a deliberate one.
+  35: { id: 35, chapter: 4, type: 'Normal', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-goal-clean-refine-L3-c9', hand: parseHand('7♦ 3♣ 6♠ 2♣ Q♣ 7♠ 8♣ 4♥ 10♣ J♦ Q♦ 4♠ 5♠'),
+        objective: { type: 'cleanHand', goldScoreBar: 20 } },
+  36: { id: 36, chapter: 4, type: 'Harder', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L36-c273', hand: parseHand('J♠ 8♠ 7♦ 3♠ 5♦ 2♣ 4♥ 5♣ 4♣ Q♣ K♦ Q♦ 9♠'),
+        objective: { type: 'score', min: 8, gold: 21 } },
+  37: { id: 37, chapter: 4, type: 'Normal', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L37-c383', hand: parseHand('2♠ 6♠ 2♦ 9♥ 7♥ K♥ 8♠ Q♦ 3♥ A♦ 5♣ K♦ J♣'),
+        objective: { type: 'score', min: -3, gold: 12 } },
+  38: { id: 38, chapter: 4, type: 'Normal', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L38-c48', hand: parseHand('5♣ 5♥ J♣ 2♥ 2♣ 6♠ 10♦ K♣ 2♦ 6♦ 8♣ 7♠ 5♦'),
+        objective: { type: 'score', min: -2, gold: 17 } },
+  39: { id: 39, chapter: 4, type: 'Harder', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L39-c27', hand: parseHand('6♦ Q♣ Q♠ K♠ 3♠ 10♦ 2♦ 7♠ 7♦ 7♥ 8♣ 6♥ 9♠'),
+        objective: { type: 'score', min: 10, gold: 18 } },
+  40: { id: 40, chapter: 4, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_wildcard',
+        seed: 'ddp-boss-refine-L40-c86',
+        hands4: [
+          parseHand('Q♠ 9♠ 2♦ 2♣ Q♣ 2♠ 2♥ 10♠ J♥ 4♥ K♠ 4♦ 9♣'),
+          parseHand('10♠ J♠ 10♥ 9♠ Q♣ 2♥ 3♥ 8♣ 5♦ 4♣ A♦ 8♥ 6♥'),
+          parseHand('J♣ 6♠ 5♦ Q♠ A♥ 7♣ 9♥ 10♣ 4♦ 3♣ 10♥ 6♦ 6♣'),
+          parseHand('2♥ 3♦ 9♥ 5♥ J♣ J♦ 10♠ 10♦ 9♣ 3♥ 8♣ Q♠ 8♠'),
+        ],
+        objective: { type: 'score', min: 3, gold: 42 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -2641,6 +2703,87 @@ const CAMPAIGN_STORY_CUES = [
   ccue(30, 'chapterExit', 'player', 'You are not coming?'),
   ccue(30, 'chapterExit', 'the_scholar', 'Of course I am coming.'),
   ccue(30, 'chapterExit', 'the_scholar', 'Woof.'),
+
+  // ── Chapter 4 — The Carnival Lounge, Boss: The Wildcard ──
+  // Level 31 — That Laugh
+  ccue(31, 'preLevel', 'the_wildcard', 'Ha! No, no, no — that was magnificent.'),
+  ccue(31, 'preLevel', 'the_wildcard', 'You found the worst possible card and adopted it like a stray dog. Very generous.'),
+  ccue(31, 'preLevel', 'the_wildcard', 'Next time, watch who is void before you lead that suit. Same courage, better timing.'),
+  ccue(31, 'preLevel', 'lounge1', 'You get used to him.'),
+  ccue(31, 'preLevel', 'lounge2', 'No, you do not.'),
+
+  // Level 32 — Gold Star (Trick Count)
+  ccue(32, 'preLevel', 'the_wildcard', 'Bold! Wrong, but bold!'),
+  ccue(32, 'postClear', 'the_wildcard', 'You wanted to get rid of the danger before checking who could hand it back. Tiny detail. Enormous consequences.'),
+  ccue(32, 'postClear', 'lounge3', 'Thank you, professor.'),
+  ccue(32, 'postClear', 'the_wildcard', 'Gold star. No sticker. Budget cuts.'),
+  ccue(32, 'postClear', 'lounge1', 'He teaches like the school burned down years ago.'),
+
+  // Level 33 — Nice Escape
+  ccue(33, 'postClear', 'the_wildcard', 'Nice escape!'),
+  ccue(33, 'postClear', 'the_wildcard', 'You saw the exit before the room caught fire. Keep that.'),
+  ccue(33, 'postClear', 'player', 'Do you comment on every table?'),
+  ccue(33, 'postClear', 'the_wildcard', 'Only the educational ones!'),
+
+  // Level 34 — Wrong Card, Great Confidence
+  ccue(34, 'postClear', 'the_wildcard', 'Wrong card. Great confidence, though.'),
+  ccue(34, 'postClear', 'lounge2', 'Helpful.'),
+  ccue(34, 'postClear', 'the_wildcard', 'I am helping. You will remember this because I made it embarrassing.'),
+  ccue(34, 'postClear', 'the_wildcard', 'Next time, count what is gone before you decide what is safe.'),
+  ccue(34, 'postClear', 'the_wildcard', 'You already do that. Annoying.'),
+
+  // Level 35 — Class Is In Session (Clean Hand)
+  ccue(35, 'postClear', 'lounge1', 'How are you still clean?'),
+  ccue(35, 'postClear', 'the_wildcard', 'Because our new student is doing homework!'),
+  ccue(35, 'postClear', 'the_wildcard', 'Everybody else is trying to win tricks. You are trying to win the hand. Different subject.'),
+
+  // Level 36 — Joke, Then Lesson
+  ccue(36, 'postClear', 'the_wildcard', 'Congratulations! You have collected the complete red set.'),
+  ccue(36, 'postClear', 'the_wildcard', 'Now the boring part: you showed your void too early and they used it against you. Hide information until it buys you something.'),
+  ccue(36, 'postClear', 'lounge3', 'See? There it is. Joke, then homework.'),
+  ccue(36, 'postClear', 'the_wildcard', 'Education is a gift.'),
+
+  // Level 37 — He Notices You
+  ccue(37, 'postClear', 'lounge2', 'I thought that was a mistake.'),
+  ccue(37, 'postClear', 'the_wildcard', 'So did I.'),
+  ccue(37, 'postClear', 'the_wildcard', 'Oh, that is fun.'),
+  ccue(37, 'postClear', 'player', 'Educational?'),
+  ccue(37, 'postClear', 'the_wildcard', 'Deeply.'),
+
+  // Level 38 — The Laughter Moves Closer
+  ccue(38, 'postClear', 'the_wildcard', 'Ha! You knew exactly who could not follow suit.'),
+  ccue(38, 'postClear', 'lounge1', 'He has been watching every card.'),
+  ccue(38, 'postClear', 'the_wildcard', 'Of course. I can drink and count.'),
+  ccue(38, 'postClear', 'player', 'That should not sound impressive.'),
+  ccue(38, 'postClear', 'the_wildcard', 'And yet.'),
+
+  // Level 39 — When The Laughter Stops
+  ccue(39, 'preLevel', 'lounge3', 'I preferred the jokes.'),
+  ccue(39, 'postClear', 'the_wildcard', 'Good.'),
+  ccue(39, 'postClear', 'the_wildcard', 'Recess.'),
+  ccue(39, 'postClear', 'lounge3', 'That means my seat, does it?'),
+  ccue(39, 'postClear', 'the_wildcard', 'You are learning.'),
+  ccue(39, 'postClear', 'the_wildcard', 'All right. Class starts next hand.'),
+
+  // Level 40 — BOSS: The Wildcard
+  ccue(40, 'bossIntro', 'the_wildcard', 'Right, class. Tiny problem.'),
+  ccue(40, 'bossIntro', 'player', 'You are the teacher?'),
+  ccue(40, 'bossIntro', 'the_wildcard', 'Exactly. Terrifying, is it not?'),
+  ccue(40, 'bossIntro', 'the_wildcard', 'Let us see whether the teacher can still pass the exam.'),
+  ccue(40, 'bossMidpoint', 'the_wildcard', 'There is the lesson: unpredictable is not the same as random.'),
+  ccue(40, 'bossMidpoint', 'player', 'You rehearsed that line.'),
+  ccue(40, 'bossMidpoint', 'the_wildcard', 'For years.'),
+  ccue(40, 'postFail', 'the_wildcard', 'Again! Same classroom, same exam, less creative suffering.', { pick: 'random' }),
+  ccue(40, 'postFail', 'the_wildcard', 'You watched my joke and missed my card. Classic.', { pick: 'random' }),
+  ccue(40, 'postFail', 'the_wildcard', 'Good idea. Bad timing. Fortunately, timing is teachable.', { pick: 'random' }),
+  ccue(40, 'bossDefeat', 'the_wildcard', 'Excellent!'),
+  ccue(40, 'bossDefeat', 'player', 'That sounded sincere.'),
+  ccue(40, 'bossDefeat', 'the_wildcard', 'It is. You learned the important bit.'),
+  ccue(40, 'bossDefeat', 'player', 'Which bit?'),
+  ccue(40, 'bossDefeat', 'the_wildcard', 'When I make noise, watch the cards.'),
+  ccue(40, 'chapterExit', 'the_wildcard', 'Come on. Next room has flowers, sunlight and a man with opinions about absolutely everything.'),
+  ccue(40, 'chapterExit', 'player', 'Worse than you?'),
+  ccue(40, 'chapterExit', 'the_wildcard', 'Much more direct.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);
@@ -2919,7 +3062,9 @@ function closeRoom(G, reason) {
   clearAuto(G);
   clearVote(G);
   for (let i = 0; i < 4; i++) clearRankedTakeover(G, i);
-  io.to(G.code).emit('roomClosed', { reason });
+  // campaign flag for the same reason leaveRoom sends one — it decides
+  // where the client lands (chapter map vs casual landing screen).
+  io.to(G.code).emit('roomClosed', { reason, campaign: !!G.campaign });
   delete rooms[G.code];
 }
 
@@ -4749,7 +4894,11 @@ io.on('connection', (socket) => {
 
     const wasHost = !!(G.hostToken && G.players[idx].token === G.hostToken);
     socket.leave(G.code);
-    socket.emit('leftRoom');
+    // The flag routes the client home correctly: a campaign player goes
+    // back to the chapter map, not the casual landing screen. Read off G
+    // here rather than client-side, since the room may be closed (and the
+    // client's own state cleared) by the time this is handled.
+    socket.emit('leftRoom', { campaign: !!G.campaign });
 
     if (G.phase === 'lobby' || G.phase === 'final') {
       // Free the seat entirely
@@ -4822,13 +4971,20 @@ setInterval(() => {
   for (const code in rooms) {
     const G = rooms[code];
 
-    // A Daily Challenge or Campaign room is deliberately NOT covered by
-    // the solo-vs-AI exemption below: each is a short attempt (a single
-    // hand, or up to 4 for a boss), the result is already banked in
-    // Postgres the moment it ends, and there's nothing to come back to —
-    // so let it close on the normal timers instead of lingering for the
-    // life of the process.
-    if (!G.ranked && !G.daily && !G.campaign && G.players.filter(p => !p.isAI).length === 1) {
+    // A Daily Challenge room is deliberately NOT covered by the
+    // solo-vs-AI exemption below: it's a single five-minute hand, the
+    // result is already banked in Postgres the moment it ends, and
+    // there's nothing to come back to — so let it close on the normal
+    // timers instead of lingering for the life of the process.
+    //
+    // A CAMPAIGN room is covered, exactly like a solo-vs-AI casual game:
+    // an in-progress level must survive the player closing the app,
+    // backgrounding it, or losing connection, and must only be lost when
+    // they deliberately leave (the home button, which closes the room via
+    // leaveRoom). So no idle/empty timer may reap it. The known limit is
+    // the same one solo casual has: rooms are in-memory, so a server
+    // restart/redeploy still loses it — see CLAUDE.md.
+    if (!G.ranked && !G.daily && G.players.filter(p => !p.isAI).length === 1) {
       G.emptySince = null;
       continue;
     }

@@ -2197,6 +2197,17 @@ const CAMPAIGN_CHARACTERS = {
   nervous_player: { id: 'nervous_player', name: 'Nervous Player' },
   // Same deal as every other boss who's already a House Regular.
   the_closer:  { id: 'the_closer',  name: 'The Closer', seatAvatar: 'regular_closer' },
+  private1:    { id: 'private1',    name: 'Private Player #1' },
+  private2:    { id: 'private2',    name: 'Private Player #2' },
+  private3:    { id: 'private3',    name: 'Private Player #3' },
+  // Unlike every boss since The Sharp, NOT given a seatAvatar — fresh
+  // dedicated portrait art was supplied for her specifically rather
+  // than reusing the existing regular_countess House Regular (a
+  // different pose/setting entirely), a deliberate art choice rather
+  // than an oversight. She renders through the same generic
+  // /campaign/characters/the_countess.webp path every non-reused
+  // character already uses, both at the table and in dialogue.
+  the_countess:{ id: 'the_countess',name: 'The Countess' },
   player:      { id: 'player',      name: null },
 };
 
@@ -2236,6 +2247,11 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // means me." / "It does.") — the same one-level-early tease as every
   // other chapter boss before he takes seat #3 for Level 80.
   8: { regulars: ['vault1', 'vault2', 'vault3'], bossSeat: 2 },
+  // The Countess never sits until she claims seat #3 for Level 90 —
+  // same one-level-early tease, at Level 89's postClear ("PRIVATE
+  // PLAYER #3 stands. THE COUNTESS rises from her chair and crosses to
+  // the table.").
+  9: { regulars: ['private1', 'private2', 'private3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2271,6 +2287,7 @@ const CAMPAIGN_CHAPTERS = [
   // No background art supplied yet — falls back to the CSS/SVG
   // placeholder until public/campaign/chapters/vault.webp exists.
   { id: 8, title: 'The Vault', levelStart: 71, levelEnd: 80, slug: 'vault', bossId: 'the_closer' },
+  { id: 9, title: "The Countess's Antechamber", levelStart: 81, levelEnd: 90, slug: 'countess_antechamber', bossId: 'the_countess' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -2652,6 +2669,45 @@ const CAMPAIGN_LEVELS = {
           parseHand('J♦ J♥ 8♦ J♠ K♦ A♣ K♥ Q♦ 8♥ 7♠ 6♥ 10♣ 9♣'),
         ],
         objective: { type: 'score', min: 21, gold: 63 } },
+
+  // Chapter 9 — plain score objectives throughout, same call as
+  // Chapters 6-8.
+  81: { id: 81, chapter: 9, type: 'Harder', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L81-c575', hand: parseHand('J♥ A♦ 2♦ 5♥ 4♥ 8♥ 10♦ 8♣ 7♣ 7♦ J♠ K♣ K♦'),
+        objective: { type: 'score', min: 38, gold: 57 } },
+  82: { id: 82, chapter: 9, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L82-c311', hand: parseHand('3♦ 6♠ Q♥ 7♥ 9♥ K♣ 2♥ 8♥ J♦ J♠ A♣ 3♠ 10♦'),
+        objective: { type: 'score', min: 16, gold: 42 } },
+  83: { id: 83, chapter: 9, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L83-c388', hand: parseHand('7♥ 2♥ J♠ 2♠ 3♦ 10♠ Q♣ A♠ J♥ A♣ Q♠ J♦ 10♣'),
+        objective: { type: 'score', min: 17, gold: 35 } },
+  84: { id: 84, chapter: 9, type: 'Harder', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L84-c91', hand: parseHand('4♣ A♣ 5♣ 6♥ J♥ J♦ 2♦ 2♣ J♠ K♣ 8♠ 9♣ A♦'),
+        objective: { type: 'score', min: 41, gold: 72 } },
+  85: { id: 85, chapter: 9, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L85-c3', hand: parseHand('5♣ J♠ 4♦ 10♠ 6♥ 6♦ Q♣ 3♦ 7♣ 7♦ K♥ 2♦ Q♠'),
+        objective: { type: 'score', min: 20, gold: 28 } },
+  86: { id: 86, chapter: 9, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L86-c65', hand: parseHand('8♥ 9♣ K♦ A♥ 5♣ A♣ K♥ 8♦ K♠ 3♥ 2♦ 5♥ 6♠'),
+        objective: { type: 'score', min: 20, gold: 26 } },
+  87: { id: 87, chapter: 9, type: 'Harder', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L87-c639', hand: parseHand('J♦ 10♥ 5♦ Q♥ 4♦ A♦ 4♠ Q♠ 7♦ 5♣ 9♦ 10♠ K♦'),
+        objective: { type: 'score', min: 58, gold: 64 } },
+  88: { id: 88, chapter: 9, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L88-c66', hand: parseHand('A♦ 6♠ K♦ 9♣ Q♥ 3♣ K♣ 5♣ 10♠ A♥ A♣ 5♠ 9♦'),
+        objective: { type: 'score', min: 21, gold: 44 } },
+  89: { id: 89, chapter: 9, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L89-c359', hand: parseHand('Q♥ Q♦ 10♦ 3♣ A♣ 2♠ J♠ A♥ 4♣ 5♠ 5♦ 8♥ K♦'),
+        objective: { type: 'score', min: 22, gold: 39 } },
+  90: { id: 90, chapter: 9, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_countess',
+        seed: 'ddp-boss-refine-L90-c957',
+        hands4: [
+          parseHand('10♠ 8♦ K♣ 4♠ J♠ 2♦ 9♥ K♠ 8♠ 6♦ 8♥ 5♦ A♦'),
+          parseHand('8♦ 4♣ 5♣ 10♦ 7♣ K♠ 6♣ K♣ 4♦ 9♥ 9♣ A♠ 5♥'),
+          parseHand('3♦ 2♣ 4♥ 10♦ 2♠ Q♦ 3♥ 4♦ 6♠ A♦ 8♣ 8♦ Q♠'),
+          parseHand('Q♦ A♦ 3♠ 7♦ J♣ 10♣ 4♠ 6♣ 2♥ A♣ K♣ 6♠ 5♦'),
+        ],
+        objective: { type: 'score', min: 26, gold: 42 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -3794,6 +3850,148 @@ const CAMPAIGN_STORY_CUES = [
   ccue(80, 'chapterExit', 'the_closer', 'Go back upstairs.'),
   ccue(80, 'chapterExit', 'player', 'And then?'),
   ccue(80, 'chapterExit', 'the_closer', 'Someone has been waiting longer than you know.'),
+
+  // Chapter 9 — The Countess's Antechamber. Same "nothing after ON
+  // CLEAR → no postClear bucket" rule as Chapter 8; only 81, 85, 88 and
+  // 89 have real content after the marker.
+  ccue(81, 'preLevel', null, 'The lift opens. The PLAYER steps out, expecting the Grand Ballroom corridor. Before the public doors can open, a calm voice comes from the shadow beside them.'),
+  ccue(81, 'preLevel', 'the_countess', 'Do not go back in yet.'),
+  ccue(81, 'preLevel', null, 'THE COUNTESS steps into the light. Elegant, composed, impossible to place by age. She does not introduce herself.'),
+  ccue(81, 'preLevel', 'player', 'Who are you?'),
+  ccue(81, 'preLevel', 'the_countess', 'I have been following you since the moment you entered this casino.'),
+  ccue(81, 'preLevel', 'player', 'That is not an answer.'),
+  ccue(81, 'preLevel', 'the_countess', 'No. It is a reason to come with me.'),
+  ccue(81, 'preLevel', null, 'She opens a narrow door the PLAYER never noticed. Beyond it: a private salon and a four-seat table.'),
+  ccue(81, 'preLevel', 'the_countess', 'Come.'),
+  ccue(81, 'preLevel', null, 'Three private players are waiting. THE COUNTESS remains standing as the PLAYER sits.'),
+  ccue(81, 'postClear', null, 'She watches the entire hand without blinking at the wrong moments.'),
+
+  ccue(82, 'preLevel', null, 'The next table is set in the same private salon. THE COUNTESS stands beside a black curtain embroidered with a single silver spade.'),
+  ccue(82, 'preLevel', 'the_countess', 'Do you know who you are chasing?'),
+  ccue(82, 'preLevel', 'player', 'The next boss?'),
+  ccue(82, 'preLevel', 'the_countess', 'No.'),
+  ccue(82, 'preLevel', 'player', 'Dame de Pique?'),
+  ccue(82, 'preLevel', 'the_countess', 'That is a name. I asked if you know who.'),
+  ccue(82, 'preLevel', 'player', 'Then no.'),
+  ccue(82, 'preLevel', 'the_countess', 'Good. Certainty would be more dangerous at this point.'),
+  ccue(82, 'preLevel', null, 'The hand begins.'),
+  ccue(82, 'postClear', 'private1', 'She does that.'),
+  ccue(82, 'postClear', 'player', 'Answers questions with more questions?'),
+  ccue(82, 'postClear', 'private1', 'Usually worse ones.'),
+
+  ccue(83, 'preLevel', null, 'THE COUNTESS places a fresh deck on the table before the dealer can.'),
+  ccue(83, 'preLevel', 'the_countess', 'I know when people cheat.'),
+  ccue(83, 'preLevel', 'player', 'Are you accusing me?'),
+  ccue(83, 'preLevel', 'the_countess', 'No.'),
+  ccue(83, 'preLevel', 'player', 'Then why say it?'),
+  ccue(83, 'preLevel', 'the_countess', 'Because if you were cheating, you would now be wondering how I knew.'),
+  ccue(83, 'preLevel', 'player', 'And if I am not?'),
+  ccue(83, 'preLevel', 'the_countess', 'You wonder why I said it.'),
+  ccue(83, 'preLevel', null, 'She gives the faintest smile.'),
+  ccue(83, 'preLevel', 'the_countess', 'Both reactions tell me something.'),
+  ccue(83, 'preLevel', null, 'The hand begins. The PLAYER clears cleanly.'),
+
+  ccue(84, 'preLevel', null, 'A portrait hangs in the antechamber: a woman in black, face turned away, a spade worked into the frame.'),
+  ccue(84, 'preLevel', 'player', 'Is that her?'),
+  ccue(84, 'preLevel', 'the_countess', 'Perhaps.'),
+  ccue(84, 'preLevel', 'player', 'You do not know?'),
+  ccue(84, 'preLevel', 'the_countess', 'I did not say that.'),
+  ccue(84, 'preLevel', 'player', 'What do people say?'),
+  ccue(84, 'preLevel', 'the_countess', 'That there is someone above the rooms. Someone who knows the games, the players, the houses.'),
+  ccue(84, 'preLevel', 'player', 'Controls them?'),
+  ccue(84, 'preLevel', 'the_countess', 'Rumors prefer dramatic verbs.'),
+  ccue(84, 'preLevel', null, 'She turns away from the portrait.'),
+  ccue(84, 'preLevel', 'the_countess', 'Play.'),
+
+  ccue(85, 'preLevel', null, 'The PLAYER looks again at the silver-spade curtain. No one has passed through it.'),
+  ccue(85, 'preLevel', 'player', 'Why has nobody told me about this room?'),
+  ccue(85, 'preLevel', 'the_countess', 'Because almost nobody sees it.'),
+  ccue(85, 'preLevel', 'player', 'Why me?'),
+  ccue(85, 'preLevel', 'the_countess', 'Because you kept climbing when the rooms changed around you.'),
+  ccue(85, 'preLevel', 'player', 'That cannot be enough.'),
+  ccue(85, 'preLevel', 'the_countess', 'It is not.'),
+  ccue(85, 'preLevel', 'player', 'Then what else?'),
+  ccue(85, 'preLevel', 'the_countess', 'Win this hand first.'),
+  ccue(85, 'preLevel', null, 'The PLAYER does.'),
+  ccue(85, 'postClear', 'the_countess', 'Still curious. Good.'),
+
+  ccue(86, 'preLevel', null, 'THE COUNTESS walks the PLAYER past a narrow gallery of locked doors, each marked only with a subtle suit symbol worked into the metal.'),
+  ccue(86, 'preLevel', 'player', 'Spades.'),
+  ccue(86, 'preLevel', 'the_countess', 'Here, yes.'),
+  ccue(86, 'preLevel', 'player', 'And the others?'),
+  ccue(86, 'preLevel', 'the_countess', 'Every great casino has rooms nobody advertises.'),
+  ccue(86, 'preLevel', 'player', 'Throne rooms?'),
+  ccue(86, 'preLevel', 'the_countess', 'That is what some insiders call them.'),
+  ccue(86, 'preLevel', 'player', 'Who sits in them?'),
+  ccue(86, 'preLevel', 'the_countess', "You are asking tomorrow's question during tonight's hand."),
+  ccue(86, 'preLevel', null, 'She returns the PLAYER to the table.'),
+
+  ccue(87, 'preLevel', null, 'The private players speak more quietly than before. THE COUNTESS watches from beside the curtain.'),
+  ccue(87, 'preLevel', 'private2', 'You really did not know?'),
+  ccue(87, 'preLevel', 'player', 'Know what?'),
+  ccue(87, 'preLevel', 'private2', 'Who people whisper about at the top.'),
+  ccue(87, 'preLevel', 'the_countess', 'Enough.'),
+  ccue(87, 'preLevel', null, 'The room goes silent immediately.'),
+  ccue(87, 'preLevel', 'player', 'Dame de Pique.'),
+  ccue(87, 'preLevel', 'the_countess', 'You have heard a name now. Do not mistake that for understanding it.'),
+  ccue(87, 'preLevel', 'player', 'Is she real?'),
+  ccue(87, 'preLevel', 'the_countess', 'Play the hand.'),
+  ccue(87, 'preLevel', null, 'The PLAYER clears, but the question remains unanswered.'),
+
+  ccue(88, 'preLevel', null, 'For the first time, THE COUNTESS stands directly behind the PLAYER for the full hand.'),
+  ccue(88, 'preLevel', null, 'The silver-spade curtain behind her moves slightly, although there is no visible draft.'),
+  ccue(88, 'preLevel', 'player', 'What is behind that?'),
+  ccue(88, 'preLevel', 'the_countess', 'A door.'),
+  ccue(88, 'preLevel', 'player', 'You know what I mean.'),
+  ccue(88, 'preLevel', 'the_countess', 'Yes.'),
+  ccue(88, 'preLevel', 'player', 'And?'),
+  ccue(88, 'preLevel', 'the_countess', 'You are not there yet.'),
+  ccue(88, 'preLevel', null, 'The PLAYER clears.'),
+  ccue(88, 'postClear', 'the_countess', 'Closer.'),
+
+  ccue(89, 'preLevel', null, 'The Countess is already seated in the room when the PLAYER arrives, but not at the game table. She watches from a high-backed chair beside the curtain.'),
+  ccue(89, 'preLevel', 'the_countess', 'One more table before mine.'),
+  ccue(89, 'preLevel', 'player', 'And if I win yours?'),
+  ccue(89, 'preLevel', 'the_countess', 'Then I open the curtain.'),
+  ccue(89, 'preLevel', 'player', 'And I meet Dame de Pique?'),
+  ccue(89, 'preLevel', 'the_countess', 'You meet what is waiting behind it.'),
+  ccue(89, 'preLevel', null, 'The PLAYER looks at the three private opponents. PRIVATE PLAYER #3 slowly stands after the deal is completed.'),
+  ccue(89, 'preLevel', 'private3', 'I suppose that will be my chair next.'),
+  ccue(89, 'preLevel', 'the_countess', 'If the PLAYER clears.'),
+  ccue(89, 'preLevel', null, 'The PLAYER clears.'),
+  ccue(89, 'postClear', null, 'PRIVATE PLAYER #3 stands. THE COUNTESS rises from her chair and crosses to the table.'),
+
+  ccue(90, 'bossIntro', null, 'THE COUNTESS takes the open seat. Behind her, the silver-spade curtain remains closed.'),
+  ccue(90, 'bossIntro', 'the_countess', 'Before we begin, one last question.'),
+  ccue(90, 'bossIntro', 'player', 'Go on.'),
+  ccue(90, 'bossIntro', 'the_countess', 'If the truth is stranger than the rumor, do you still want it?'),
+  ccue(90, 'bossIntro', 'player', 'Yes.'),
+  ccue(90, 'bossIntro', 'the_countess', 'Good. I would have known if that answer was false.'),
+  ccue(90, 'bossIntro', null, 'The boss match begins.'),
+  // Two stinger blocks fire in sequence off the one trigger, same
+  // pattern as every earlier boss level's combined midpoint.
+  ccue(90, 'bossMidpoint', 'the_countess', 'You are not cheating.'),
+  ccue(90, 'bossMidpoint', 'player', 'I told you that.'),
+  ccue(90, 'bossMidpoint', 'the_countess', 'You told me nothing. Your play did.'),
+  ccue(90, 'bossMidpoint', 'the_countess', 'You have spent ninety levels learning people.'),
+  ccue(90, 'bossMidpoint', 'player', 'And now?'),
+  ccue(90, 'bossMidpoint', 'the_countess', 'Now you meet a problem that may not be one person.'),
+  ccue(90, 'postFail', 'the_countess', 'Not yet. Curiosity is not qualification. Again.', { pick: 'random' }),
+  ccue(90, 'postFail', 'the_countess', 'You looked beyond the table too soon. Deal again.', { pick: 'random' }),
+  ccue(90, 'postFail', 'the_countess', 'The door stays closed until the game says otherwise.', { pick: 'random' }),
+  ccue(90, 'bossDefeat', null, 'The final score settles.'),
+  ccue(90, 'bossDefeat', null, 'THE COUNTESS stands. For the first time, she looks almost pleased.'),
+  ccue(90, 'bossDefeat', 'the_countess', 'All right.'),
+  ccue(90, 'bossDefeat', 'player', 'The curtain?'),
+  ccue(90, 'bossDefeat', 'the_countess', 'The curtain.'),
+  ccue(90, 'chapterExit', null, 'She pulls it aside. Behind it are enormous black doors traced with silver spades. No handle is visible.'),
+  ccue(90, 'chapterExit', 'player', 'You said almost nobody sees this.'),
+  ccue(90, 'chapterExit', 'the_countess', 'That remains true.'),
+  ccue(90, 'chapterExit', null, 'THE COUNTESS presses one gloved hand to the center spade. The doors unlock from within with a deep mechanical sound.'),
+  ccue(90, 'chapterExit', 'the_countess', 'Do not waste your first question asking which one is real.'),
+  ccue(90, 'chapterExit', 'player', 'Which one?'),
+  ccue(90, 'chapterExit', null, 'THE COUNTESS looks at the opening doors.'),
+  ccue(90, 'chapterExit', 'the_countess', 'Exactly.'),
 
   // Prologue cinematic — the screenplay's opening EXT. CITY STREET beat
   // (motorcar, envelope, facade), fed in verbatim like every other cue.

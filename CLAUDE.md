@@ -3118,6 +3118,93 @@ before pushing.
 - Gold medallions for Levels 71-80 are deferred along with 51-70's, by
   the user's own choice.
 
+## Chapter 9 — The Countess's Antechamber (Levels 81-90, Boss: The Countess)
+- **Same spreadsheet source as Chapters 6-8** — all ten levels come
+  straight off the main sheet, plain `score` objectives throughout, no
+  fixed-hand values invented. `forcePassDir` is `'across'` for all nine
+  non-boss levels (the sheet's own direction column), boss cycles
+  L/R/A/K like every other x4 boss level.
+- **The Countess is the FIRST boss who does NOT reuse an existing House
+  Regular avatar, and that's a deliberate art choice, not an
+  oversight.** `regular_countess`/`countess.webp` already existed (used
+  by the original House Regulars set), but the art supplied for this
+  chapter — `THE countess.png` — is a completely different pose and
+  setting, clearly meant as her own dedicated campaign portrait rather
+  than a reuse. So `the_countess` in `CAMPAIGN_CHARACTERS` carries no
+  `seatAvatar`, unlike every boss since The Sharp — she renders through
+  the same generic `/campaign/characters/the_countess.webp` fallback
+  path any non-reused character uses, both at the table
+  (`campaignCharId`) and in dialogue (`campaignPortraitHTML`). The
+  pre-existing `regular_countess` avatar and its unlock rules are
+  completely untouched by this — the two are unrelated art assets that
+  happen to depict the same character.
+- **`private1/2/3` are the antechamber's three regulars** (from the
+  screenplay's "PRIVATE PLAYER #1/2/3"), following the same naming
+  convention as every other chapter's roster (`vault1..3`,
+  `ballroom1..3`, etc.).
+- **The Countess never sits until the exact same one-level-early tease
+  every chapter boss uses** — Level 89's `postClear` has Private Player
+  #3 give up the chair implicitly ("I suppose that will be my chair
+  next." / "If the PLAYER clears.") and stand once the player clears,
+  and Level 90's `bossIntro` is where she actually takes the seat.
+- **Confirmed the "nothing after ON CLEAR → no postClear cue" rule
+  against this chapter's own raw text again** rather than assuming it
+  from Chapter 8 — only Levels 81, 85, 88 and 89 have real content after
+  the marker; the other six carry only a `preLevel` bucket.
+- **Level 90's `bossDefeat`/`chapterExit` split follows the same
+  precedent as Levels 70/80**: the immediate table-side reaction to the
+  win — the score settling, Countess standing "almost pleased," the
+  short "All right."/"The curtain?"/"The curtain." exchange — is
+  `bossDefeat`; the moment the scene turns to the literal physical
+  transition ("She pulls it aside..." onward, through the doors
+  unlocking and the "which one is real" tease that hands off into
+  Chapter 10) is `chapterExit`.
+- **`bossMidpoint` runs two stinger blocks in sequence off the one
+  trigger**, same pattern as every earlier boss level.
+- Verified structurally (every speaker id — `private1/2/3`,
+  `the_countess` — resolves in both the server and client
+  `CAMPAIGN_CHARACTERS` tables via a Python cross-check of all 127
+  `ccue()` calls tagged 81-90, and every one of the 10 levels correctly
+  tagged `chapter: 9`) and live: a stubbed-`io` copy of `index.html` was
+  driven through `renderCampaignMap`/`campaignRenderChapterView` with a
+  synthetic `campaignData` unlocking through Level 90, confirming the
+  map renders "The Countess's Antechamber" / "Levels 81–90" with her
+  real dedicated photo in the boss-teaser corner (not the reused
+  avatar) and Table 90 marked BOSS. Three representative sequences —
+  Level 81's `preLevel`+`postClear` (11 lines, correctly resolving The
+  Countess's real portrait on every one of her lines), Level 87's
+  `preLevel` (the Private Player #2 exchange, 11 lines) and Level 90's
+  full boss sequence (`bossIntro`, `postFail`'s random-pick bucket
+  confirmed to show exactly one of its three lines and correctly no-op
+  on replay, `bossDefeat`, `chapterExit`) — were driven through the
+  actual `campaignMaybeShow`/`campaignDialogueStep` renderer (a
+  byte-identical `ccue()` re-implementation, per-bucket counter
+  included, fed the real extracted call text) and matched the intended
+  narrator/speaker order, names, and portraits exactly.
+- **Chapter background and all four character portraits arrived the
+  same session and are all in**:
+  `public/campaign/chapters/countess_antechamber.webp` (from
+  `Countesses antechamber.png`, 1672×941 — same source resolution as
+  every chapter background since Cabaret — resized to the same
+  1400×788 / quality-85 convention, no crop needed) and
+  `public/campaign/characters/the_countess.webp` /
+  `private1/2/3.webp` (from 1254×1254 medallion sources). **Crop method
+  was measured per-image again rather than assumed**: `THE countess.png`
+  has a fleur-de-lis top ornament exceeding its ring's own radius by
+  68px, `Countess player 1/3` have smaller top/bottom ornaments (2-3px
+  excess), `Countess player 2` is a perfectly plain ring (no excess at
+  all) — a genuine mix of styles in one batch, unlike any earlier
+  chapter's set. All four still fit comfortably inside a circular mask
+  at radius = width/2 (627px against a max actual reach of 610-625px),
+  so one crop method served the whole batch despite the visual
+  inconsistency between sources. Verified live via
+  `campaignPortraitHTML` at real in-game size: all four load with no
+  clipping.
+- **Nothing missing for this chapter** — background, all three
+  regulars, and the boss all have real art. Gold medallions for Levels
+  81-90 are deferred along with every earlier chapter's, by the user's
+  own choice.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

@@ -3030,8 +3030,13 @@ async function createCampaignRoom(name, avatar, accountId, socketId, levelId) {
   // Seats 1-3 are the chapter's own cast (boss substituted in at an x0
   // level), not "Computer 2/3/4" — the whole point of a story mode is
   // that you're playing these specific people. seatAvatar dresses the
-  // seat with real avatar art where that character has some; the rest
-  // fall back to the initials treatment every undressed seat already uses.
+  // seat with real avatar art where that character has some; campaignCharId
+  // is sent alongside it so the client can render the SAME dialogue
+  // portrait (real photo if CAMPAIGN_PORTRAIT_SRC has one, the gold
+  // monogram badge otherwise) for every character at the table, not just
+  // the handful who happen to already be a House Regular avatar — before
+  // this field existed, every AI seat's table/roster/summary/final avatar
+  // was hardcoded to the generic robot glyph regardless of `avatar`.
   const seatIds = campaignSeatCharacters(level);
   for (let i = 1; i < 4; i++) {
     const cid = seatIds[i - 1];
@@ -3039,6 +3044,7 @@ async function createCampaignRoom(name, avatar, accountId, socketId, levelId) {
     Object.assign(G.players[i], {
       name: ch.name || `Computer ${i + 1}`,
       avatar: ch.seatAvatar ? sanitizeAvatar(ch.seatAvatar) : null,
+      campaignCharId: cid || null,
       // Marks the boss's seat wherever it lands (it is NOT always seat 1 —
       // each chapter's roster decides which chair the boss takes over).
       // Set here rather than client-side for exactly that reason.
@@ -3598,6 +3604,11 @@ function publicState(G) {
       // (see getPlayerProfile), and both those callers already gate on
       // it being truthy before rendering a click affordance.
       accountId: p.accountId || null,
+      // Which campaign character this AI seat is playing, if any — lets
+      // the client render that character's own portrait (see
+      // createCampaignRoom) instead of the generic AI glyph. Always null
+      // outside campaign rooms.
+      campaignCharId: p.campaignCharId || null,
       rankMaterial: p.rankMaterial || null,
       crest: p.crest || null, crestLevel: p.crestLevel || 1,
       crest2: p.crest2 || null, crest2Level: p.crest2Level || 1,

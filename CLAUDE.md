@@ -2588,6 +2588,104 @@ before pushing.
   `campaignArtMissing`-gated against repeat 404s, so loading them eagerly
   costs nothing extra.
 
+## Campaign AI seats show their character's real portrait at the table
+- **Every campaign character already has real portrait art** at
+  `public/campaign/characters/<id>.webp` — all 17 of them, including the
+  "unnamed" regulars (`reg1..3`, `lounge1..3`, `lib1..3`, `cons1..3`,
+  `rooftop1..2`, `glass_baron`, `concierge`). This was already true
+  before this change and easy to miss: only the 5 characters who are
+  ALSO an existing House Regular avatar (`the_sharp`/`the_scholar`/
+  `the_wildcard`/`the_optimist`/`cons_guest`) are listed in
+  `CAMPAIGN_PORTRAIT_SRC`; everyone else was always falling through to
+  `campaignPortraitImg`'s own `/campaign/characters/${id}.webp` fallback,
+  which was never a hypothetical placeholder path — the files were
+  already sitting there. The only thing standing between that art and
+  the actual table was the bug below.
+- **The actual bug: every AI seat's avatar at the table, roster rail,
+  round-summary sheet and final-standings row was hardcoded to the
+  generic 🤖 glyph, unconditionally on `p.isAI`** — `seatHTML`,
+  `rosterRowHTML`, the summary sheet's identity cell, and `finalRowHTML`
+  all did `p.isAI ? '🤖' : avatarHTML(p.avatar,p.name)`, which never even
+  looked at `p.avatar`. This bug predates the campaign feature entirely
+  (it's the same expression used for a plain solo-vs-AI casual bot,
+  where showing 🤖 is correct) — campaign just inherited it, so even the
+  5 seatAvatar-dressed bosses were showing the robot glyph instead of
+  their real photo the whole time campaign existed.
+- **Fixed with a new field, `campaignCharId`, sent per-seat in
+  `publicState`** — set in `createCampaignRoom` alongside `avatar`
+  (`seatIds[i-1]`, the same id `campaignSeatCharacters` already resolves
+  boss-substitution through), always `null` outside campaign rooms. All
+  four render sites now check it FIRST: `p.campaignCharId ?
+  campaignPortraitHTML(p.campaignCharId) : p.isAI ? '🤖' :
+  avatarHTML(p.avatar,p.name)` — so a real campaign seat always renders
+  through the same portrait pipeline the dialogue cards already use
+  (real photo if `CAMPAIGN_PORTRAIT_SRC`/the characters/ fallback has
+  one, the gold monogram badge otherwise — never actually the monogram
+  in practice, per the note above), while a genuine generic bot (casual/
+  ranked/daily solo-vs-AI) is completely unaffected, since
+  `campaignCharId` is simply absent there.
+  **`p.avatar` itself is untouched** — still set from `seatAvatar` for
+  the 5 reused characters, just no longer the thing being read for
+  rendering; kept in case anything else ever needs the underlying
+  in-game avatar id rather than the campaign identity.
+- `.avatar .camp-portrait{width:100%;height:100%}` is the one CSS
+  addition this needed — `campaignPortraitHTML`'s existing per-context
+  size rules (`.camp-corner-tr`/`.camp-boss-teaser`/`.camp-modal-opp`)
+  only cover spots with no `.avatar` ancestor to size against; this one
+  rule is what lets it drop into the bare `.avatar`, `.avatar.md` and
+  `.ros-av.avatar` wrappers all four render sites already use, at
+  whatever size each already resolves to, with zero new per-context
+  rules. Relies on the same "explicit size beats `place-items:center`'s
+  shrink-to-fit" mechanism `.av-img` already uses for the same reason.
+
+## Level-detail popup — two columns, not one long stack
+- **The level's main goal now sits right next to the level name**
+  (`.camp-modal-headline`, baseline-aligned flex row, wraps to two lines
+  for a long objective) instead of in its own boxed panel underneath —
+  `campaignObjectiveParts(level)` replaced `campaignObjectiveHTML`,
+  returning `{main, gold, dir}` separately instead of one combined HTML
+  blob, since the caller now places `main` next to the title and only
+  `gold`/`dir` in the small block beneath it. `dir` is deliberately
+  returned as plain text (not pre-escaped) since the caller sets it via
+  `.textContent`, unlike `main`/`gold` which carry `<b>`/`<i>` tags and
+  go through `.innerHTML`.
+- **"Best scores" moved from below to a second column on the right**
+  (`.camp-modal-columns`, a two-column flex row), specifically so it
+  stops being what forces the whole card to scroll. `.camp-modal-friends`
+  already had `overflow-y:auto`, but every friend row still pushed the
+  card taller first — the WHOLE card scrolled, not just the list.
+- **`align-items:stretch` was tried first on `.camp-modal-columns` and
+  reverted — it doesn't actually solve the scrolling problem, it just
+  relocates it.** With stretch, the row's height is the taller of the
+  two columns' own natural content heights, and the right column's own
+  content (label + your row + every friend) has nothing bounding IT
+  either — so a handful of friends still grows the right column past the
+  left column's height, which stretch then applies back to the LEFT
+  column too, and the row (and the card) is exactly as tall as before,
+  just for a different reason. Confirmed empirically: at 6 friends the
+  card measured `scrollHeight 415` against `clientHeight 361` — still
+  scrolling.
+- **The actual fix is `align-items:flex-start` plus a fixed
+  `min-height:150px;max-height:200px` on `.camp-modal-side-col`** —
+  concrete numbers, measured against the left column's own real content
+  height (≈165px for a plain level, ≈195px for a boss level's extra sub
+  line), not an attempt to dynamically match it. This decouples the two
+  columns entirely: the left column is always exactly as tall as its own
+  content regardless of friend count; the right column ranges between
+  150–200px regardless of friend count (a short list doesn't look like
+  an empty stub, a long one scrolls via `.camp-modal-friends{flex:1;
+  min-height:0;overflow-y:auto}` inside that fixed ceiling instead of
+  ever pushing the row taller). Verified with 0, 6 and 20 fake friend
+  rows at both 915×412 and 667×375 (the smallest realistic landscape
+  phone): `card.scrollHeight === card.clientHeight` in every case — the
+  outer card never needs to scroll — while the friends list's own
+  `scrollHeight` correctly exceeds its `clientHeight` (774 vs 117 at 20
+  friends) and scrolls internally.
+- `.camp-modal-card`'s `max-width` grew from 440px to 560px to give the
+  two columns room — this modal only ever opens over the campaign
+  screen, which is landscape-only, so the extra width is never fighting
+  a narrow portrait viewport.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

@@ -5239,6 +5239,17 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 .camp-portrait-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
 .camp-corner-tr .camp-portrait{width:30px;height:30px}
 .camp-boss-teaser>.camp-portrait{width:30px;height:30px}
+/* Fills whichever .avatar-classed wrapper it lands in at the actual
+   table — the opponent seat block, the roster rail, the round-summary
+   sheet's identity cell and the final-standings row all already size
+   THAT element (bare .avatar, .avatar.md, .ros-av.avatar); this is what
+   lets campaignPortraitHTML drop into any of them with no per-context
+   rule, unlike the three explicitly-sized spots above which have no
+   .avatar ancestor to inherit a size from. .avatar's own
+   `display:grid;place-items:center` would otherwise shrink an
+   unsized inline-block to its content instead of stretching it — the
+   same reason .av-img needs the explicit 100%/100% it already has. */
+.avatar .camp-portrait{width:100%;height:100%}
 
 /* ── Story dialogue popup ──
    Extends the Tutorial callout's fade+slide/scrim approach with what it
@@ -5355,7 +5366,7 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 }
 .camp-modal-scrim.show{opacity:1;pointer-events:auto}
 .camp-modal-card{
-  position:relative;max-width:440px;width:100%;max-height:88vh;overflow-y:auto;
+  position:relative;max-width:560px;width:100%;max-height:88vh;overflow-y:auto;
   background:linear-gradient(180deg, var(--felt-0) 0%, var(--felt-1) 100%);
   border:1px solid rgba(var(--ddp-brass-rgb),.45);border-radius:18px;
   box-shadow:0 16px 40px rgba(var(--ddp-scrim-rgb),.65);
@@ -5371,26 +5382,57 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
   background:rgba(var(--ddp-scrim-rgb),.4);border:1px solid rgba(var(--ddp-brass-rgb),.3);
   color:var(--muted);font-size:13px;cursor:pointer;
 }
-.camp-modal-title{font-family:'Playfair Display',serif;font-weight:700;font-size:20px;color:var(--gold-hi)}
-.camp-modal-sub{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
-.camp-modal-objective{
-  margin-top:14px;padding:12px 14px;border-radius:12px;
-  background:rgba(var(--ddp-scrim-rgb),.35);border:1px solid rgba(var(--ddp-brass-rgb),.22);
+/* Deliberately NOT align-items:stretch. That was tried first and doesn't
+   work here — .camp-modal-side-col's box (label + your row + the friends
+   list) has nothing bounding IT either, so with stretch the taller of
+   the two columns always wins and a handful of friends silently grows
+   the whole row (and the outer card) right back to needing to scroll,
+   defeating the point of moving the list out here at all. min-width:0 on
+   both lets their own text/ellipsis rules do their job instead of
+   forcing the row wider. */
+.camp-modal-columns{display:flex;gap:18px;align-items:flex-start}
+.camp-modal-main-col{flex:1 1 55%;min-width:0}
+/* The real cap: min/max-height are BOTH fixed numbers, measured against
+   the left column's own natural height (roughly 165px for a plain level,
+   ~195px for a boss level's extra sub-line) rather than trying to match
+   it dynamically — a friend list short of this still looks like a
+   proper column instead of an oddly short stub, and one long enough to
+   exceed it scrolls internally (.camp-modal-friends) instead of ever
+   pushing the row, and therefore the card, taller. */
+.camp-modal-side-col{
+  flex:1 1 45%;min-width:0;display:flex;flex-direction:column;
+  border-left:1px solid rgba(var(--ddp-brass-rgb),.22);padding-left:16px;
+  min-height:150px;max-height:200px;
 }
-.camp-obj-main{font-size:14px;color:var(--cream);line-height:1.4}
-.camp-obj-gold{font-size:12px;color:var(--gold-hi);margin-top:4px}
-.camp-obj-dir{font-size:11px;color:var(--muted);margin-top:6px}
+/* Title and goal on one line (wrapping to two for a long objective)
+   rather than the goal living in its own boxed panel below — the ask was
+   for the goal to read as prominently as the level name, right next to
+   it. baseline alignment is what keeps a 20px title and an 16px goal
+   sitting on a common text line instead of top-aligned like block boxes. */
+.camp-modal-headline{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;row-gap:2px}
+.camp-modal-title{font-family:'Playfair Display',serif;font-weight:700;font-size:20px;color:var(--gold-hi)}
+.camp-modal-goal-main{font-size:16px;font-weight:600;color:var(--cream);line-height:1.3}
+.camp-modal-sub{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.camp-obj-gold{font-size:12px;color:var(--gold-hi);margin-top:8px}
+.camp-obj-dir{font-size:11px;color:var(--muted);margin-top:5px}
 .camp-modal-section-label{
   font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
   margin:16px 0 8px;
 }
+.camp-modal-main-col .camp-modal-section-label{margin-top:18px}
 .camp-modal-opponents{display:flex;gap:14px}
 .camp-modal-opp{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1 1 0;min-width:0}
 .camp-modal-opp .camp-portrait{width:52px;height:52px}
 .camp-modal-opp span{font-size:10px;color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-/* padding-right clears the scrollbar, which otherwise sits on top of the
-   right-aligned score column once the list overflows. */
-.camp-modal-friends{display:flex;flex-direction:column;gap:6px;max-height:132px;overflow-y:auto;padding-right:8px}
+/* flex:1 (not a fixed max-height) is what lets this stretch to match the
+   left column's own height and only THEN start scrolling — the whole
+   reason the outer card no longer needs to scroll for a normal-sized
+   friends list. min-height:0 is required for a flex child to shrink
+   below its content size at all; without it flex:1 alone doesn't let the
+   list clip and scroll, it just keeps growing the row. padding-right
+   clears the scrollbar, which otherwise sits on top of the right-aligned
+   score column once the list overflows. */
+.camp-modal-friends{display:flex;flex-direction:column;gap:6px;flex:1;min-height:0;overflow-y:auto;padding-right:8px}
 .camp-modal-friend-row{display:flex;align-items:center;gap:8px;font-size:12px}
 .camp-mf-name{flex:1 1 auto;min-width:0;color:var(--cream);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* Badge and score are fixed-width columns so they line up down the list
@@ -6259,21 +6301,40 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 <div id="camp-level-modal" class="camp-modal-scrim" aria-hidden="true" onclick="if(event.target===this)campaignCloseLevelModal()">
   <div class="camp-modal-card">
     <button class="camp-modal-close" onclick="campaignCloseLevelModal()" aria-label="Close">&#10005;</button>
-    <div class="camp-modal-head">
-      <div class="camp-modal-title" id="camp-modal-title">Table</div>
-      <div class="camp-modal-sub" id="camp-modal-sub"></div>
+    <!-- Two columns rather than one long stack: the goal used to sit in
+         its own boxed panel below the title, and the friends list below
+         THAT, which was what forced the whole card to scroll once a
+         handful of friends had played this table. The friends column now
+         stretches to match the left column's own height (a plain flex
+         row, no fixed number) and scrolls internally instead — see
+         .camp-modal-friends' own note. -->
+    <div class="camp-modal-columns">
+      <div class="camp-modal-main-col">
+        <!-- Title and the level's main goal share one line (wrapping to
+             two on a long objective) so the goal reads as prominently as
+             the level name itself, per the brief's own "next to the
+             level name" ask — not a separate boxed callout underneath. -->
+        <div class="camp-modal-headline">
+          <span class="camp-modal-title" id="camp-modal-title">Table</span>
+          <span class="camp-modal-goal-main" id="camp-modal-goal-main"></span>
+        </div>
+        <div class="camp-modal-sub" id="camp-modal-sub"></div>
+        <div class="camp-obj-gold" id="camp-modal-goal-gold"></div>
+        <div class="camp-obj-dir" id="camp-modal-goal-dir"></div>
+        <div class="camp-modal-section-label">At this table</div>
+        <div class="camp-modal-opponents" id="camp-modal-opponents"></div>
+      </div>
+      <div class="camp-modal-side-col">
+        <div class="camp-modal-section-label">Best scores</div>
+        <!-- Your own row is OUTSIDE the scrolling list on purpose, so it
+             stays visible however many friends are listed — same "pin the
+             player's own row" pattern as .daily-you on the Daily Challenge
+             leaderboard. It also needs no server round trip: your result for
+             this level is already in campaignData. -->
+        <div class="camp-modal-you" id="camp-modal-you"></div>
+        <div class="camp-modal-friends" id="camp-modal-friends"></div>
+      </div>
     </div>
-    <div class="camp-modal-objective" id="camp-modal-objective"></div>
-    <div class="camp-modal-section-label">At this table</div>
-    <div class="camp-modal-opponents" id="camp-modal-opponents"></div>
-    <div class="camp-modal-section-label">Best scores</div>
-    <!-- Your own row is OUTSIDE the scrolling list on purpose, so it
-         stays visible however many friends are listed — same "pin the
-         player's own row" pattern as .daily-you on the Daily Challenge
-         leaderboard. It also needs no server round trip: your result for
-         this level is already in campaignData. -->
-    <div class="camp-modal-you" id="camp-modal-you"></div>
-    <div class="camp-modal-friends" id="camp-modal-friends"></div>
     <button class="btn btn-primary btn-block" id="camp-modal-play" onclick="campaignModalPlay()">Play</button>
   </div>
 </div>
@@ -7754,7 +7815,7 @@ function seatHTML(G,i,opts){
   // Frozen at the score before this round started — only moves once the
   // hand finishes, never mid-trick, so it doesn't flicker during play.
   const total=(G.roundBefore&&typeof G.roundBefore[i]==='number')?G.roundBefore[i]:p.score;
-  const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
+  const avatarContent=p.campaignCharId?campaignPortraitHTML(p.campaignCharId):p.isAI?'🤖':avatarHTML(p.avatar,p.name);
   // Rank cosmetics on a table seat are strictly zero-height: the frame
   // is border+glow on the avatar well that already exists, and the badge
   // is inline in the name line. Nothing here may add a row — the
@@ -7829,7 +7890,7 @@ function rosterRowHTML(G,i,active){
   const total=(G.roundBefore&&typeof G.roundBefore[i]==='number')?G.roundBefore[i]:p.score;
   const cls=[i===active?'turn':'',i===me?'mine':'',
              (!p.connected&&!p.isAI)?'off':''].join(' ');
-  const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
+  const avatarContent=p.campaignCharId?campaignPortraitHTML(p.campaignCharId):p.isAI?'🤖':avatarHTML(p.avatar,p.name);
   // The plate carries no data-material when a human has no rank set
   // equipped, which is the documented bare-wrapper state: every
   // decorative layer stays display:none and it degrades to plain name +
@@ -8704,8 +8765,13 @@ function campaignTapNode(levelId){
   campaignOpenLevelModal(levelId);
 }
 let campaignModalLevelId=null;
-function campaignObjectiveHTML(level){
-  const o=level&&level.objective; if(!o) return '';
+// Returns the three pieces separately rather than one combined HTML
+// blob — the modal now puts `main` inline next to the level title
+// (.camp-modal-headline) and only `gold`/`dir` in the small block
+// underneath, so the caller places them in two different parts of the
+// DOM rather than one.
+function campaignObjectiveParts(level){
+  const o=level&&level.objective; if(!o) return {main:'',gold:'',dir:''};
   const signed=n=>(n>=0?'+':'')+n;
   let main='',gold='';
   if(o.type==='score'){
@@ -8727,8 +8793,10 @@ function campaignObjectiveHTML(level){
       : `Gold: win <b>${o.goldTricks}</b> or more.`;
   }
   const dir=CAMP_PASS_DIR_TEXT[level.forcePassDir]||(level.forcePassDir?'':'Pass direction cycles as usual');
-  return `<div class="camp-obj-main">${main}</div><div class="camp-obj-gold">${gold}</div>`
-    +(dir?`<div class="camp-obj-dir">${esc(dir)}</div>`:'');
+  // Plain text, not HTML — the caller sets it via .textContent, so it's
+  // deliberately NOT pre-escaped here (unlike main/gold, which do carry
+  // <b>/<i> tags and go through .innerHTML).
+  return {main, gold, dir};
 }
 const CAMP_PASS_DIR_TEXT={left:'Pass 2 cards left',right:'Pass 2 cards right',across:'Pass 2 cards across',keep:'No passing — keep your hand'};
 // The three chapter regulars sit at every ordinary table in that
@@ -8788,7 +8856,10 @@ function campaignOpenLevelModal(levelId){
   const bossName=level.bossId&&CAMPAIGN_CHARACTERS[level.bossId]?CAMPAIGN_CHARACTERS[level.bossId].name:'';
   $('camp-modal-title').textContent=level.type==='BOSS'?'Boss Table':('Table '+levelId);
   $('camp-modal-sub').textContent=level.type==='BOSS'?bossName:(level.type==='Harder'?'A harder hand':'');
-  $('camp-modal-objective').innerHTML=campaignObjectiveHTML(level);
+  const obj=campaignObjectiveParts(level);
+  $('camp-modal-goal-main').innerHTML=obj.main;
+  $('camp-modal-goal-gold').innerHTML=obj.gold;
+  $('camp-modal-goal-dir').textContent=obj.dir;
   $('camp-modal-opponents').innerHTML=campaignOpponentsHTML(level);
   $('camp-modal-you').innerHTML=campaignMyResultRowHTML(level);
   $('camp-modal-friends').innerHTML='<div class="camp-modal-empty">Loading…</div>';
@@ -11295,7 +11366,7 @@ function toggleAI(i){
 function slotHTML(G,i){
   const p=G.players[i];
   const dot=p.isAI?'bot':p.connected?'on':'';
-  const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
+  const avatarContent=p.campaignCharId?campaignPortraitHTML(p.campaignCharId):p.isAI?'🤖':avatarHTML(p.avatar,p.name);
   const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
   const set=mat?RANK_SETS.find(r=>r.material===mat):null;
   const crestIds=p.isAI?[]:[p.crest,p.crest2].filter(Boolean);
@@ -11435,7 +11506,7 @@ function renderDraw(G){
     // The D button only appears once the cut is actually settled — during
     // round 1 (seats) there is no dealer yet, and mid-cut it isn't known.
     const isDealer=G.drawRound===2 && G.phase==='drawDone' && G.dealer===i;
-    const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
+    const avatarContent=p.campaignCharId?campaignPortraitHTML(p.campaignCharId):p.isAI?'🤖':avatarHTML(p.avatar,p.name);
     const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
     const set=mat?RANK_SETS.find(r=>r.material===mat):null;
     const crestIds=p.isAI?[]:[p.crest,p.crest2].filter(Boolean);
@@ -12165,7 +12236,7 @@ function summaryStandingsHTML(G){
     cells+=`<div class="sg-id ros${mine?' mine':''}">`
       +`<span class="ros-av avatar${mat?' rank-framed':''}"`
         +`${mat?` data-material="${mat}"`:''}>`
-        +(p.isAI?'🤖':avatarHTML(p.avatar,p.name))
+        +(p.campaignCharId?campaignPortraitHTML(p.campaignCharId):p.isAI?'🤖':avatarHTML(p.avatar,p.name))
       +`</span>`
       +`<span class="rank-plate xs ros-plate"`
         +`${set?` data-material="${set.material}" data-emblem="${set.emblem}"`:''}>`
@@ -12276,7 +12347,7 @@ let finalFxPlayed=false;
 // broken, not aspirational" reason those already document.
 function finalRowHTML(p,n){
   const mat=p.isAI?AI_MATERIAL:(p.rankMaterial||'');
-  const avatarContent=p.isAI?'🤖':avatarHTML(p.avatar,p.name);
+  const avatarContent=p.campaignCharId?campaignPortraitHTML(p.campaignCharId):p.isAI?'🤖':avatarHTML(p.avatar,p.name);
   const badge=mat?rankBadgeHTML(mat,null,20):'';
   const crestIds=p.isAI?[]:[p.crest,p.crest2].filter(Boolean);
   const crests=crestIds.map(id=>

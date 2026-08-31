@@ -2116,9 +2116,13 @@ const CAMPAIGN_CHARACTERS = {
   reg2:        { id: 'reg2',        name: 'Regular #2' },
   reg3:        { id: 'reg3',        name: 'Regular #3' },
   glass_baron: { id: 'glass_baron', name: 'The Glass Baron' },
+  // TWO rooftop players, not the screenplay's three. Once the Glass
+  // Baron holds a chair (he stays on after escorting the PLAYER up),
+  // the table has exactly two rooftop seats left — three distinct
+  // rooftop players were never stageable. The screenplay's #3 lines are
+  // folded into these two; no line was cut, only reattributed.
   rooftop1:    { id: 'rooftop1',    name: 'Rooftop Player #1' },
   rooftop2:    { id: 'rooftop2',    name: 'Rooftop Player #2' },
-  rooftop3:    { id: 'rooftop3',    name: 'Rooftop Player #3' },
   // seatAvatar: an existing in-game avatar id (AVATAR_IDS) to dress this
   // character's SEAT with during the hand itself, so the table shows a
   // real face instead of initials. Only set where the character already
@@ -2134,11 +2138,12 @@ const CAMPAIGN_CHARACTERS = {
 // Glass Baron stays on at the Rooftop table after escorting the PLAYER
 // up there — he keeps speaking through Chapter 2 in the screenplay, so
 // he holds a real chair rather than hovering behind one. The Sharp then
-// takes Rooftop Player #3's seat at Level 20, which is exactly whose
-// seat the screenplay has him claim ("Your seat." / "There it is.").
+// takes Rooftop Player #2's seat at Level 20 — the screenplay's own
+// seat-claim beat ("Your seat." / "There it is."), reattributed along
+// with the rest of its #3 lines (see CAMPAIGN_CHARACTERS above).
 const CAMPAIGN_CHAPTER_ROSTER = {
   1: { regulars: ['reg1', 'reg2', 'reg3'], bossSeat: 2 },
-  2: { regulars: ['glass_baron', 'rooftop2', 'rooftop3'], bossSeat: 2 },
+  2: { regulars: ['glass_baron', 'rooftop1', 'rooftop2'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2420,14 +2425,14 @@ const CAMPAIGN_STORY_CUES = [
   ccue(12, 'preLevel', 'the_sharp', 'You took one trick you did not need.'),
   ccue(12, 'preLevel', 'player', 'Hello to you too.'),
   ccue(12, 'preLevel', 'the_sharp', 'Greetings are also unnecessary motion.'),
-  ccue(12, 'preLevel', 'rooftop3', 'That was him being friendly.'),
+  ccue(12, 'preLevel', 'rooftop2', 'That was him being friendly.'),
   ccue(12, 'postClear', 'rooftop1', 'He is irritating. He is also usually right.'),
 
   // Level 13 — Two Tricks Ahead (Trick Count)
   ccue(13, 'postClear', 'rooftop2', 'I thought you would take that.'),
-  ccue(13, 'postClear', 'rooftop3', 'He saw it two tricks ago.'),
+  ccue(13, 'postClear', 'rooftop1', 'He saw it two tricks ago.'),
   ccue(13, 'postClear', 'the_sharp', 'Thirty-nine... forty...'),
-  ccue(13, 'postClear', 'rooftop1', 'Show-off.'),
+  ccue(13, 'postClear', 'rooftop2', 'Show-off.'),
 
   // Level 14 — Razor Comment
   ccue(14, 'postClear', 'rooftop1', 'That was good.'),
@@ -2438,10 +2443,10 @@ const CAMPAIGN_STORY_CUES = [
   ccue(14, 'postClear', 'rooftop2', 'I would take "adequate." That is practically a standing ovation from him.'),
 
   // Level 15 — Make Them Change (Clean Hand)
-  ccue(15, 'postClear', 'rooftop3', 'I have been trying to fool you for three rounds.'),
+  ccue(15, 'postClear', 'rooftop2', 'I have been trying to fool you for three rounds.'),
   ccue(15, 'postClear', 'rooftop1', 'And now you are changing how you play because of it.'),
   ccue(15, 'postClear', 'glass_baron', 'That is usually the moment a table becomes interesting.'),
-  ccue(15, 'postClear', 'rooftop3', 'Fine. I need a new plan.'),
+  ccue(15, 'postClear', 'rooftop2', 'Fine. I need a new plan.'),
 
   // Level 16 — The Cut
   ccue(16, 'postClear', 'the_sharp', 'You showed them too much.'),
@@ -2458,20 +2463,20 @@ const CAMPAIGN_STORY_CUES = [
   ccue(17, 'postClear', 'the_sharp', 'No.'),
 
   // Level 18 — He Stops Moving
-  ccue(18, 'preLevel', 'rooftop3', 'That is worse.'),
+  ccue(18, 'preLevel', 'rooftop1', 'That is worse.'),
   ccue(18, 'preLevel', 'rooftop2', 'Much worse.'),
   ccue(18, 'postClear', 'the_sharp', 'You counted the void.'),
   ccue(18, 'postClear', 'player', 'You sound surprised.'),
   ccue(18, 'postClear', 'the_sharp', 'I am not.'),
 
   // Level 19 — Sharp Eyes
-  ccue(19, 'preLevel', 'rooftop3', 'You planning to stand there all night?'),
+  ccue(19, 'preLevel', 'rooftop2', 'You planning to stand there all night?'),
   ccue(19, 'preLevel', 'the_sharp', 'No.'),
   ccue(19, 'postClear', 'the_sharp', 'You remember cards. You read people. You recover from imperfect hands.'),
   ccue(19, 'postClear', 'player', 'Is that a compliment?'),
   ccue(19, 'postClear', 'the_sharp', 'It is an assessment.'),
   ccue(19, 'postClear', 'the_sharp', 'Your seat.'),
-  ccue(19, 'postClear', 'rooftop3', 'There it is.'),
+  ccue(19, 'postClear', 'rooftop2', 'There it is.'),
   ccue(19, 'postClear', 'glass_baron', 'I told you: sharper eyes.'),
 
   // Level 20 — BOSS: The Sharp

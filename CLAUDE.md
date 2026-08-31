@@ -2803,6 +2803,30 @@ before pushing.
   plain `renderCampaignMap` call on the same data correctly falls back
   to Chapter 4 ("The Carnival Lounge"), matching the frontier again.
 
+## Boss teaser (top-right map corner) is 3x bigger, name below not beside
+- `.camp-corner-tr` went from a horizontal row (30px portrait + name
+  beside it) to a column (90px portrait, name centered underneath) —
+  `flex-direction:column`, portrait sizing bumped 30px→90px on both of
+  the (redundant, same-value) selectors that set it
+  (`.camp-corner-tr .camp-portrait` and `.camp-boss-teaser>.camp-portrait`).
+  Verified at both 915×412 and 667×375 across all 5 real chapters (Glass
+  Baron/Sharp/Scholar/Wildcard/Optimist all render their real photo, not
+  the monogram fallback) — the box tops out around 135px tall, well
+  clear of the route below even on the shortest phone.
+- **The "Carnival Lounge boss not there" report was the existing
+  progressive-reveal gate working as designed, not a bug** —
+  `campaignRenderChapterView`'s `bossGlimpsed = highestUnlockedLevel >=
+  ch.levelStart+3` deliberately keeps the teaser empty until the player
+  is a few levels into a chapter (Chapter 4 = Level 34+), matching the
+  brief's "early levels: distant glimpse" pacing. Confirmed by forcing
+  `highestUnlockedLevel` past that threshold in a fake payload and
+  re-rendering Chapter 4 specifically — The Wildcard's real photo comes
+  up correctly, so the asset/data pipeline for that chapter was never
+  broken; the account that reported it likely just hadn't reached Level
+  34 in-game yet (or was peeking at the chapter early via the nav
+  arrows). Left as-is rather than "fixed", since removing the gate would
+  be a real pacing/design change beyond what was asked.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

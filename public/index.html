@@ -5152,14 +5152,20 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 .camp-progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-hi));
   border-radius:3px;transition:width .4s ease}
 
+/* Column, not the row it used to be — the ask was a much bigger portrait
+   (3x, 30px to 90px) with the name underneath rather than beside it, so
+   the boss actually reads as a real presence on the map instead of a
+   small corner chip. gap/padding grew to match the larger portrait;
+   max-width stays a vw fraction since this only ever renders in
+   landscape, where 42vw is comfortably wider than a 90px avatar. */
 .camp-corner-tr{
   position:absolute;right:8px;top:6px;z-index:15;
-  display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 14px;border-radius:16px;
   max-width:42vw;
 }
 .camp-corner-tr:empty{display:none}
-.camp-boss-name{font-family:'Playfair Display',serif;font-weight:600;font-size:11px;
-  color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.camp-boss-name{font-family:'Playfair Display',serif;font-weight:600;font-size:13px;
+  color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 
 .camp-attempts{
   position:absolute;left:8px;top:48px;z-index:15;
@@ -5237,8 +5243,8 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 .camp-portrait{position:relative;display:inline-block;border-radius:50%;overflow:hidden;flex:0 0 auto}
 .camp-portrait-svg{display:block;width:100%;height:100%}
 .camp-portrait-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
-.camp-corner-tr .camp-portrait{width:30px;height:30px}
-.camp-boss-teaser>.camp-portrait{width:30px;height:30px}
+.camp-corner-tr .camp-portrait{width:90px;height:90px}
+.camp-boss-teaser>.camp-portrait{width:90px;height:90px}
 /* Fills whichever .avatar-classed wrapper it lands in at the actual
    table — the opponent seat block, the roster rail, the round-summary
    sheet's identity cell and the final-standings row all already size

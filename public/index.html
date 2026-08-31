@@ -7065,7 +7065,7 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
     <div id="f-campaign" style="display:none"></div>
     <button class="btn btn-ghost btn-block" id="f-newgame" style="margin-top:14px" onclick="newGame()">Return to menu</button>
     <button class="btn btn-ghost btn-block" id="f-daily-return" style="display:none;margin-top:14px" onclick="goDaily()">Back to Daily Challenge</button>
-    <button class="btn btn-ghost btn-block" id="f-campaign-return" style="display:none;margin-top:14px" onclick="goCampaign()">Back to the Map</button>
+    <button class="btn btn-ghost btn-block" id="f-campaign-return" style="display:none;margin-top:14px" onclick="goCampaignFromTable()">Back to the Map</button>
   </div>
 </section>
 
@@ -8393,7 +8393,14 @@ function campaignPortraitHTML(id){
 let campaignData=null;        // last campaignStateOk payload
 let campaignSeenCues=new Set();
 let campaignPendingLevel=null; // level id waiting behind the current dialogue queue, if any
-
+// Set only when returning to the map from an actual table (leaving,
+// forfeiting, or finishing a level) — see goCampaignFromTable. Read once
+// by renderCampaignMap/campaignRenderChapterView to focus that level's
+// chapter and scroll to its node instead of the player's frontier, then
+// cleared, so a plain goCampaign() (menu tile, chapter-switch arrows)
+// goes back to showing frontier progress rather than getting stuck
+// re-centering on whatever level was last replayed.
+let campaignReturnLevelId=null;
 function goCampaign(){
   const id=identity();
   if(!id.name){ goPersonal(); return; }
@@ -8402,6 +8409,17 @@ function goCampaign(){
   $('camp-loading').style.display='flex';
   $('camp-route').innerHTML='';
   socket.emit('getCampaignState',{accountToken:accountToken||''});
+}
+// Used by every "back to the map FROM a table" site (leaving/forfeiting
+// mid-game, finishing a hand and returning from the final screen) —
+// never by the menu tile, which should always land on frontier
+// progress. Reads S.campaignLevel (sent in every publicState while
+// S.campaign is true) before goCampaign()'s own socket round trip can
+// touch anything, so it captures whichever level was actually just
+// played even on a replay of an already-cleared one.
+function goCampaignFromTable(){
+  campaignReturnLevelId=(S&&S.campaign&&S.campaignLevel)||null;
+  goCampaign();
 }
 
 socket.on('campaignStateOk',d=>{
@@ -8647,10 +8665,13 @@ function renderCampaignMap(d){
   // not this parameter, so a caller that passed fresh data without also
   // assigning campaignData would silently render nothing further down.
   campaignData=d;
-  // Defaults to whichever chapter contains the current frontier (falls
-  // back to the LAST chapter if every level in the data is already
-  // cleared, e.g. both chapters done and there's no chapter 3 yet).
-  const current=d.chapters.find(c=>d.highestUnlockedLevel>=c.levelStart&&d.highestUnlockedLevel<=c.levelEnd);
+  // Defaults to whichever chapter contains campaignReturnLevelId — the
+  // level just left/finished, when returning from an actual table — or
+  // the current frontier otherwise (falls back to the LAST chapter if
+  // every level in the data is already cleared, e.g. both chapters done
+  // and there's no chapter 3 yet). See campaignReturnLevelId's own note.
+  const focusLevel=campaignReturnLevelId||d.highestUnlockedLevel;
+  const current=d.chapters.find(c=>focusLevel>=c.levelStart&&focusLevel<=c.levelEnd);
   campaignViewChapterId=(current||d.chapters[d.chapters.length-1]).id;
 
   // Chapter-independent chrome — set once here, not on every chapter switch.
@@ -8706,9 +8727,19 @@ function campaignRenderChapterView(){
     :'';
 
   $('camp-route').innerHTML=levels.map(l=>campaignNodeHTML(l,d.highestUnlockedLevel)).join('');
-  const currentId=Math.min(Math.max(d.highestUnlockedLevel,levels[0].id),levels[levels.length-1].id);
+  // Scrolls to campaignReturnLevelId (the level just left/finished) when
+  // set, not the frontier — deliberately independent of campaignNodeHTML's
+  // OWN highestUnlockedLevel-based .current pulse above, which always
+  // keeps marking the real next level to play regardless of where the
+  // player scrolled off to replay an earlier one.
+  const scrollTarget=campaignReturnLevelId||d.highestUnlockedLevel;
+  const currentId=Math.min(Math.max(scrollTarget,levels[0].id),levels[levels.length-1].id);
   const currentEl=$('camp-node-'+currentId);
   if(currentEl) currentEl.scrollIntoView({inline:'center',block:'nearest'});
+  // Consumed exactly once — a later plain goCampaign() (from the menu
+  // tile, or switching chapters) must go back to showing frontier
+  // progress, not get stuck re-centering on a replayed level forever.
+  campaignReturnLevelId=null;
 
   campaignRenderChapterNav(d);
 }
@@ -11212,11 +11243,11 @@ function goLanding(msg){
 // room isn't rejoined on the next connect (see the rejoin-on-connect
 // handler); goLanding already clears it on the casual path.
 socket.on('leftRoom',d=>{
-  if(d&&d.campaign){ clearSession(); goCampaign(); return; }
+  if(d&&d.campaign){ clearSession(); goCampaignFromTable(); return; }
   goLanding('You left the game.');
 });
 socket.on('roomClosed',d=>{
-  if(d&&d.campaign){ clearSession(); goCampaign(); return; }
+  if(d&&d.campaign){ clearSession(); goCampaignFromTable(); return; }
   goLanding((d&&d.reason)||'The game was closed.');
 });
 

@@ -2765,6 +2765,44 @@ before pushing.
   in any level, safe — it can now only ever renumber cues in that one
   level+trigger bucket, never anything outside it.
 
+## Returning to the map re-centers on the level you just played
+- **Was always re-centering on the account's frontier
+  (`highestUnlockedLevel`)** regardless of which level the player
+  actually just left — replaying an already-cleared Level 10 while your
+  real progress sat at Level 34 would drop you back on Chapter 4 (34's
+  chapter) instead of back where you were looking, Chapter 1 around
+  Level 10. Reported as wanting to land back "on the level I played."
+- **Fixed with one extra piece of state, `campaignReturnLevelId`**, read
+  once by `renderCampaignMap`/`campaignRenderChapterView` in place of
+  `highestUnlockedLevel` — for BOTH which chapter to show and which node
+  to scroll to — then cleared immediately after. Deliberately NOT
+  persisted or left set: a later plain `goCampaign()` (the menu tile, or
+  the chapter nav arrows) must go back to showing frontier progress, not
+  get stuck re-centering on a replayed level forever.
+- **Only set by `goCampaignFromTable()`, a new wrapper used at every
+  "back to the map FROM A TABLE" site** — leaving/forfeiting mid-game
+  (`leftRoom`/`roomClosed`, when `d.campaign` is true) and the final
+  screen's "Back to the Map" button. The menu tile keeps calling the
+  plain `goCampaign()` directly, on purpose — opening Campaign fresh
+  from the menu has always meant "show me where I am," and should keep
+  meaning that.
+- **Reads `S.campaignLevel`** (already sent in every `publicState` while
+  `S.campaign` is true) rather than anything tracked separately, so it
+  reflects whichever level was ACTUALLY just played — including a replay
+  of an old one — with no new server-side field needed.
+- **Deliberately does not touch `campaignNodeHTML`'s own `.current`
+  pulse**, which still keys off `highestUnlockedLevel` alone. The glow
+  marking "the real next level to play" must keep pointing at the actual
+  frontier regardless of where the player scrolled off to replay an
+  earlier table — only the chapter shown and the scroll position change.
+- Verified by driving `goCampaignFromTable`/`renderCampaignMap` directly
+  against a fake account sitting at Level 34 with Level 10 as the
+  just-played level: first render lands on Chapter 1 ("Velvet
+  Entrance") scrolled to Table 10, `campaignReturnLevelId` reads back
+  `null` immediately after (confirming it was consumed), and a second,
+  plain `renderCampaignMap` call on the same data correctly falls back
+  to Chapter 4 ("The Carnival Lounge"), matching the frontier again.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

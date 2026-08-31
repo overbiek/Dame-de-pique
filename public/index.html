@@ -6357,6 +6357,27 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
   </div>
 </div>
 
+<!-- In-hand campaign menu — what the home button opens mid-level instead
+     of the plain two-tap "Tap again to forfeit" every other mode uses
+     (see askLeave). Same objective headline the level-detail popup
+     shows before a hand starts, so a player who forgot the target
+     partway through can check it, rather than the destructive action
+     being the only thing on offer. Deliberately no "at this table"/
+     "best scores" sections here — this is a quick reminder mid-hand,
+     not the pre-game popup. -->
+<div id="camp-leave-modal" class="camp-modal-scrim" aria-hidden="true" onclick="if(event.target===this)closeCampaignLeaveModal()">
+  <div class="camp-modal-card" style="max-width:400px">
+    <button class="camp-modal-close" onclick="closeCampaignLeaveModal()" aria-label="Close">&#10005;</button>
+    <div class="camp-modal-headline">
+      <span class="camp-modal-title" id="camp-leave-title">Table</span>
+      <span class="camp-modal-goal-main" id="camp-leave-goal-main"></span>
+    </div>
+    <div class="camp-modal-sub" id="camp-leave-sub"></div>
+    <div class="camp-obj-gold" id="camp-leave-goal-gold"></div>
+    <button class="btn btn-block danger" style="margin-top:18px" onclick="confirmCampaignForfeit()">Tap to Forfeit</button>
+  </div>
+</div>
+
 <!-- ═══ RANKED MULTIPLAYER ═══ -->
 <section id="s-ranked" class="screen">
   <div class="center-wrap" style="max-width:440px">
@@ -11185,12 +11206,35 @@ function armConfirm(btn,label,action){
 function askLeave(btn){
   if(tutorialActive){ exitTutorial(); return; }
   // Leaving a campaign level forfeits the attempt outright (the room is
-  // closed server-side), so the confirm says so rather than the neutral
-  // "leave" — this is the ONE way a campaign hand is lost, since the
-  // room otherwise survives app closes and reconnects.
+  // closed server-side) — campaign gets its own menu instead of the
+  // plain two-tap confirm every other mode uses, since a forgotten
+  // objective is one tap away from an accidental forfeit otherwise. Every
+  // other mode (casual/ranked/daily) keeps the neutral "leave" arm-and-
+  // confirm on the button itself.
   const campaign=!!(S&&S.campaign);
-  armConfirm(btn,campaign?'Tap again to forfeit':'Tap again to leave',
-    ()=>socket.emit('leaveRoom',{code:room}));
+  if(campaign){ openCampaignLeaveModal(); return; }
+  armConfirm(btn,'Tap again to leave',()=>socket.emit('leaveRoom',{code:room}));
+}
+// In-hand campaign menu (see #camp-leave-modal). Built entirely from the
+// live game state S — never campaignData/the map's own level list —
+// specifically so this works on a cold reconnect straight into a hand,
+// before the map was ever fetched this session (same reasoning
+// campaignChapterSlug's own note documents for the table background).
+function openCampaignLeaveModal(){
+  if(!S) return;
+  const isBoss=!!S.campaignBoss;
+  const bossCh=isBoss&&CAMPAIGN_CHARACTERS[S.campaignBoss];
+  $('camp-leave-title').textContent=isBoss?'Boss Table':('Table '+(S.campaignLevel||''));
+  $('camp-leave-sub').textContent=bossCh?bossCh.name:'';
+  const obj=campaignObjectiveParts({objective:S.campaignObjective});
+  $('camp-leave-goal-main').innerHTML=obj.main;
+  $('camp-leave-goal-gold').innerHTML=obj.gold;
+  $('camp-leave-modal').classList.add('show');
+}
+function closeCampaignLeaveModal(){ $('camp-leave-modal').classList.remove('show'); }
+function confirmCampaignForfeit(){
+  closeCampaignLeaveModal();
+  socket.emit('leaveRoom',{code:room});
 }
 function askEnd(btn){ armConfirm(btn,'Tap again to ask',()=>socket.emit('endGame',{code:room})); }
 function voteEnd(agree){ socket.emit('endVote',{code:room,agree:!!agree}); }

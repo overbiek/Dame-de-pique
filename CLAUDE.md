@@ -2827,6 +2827,42 @@ before pushing.
   arrows). Left as-is rather than "fixed", since removing the gate would
   be a real pacing/design change beyond what was asked.
 
+## Campaign's home button opens a menu mid-hand, not a bare two-tap confirm
+- **Campaign is the one mode where leaving is destructive** (it forfeits
+  the attempt outright — see the ranked-vs-campaign distinction
+  documented elsewhere), so the plain "tap the home icon twice" pattern
+  every other mode uses is a real risk: one careless double-tap and an
+  attempt is gone with no reminder of what was even at stake. `askLeave`
+  now branches on `S.campaign` — campaign opens `#camp-leave-modal`
+  instead of arming the button's own two-tap confirm; every other mode
+  (casual/ranked/daily) is untouched.
+- **The modal shows the same objective headline the level-detail popup
+  shows before a hand starts** ("Table 34 — Win at least 6 tricks." /
+  "Gold: win 9 or more." underneath), built via the same
+  `campaignObjectiveParts()` the pre-game popup uses, plus a red
+  "Tap to Forfeit" button. Deliberately no "At this table"/"Best
+  scores" sections — this is a quick mid-hand reminder of the goal, not
+  the pre-game popup, and campaign's tight vertical budget doesn't need
+  a second copy of content the player already saw.
+- **Built entirely from the live game state `S`** —
+  `S.campaignLevel`/`S.campaignBoss`/`S.campaignObjective` (all already
+  sent in every `publicState` while `S.campaign` is true) — never from
+  `campaignData`/the map's own level list, so it works on a cold
+  reconnect straight into a hand, before the map was ever fetched this
+  session, the same reasoning `campaignChapterSlug` already documents
+  for the table background.
+- **One tap inside the modal is enough** — no second arm-and-confirm on
+  the "Tap to Forfeit" button itself. Opening the modal (tapping the
+  home icon once) is already the deliberate extra step that replaces
+  the old double-tap; stacking another confirm on top of that would be
+  redundant friction. Tapping the scrim background or the × still
+  dismisses without forfeiting.
+- Verified live: a normal level shows "Table 34" + the score objective,
+  a boss level shows "Boss Table" + the boss's name as a subtitle, the
+  Forfeit button emits `leaveRoom` with the room code and closes the
+  modal, and a non-campaign game (`S.campaign` false) still gets the
+  original "Tap again to leave" two-tap button behavior unchanged.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

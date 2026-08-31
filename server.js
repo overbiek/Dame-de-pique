@@ -2967,6 +2967,35 @@ const CAMPAIGN_STORY_CUES = [
   ccue(50, 'chapterExit', 'cons_guest', 'No.'),
   ccue(50, 'chapterExit', 'the_optimist', 'Worth a try.'),
   ccue(50, 'chapterExit', 'the_optimist', 'Onward.'),
+
+  // Prologue cinematic — the screenplay's opening EXT. CITY STREET beat
+  // (motorcar, envelope, facade), fed in verbatim like every other cue.
+  // Appended at the very end of the array, not alongside ch1's other
+  // cues above, ON PURPOSE: ccue()'s id embeds _campaignCueSeq, a
+  // running counter over file order, so inserting these earlier would
+  // shift every subsequent cue's id and silently invalidate real
+  // players' already-persisted story_cues_seen. levelId 1 + a dedicated
+  // 'prologue' trigger keeps this bucket out of every other level/trigger
+  // filter without needing a level 0. speakerId is deliberately null —
+  // these are narrator/scene-direction lines with nobody to anchor a
+  // portrait to, so the client renders this trigger through its own
+  // full-bleed cinematic overlay (campaignMaybeShowPrologue) instead of
+  // the small #camp-dialogue speech-bubble card campaignDialogueStep
+  // draws for every other trigger. `bg` (1/2/3) selects which of the
+  // three /campaign/prologue/*.webp stills is behind the line; the
+  // letter-reveal beat carries no text of its own (the invitation's copy
+  // is baked into still #2) and `hold` tells the client to replace
+  // tap-to-advance with a 2s pause then an explicit Continue button,
+  // exactly as asked for that one beat. The final line hands off
+  // straight into ch1's existing chapterEnter cues above ("First time
+  // here?"), which is the screenplay's very next line after this one.
+  ccue(1, 'prologue', null, 'Rain stripes the pavement. A black motorcar stops beside the PLAYER. No driver is visible through the smoked glass.', { bg: 1 }),
+  ccue(1, 'prologue', null, 'A gloved hand extends from the rear window and offers a black envelope sealed with a gold spade.', { bg: 1 }),
+  ccue(1, 'prologue', null, 'The PLAYER opens it.', { bg: 1 }),
+  ccue(1, 'prologue', null, '', { bg: 2, hold: 2000 }),
+  ccue(1, 'prologue', null, 'The car pulls away before the PLAYER can answer.', { bg: 3 }),
+  ccue(1, 'prologue', null, 'Across the street, an Art Deco facade glows through the rain. Above the doors: a single gold spade.', { bg: 3 }),
+  ccue(1, 'prologue', null, 'The doors open. The CONCIERGE waits inside.', { bg: 3 }),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

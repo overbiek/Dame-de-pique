@@ -2482,6 +2482,112 @@ before pushing.
   **Run it against a throwaway Postgres before trusting the schema
   migration or the flush path.**
 
+## Campaign prologue cinematic
+- **Gated purely on "has this account seen these cues before", the same
+  mechanism every other story cue already uses** — deliberately NOT also
+  tied to campaign progress (no `highestUnlockedLevel`/level-1-result
+  check). This was tried and reverted: it correctly stopped an
+  already-progressed account from getting the cinematic sprung on it,
+  but it also meant testing the prologue required resetting an account's
+  entire campaign progress (`campaign_level_results` +
+  `highest_unlocked_level`), not just its seen-cues. Kept simple instead
+  — clearing `story_cues_seen` alone is enough to make an account see it
+  again. **Real consequence to expect on deploy**: since these seven cue
+  ids are brand new, every EXISTING account — at any chapter, any
+  level — has none of them in `storyCuesSeen` yet, so the cinematic will
+  play for them too on their very next campaign visit, not just for
+  brand-new players. Accepted deliberately rather than guarded against.
+- **Plays once ever per account**, before the campaign map's existing
+  Level 1 `chapterEnter` dialogue ("First time here?"). Covers the
+  screenplay's opening EXT. CITY STREET beat that nothing had rendered
+  before now — the motorcar, the envelope, the invitation, the walk to
+  the facade — ending exactly where `chapterEnter` already begins
+  ("The doors open. The CONCIERGE waits inside." → "First time here?"),
+  so the two hand off without overlap or a gap.
+- **Stored as ordinary story cues, not a parallel system** — seven
+  `ccue(1, 'prologue', null, ...)` entries at the very end of
+  `CAMPAIGN_STORY_CUES` in `server.js`, reusing the exact same
+  `storyCuesSeen`/`markCampaignCuesSeen` persistence every other cue
+  already has, so "seen" is server-authoritative and synced across
+  devices rather than a `localStorage` flag. **They're appended at the
+  END of the array specifically** — `ccue()`'s id embeds
+  `_campaignCueSeq`, a running counter over file order, so inserting
+  them earlier would have shifted every subsequent cue's id and
+  silently replayed already-seen dialogue for real accounts. Any future
+  edit to these seven lines is safe (their own ids are unaffected by
+  edits to their own `text`); adding an eighth must still go after them,
+  not before.
+- **Narrator-only, `speakerId: null`, and that's what forks the
+  rendering path.** Every other trigger goes through
+  `campaignDialogueStep`/`#camp-dialogue` (the small speech-bubble card
+  with a character portrait). The prologue's lines have no character to
+  anchor a portrait to, so they're rendered by a dedicated client-side
+  path, `campaignMaybeShowPrologue`/`#camp-prologue`, instead — a
+  full-bleed cinematic, not a speech bubble.
+- **Three photographed stills**, `public/campaign/prologue/1.webp` /
+  `2.webp` / `3.webp` (downscaled to 1600px wide, ~135–195KB each, same
+  WebP-from-source-PNG convention as every other art asset in this
+  file). Not in `sw.js`'s `ASSETS` — runtime-cached on first use, same
+  as scenes/avatars/rank plates. `CAMPAIGN_PROLOGUE_BG` (client) maps
+  each cue's `bg` (1/2/3) to its file; `campaignPrologueSetBg` no-ops if
+  the requested still is already showing (two consecutive cues share
+  still 1), and otherwise fades out, swaps `src`, fades in.
+- **The letter-reveal beat (still 2) carries no text of its own** — the
+  invitation's copy ("ONE HUNDRED TABLES... COME ALONE. — DAME DE
+  PIQUE") is baked into the still itself, not overlaid. Its cue has
+  `hold: 2000` instead: the text box stays hidden, tap-to-advance is
+  suspended (`campProlHolding`), and a Continue button fades in after
+  2s — the one beat in this sequence that isn't tap-through, because the
+  brief asked for a timed reveal there specifically.
+  **`campProlHolding` is what stops a stray tap during those 2s from
+  skipping the button entirely** — without it, the scrim's click
+  listener would advance straight past the letter on the first tap.
+- **Tapping anywhere on the scrim advances**, not just a button —
+  `#camp-prologue`'s click listener fires on any tap except one that
+  lands inside `#camp-prol-continue` (`closest()` check, since that
+  button's own `onclick` already handles itself and the click still
+  bubbles up). This works only because the background stills fill the
+  whole scrim via `object-fit:cover` with no dead space — unlike
+  `#camp-dialogue`'s scrim, which relies on empty padding around a
+  smaller centered card and can't use a plain `e.target.id===scrim`
+  check here.
+- A permanent bottom-weighted `linear-gradient` (`.camp-prol-vignette`)
+  sits over the stills independent of the text card's own panel
+  background — both stills have bright highlights low in frame (the
+  car's light, the wet pavement reflections), so the card alone
+  wouldn't guarantee the text stays readable against every still.
+- Own typewriter reveal (`campaignPrologueTypeText`, same per-character
+  timing as `campaignTypeText`'s `CAMP_TYPE_MS`) rather than reusing
+  that function directly — it's hard-wired to `#camp-dlg-text`, and this
+  overlay needs its own typing/timer/full-text state for its own
+  tap-to-complete-early behavior anyway, so sharing would only mean
+  threading an element parameter through both call sites.
+
+## Campaign dialogue portraits are `loading="eager"`, not lazy
+- **Was `loading="lazy"` and that was a real, intermittent bug** —
+  reported as "his images are not all fully inserted in all the
+  conversations he had" about The Scholar specifically, though the
+  mechanism isn't scholar-specific. `campaignDialogueStep()` replaces
+  `#camp-dlg-portrait`'s innerHTML on EVERY line, even consecutive ones
+  from the same speaker, so `campaignPortraitImg` builds a brand-new
+  `<img>` per line and its lazy-load timer restarts from zero every
+  time. A quick tap could dismiss a line before that line's fresh image
+  had even started loading, leaving the SVG monogram showing instead of
+  the real portrait for that one line, while a slower/longer line
+  elsewhere in the same conversation loaded fine — "not every line",
+  not "never". **The Scholar surfaced it because he has the most
+  consecutive same-speaker runs of any character** — four "Woof."-style
+  short lines in a row in both his `bossIntro` and `chapterExit` — so
+  he's the character most likely to have a line dismissed before its
+  image starts loading, not the only one capable of hitting this.
+  Fixed by making `campaignPortraitImg` eager, same call already made
+  for `campaignGoldImg` (gold medallions) for an unrelated reason —
+  neither image is ever off-screen/deferred in a way lazy-loading could
+  actually help with, so there was never a benefit to weigh against this
+  cost. Portraits are small (a handful of KB) and already
+  `campaignArtMissing`-gated against repeat 404s, so loading them eagerly
+  costs nothing extra.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

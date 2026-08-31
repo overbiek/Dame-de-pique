@@ -5297,6 +5297,50 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
   color:var(--gold-hi);cursor:pointer;
 }
 
+/* Prologue cinematic — full-bleed photographed stills for the
+   screenplay's opening EXT. CITY STREET beat, shown once ever per
+   account (campaignMaybeShowPrologue) before #camp-dialogue's own
+   chapterEnter line picks up. Deliberately its own overlay rather than
+   another #camp-dialogue speaker: these lines are narration with no
+   character to anchor a portrait to. z-index sits above .camp-dlg-scrim
+   (2000) since nothing may ever show through it. */
+.camp-prol-scrim{
+  position:fixed;inset:0;z-index:2100;background:#000;overflow:hidden;
+  opacity:0;pointer-events:none;transition:opacity .3s ease;
+}
+.camp-prol-scrim.show{opacity:1;pointer-events:auto}
+.camp-prol-bg{
+  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  transition:opacity .3s ease;
+}
+.camp-prol-bg.fading{opacity:0}
+/* Permanent bottom-weighted scrim, independent of the text card's own
+   panel background — both stills have bright highlights low in frame
+   (the car's light, the wet pavement), so the card alone can't guarantee
+   the text stays readable against every still. */
+.camp-prol-vignette{
+  position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.75) 100%);
+}
+.camp-prol-box{
+  position:absolute;left:16px;right:16px;max-width:640px;margin:0 auto;
+  bottom:calc(env(safe-area-inset-bottom) + 20px);
+  background:linear-gradient(180deg, var(--felt-0) 0%, var(--felt-1) 100%);
+  border:1px solid rgba(var(--ddp-brass-rgb),.45);border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.6);padding:18px 20px;
+}
+.camp-prol-text{
+  font-family:'Playfair Display',serif;font-style:italic;font-weight:500;
+  font-size:17px;line-height:1.5;color:var(--cream);min-height:1.5em;
+}
+.camp-prol-continue{
+  position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 20px);
+  transform:translateX(-50%);
+}
+@media (prefers-reduced-motion:reduce){
+  .camp-prol-scrim,.camp-prol-bg{transition:opacity .18s ease}
+}
+
 .camp-loading{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center}
 
 /* ── Level-detail popup ──
@@ -6190,6 +6234,21 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
       <button class="camp-dlg-next" id="camp-dlg-next" onclick="campaignDialogueAdvance()" aria-label="Continue">›</button>
     </div>
   </div>
+</div>
+
+<!-- Prologue cinematic — plays once ever per account, before the above
+     dialogue overlay's own chapterEnter line. See campaignMaybeShowPrologue
+     and the 'prologue'-trigger cues at the end of server.js's
+     CAMPAIGN_STORY_CUES. Tapping anywhere on the scrim advances, except
+     during the letter-reveal beat (campProlHolding), where only the
+     Continue button — which appears after its own timed delay — can. -->
+<div id="camp-prologue" class="camp-prol-scrim" aria-hidden="true">
+  <img class="camp-prol-bg" id="camp-prol-bg" alt="" aria-hidden="true"/>
+  <div class="camp-prol-vignette"></div>
+  <div class="camp-prol-box" id="camp-prol-box">
+    <div class="camp-prol-text" id="camp-prol-text"></div>
+  </div>
+  <button class="btn btn-primary camp-prol-continue" id="camp-prol-continue" style="display:none" onclick="campaignPrologueAdvance()">Continue</button>
 </div>
 
 <!-- Level-detail popup — opens on a map node tap, BEFORE any dialogue or
@@ -8192,11 +8251,23 @@ const CAMPAIGN_PORTRAIT_SRC={
   // one-note walk-on needs no art of her own.
   cons_guest:'/avatars/house-regulars/belle.webp',
 };
+// NOT lazy — same call as campaignGoldImg's, for a different reason.
+// campaignDialogueStep() replaces #camp-dlg-portrait's innerHTML on
+// EVERY line, even consecutive ones from the same speaker, so a fresh
+// <img> is created per line and its lazy-load timer restarts from zero
+// every time. A character with several short, rapid same-speaker lines
+// in a row (The Scholar's "Woof." runs — four lines in a row in both
+// his bossIntro and chapterExit) can easily have a line dismissed by a
+// quick tap before that line's brand-new image ever starts loading,
+// showing the SVG monogram instead of his real portrait on that one
+// line while a slower/longer line elsewhere in the same conversation
+// loads fine — which is exactly "not every one of his lines shows the
+// portrait" rather than it being missing outright.
 function campaignPortraitImg(id){
   if(campaignArtMissing['pf:'+id]) return '';
   const src=CAMPAIGN_PORTRAIT_SRC[id]||`/campaign/characters/${id}.webp`;
   return `<img class="camp-portrait-img" src="${src}" alt="" aria-hidden="true"`+
-         ` loading="lazy" onerror="campaignArtFailed('pf:${id}',this)"/>`;
+         ` loading="eager" onerror="campaignArtFailed('pf:${id}',this)"/>`;
 }
 // Per-level gold medallion, shown on a node cleared at Gold. Same
 // drop-in contract as the rest: a missing file costs one 404 for the
@@ -8266,7 +8337,7 @@ socket.on('campaignStateOk',d=>{
   if(!$('s-campaign').classList.contains('active')) return;
   $('camp-loading').style.display='none';
   renderCampaignMap(d);
-  campaignMaybeShow(1,'chapterEnter',()=>{});
+  campaignMaybeShowPrologue(()=>{ campaignMaybeShow(1,'chapterEnter',()=>{}); });
 });
 socket.on('campaignStateErr',d=>{
   if(!$('s-campaign').classList.contains('active')){ toast('err-menu',d.msg); return; }
@@ -8384,6 +8455,106 @@ function campaignDialogueAdvance(){
   campaignDialogueStep();
 }
 $('camp-dialogue').addEventListener('click',e=>{ if(e.target.id==='camp-dialogue') campaignDialogueAdvance(); });
+
+// ═══ Prologue cinematic ═══
+// Renders the 'prologue'-trigger cues (server.js, end of
+// CAMPAIGN_STORY_CUES) as full-bleed stills instead of the small
+// #camp-dialogue speech-bubble card — they're narration with no speaker
+// to anchor a portrait to. Reuses the same storyCuesSeen/campaignMarkSeen
+// plumbing as every other cue, so it plays exactly once ever per
+// account, in sync across devices, then hands off to `done` (the
+// existing chapterEnter dialogue) exactly like campaignMaybeShow does.
+const CAMPAIGN_PROLOGUE_BG={1:'/campaign/prologue/1.webp',2:'/campaign/prologue/2.webp',3:'/campaign/prologue/3.webp'};
+let campProlQueue=[];
+let campProlOnDone=null;
+let campProlBgNum=null;
+let campProlHolding=false;
+let campProlTyping=false;
+let campProlTypeTimer=null;
+let campProlFullText='';
+function campaignMaybeShowPrologue(done){
+  const cues=campaignCuesFor(1,'prologue');
+  if(!cues.length||cues.every(c=>campaignSeenCues.has(c.id))){ done(); return; }
+  Object.values(CAMPAIGN_PROLOGUE_BG).forEach(src=>{ new Image().src=src; });
+  campProlQueue=cues.slice();
+  campProlOnDone=done;
+  campProlBgNum=null;
+  $('camp-prologue').classList.add('show');
+  campaignPrologueStep();
+}
+function campaignPrologueSetBg(n){
+  if(campProlBgNum===n) return;
+  campProlBgNum=n;
+  const img=$('camp-prol-bg');
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){
+    img.src=CAMPAIGN_PROLOGUE_BG[n]; return;
+  }
+  img.classList.add('fading');
+  setTimeout(()=>{ img.src=CAMPAIGN_PROLOGUE_BG[n]; img.classList.remove('fading'); },300);
+}
+// Same typewriter reveal as campaignTypeText (CAMP_TYPE_MS), kept as its
+// own copy rather than a shared helper — that one is hard-wired to
+// #camp-dlg-text and this overlay's tap-to-complete-early behavior
+// (campaignPrologueAdvance) needs its own typing/timer/full-text state
+// anyway, so sharing would mean threading an element through both.
+function campaignPrologueTypeText(text){
+  clearInterval(campProlTypeTimer);
+  campProlFullText=text;
+  const el=$('camp-prol-text');
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){
+    el.textContent=text; campProlTyping=false; return;
+  }
+  el.textContent='';
+  campProlTyping=true;
+  let i=0;
+  campProlTypeTimer=setInterval(()=>{
+    i++;
+    el.textContent=text.slice(0,i);
+    if(i>=text.length){ clearInterval(campProlTypeTimer); campProlTyping=false; }
+  },CAMP_TYPE_MS);
+}
+function campaignPrologueStep(){
+  if(!campProlQueue.length){
+    $('camp-prologue').classList.remove('show');
+    clearInterval(campProlTypeTimer); campProlTyping=false;
+    const done=campProlOnDone; campProlOnDone=null;
+    if(done) done();
+    return;
+  }
+  const cue=campProlQueue.shift();
+  campaignMarkSeen([cue.id]);
+  if(cue.bg) campaignPrologueSetBg(cue.bg);
+  if(cue.hold){
+    // The letter-reveal beat: no text of its own (still #2 already carries
+    // the invitation's copy), so the box stays hidden and tap-to-advance
+    // is suspended until the timed Continue button appears.
+    campProlHolding=true;
+    $('camp-prol-box').style.display='none';
+    $('camp-prol-continue').style.display='none';
+    setTimeout(()=>{ campProlHolding=false; $('camp-prol-continue').style.display='block'; },cue.hold);
+  }else{
+    campProlHolding=false;
+    $('camp-prol-continue').style.display='none';
+    $('camp-prol-box').style.display='block';
+    campaignPrologueTypeText(cue.text);
+  }
+}
+function campaignPrologueAdvance(){
+  if(campProlHolding) return;
+  if(campProlTyping){
+    clearInterval(campProlTypeTimer);
+    $('camp-prol-text').textContent=campProlFullText;
+    campProlTyping=false;
+    return;
+  }
+  campaignPrologueStep();
+}
+// Tapping the button fires its own onclick AND bubbles here — the
+// closest() check is what stops that from double-advancing.
+$('camp-prologue').addEventListener('click',e=>{
+  if(e.target.closest('#camp-prol-continue')) return;
+  campaignPrologueAdvance();
+});
 
 // Which chapter the map is currently showing. Independent of progress —
 // once a second chapter unlocks, the player still needs to get back to

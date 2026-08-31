@@ -2237,7 +2237,7 @@ const CAMPAIGN_CHAPTERS = [
 const CAMPAIGN_LEVELS = {
   1: { id: 1, chapter: 1, type: 'Normal', forcePassDir: 'keep', hands: 1,
        seed: 'ddp-main-refine-L1-c690', hand: parseHand('2♠ K♣ A♥ 7♥ 2♥ 9♦ Q♣ J♠ A♠ 5♣ 7♠ Q♦ 3♦'),
-       objective: { type: 'score', min: -27, gold: 8 } },
+       objective: { type: 'score', min: -27, gold: 20 } },
   2: { id: 2, chapter: 1, type: 'Normal', forcePassDir: 'keep', hands: 1,
        seed: 'ddp-main-refine-L2-c134', hand: parseHand('Q♦ Q♠ 8♣ A♥ J♥ 5♠ 7♥ 10♠ 2♣ 4♦ J♣ 6♠ A♣'),
        objective: { type: 'score', min: -26, gold: 19 } },
@@ -2252,16 +2252,16 @@ const CAMPAIGN_LEVELS = {
        objective: { type: 'avoidQueen', goldScoreBar: 20 } },
   6: { id: 6, chapter: 1, type: 'Harder', forcePassDir: 'left', hands: 1,
        seed: 'ddp-main-refine-L6-c573', hand: parseHand('6♠ 2♦ 3♣ 2♥ J♣ 9♠ Q♦ K♠ 10♦ 10♠ 8♠ 4♠ 6♣'),
-       objective: { type: 'score', min: -14, gold: 8 } },
+       objective: { type: 'score', min: -14, gold: 13 } },
   7: { id: 7, chapter: 1, type: 'Normal', forcePassDir: 'left', hands: 1,
        seed: 'ddp-main-refine-L7-c337', hand: parseHand('2♦ 10♣ 10♠ 6♠ J♦ 8♥ 9♦ 8♠ 4♣ 9♥ Q♦ K♦ 3♥'),
-       objective: { type: 'score', min: -22, gold: 5 } },
+       objective: { type: 'score', min: -22, gold: 20 } },
   8: { id: 8, chapter: 1, type: 'Normal', forcePassDir: 'left', hands: 1,
        seed: 'ddp-main-refine-L8-c63', hand: parseHand('8♠ A♦ 4♦ 7♠ 10♠ K♣ K♦ 9♥ 2♠ 5♥ J♦ 3♦ 9♣'),
-       objective: { type: 'score', min: -12, gold: 12 } },
+       objective: { type: 'score', min: -12, gold: 30 } },
   9: { id: 9, chapter: 1, type: 'Harder', forcePassDir: 'left', hands: 1,
        seed: 'ddp-main-refine-L9-c122', hand: parseHand('K♦ 4♥ A♥ A♦ 9♥ 3♦ 2♦ 5♦ A♠ 3♠ 7♥ Q♦ 5♠'),
-       objective: { type: 'score', min: -1, gold: 22 } },
+       objective: { type: 'score', min: -1, gold: 60 } },
   // Boss levels are a 4-hand mini-match, pass cycling Left→Right→Across→
   // Keep naturally (forcePassDir stays null — round 1-4 already lands on
   // exactly that cycle via the ordinary passDir(round) formula, see
@@ -2287,12 +2287,18 @@ const CAMPAIGN_LEVELS = {
         objective: { type: 'score', min: -4, gold: 31 } },
   // Original main-sheet objective for L13 was score (min -17 / gold 6).
   // Swapped for the Trick Count mini-ladder's own Level 2 rung.
+  // Gold here is deliberately a rare trophy rather than the usual
+  // ~1-in-10: it asks for a SHOT MOON on top of the trick minimum.
+  // goldMoon is only meaningful on a single-hand level — G.moonShooter
+  // holds the last round's shooter, so on a multi-hand boss it would
+  // read only the final hand. Nothing uses it that way today; keep it
+  // that way, or make it a per-round accumulator first.
   13: { id: 13, chapter: 2, type: 'Normal', forcePassDir: 'keep', hands: 1,
         seed: 'ddp-goal-tricks-refine-L2-c59', hand: parseHand('9♣ 9♠ 8♥ 10♥ Q♣ 8♦ A♥ A♣ Q♥ 2♦ J♠ 6♠ J♥'),
-        objective: { type: 'trickCount', minTricks: 3, goldTricks: 6 } },
+        objective: { type: 'trickCount', minTricks: 3, goldTricks: 3, goldMoon: true } },
   14: { id: 14, chapter: 2, type: 'Normal', forcePassDir: 'keep', hands: 1,
         seed: 'ddp-main-refine-L14-c97', hand: parseHand('J♦ Q♦ 7♣ 5♦ 3♥ 2♥ 6♥ 6♠ 8♣ J♠ A♥ 2♠ 2♦'),
-        objective: { type: 'score', min: -16, gold: 13 } },
+        objective: { type: 'score', min: -16, gold: 20 } },
   // Original main-sheet objective for L15 was score (min 3 / gold 28).
   // Swapped for the Clean Hand mini-ladder's own Level 2 rung.
   15: { id: 15, chapter: 2, type: 'Harder', forcePassDir: 'keep', hands: 1,
@@ -2306,7 +2312,7 @@ const CAMPAIGN_LEVELS = {
         objective: { type: 'score', min: -14, gold: 10 } },
   18: { id: 18, chapter: 2, type: 'Harder', forcePassDir: 'keep', hands: 1,
         seed: 'ddp-main-refine-L18-c70', hand: parseHand('10♥ 5♦ 8♣ 2♠ J♥ 9♦ Q♣ 9♣ 4♠ 7♥ 5♥ 2♣ A♣'),
-        objective: { type: 'score', min: 1, gold: 18 } },
+        objective: { type: 'score', min: 1, gold: 20 } },
   19: { id: 19, chapter: 2, type: 'Normal', forcePassDir: 'keep', hands: 1,
         seed: 'ddp-main-refine-L19-c9', hand: parseHand('2♥ A♥ 5♠ 9♥ J♥ 6♠ Q♠ J♣ 10♥ A♣ 6♣ 7♦ Q♦'),
         objective: { type: 'score', min: -12, gold: 20 } },
@@ -3055,7 +3061,13 @@ function evaluateCampaignObjective(G) {
   }
   if (obj.type === 'trickCount') {
     const tricksWon = p.tricks.length / 4;
-    return { cleared: tricksWon >= obj.minTricks, gold: tricksWon >= obj.goldTricks, metric: tricksWon };
+    // goldMoon adds "...and shoot the moon" to the gold condition. Read
+    // off G.moonShooter, the same field submitDailyResult uses for its
+    // own shot-moon flag — set in endRound, so it's already settled by
+    // the time this runs. See the objective's own note on why this is
+    // single-hand only.
+    const gold = tricksWon >= obj.goldTricks && (!obj.goldMoon || G.moonShooter === 0);
+    return { cleared: tricksWon >= obj.minTricks, gold, metric: tricksWon };
   }
   return { cleared: false, gold: false, metric: score };
 }

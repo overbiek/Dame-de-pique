@@ -8504,7 +8504,9 @@ function campaignObjectiveHTML(level){
     gold=`Gold: clean <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`;
   }else if(o.type==='trickCount'){
     main=`Win at least <b>${o.minTricks}</b> tricks.`;
-    gold=`Gold: win <b>${o.goldTricks}</b> or more.`;
+    gold=o.goldMoon
+      ? `Gold: win <b>${o.goldTricks}</b> or more <i>and</i> <b>shoot the moon</b>.`
+      : `Gold: win <b>${o.goldTricks}</b> or more.`;
   }
   const dir=CAMP_PASS_DIR_TEXT[level.forcePassDir]||(level.forcePassDir?'':'Pass direction cycles as usual');
   return `<div class="camp-obj-main">${main}</div><div class="camp-obj-gold">${gold}</div>`

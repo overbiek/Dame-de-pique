@@ -2145,6 +2145,17 @@ const CAMPAIGN_CHARACTERS = {
   lounge2:     { id: 'lounge2',     name: 'Lounge Player #2' },
   lounge3:     { id: 'lounge3',     name: 'Lounge Player #3' },
   the_wildcard:{ id: 'the_wildcard',name: 'The Wildcard', seatAvatar: 'regular_wildcard' },
+  cons1:       { id: 'cons1',       name: 'Conservatory Player #1' },
+  cons2:       { id: 'cons2',       name: 'Conservatory Player #2' },
+  cons3:       { id: 'cons3',       name: 'Conservatory Player #3' },
+  the_optimist:{ id: 'the_optimist',name: 'The Optimist', seatAvatar: 'regular_optimist' },
+  // The Optimist's running gag needs someone to turn him down. The
+  // screenplay writes four separate walk-ons (at the fountain, passing,
+  // at the next table, by the fountain); they're collapsed into one
+  // recurring guest so she can carry real art rather than four
+  // monogrammed strangers with one line each — and "Still no." lands
+  // better from someone he has already asked.
+  cons_guest:  { id: 'cons_guest',  name: 'A Guest' },
   player:      { id: 'player',      name: null },
 };
 
@@ -2168,6 +2179,7 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // chairs are the chapter's own players until he claims #3's at Level 39
   // ("Recess." / "That means my seat, does it?").
   4: { regulars: ['lounge1', 'lounge2', 'lounge3'], bossSeat: 2 },
+  5: { regulars: ['cons1', 'cons2', 'cons3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2194,6 +2206,10 @@ const CAMPAIGN_CHAPTERS = [
   // placeholder until public/campaign/chapters/grand_library.webp exists.
   { id: 3, title: 'The Grand Library', levelStart: 21, levelEnd: 30, slug: 'grand_library', bossId: 'the_scholar' },
   { id: 4, title: 'The Carnival Lounge', levelStart: 31, levelEnd: 40, slug: 'carnival_lounge', bossId: 'the_wildcard' },
+  // This room already exists in the game as an equippable scene, so the
+  // client points this slug at /scenes/conservatory.webp rather than a
+  // duplicated file — see CAMPAIGN_BG_SRC.
+  { id: 5, title: 'The Conservatory', levelStart: 41, levelEnd: 50, slug: 'conservatory', bossId: 'the_optimist' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -2401,6 +2417,52 @@ const CAMPAIGN_LEVELS = {
           parseHand('2♥ 3♦ 9♥ 5♥ J♣ J♦ 10♠ 10♦ 9♣ 3♥ 8♣ Q♠ 8♠'),
         ],
         objective: { type: 'score', min: 3, gold: 42 } },
+
+  // Chapter 5 — all 'left', and both mini-ladder rungs used here are
+  // 'left' too, so unlike Chapter 4 there is no direction anomaly.
+  41: { id: 41, chapter: 5, type: 'Normal', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L41-c99', hand: parseHand('3♦ 5♦ 3♥ A♥ 3♣ 4♠ J♥ Q♠ 5♠ K♥ 8♥ A♠ 4♦'),
+        objective: { type: 'score', min: -7, gold: 25 } },
+  42: { id: 42, chapter: 5, type: 'Harder', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L42-c514', hand: parseHand('K♣ 7♥ 6♦ Q♠ A♥ 9♣ K♦ A♣ J♦ Q♦ K♥ 10♠ 3♠'),
+        objective: { type: 'score', min: 21, gold: 76 } },
+  43: { id: 43, chapter: 5, type: 'Normal', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L43-c817', hand: parseHand('A♠ 10♦ 8♦ 6♣ 8♠ 10♠ Q♦ J♥ 3♦ 4♣ 2♣ J♣ K♠'),
+        objective: { type: 'score', min: 8, gold: 21 } },
+  // Original main-sheet objective was score (min 8 / gold 21). Swapped
+  // for the Suit Void ladder's rung 4 against this level's own lesson —
+  // "watch who is void before you lead the suit".
+  44: { id: 44, chapter: 5, type: 'Normal', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-goal-void-refine-L4-c29', hand: parseHand('10♥ 7♠ 3♥ K♦ J♠ 10♠ 6♣ 5♠ 9♠ 7♣ 6♦ 2♠ 9♦'),
+        objective: { type: 'suitVoid', suit: '♦', voidByTrick: 10, goldByTrick: 7 } },
+  45: { id: 45, chapter: 5, type: 'Harder', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L45-c109', hand: parseHand('Q♦ 8♥ K♥ 7♣ A♦ 3♦ A♥ 5♦ 3♠ 8♣ 10♥ Q♠ 2♠'),
+        objective: { type: 'score', min: 6, gold: 18 } },
+  46: { id: 46, chapter: 5, type: 'Normal', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L46-c50', hand: parseHand('9♠ 7♠ 4♥ 10♠ 3♥ 8♥ 5♥ 6♠ 8♦ Q♠ J♠ Q♣ Q♦'),
+        objective: { type: 'score', min: 10, gold: 22 } },
+  // Original main-sheet objective was score (min 18 / gold 32). Swapped
+  // for the Avoid-the-Queen ladder's rung 4 — this level's own action
+  // line is literally "reads a late sequence perfectly, avoids the
+  // Queen and finishes with a strong clear".
+  47: { id: 47, chapter: 5, type: 'Normal', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-goal-queen-refine-L4-c584', hand: parseHand('10♥ 10♦ J♦ Q♦ 7♠ 2♠ 3♠ Q♣ A♥ K♦ 5♦ 2♣ 8♦'),
+        objective: { type: 'avoidQueen', goldScoreBar: 5 } },
+  48: { id: 48, chapter: 5, type: 'Harder', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L48-c491', hand: parseHand('A♦ J♣ 5♥ Q♠ 2♥ 2♣ 3♠ 5♠ 5♦ J♦ 6♠ K♣ 10♣'),
+        objective: { type: 'score', min: 26, gold: 41 } },
+  49: { id: 49, chapter: 5, type: 'Normal', forcePassDir: 'left', hands: 1,
+        seed: 'ddp-main-refine-L49-c181', hand: parseHand('K♣ 10♦ 10♠ 9♥ K♠ 9♦ 3♣ 6♥ 5♥ 8♦ 2♥ 2♠ 7♠'),
+        objective: { type: 'score', min: 6, gold: 19 } },
+  50: { id: 50, chapter: 5, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_optimist',
+        seed: 'ddp-boss-refine-L50-c72',
+        hands4: [
+          parseHand('4♠ A♦ J♣ Q♠ 5♥ 8♦ 7♦ 8♥ 3♠ 7♥ 10♣ 8♠ K♣'),
+          parseHand('Q♥ 8♦ 10♦ 7♣ 2♦ 2♣ K♠ 3♣ 5♥ 9♣ K♣ Q♠ 3♦'),
+          parseHand('9♣ J♠ 8♥ 6♦ Q♣ 5♥ K♥ 6♥ 9♥ 2♦ K♠ 4♣ J♥'),
+          parseHand('10♦ 4♣ 7♠ K♥ 5♠ 8♥ 3♦ 4♠ J♠ K♠ A♠ 8♠ Q♣'),
+        ],
+        objective: { type: 'score', min: 6, gold: 41 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -2784,6 +2846,113 @@ const CAMPAIGN_STORY_CUES = [
   ccue(40, 'chapterExit', 'the_wildcard', 'Come on. Next room has flowers, sunlight and a man with opinions about absolutely everything.'),
   ccue(40, 'chapterExit', 'player', 'Worse than you?'),
   ccue(40, 'chapterExit', 'the_wildcard', 'Much more direct.'),
+
+  // ── Chapter 5 — The Conservatory, Boss: The Optimist ──
+  // Level 41 — No Hard Feelings
+  ccue(41, 'preLevel', 'the_optimist', 'Dinner tonight?'),
+  ccue(41, 'preLevel', 'cons_guest', 'No.'),
+  ccue(41, 'preLevel', 'the_optimist', 'Perfect. Saves us both an awkward dessert. Have a beautiful evening.'),
+  ccue(41, 'preLevel', 'the_optimist', 'Whoa. That was really bad.'),
+  ccue(41, 'preLevel', 'the_optimist', 'Good news: lead lower next time and half the problem disappears. You are welcome.'),
+  ccue(41, 'preLevel', 'cons1', 'That is him.'),
+  ccue(41, 'preLevel', 'cons2', 'You will know when he dislikes a play.'),
+
+  // Level 42 — Blunt First
+  ccue(42, 'postClear', 'the_optimist', 'Too timid.'),
+  ccue(42, 'postClear', 'player', 'It worked.'),
+  ccue(42, 'postClear', 'the_optimist', 'Yes. And crossing the street with your eyes closed can work once.'),
+  ccue(42, 'postClear', 'the_optimist', 'Next time, keep the safety but use the information you already earned. You had more room than you thought.'),
+  ccue(42, 'postClear', 'cons3', 'Blunt first. Advice second.'),
+  ccue(42, 'postClear', 'the_optimist', 'Still a clear. Take the win.'),
+
+  // Level 43 — Rejected, Still Smiling
+  ccue(43, 'preLevel', 'the_optimist', 'Coffee tomorrow?'),
+  ccue(43, 'preLevel', 'cons_guest', 'Absolutely not.'),
+  ccue(43, 'preLevel', 'the_optimist', 'Strong answer. I respect the confidence.'),
+  ccue(43, 'postClear', 'the_optimist', 'Speaking of strong answers — that discard was good.'),
+  ccue(43, 'postClear', 'player', 'Do you recover from everything that quickly?'),
+  ccue(43, 'postClear', 'the_optimist', 'Why waste a perfectly good next minute on the previous one?'),
+
+  // Level 44 — That Was Really Bad (Suit Void)
+  ccue(44, 'postClear', 'the_optimist', 'Oh, wow. That was really bad.'),
+  ccue(44, 'postClear', 'cons2', 'Thank you.'),
+  ccue(44, 'postClear', 'the_optimist', 'No, listen — this is good.'),
+  ccue(44, 'postClear', 'cons2', 'How?'),
+  ccue(44, 'postClear', 'the_optimist', 'Because now you will never do exactly that again. Next time, watch who is void before you lead the suit. Easy fix.'),
+  ccue(44, 'postClear', 'cons1', 'He insults the mistake, then rescues the person.'),
+
+  // Level 45 — That One Is On You
+  ccue(45, 'postClear', 'the_optimist', 'That one is on you.'),
+  ccue(45, 'postClear', 'player', 'You really go straight for it.'),
+  ccue(45, 'postClear', 'the_optimist', 'Would you prefer I lie first?'),
+  ccue(45, 'postClear', 'the_optimist', 'You gave them control of the suit one trick too early. Hold it once longer next time and you are fine.'),
+  ccue(45, 'postClear', 'player', 'And the optimism?'),
+  ccue(45, 'postClear', 'the_optimist', 'You noticed the mistake. That already makes the next hand better.'),
+
+  // Level 46 — Progress
+  ccue(46, 'postClear', 'the_optimist', 'Terrible.'),
+  ccue(46, 'postClear', 'the_optimist', 'But impressive commitment.'),
+  ccue(46, 'postClear', 'cons3', 'There is the soft landing.'),
+  ccue(46, 'postClear', 'the_optimist', 'And here is the useful part: do not throw danger until you know who can return it. Try that and you will look like a different player next hand.'),
+  ccue(46, 'postClear', 'cons_guest', 'No.'),
+  ccue(46, 'postClear', 'the_optimist', 'I had not even asked yet.'),
+  ccue(46, 'postClear', 'cons_guest', 'Still no.'),
+  ccue(46, 'postClear', 'the_optimist', 'Efficient. I like it.'),
+
+  // Level 47 — Annoyingly Good (Avoid the Queen)
+  ccue(47, 'postClear', 'the_optimist', 'Okay.'),
+  ccue(47, 'postClear', 'the_optimist', 'That was good.'),
+  ccue(47, 'postClear', 'player', 'Only good?'),
+  ccue(47, 'postClear', 'the_optimist', 'Annoyingly good. I had a whole speech ready.'),
+  ccue(47, 'postClear', 'cons1', 'You can still give it.'),
+  ccue(47, 'postClear', 'the_optimist', "No. Waste of everybody's time. Next hand."),
+
+  // Level 48 — No Joke This Time
+  ccue(48, 'postClear', 'the_optimist', 'No joke this time.'),
+  ccue(48, 'postClear', 'player', 'That serious?'),
+  ccue(48, 'postClear', 'the_optimist', 'You saw the whole hand. Not just your cards. The whole table.'),
+  ccue(48, 'postClear', 'the_optimist', 'That is the part people usually cannot be taught.'),
+
+  // Level 49 — Probably Ready
+  ccue(49, 'preLevel', 'the_optimist', 'One drink after this?'),
+  ccue(49, 'preLevel', 'cons_guest', 'No.'),
+  ccue(49, 'preLevel', 'the_optimist', 'Excellent. I have a boss fight anyway.'),
+  ccue(49, 'preLevel', 'cons2', 'You never get discouraged, do you?'),
+  ccue(49, 'preLevel', 'the_optimist', 'Of course I do. For about four seconds.'),
+  ccue(49, 'postClear', 'the_optimist', 'You are ready.'),
+  ccue(49, 'postClear', 'the_optimist', 'Probably.'),
+  ccue(49, 'postClear', 'cons3', 'That means my seat, right?'),
+  ccue(49, 'postClear', 'the_optimist', 'See? You are learning too.'),
+  ccue(49, 'postClear', 'the_optimist', 'All right. No sugarcoating next hand.'),
+
+  // Level 50 — BOSS: The Optimist
+  ccue(50, 'bossIntro', 'the_optimist', 'All right. No sugarcoating. Show me what you have got.'),
+  ccue(50, 'bossIntro', 'player', 'And if it is bad?'),
+  ccue(50, 'bossIntro', 'the_optimist', 'I will tell you immediately.'),
+  ccue(50, 'bossIntro', 'player', 'I was afraid of that.'),
+  ccue(50, 'bossIntro', 'the_optimist', 'Then I will tell you how to fix it. Much more useful.'),
+  // The screenplay gives this boss TWO alternative midpoint stingers (one
+  // after a mistake, one after a strong adjustment). There's only one
+  // bossMidpoint trigger and no signal to pick between them, so the
+  // encouraging one is used — it fits a boss whose whole character is
+  // that he tells you the fix — and the other is kept as a failure line
+  // below, where its "you gave away control too early" note belongs.
+  ccue(50, 'bossMidpoint', 'the_optimist', 'There.'),
+  ccue(50, 'bossMidpoint', 'the_optimist', 'That is better. Same problem, better answer. See? Progress.'),
+  ccue(50, 'postFail', 'the_optimist', 'That was bad. Good news: now we know exactly what to fix.', { pick: 'random' }),
+  ccue(50, 'postFail', 'the_optimist', 'You lost the hand, not the ability. Again.', { pick: 'random' }),
+  ccue(50, 'postFail', 'the_optimist', 'Four seconds of disappointment. One... two... three... four. Done. Deal again.', { pick: 'random' }),
+  ccue(50, 'postFail', 'the_optimist', 'Whoa. That was really bad. But you know why — you gave away control too early. Fix it on the next hand and we never have to talk about it again.', { pick: 'random' }),
+  ccue(50, 'bossDefeat', 'the_optimist', 'See?'),
+  ccue(50, 'bossDefeat', 'player', 'See what?'),
+  ccue(50, 'bossDefeat', 'the_optimist', 'Told you you would get it.'),
+  ccue(50, 'chapterExit', 'the_optimist', 'Come on. There is another room waiting.'),
+  ccue(50, 'chapterExit', 'player', 'Another table?'),
+  ccue(50, 'chapterExit', 'the_optimist', 'Always.'),
+  ccue(50, 'chapterExit', 'the_optimist', 'Quick question—'),
+  ccue(50, 'chapterExit', 'cons_guest', 'No.'),
+  ccue(50, 'chapterExit', 'the_optimist', 'Worth a try.'),
+  ccue(50, 'chapterExit', 'the_optimist', 'Onward.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

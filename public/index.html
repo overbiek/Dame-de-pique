@@ -8125,6 +8125,11 @@ const CAMPAIGN_CHARACTERS={
   lounge2:{name:'Lounge Player #2',initial:'2'},
   lounge3:{name:'Lounge Player #3',initial:'3'},
   the_wildcard:{name:'The Wildcard',initial:'W'},
+  cons1:{name:'Conservatory Player #1',initial:'1'},
+  cons2:{name:'Conservatory Player #2',initial:'2'},
+  cons3:{name:'Conservatory Player #3',initial:'3'},
+  the_optimist:{name:'The Optimist',initial:'O'},
+  cons_guest:{name:'A Guest',initial:'G'},
   player:{name:null,initial:null},
 };
 // Which three characters sit at an ordinary (non-boss) table per chapter,
@@ -8140,6 +8145,7 @@ const CAMPAIGN_CHAPTER_ROSTER={
   2:{regulars:['glass_baron','rooftop1','rooftop2'],bossSeat:2},
   3:{regulars:['lib1','lib2','lib3'],bossSeat:2},
   4:{regulars:['lounge1','lounge2','lounge3'],bossSeat:2},
+  5:{regulars:['cons1','cons2','cons3'],bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/
@@ -8147,9 +8153,14 @@ const CAMPAIGN_CHAPTER_ROSTER={
    the moment it exists at the drop-in path, and a missing file costs one
    404 per id for the session. */
 const campaignArtMissing={};
+// Same idea as CAMPAIGN_PORTRAIT_SRC below: a chapter whose room already
+// exists in the game as an equippable SCENE points at that art instead of
+// a duplicated copy under /campaign/chapters/, so the two can never drift.
+const CAMPAIGN_BG_SRC={ conservatory:'/scenes/conservatory.webp' };
 function campaignBgImg(slug){
   if(campaignArtMissing['bg:'+slug]) return '';
-  return `<img class="campaign-bg-img" src="/campaign/chapters/${slug}.webp" alt="" aria-hidden="true"`+
+  const src=CAMPAIGN_BG_SRC[slug]||`/campaign/chapters/${slug}.webp`;
+  return `<img class="campaign-bg-img" src="${src}" alt="" aria-hidden="true"`+
          ` loading="lazy" onerror="campaignArtFailed('bg:${slug}',this)"/>`;
 }
 // A campaign character who is ALSO an existing in-game avatar points
@@ -8161,6 +8172,10 @@ const CAMPAIGN_PORTRAIT_SRC={
   the_sharp:'/avatars/house-regulars/sharp.webp',
   the_scholar:'/avatars/house-regulars/scholar.webp',
   the_wildcard:'/avatars/house-regulars/wildcard.webp',
+  the_optimist:'/avatars/house-regulars/optimist.webp',
+  // The Optimist's recurring rejection — reuses an existing avatar so a
+  // one-note walk-on needs no art of her own.
+  cons_guest:'/avatars/house-regulars/belle.webp',
 };
 function campaignPortraitImg(id){
   if(campaignArtMissing['pf:'+id]) return '';
@@ -8638,7 +8653,9 @@ const CAMPAIGN_LEVEL_META={1:{type:'Normal'},2:{type:'Normal'},3:{type:'Harder'}
   21:{type:'Harder'},22:{type:'Normal'},23:{type:'Normal'},24:{type:'Harder'},25:{type:'Normal'},
   26:{type:'Normal'},27:{type:'Harder'},28:{type:'Normal'},29:{type:'Normal'},30:{type:'BOSS'},
   31:{type:'Normal'},32:{type:'Normal'},33:{type:'Harder'},34:{type:'Normal'},35:{type:'Normal'},
-  36:{type:'Harder'},37:{type:'Normal'},38:{type:'Normal'},39:{type:'Harder'},40:{type:'BOSS'}};
+  36:{type:'Harder'},37:{type:'Normal'},38:{type:'Normal'},39:{type:'Harder'},40:{type:'BOSS'},
+  41:{type:'Normal'},42:{type:'Harder'},43:{type:'Normal'},44:{type:'Normal'},45:{type:'Harder'},
+  46:{type:'Normal'},47:{type:'Normal'},48:{type:'Harder'},49:{type:'Normal'},50:{type:'BOSS'}};
 
 // Drives every "roll the number upward" moment (Campaign's credit/score
 // counters) — no prior counter animation existed anywhere in this

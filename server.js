@@ -2103,6 +2103,14 @@ function submitDailyResult(G) {
 // real cap, passed into every getCampaignState/consumeCampaignAttempt
 // call). Lowering this is safe for existing accounts — getCampaignState
 // clamps whatever is stored down to the new max on read.
+// ── TEMPORARY: unlimited campaign attempts, for playtesting ──
+// Flip this ONE constant back to false to restore the normal
+// CAMPAIGN_MAX_ATTEMPTS cap. Nothing else needs changing: while it's
+// true, startCampaignLevel skips spending an attempt and the map
+// reports the pool as unlimited (the client renders ∞ instead of
+// "n/15"). The stored attempts_current is left completely untouched,
+// so whatever players had before this is exactly what they get back.
+const CAMPAIGN_UNLIMITED_ATTEMPTS = true;
 const CAMPAIGN_MAX_ATTEMPTS = 15;
 const CAMPAIGN_ATTEMPT_REFILL_MS = 20 * 60 * 1000; // placeholder — no economy spec existed, tune freely
 const CAMPAIGN_CREDITS_BY_TYPE = { Normal: 15, Harder: 22, BOSS: 60 }; // placeholder, same reason
@@ -3160,7 +3168,12 @@ async function buildCampaignMapPayload(accountId) {
     storyCues: CAMPAIGN_STORY_CUES,
     characters: CAMPAIGN_CHARACTERS,
     highestUnlockedLevel: state.highestUnlockedLevel,
-    attempts: state.attempts,
+    // While the playtest flag is on, the pool is reported as unlimited
+    // rather than faked to a full 15 — the client shows ∞ so it's always
+    // obvious this is the temporary mode and not a real full bar.
+    attempts: CAMPAIGN_UNLIMITED_ATTEMPTS
+      ? { unlimited: true, available: CAMPAIGN_MAX_ATTEMPTS, max: CAMPAIGN_MAX_ATTEMPTS, nextRefillAt: null }
+      : state.attempts,
     storyCuesSeen: state.storyCuesSeen,
   };
 }
@@ -4866,8 +4879,10 @@ io.on('connection', (socket) => {
       if (level.id > state.highestUnlockedLevel) {
         return socket.emit('campaignError', { msg: 'That table is still locked.' });
       }
-      const spend = await db.consumeCampaignAttempt(acct.id, CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
-      if (!spend.ok) return socket.emit('campaignError', { msg: 'Out of attempts — wait for a refill.' });
+      if (!CAMPAIGN_UNLIMITED_ATTEMPTS) {
+        const spend = await db.consumeCampaignAttempt(acct.id, CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
+        if (!spend.ok) return socket.emit('campaignError', { msg: 'Out of attempts — wait for a refill.' });
+      }
       const clean = String(name || '').trim().slice(0, 16) || acct.nickname || 'Player';
       const { G, token } = await createCampaignRoom(clean, sanitizeAvatar(avatar), acct.id, socket.id, level.id);
       socket.join(G.code);

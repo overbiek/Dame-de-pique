@@ -5203,6 +5203,21 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
   background:var(--felt-2);box-shadow:none;
 }
 .camp-node.cleared .camp-node-inner{border-color:var(--gold);color:var(--gold-hi)}
+/* A gold medallion carries its own ornate gold ring, so the node's own
+   border/background/padding would double it up — dropped here rather
+   than in the base rule so a level still on the star fallback keeps the
+   normal treatment. */
+.camp-node.has-gold-art .camp-node-inner{
+  border-color:transparent;background:none;box-shadow:none;padding:0;overflow:hidden;
+}
+.camp-gold-img{width:100%;height:100%;object-fit:contain;display:block;
+  filter:drop-shadow(0 2px 6px rgba(var(--ddp-scrim-rgb),.55))}
+/* The current-node pulse rings the medallion instead of the (now
+   invisible) border, so "this is where you are" still reads on a node
+   you have already golded. */
+.camp-node.has-gold-art.current .camp-node-inner{
+  box-shadow:0 0 0 3px rgba(var(--ddp-brass-rgb),.45);
+}
 .camp-node.current .camp-node-inner{
   border-color:var(--gold-hi);box-shadow:0 0 0 4px rgba(var(--ddp-brass-rgb),.22),0 4px 14px rgba(var(--ddp-scrim-rgb),.55);
   animation:camp-node-pulse 2.2s ease-in-out infinite;
@@ -8183,6 +8198,28 @@ function campaignPortraitImg(id){
   return `<img class="camp-portrait-img" src="${src}" alt="" aria-hidden="true"`+
          ` loading="lazy" onerror="campaignArtFailed('pf:${id}',this)"/>`;
 }
+// Per-level gold medallion, shown on a node cleared at Gold. Same
+// drop-in contract as the rest: a missing file costs one 404 for the
+// session and the node falls back to the plain star. NOT lazy —
+// these sit in a horizontally-scrolled row where most are off-screen,
+// and lazy loading leaves them blank until scrolled to (and never
+// loads at all in a hidden pane; see CLAUDE.md).
+function campaignGoldImg(levelId){
+  if(campaignArtMissing['gold:'+levelId]) return '';
+  return `<img class="camp-gold-img" src="/campaign/gold/${levelId}.webp" alt="Gold" `+
+         `loading="eager" onerror="campaignGoldFailed(${levelId},this)"/>`;
+}
+// Unlike the other art hooks, a failed gold medallion has to restore the
+// star it replaced — the node would otherwise be empty.
+function campaignGoldFailed(levelId,el){
+  campaignArtMissing['gold:'+levelId]=true;
+  const node=el&&el.closest('.camp-node');
+  if(node){
+    node.classList.remove('has-gold-art');
+    const inner=node.querySelector('.camp-node-inner');
+    if(inner) inner.innerHTML='&#9733;';
+  }else if(el&&el.remove){ el.remove(); }
+}
 function campaignArtFailed(key,el){ campaignArtMissing[key]=true; if(el&&el.remove) el.remove(); }
 
 // Inline SVG monogram badge — the placeholder for every character
@@ -8380,7 +8417,10 @@ function renderCampaignMap(d){
   const a=d.attempts;
   $('camp-attempts').innerHTML=
     creditChipHTML(20)
-    +`<span class="camp-attempts-num">${a.available}/${a.max}</span>`
+    // a.unlimited is the temporary playtest mode (see
+    // CAMPAIGN_UNLIMITED_ATTEMPTS server-side) — shown as ∞ rather than
+    // a full bar so it never reads as a normal full pool.
+    +`<span class="camp-attempts-num">${a.unlimited?'&infin;':a.available+'/'+a.max}</span>`
     +`<span class="camp-refill" id="camp-refill-timer"${a.nextRefillAt?` data-until="${a.nextRefillAt}"`:''}></span>`;
   campaignUpdateRefillTimer();
 
@@ -8456,7 +8496,14 @@ function campaignNodeHTML(l,highestUnlocked){
   if(!unlocked) cls+=' locked';
   if(cleared) cls+=' cleared';
   if(isCurrent) cls+=' current';
-  const inner=!unlocked?'&#128274;':cleared?(gold?'&#9733;':'&#10003;'):String(l.id);
+  // A gold clear shows that level's own gold medallion, which fills the
+  // node entirely (hence .has-gold-art dropping the node's own border and
+  // padding — the art carries its own gold ring). Falls back to the plain
+  // star for any level whose medallion doesn't exist yet, via the same
+  // onerror contract as every other drop-in asset here.
+  const goldArt=gold?campaignGoldImg(l.id):'';
+  if(gold&&goldArt) cls+=' has-gold-art';
+  const inner=!unlocked?'&#128274;':cleared?(gold?(goldArt||'&#9733;'):'&#10003;'):String(l.id);
   return `<button class="${cls}" id="camp-node-${l.id}"`
     +(unlocked?` onclick="campaignTapNode(${l.id})"`:' disabled')+`>`
     +`<span class="camp-node-inner">${inner}</span>`

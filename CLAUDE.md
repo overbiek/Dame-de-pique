@@ -2706,12 +2706,46 @@ before pushing.
   hides the (now-empty) portrait slot and the name line, and italicizes
   the text, all within the SAME card markup a spoken line uses. No new
   DOM, no new overlay.
-- **Only Chapter 1's Prologue and Level 1 are done as of this pass** —
-  one gap in the prologue (a narration beat between "Only to people who
-  remember their first time." and "Your seat is ready.") plus three in
-  Level 1 (one before "This one is yours.", two before "Huh."). The
-  reference doc covers all 100 levels; the rest are follow-up work, not
-  scoped into this pass.
+- **All of Chapters 1-5 (Prologue + Levels 1-50, every level this game
+  actually has) are done.** The reference doc covers all 100 levels;
+  Levels 51-100 (Cabaret of Oddities/The Jester and the Grand Ballroom/
+  The Charmer onward) aren't in scope because those chapters don't exist
+  in `CAMPAIGN_LEVELS`/`CAMPAIGN_CHAPTERS` yet — there is nothing to
+  insert story boxes INTO until those levels are built, so that's
+  follow-up work for whenever they are, not a gap in this pass.
+- **Every insertion follows one rule for resolving a mismatch between
+  the guide's anchors and this implementation's actual cue list**: this
+  codebase already deviates from the master screenplay in real ways —
+  Chapter 2 collapsed three rooftop players into two (their #3 lines
+  reattributed, see `CAMPAIGN_CHAPTER_ROSTER`'s own note), several
+  levels have extra "Added buildup" lines the screenplay never had (Level
+  5/6's glass-swirl foreshadowing, Level 10's drink-banter cold open),
+  and Level 50 restructured two of The Optimist's alternate midpoint
+  stingers into one `pick:'random'` postFail line. Where a guide anchor
+  and the literal current text disagree because of one of these, the
+  fix follows the STATED anchor text, inserted immediately adjacent to
+  it, rather than guessing at "the start" or "the end" of a bucket —
+  except when the anchor is a scene/level heading (`INT./EXT. ... NIGHT`
+  or `LEVEL N`), which always means "the very first thing in that
+  level's sequence," ahead of any added banter too, since an
+  establishing shot has to come before dialogue that assumes the scene
+  has already started. **One box was skipped rather than forced in**:
+  Level 50's "He lets the sentence sit for exactly one beat," anchored
+  to a two-line exchange the postFail restructuring above collapsed
+  into a single random-pick string — splitting a `pick:'random'` cue to
+  fit a narration box in the middle would change what "one of these
+  four lines chosen at random" means, so it's left out; see the comment
+  at that level's `bossMidpoint`/`postFail` block.
+- **Verified structurally, not level-by-level by hand**: a Python pass
+  parsed every `ccue()` call out of the live file, grouped them into
+  their `(levelId, trigger)` buckets, and confirmed the narration/speech
+  interleaving matches what was intended for every one of the 49 levels
+  touched. Two representative sequences (Level 10's `bossIntro`, mixing
+  narration with the added drink-banter cold open; Level 26's `postClear`,
+  where a narration "A beat." sits between "Correct." and "Woof.") were
+  also driven live through `campaignMaybeShow`/`campaignDialogueStep` in
+  a browser and the exact narrator/speaker order at each step confirmed
+  against the plan.
 - **`ccue()`'s id/order scheme had to change FIRST, before any of this
   could be inserted safely.** It used to embed a single counter running
   over the ENTIRE file (`_campaignCueSeq`), so a cue's id depended on

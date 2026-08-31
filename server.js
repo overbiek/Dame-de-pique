@@ -2541,7 +2541,9 @@ const CAMPAIGN_STORY_CUES = [
   ccue(1, 'postClear', 'concierge', 'One hand. Do not build a legend out of it yet.'),
 
   // Level 2 — Not An Accident
+  ccue(2, 'preLevel', null, 'The same four seats. A new fixed hand. The regulars are noticeably less relaxed now.'),
   ccue(2, 'preLevel', 'reg1', 'All right. Do it twice.'),
+  ccue(2, 'postClear', null, 'The PLAYER lets an opponent take a harmless trick rather than winning it unnecessarily. Later, the PLAYER unloads a dangerous card at the right moment.'),
   ccue(2, 'postClear', 'reg2', 'You knew not to take that.'),
   ccue(2, 'postClear', 'reg3', 'Either lucky or you know the game.'),
   ccue(2, 'postClear', 'player', 'Maybe I know when I do not want a trick.'),
@@ -2549,21 +2551,29 @@ const CAMPAIGN_STORY_CUES = [
   ccue(2, 'postClear', 'reg2', 'Twice is harder to call luck.'),
 
   // Level 3 — Count What Is Gone (Suit Void)
+  ccue(3, 'preLevel', null, 'The hand develops unevenly. One suit disappears quickly from the PLAYER hand.'),
   ccue(3, 'preLevel', 'reg3', "You are watching what is left, aren't you?"),
+  ccue(3, 'postClear', null, 'The PLAYER uses the void to avoid taking a costly trick.'),
   ccue(3, 'postClear', 'reg1', 'There. You knew exactly when that suit was dead for you.'),
   ccue(3, 'postClear', 'reg2', 'Counting cards already? In the entrance room?'),
   ccue(3, 'postClear', 'concierge', 'Counting is not cheating when the cards were played in front of everyone.'),
   ccue(3, 'postClear', 'reg3', 'Fine. I am officially paying attention.'),
 
   // Level 4 — The Man With The Glass
+  ccue(4, 'preLevel', null, 'As the next hand is dealt, REGULAR #2 glances toward the far end of the room.'),
   ccue(4, 'preLevel', 'reg2', 'Do not turn around.'),
   ccue(4, 'preLevel', 'player', 'That usually makes people turn around.'),
   ccue(4, 'preLevel', 'reg2', 'The Glass Baron is watching this table.'),
+  ccue(4, 'preLevel', null, 'The PLAYER looks anyway. At the far railing, THE GLASS BARON stands with a cut-glass tumbler in one hand. He does not wave. He simply watches.'),
   ccue(4, 'preLevel', 'reg1', 'Now you have done it.'),
+  ccue(4, 'preLevel', null, 'The PLAYER avoids a late dangerous trick and clears again.'),
+  ccue(4, 'postClear', null, 'Across the room, THE GLASS BARON lifts his glass by half an inch. Nothing more.'),
 
   // Level 5 — The Queen Stays Out (Avoid ♠Q)
+  ccue(5, 'preLevel', null, 'The Queen of Spades remains unplayed deep into the hand. The table grows careful.'),
   ccue(5, 'preLevel', 'reg1', 'There she is somewhere.'),
   ccue(5, 'preLevel', 'reg3', 'And nobody wants to ask where.'),
+  ccue(5, 'postClear', null, 'The PLAYER refuses an obvious-looking lead that could invite the Queen onto the trick.'),
   ccue(5, 'postClear', 'reg2', 'You saw that trap.'),
   ccue(5, 'postClear', 'player', 'I saw thirteen reasons not to take it.'),
   ccue(5, 'postClear', 'reg3', 'That was almost clever.'),
@@ -2577,7 +2587,9 @@ const CAMPAIGN_STORY_CUES = [
   ccue(5, 'postClear', 'reg2', 'He is still by the rail. Same glass, still full — I do not think he has taken one sip all night.'),
 
   // Level 6 — Good Enough To Pass
+  ccue(6, 'postClear', null, 'The PLAYER takes a few penalty points early. REGULAR #2 smiles as if the spell has broken.'),
   ccue(6, 'postClear', 'reg2', 'There we go. Human after all.'),
+  ccue(6, 'postClear', null, 'Instead of chasing a perfect hand, the PLAYER limits the damage and keeps the total beneath the clear line.'),
   ccue(6, 'postClear', 'reg1', 'You stopped trying to make it pretty.'),
   ccue(6, 'postClear', 'player', 'Pretty was not the target.'),
   ccue(6, 'postClear', 'reg3', 'That might be the first smart thing anybody has said in this room tonight.'),
@@ -2588,123 +2600,169 @@ const CAMPAIGN_STORY_CUES = [
   // the PLAYER later lands as a bigger moment.
   ccue(6, 'postClear', 'glass_baron', 'Interesting.'),
   ccue(6, 'postClear', 'reg1', 'He does not usually say even that much.'),
+  ccue(6, 'postClear', null, 'THE GLASS BARON has moved closer. He now watches from beside the velvet rope.'),
 
   // Level 7 — Maybe You Know The Game
+  ccue(7, 'postClear', null, 'A quick exchange leaves REGULAR #1 exposed in one suit. The PLAYER notices immediately and changes the route of the hand.'),
   ccue(7, 'postClear', 'reg1', 'You counted that.'),
   ccue(7, 'postClear', 'reg2', 'He counted all of it.'),
   ccue(7, 'postClear', 'reg3', 'Maybe our first-timer actually knows how this game works.'),
+  ccue(7, 'postClear', null, 'THE GLASS BARON passes behind the table. He does not stop.'),
   ccue(7, 'postClear', 'glass_baron', 'Maybe.'),
+  ccue(7, 'postClear', null, 'He keeps walking.'),
   ccue(7, 'postClear', 'reg2', 'Well. Now I am definitely not relaxing.'),
 
   // Level 8 — He Is Still Watching
+  ccue(8, 'preLevel', null, 'The room feels busier, but the PLAYER table has become strangely quiet.'),
   ccue(8, 'preLevel', 'reg3', 'He has watched three full hands now.'),
   ccue(8, 'preLevel', 'player', 'Who?'),
   ccue(8, 'preLevel', 'reg3', 'Very funny.'),
+  ccue(8, 'postClear', null, "The PLAYER slips a dangerous heart away on an opponent's winning trick and preserves the clear."),
   ccue(8, 'postClear', 'reg1', 'That was clean.'),
+  ccue(8, 'postClear', null, 'THE GLASS BARON stands at the bar, speaking to nobody, eyes still on the table.'),
   ccue(8, 'postClear', 'reg2', 'I think he is waiting for something.'),
 
   // Level 9 — An Empty Chair
+  ccue(9, 'preLevel', null, 'The hand ends. Before the next deal, REGULAR #3 receives a quiet tap on the shoulder from the CONCIERGE.'),
   ccue(9, 'preLevel', 'reg3', 'That my cue?'),
   ccue(9, 'preLevel', 'concierge', 'It is.'),
+  ccue(9, 'preLevel', null, 'REGULAR #3 stands and leaves the fourth seat empty.'),
   ccue(9, 'preLevel', 'reg1', 'Oh, no.'),
   ccue(9, 'preLevel', 'reg2', 'Congratulations. You have been noticed.'),
+  ccue(9, 'preLevel', null, 'THE GLASS BARON finally walks toward the table, glass in hand. He stops behind the empty chair but does not sit yet.'),
   ccue(9, 'preLevel', 'glass_baron', 'Finish this one first.'),
+  ccue(9, 'preLevel', null, 'The PLAYER does.'),
   ccue(9, 'postClear', 'glass_baron', 'Good. Now we can stop guessing.'),
 
   // Level 10 — BOSS: The Glass Baron
   // Payoff for the Level 5/6 buildup (the glass he never drinks from) —
   // added alongside that buildup, not in the source screenplay.
+  ccue(10, 'bossIntro', null, 'The PLAYER remains seated with two regulars. THE GLASS BARON takes the chair REGULAR #3 left behind and places his glass beside his cards.'),
   ccue(10, 'bossIntro', 'player', 'You never actually drink that, do you?'),
   ccue(10, 'bossIntro', 'glass_baron', 'It gives my hands something respectable to do while I watch.'),
   ccue(10, 'bossIntro', 'glass_baron', 'I have been watching you since your fourth hand.'),
   ccue(10, 'bossIntro', 'player', 'That sounds unhealthy.'),
   ccue(10, 'bossIntro', 'glass_baron', 'It is a casino. We have worse habits.'),
+  ccue(10, 'bossIntro', null, 'A small smile.'),
   ccue(10, 'bossIntro', 'glass_baron', 'You play your cards well. You remember what is gone. You know when a trick is not worth taking.'),
+  ccue(10, 'bossIntro', null, 'He squares the cards in front of him.'),
   ccue(10, 'bossIntro', 'glass_baron', 'Let us see if you can beat me.'),
+  ccue(10, 'bossMidpoint', null, 'The Baron studies the running score.'),
   ccue(10, 'bossMidpoint', 'glass_baron', 'Still keeping the damage low. Sensible.'),
   ccue(10, 'bossMidpoint', 'player', 'You sound disappointed.'),
   ccue(10, 'bossMidpoint', 'glass_baron', 'No. Interested.'),
   ccue(10, 'postFail', 'glass_baron', 'Again. Same hand. Better answer.', { pick: 'random' }),
   ccue(10, 'postFail', 'glass_baron', 'You saw the danger. You simply saw it one trick too late.', { pick: 'random' }),
   ccue(10, 'postFail', 'glass_baron', 'Do not chase the hand you wanted. Play the hand that is here.', { pick: 'random' }),
+  ccue(10, 'bossDefeat', null, 'The final score settles.'),
+  ccue(10, 'bossDefeat', null, 'THE GLASS BARON looks at the result, then finishes his drink.'),
   ccue(10, 'bossDefeat', 'glass_baron', 'All right.'),
   ccue(10, 'bossDefeat', 'player', 'That is all I get?'),
   ccue(10, 'bossDefeat', 'glass_baron', 'No. You get an invitation.'),
+  ccue(10, 'bossDefeat', null, 'He stands.'),
   ccue(10, 'bossDefeat', 'glass_baron', 'There is another table where I would like you to join me.'),
   ccue(10, 'bossDefeat', 'player', 'Where?'),
   ccue(10, 'bossDefeat', 'glass_baron', 'Rooftop. Higher rollers. Sharper eyes.'),
+  ccue(10, 'chapterExit', null, 'He gestures toward a private lift.'),
   ccue(10, 'chapterExit', 'glass_baron', 'Come. I want to see what they make of you.'),
 
   // ── Chapter 2 — The Rooftop, Boss: The Sharp ──
   // Level 11 — Higher Up
+  ccue(11, 'preLevel', null, 'The lift doors open onto city lights and cold air. THE GLASS BARON leads the PLAYER to a table with three new opponents.'),
   ccue(11, 'preLevel', 'glass_baron', 'Everyone here earned their chair. They will not underestimate you for long.'),
+  ccue(11, 'preLevel', null, 'A strange sound comes from the balcony corridor.'),
   ccue(11, 'preLevel', 'the_sharp', 'Five hundred thirty-seven... five hundred thirty-eight...'),
+  ccue(11, 'preLevel', null, 'The PLAYER looks over. A man in an immaculate suit is doing pull-ups from the decorative balcony crossbar as if this is perfectly normal.'),
   ccue(11, 'preLevel', 'rooftop1', 'Do not ask.'),
   ccue(11, 'preLevel', 'rooftop2', 'He likes an audience.'),
+  ccue(11, 'postClear', null, 'The hand begins. The PLAYER keeps the penalty low enough to clear.'),
   ccue(11, 'postClear', 'glass_baron', 'The rooftop suits you.'),
 
   // Level 12 — Do Not Waste Motion
+  ccue(12, 'preLevel', null, 'THE SHARP drops lightly from the balcony bar, adjusts his cuffs and walks past the table without appearing out of breath.'),
   ccue(12, 'preLevel', 'the_sharp', 'You took one trick you did not need.'),
   ccue(12, 'preLevel', 'player', 'Hello to you too.'),
   ccue(12, 'preLevel', 'the_sharp', 'Greetings are also unnecessary motion.'),
+  ccue(12, 'preLevel', null, 'He keeps walking.'),
   ccue(12, 'preLevel', 'rooftop2', 'That was him being friendly.'),
+  ccue(12, 'postClear', null, 'The PLAYER plays a cleaner hand.'),
   ccue(12, 'postClear', 'rooftop1', 'He is irritating. He is also usually right.'),
 
   // Level 13 — Two Tricks Ahead (Trick Count)
+  ccue(13, 'postClear', null, 'An opponent changes strategy mid-hand. The PLAYER adjusts before the trap closes.'),
   ccue(13, 'postClear', 'rooftop2', 'I thought you would take that.'),
   ccue(13, 'postClear', 'rooftop1', 'He saw it two tricks ago.'),
+  ccue(13, 'postClear', null, 'At the railing, THE SHARP is now doing slow push-ups, jacket still on.'),
   ccue(13, 'postClear', 'the_sharp', 'Thirty-nine... forty...'),
   ccue(13, 'postClear', 'rooftop2', 'Show-off.'),
+  ccue(13, 'postClear', null, 'THE SHARP looks up from the floor exactly as the credit counter finishes rolling.'),
 
   // Level 14 — Razor Comment
+  ccue(14, 'postClear', null, 'The Queen of Spades appears late. The PLAYER routes around it and leaves another opponent holding the dangerous trick.'),
   ccue(14, 'postClear', 'rooftop1', 'That was good.'),
   ccue(14, 'postClear', 'the_sharp', 'It was adequate.'),
+  ccue(14, 'postClear', null, 'THE SHARP is leaning against the corridor now, perfectly composed.'),
   ccue(14, 'postClear', 'the_sharp', 'Good would have cost fewer points two tricks earlier.'),
   ccue(14, 'postClear', 'player', 'Do you ever compliment anyone?'),
   ccue(14, 'postClear', 'the_sharp', 'When necessary.'),
   ccue(14, 'postClear', 'rooftop2', 'I would take "adequate." That is practically a standing ovation from him.'),
 
   // Level 15 — Make Them Change (Clean Hand)
+  ccue(15, 'postClear', null, 'ROOFTOP PLAYER #3 attempts the same bait twice. The PLAYER refuses it twice.'),
   ccue(15, 'postClear', 'rooftop2', 'I have been trying to fool you for three rounds.'),
   ccue(15, 'postClear', 'rooftop1', 'And now you are changing how you play because of it.'),
   ccue(15, 'postClear', 'glass_baron', 'That is usually the moment a table becomes interesting.'),
+  ccue(15, 'postClear', null, 'THE SHARP watches from the far balcony, arms folded.'),
   ccue(15, 'postClear', 'rooftop2', 'Fine. I need a new plan.'),
 
   // Level 16 — The Cut
+  ccue(16, 'postClear', null, 'The PLAYER reveals a void slightly earlier than ideal. The hand still clears.'),
   ccue(16, 'postClear', 'the_sharp', 'You showed them too much.'),
   ccue(16, 'postClear', 'player', 'I passed.'),
   ccue(16, 'postClear', 'the_sharp', 'Passing does not make the mistake disappear.'),
+  ccue(16, 'postClear', null, 'A beat. He points once toward the table.'),
   ccue(16, 'postClear', 'the_sharp', 'Next time, make them discover it. Do not announce it.'),
   ccue(16, 'postClear', 'rooftop2', 'See? Knife first. Advice second.'),
 
   // Level 17 — Close Still Counts
+  ccue(17, 'postClear', null, 'The margin is tight. The PLAYER finishes just inside the clear requirement.'),
   ccue(17, 'postClear', 'rooftop1', 'Close.'),
   ccue(17, 'postClear', 'player', 'Close still counts.'),
   ccue(17, 'postClear', 'the_sharp', 'Only if you learn why it was close.'),
   ccue(17, 'postClear', 'player', 'You really cannot help yourself, can you?'),
   ccue(17, 'postClear', 'the_sharp', 'No.'),
+  ccue(17, 'postClear', null, 'For the first time, THE GLASS BARON laughs aloud.'),
 
   // Level 18 — He Stops Moving
+  ccue(18, 'preLevel', null, 'No pull-ups. No push-ups. No pacing. THE SHARP stands completely still behind the rooftop table and watches every card.'),
   ccue(18, 'preLevel', 'rooftop1', 'That is worse.'),
   ccue(18, 'preLevel', 'rooftop2', 'Much worse.'),
+  ccue(18, 'postClear', null, 'The PLAYER notices an opponent is void, uses it, and avoids a costly late trick.'),
   ccue(18, 'postClear', 'the_sharp', 'You counted the void.'),
   ccue(18, 'postClear', 'player', 'You sound surprised.'),
   ccue(18, 'postClear', 'the_sharp', 'I am not.'),
+  ccue(18, 'postClear', null, 'THE SHARP remains behind the table after the others begin to stand.'),
 
   // Level 19 — Sharp Eyes
+  ccue(19, 'preLevel', null, 'Before the deal, ROOFTOP PLAYER #3 glances back at THE SHARP.'),
   ccue(19, 'preLevel', 'rooftop2', 'You planning to stand there all night?'),
   ccue(19, 'preLevel', 'the_sharp', 'No.'),
+  ccue(19, 'postClear', null, 'The hand begins. THE SHARP watches without a word. The PLAYER clears.'),
   ccue(19, 'postClear', 'the_sharp', 'You remember cards. You read people. You recover from imperfect hands.'),
   ccue(19, 'postClear', 'player', 'Is that a compliment?'),
   ccue(19, 'postClear', 'the_sharp', 'It is an assessment.'),
+  ccue(19, 'postClear', null, 'He looks at ROOFTOP PLAYER #3.'),
   ccue(19, 'postClear', 'the_sharp', 'Your seat.'),
   ccue(19, 'postClear', 'rooftop2', 'There it is.'),
+  ccue(19, 'postClear', null, 'The opponent stands.'),
   ccue(19, 'postClear', 'glass_baron', 'I told you: sharper eyes.'),
 
   // Level 20 — BOSS: The Sharp
+  ccue(20, 'bossIntro', null, 'THE SHARP takes the open chair. He smooths his suit jacket as if the previous five hundred repetitions never happened.'),
   ccue(20, 'bossIntro', 'the_sharp', 'The Baron says you understand cards.'),
   ccue(20, 'bossIntro', 'player', 'And you disagree?'),
   ccue(20, 'bossIntro', 'the_sharp', 'Cards are easy. People leak information.'),
+  ccue(20, 'bossIntro', null, 'He looks at the two remaining rooftop opponents, then back to the PLAYER.'),
   ccue(20, 'bossIntro', 'the_sharp', 'Let us see whether you notice before they do.'),
   ccue(20, 'bossMidpoint', 'the_sharp', 'Better. You changed after one mistake instead of defending it.'),
   ccue(20, 'bossMidpoint', 'player', 'That almost sounded kind.'),
@@ -2712,78 +2770,115 @@ const CAMPAIGN_STORY_CUES = [
   ccue(20, 'postFail', 'the_sharp', 'Again. You saw the card. You missed the person.', { pick: 'random' }),
   ccue(20, 'postFail', 'the_sharp', 'Too much motion. Too little purpose.', { pick: 'random' }),
   ccue(20, 'postFail', 'the_sharp', 'You knew what was gone. You did not ask what that forced them to hold.', { pick: 'random' }),
+  ccue(20, 'bossDefeat', null, 'The score settles.'),
+  ccue(20, 'bossDefeat', null, 'THE SHARP studies the result for a long second.'),
   ccue(20, 'bossDefeat', 'the_sharp', 'You adapt.'),
   ccue(20, 'bossDefeat', 'player', 'Interesting?'),
   ccue(20, 'bossDefeat', 'the_sharp', 'Annoyingly.'),
+  ccue(20, 'bossDefeat', null, 'He rises and gestures toward a narrow brass door beyond the rooftop bar.'),
   ccue(20, 'bossDefeat', 'the_sharp', 'There is someone downstairs who believes every decision can be explained.'),
   ccue(20, 'bossDefeat', 'glass_baron', 'You two will either get along beautifully or not at all.'),
   ccue(20, 'chapterExit', 'the_sharp', 'Come. The library is quieter.'),
 
   // ── Chapter 3 — The Grand Library, Boss: The Scholar ──
   // Level 21 — The Reader
+  ccue(21, 'preLevel', null, 'The brass door opens into near-silence. Three library players wait at the next four-seat table.'),
+  ccue(21, 'preLevel', null, 'At a reading desk beyond them sits THE SCHOLAR, glasses low on his nose, absorbed in a thick book.'),
   ccue(21, 'preLevel', 'the_scholar', 'Woof.'),
+  ccue(21, 'preLevel', null, 'Nobody reacts.'),
   ccue(21, 'preLevel', 'player', 'Did he just—'),
   ccue(21, 'preLevel', 'lib1', 'Yes.'),
   ccue(21, 'preLevel', 'player', 'Why?'),
   ccue(21, 'preLevel', 'lib1', 'We stopped asking.'),
+  ccue(21, 'preLevel', null, 'The hand begins. The PLAYER clears with a restrained defensive line.'),
+  ccue(21, 'postClear', null, 'THE SCHOLAR turns one page without looking up.'),
 
   // Level 22 — One Line In The Margin
+  ccue(22, 'postClear', null, 'The PLAYER adjusts immediately when an opponent changes the route of a suit.'),
   ccue(22, 'postClear', 'lib2', 'Most people need two tricks to see that.'),
   ccue(22, 'postClear', 'lib3', 'You needed one.'),
+  ccue(22, 'postClear', null, 'Across the room, THE SCHOLAR writes a single line in the margin of his book.'),
   ccue(22, 'postClear', 'player', 'Is he taking notes on us?'),
   ccue(22, 'postClear', 'lib1', 'Probably on you.'),
+  ccue(22, 'postClear', null, 'THE SCHOLAR pushes his glasses back up and continues reading.'),
 
   // Level 23 — Where The Queen Lands (Avoid the Queen)
+  ccue(23, 'preLevel', null, 'The Queen of Spades stays hidden deep into the hand. The table tightens.'),
   ccue(23, 'preLevel', 'lib3', 'Nobody wants to open that door.'),
+  ccue(23, 'postClear', null, 'The PLAYER chooses a safe route that forces the dangerous card away from their own pile.'),
   ccue(23, 'postClear', 'lib2', 'You knew where she could land.'),
   ccue(23, 'postClear', 'the_scholar', 'Woof.'),
   ccue(23, 'postClear', 'lib1', 'That might be approval.'),
 
   // Level 24 — Sacrifice The Trick
+  ccue(24, 'postClear', null, 'The PLAYER deliberately gives up an early trick to preserve a safer endgame.'),
   ccue(24, 'postClear', 'lib1', 'You let that go on purpose.'),
   ccue(24, 'postClear', 'player', 'It was cheaper.'),
   ccue(24, 'postClear', 'lib2', 'Most people hate losing a trick even when winning it hurts them.'),
+  ccue(24, 'postClear', null, 'THE SCHOLAR looks up from his book for the first time, then writes another note.'),
   ccue(24, 'postClear', 'lib3', 'He noticed that one.'),
 
   // Level 25 — Luck Is The Excuse
+  ccue(25, 'preLevel', null, 'Between hands, LIBRARY PLAYER #2 closes a small notebook of their own.'),
   ccue(25, 'preLevel', 'lib2', 'People downstairs call this luck.'),
   ccue(25, 'preLevel', 'lib1', 'People downstairs are downstairs.'),
+  ccue(25, 'postClear', null, 'The hand turns awkward. The PLAYER limits the penalty instead of forcing an impossible clean finish.'),
   ccue(25, 'postClear', 'lib3', 'That is the difference. You stop fighting the hand before the hand punishes you for it.'),
+  ccue(25, 'postClear', null, 'THE SCHOLAR quietly changes books.'),
 
   // Level 26 — Rewrite The Plan
+  ccue(26, 'postClear', null, 'Hearts break earlier than expected. The PLAYER abandons the first plan and pivots.'),
   ccue(26, 'postClear', 'lib1', 'You changed everything in one trick.'),
   ccue(26, 'postClear', 'player', 'The table changed first.'),
+  ccue(26, 'postClear', null, "THE SCHOLAR looks over the top of his book."),
   ccue(26, 'postClear', 'the_scholar', 'Correct.'),
   // Deliberately its own card, not appended to the line above — the beat
-  // between "Correct." and this IS the joke.
+  // between "Correct." and this IS the joke. The story-box guide's own
+  // "A beat." narration for this exact gap confirms the pacing this
+  // comment already described; see it below rather than duplicated here.
+  ccue(26, 'postClear', null, 'A beat.'),
   ccue(26, 'postClear', 'the_scholar', 'Woof.'),
   ccue(26, 'postClear', 'player', 'I was almost taking you seriously.'),
+  ccue(26, 'postClear', null, "A tiny smile appears behind THE SCHOLAR's book."),
 
   // Level 27 — The Book Is Not The Game
+  ccue(27, 'preLevel', null, 'More spectators gather between the shelves. THE SCHOLAR has moved to a chair closer to the PLAYER table, book still open.'),
   ccue(27, 'preLevel', 'lib3', 'He has not read a line in five minutes.'),
   ccue(27, 'preLevel', 'lib2', 'He is reading something else now.'),
+  ccue(27, 'postClear', null, 'The PLAYER avoids bait on two consecutive tricks.'),
   ccue(27, 'postClear', 'the_scholar', 'Patterns are useful until the opponent knows you prefer them.'),
   ccue(27, 'postClear', 'player', 'That advice free?'),
   ccue(27, 'postClear', 'the_scholar', 'For now.'),
 
   // Level 28 — Book Closed
+  ccue(28, 'preLevel', null, 'The PLAYER arrives. THE SCHOLAR closes his thick book before the first card is dealt.'),
   ccue(28, 'preLevel', 'lib1', 'That is new.'),
+  ccue(28, 'postClear', null, 'THE SCHOLAR removes his glasses, folds them and sets them on top of the book. He watches the entire hand directly.'),
+  ccue(28, 'postClear', null, 'The PLAYER refuses a tempting but dangerous trick and clears.'),
   ccue(28, 'postClear', 'the_scholar', 'You no longer need the obvious answer.'),
   ccue(28, 'postClear', 'player', 'Neither do you, apparently.'),
+  ccue(28, 'postClear', null, 'THE SCHOLAR does not reopen the book.'),
 
   // Level 29 — Studying You (Suit Void)
+  ccue(29, 'preLevel', null, 'The table is ready. THE SCHOLAR stands behind LIBRARY PLAYER #3 for the entire hand.'),
   ccue(29, 'preLevel', 'lib3', 'You are making this very comfortable.'),
   ccue(29, 'preLevel', 'the_scholar', 'Good.'),
+  ccue(29, 'postClear', null, 'The PLAYER clears after tracking a late void and unloading the dangerous card at the only safe moment.'),
   ccue(29, 'postClear', 'the_scholar', 'Enough.'),
+  ccue(29, 'postClear', null, 'He taps LIBRARY PLAYER #3 on the shoulder.'),
   ccue(29, 'postClear', 'lib3', 'My seat?'),
   ccue(29, 'postClear', 'the_scholar', 'Your seat.'),
   ccue(29, 'postClear', 'lib1', 'He likes you. I think.'),
+  ccue(29, 'postClear', null, 'LIBRARY PLAYER #3 stands. THE SCHOLAR takes one step toward the chair.'),
 
   // Level 30 — BOSS: The Scholar
+  ccue(30, 'bossIntro', null, 'THE SCHOLAR reaches the empty chair. Before sitting, he looks directly at the PLAYER.'),
   ccue(30, 'bossIntro', 'the_scholar', 'Woof.'),
+  ccue(30, 'bossIntro', null, 'He sits. Nobody reacts.'),
   ccue(30, 'bossIntro', 'the_scholar', 'I have read every game you played in this building tonight.'),
   ccue(30, 'bossIntro', 'player', 'Read?'),
   ccue(30, 'bossIntro', 'the_scholar', 'Cards are text. Decisions are annotations. Mistakes are revisions.'),
+  ccue(30, 'bossIntro', null, 'He places the closed book beside him.'),
   ccue(30, 'bossIntro', 'the_scholar', 'Let us add one more chapter.'),
   ccue(30, 'bossMidpoint', 'the_scholar', 'Interesting. You are not following the pattern I wrote down.'),
   ccue(30, 'bossMidpoint', 'player', 'Then your notes are wrong.'),
@@ -2791,62 +2886,92 @@ const CAMPAIGN_STORY_CUES = [
   ccue(30, 'postFail', 'the_scholar', 'Again. The result changed before your plan did.', { pick: 'random' }),
   ccue(30, 'postFail', 'the_scholar', 'You remembered the cards. You forgot the reason they mattered.', { pick: 'random' }),
   ccue(30, 'postFail', 'the_scholar', 'A mistake is only expensive if you insist on repeating it.', { pick: 'random' }),
+  ccue(30, 'bossDefeat', null, 'The score settles.'),
+  ccue(30, 'bossDefeat', null, 'THE SCHOLAR opens his book, crosses out one full line, then closes it again.'),
   ccue(30, 'bossDefeat', 'the_scholar', 'You do not merely follow patterns.'),
   ccue(30, 'bossDefeat', 'player', 'No?'),
   ccue(30, 'bossDefeat', 'the_scholar', 'You create new ones.'),
+  ccue(30, 'bossDefeat', null, 'He puts his glasses back on and walks toward a bronze double door.'),
   ccue(30, 'bossDefeat', 'the_scholar', 'Knowledge brought you this far.'),
+  ccue(30, 'chapterExit', null, 'He opens the doors. Laughter and music spill into the library.'),
   ccue(30, 'chapterExit', 'the_scholar', 'The next room is less respectful of knowledge.'),
   ccue(30, 'chapterExit', 'player', 'You are not coming?'),
   ccue(30, 'chapterExit', 'the_scholar', 'Of course I am coming.'),
+  ccue(30, 'chapterExit', null, 'A beat.'),
   ccue(30, 'chapterExit', 'the_scholar', 'Woof.'),
 
   // ── Chapter 4 — The Carnival Lounge, Boss: The Wildcard ──
   // Level 31 — That Laugh
+  ccue(31, 'preLevel', null, 'The bronze doors swing open. Before the PLAYER sees anyone, a huge laugh rolls across the room.'),
   ccue(31, 'preLevel', 'the_wildcard', 'Ha! No, no, no — that was magnificent.'),
+  ccue(31, 'preLevel', null, 'THE WILDCARD walks past another table with a beer in one hand. A player there has just swallowed the Queen of Spades.'),
   ccue(31, 'preLevel', 'the_wildcard', 'You found the worst possible card and adopted it like a stray dog. Very generous.'),
+  ccue(31, 'preLevel', null, 'The embarrassed player laughs.'),
   ccue(31, 'preLevel', 'the_wildcard', 'Next time, watch who is void before you lead that suit. Same courage, better timing.'),
+  ccue(31, 'preLevel', null, 'He wanders on, still laughing. The PLAYER sits with three new opponents.'),
   ccue(31, 'preLevel', 'lounge1', 'You get used to him.'),
   ccue(31, 'preLevel', 'lounge2', 'No, you do not.'),
+  ccue(31, 'postClear', null, "THE WILDCARD's laugh sounds again from somewhere behind the PLAYER."),
 
   // Level 32 — Gold Star (Trick Count)
+  ccue(32, 'preLevel', null, 'LOUNGE PLAYER #3 makes an aggressive play that backfires.'),
   ccue(32, 'preLevel', 'the_wildcard', 'Bold! Wrong, but bold!'),
+  ccue(32, 'postClear', null, 'He appears beside the table, beer still in hand.'),
   ccue(32, 'postClear', 'the_wildcard', 'You wanted to get rid of the danger before checking who could hand it back. Tiny detail. Enormous consequences.'),
   ccue(32, 'postClear', 'lounge3', 'Thank you, professor.'),
   ccue(32, 'postClear', 'the_wildcard', 'Gold star. No sticker. Budget cuts.'),
+  ccue(32, 'postClear', null, 'He laughs and moves on.'),
   ccue(32, 'postClear', 'lounge1', 'He teaches like the school burned down years ago.'),
 
   // Level 33 — Nice Escape
+  ccue(33, 'postClear', null, 'The PLAYER escapes a dangerous trick by using a void at exactly the right time.'),
   ccue(33, 'postClear', 'the_wildcard', 'Nice escape!'),
+  ccue(33, 'postClear', null, 'He passes behind the table without stopping, beer raised in salute.'),
   ccue(33, 'postClear', 'the_wildcard', 'You saw the exit before the room caught fire. Keep that.'),
   ccue(33, 'postClear', 'player', 'Do you comment on every table?'),
   ccue(33, 'postClear', 'the_wildcard', 'Only the educational ones!'),
+  ccue(33, 'postClear', null, 'He is gone before the sentence finishes.'),
 
   // Level 34 — Wrong Card, Great Confidence
+  ccue(34, 'postClear', null, 'LOUNGE PLAYER #2 confidently throws a card that immediately costs them.'),
   ccue(34, 'postClear', 'the_wildcard', 'Wrong card. Great confidence, though.'),
   ccue(34, 'postClear', 'lounge2', 'Helpful.'),
   ccue(34, 'postClear', 'the_wildcard', 'I am helping. You will remember this because I made it embarrassing.'),
+  ccue(34, 'postClear', null, 'He points at the trick.'),
   ccue(34, 'postClear', 'the_wildcard', 'Next time, count what is gone before you decide what is safe.'),
+  ccue(34, 'postClear', null, 'He takes a sip of beer and looks at the PLAYER.'),
   ccue(34, 'postClear', 'the_wildcard', 'You already do that. Annoying.'),
 
   // Level 35 — Class Is In Session (Clean Hand)
+  ccue(35, 'postClear', null, 'The hand becomes chaotic. Two players dump danger early. The PLAYER stays patient.'),
   ccue(35, 'postClear', 'lounge1', 'How are you still clean?'),
   ccue(35, 'postClear', 'the_wildcard', 'Because our new student is doing homework!'),
+  ccue(35, 'postClear', null, 'Laughter. THE WILDCARD leans over the back of an empty spectator chair.'),
   ccue(35, 'postClear', 'the_wildcard', 'Everybody else is trying to win tricks. You are trying to win the hand. Different subject.'),
+  ccue(35, 'postClear', null, 'THE WILDCARD taps his beer bottle against the table edge like a school bell, then moves away.'),
 
   // Level 36 — Joke, Then Lesson
+  ccue(36, 'postClear', null, 'LOUNGE PLAYER #3 gets trapped with a pile of hearts.'),
   ccue(36, 'postClear', 'the_wildcard', 'Congratulations! You have collected the complete red set.'),
+  ccue(36, 'postClear', null, 'The table laughs, including LOUNGE PLAYER #3.'),
   ccue(36, 'postClear', 'the_wildcard', 'Now the boring part: you showed your void too early and they used it against you. Hide information until it buys you something.'),
   ccue(36, 'postClear', 'lounge3', 'See? There it is. Joke, then homework.'),
   ccue(36, 'postClear', 'the_wildcard', 'Education is a gift.'),
+  ccue(36, 'postClear', null, 'He walks away with the beer still in hand.'),
 
   // Level 37 — He Notices You
+  ccue(37, 'postClear', null, 'The PLAYER makes a deliberately strange-looking move that becomes correct two tricks later.'),
   ccue(37, 'postClear', 'lounge2', 'I thought that was a mistake.'),
   ccue(37, 'postClear', 'the_wildcard', 'So did I.'),
+  ccue(37, 'postClear', null, 'For once, THE WILDCARD has stopped walking. He watches the last two tricks closely.'),
   ccue(37, 'postClear', 'the_wildcard', 'Oh, that is fun.'),
   ccue(37, 'postClear', 'player', 'Educational?'),
   ccue(37, 'postClear', 'the_wildcard', 'Deeply.'),
+  ccue(37, 'postClear', null, 'He remains near the table instead of drifting back into the room.'),
 
   // Level 38 — The Laughter Moves Closer
+  ccue(38, 'postClear', null, 'THE WILDCARD stands directly behind the PLAYER table for the entire hand, beer in hand.'),
+  ccue(38, 'postClear', null, 'The PLAYER redirects the Queen away and keeps the penalty under control.'),
   ccue(38, 'postClear', 'the_wildcard', 'Ha! You knew exactly who could not follow suit.'),
   ccue(38, 'postClear', 'lounge1', 'He has been watching every card.'),
   ccue(38, 'postClear', 'the_wildcard', 'Of course. I can drink and count.'),
@@ -2854,149 +2979,204 @@ const CAMPAIGN_STORY_CUES = [
   ccue(38, 'postClear', 'the_wildcard', 'And yet.'),
 
   // Level 39 — When The Laughter Stops
+  ccue(39, 'preLevel', null, 'The room is still loud, but THE WILDCARD is not. He stands behind LOUNGE PLAYER #3, beer in hand, watching in complete silence.'),
   ccue(39, 'preLevel', 'lounge3', 'I preferred the jokes.'),
+  ccue(39, 'postClear', null, 'The PLAYER clears after a tense final sequence.'),
   ccue(39, 'postClear', 'the_wildcard', 'Good.'),
+  ccue(39, 'postClear', null, 'No laugh. He looks at LOUNGE PLAYER #3.'),
   ccue(39, 'postClear', 'the_wildcard', 'Recess.'),
   ccue(39, 'postClear', 'lounge3', 'That means my seat, does it?'),
   ccue(39, 'postClear', 'the_wildcard', 'You are learning.'),
   ccue(39, 'postClear', 'the_wildcard', 'All right. Class starts next hand.'),
+  ccue(39, 'postClear', null, 'LOUNGE PLAYER #3 stands. THE WILDCARD keeps the beer in hand and pulls the chair back.'),
 
   // Level 40 — BOSS: The Wildcard
+  ccue(40, 'bossIntro', null, 'THE WILDCARD sits with his beer still in one hand and his cards in the other.'),
   ccue(40, 'bossIntro', 'the_wildcard', 'Right, class. Tiny problem.'),
   ccue(40, 'bossIntro', 'player', 'You are the teacher?'),
   ccue(40, 'bossIntro', 'the_wildcard', 'Exactly. Terrifying, is it not?'),
+  ccue(40, 'bossIntro', null, 'He laughs.'),
   ccue(40, 'bossIntro', 'the_wildcard', 'Let us see whether the teacher can still pass the exam.'),
+  ccue(40, 'bossMidpoint', null, 'A strange play from THE WILDCARD turns out to have purpose.'),
   ccue(40, 'bossMidpoint', 'the_wildcard', 'There is the lesson: unpredictable is not the same as random.'),
   ccue(40, 'bossMidpoint', 'player', 'You rehearsed that line.'),
   ccue(40, 'bossMidpoint', 'the_wildcard', 'For years.'),
   ccue(40, 'postFail', 'the_wildcard', 'Again! Same classroom, same exam, less creative suffering.', { pick: 'random' }),
   ccue(40, 'postFail', 'the_wildcard', 'You watched my joke and missed my card. Classic.', { pick: 'random' }),
   ccue(40, 'postFail', 'the_wildcard', 'Good idea. Bad timing. Fortunately, timing is teachable.', { pick: 'random' }),
+  ccue(40, 'bossDefeat', null, 'The final score settles.'),
+  ccue(40, 'bossDefeat', null, 'THE WILDCARD stares at the result, then bursts out laughing and raises his beer.'),
   ccue(40, 'bossDefeat', 'the_wildcard', 'Excellent!'),
   ccue(40, 'bossDefeat', 'player', 'That sounded sincere.'),
   ccue(40, 'bossDefeat', 'the_wildcard', 'It is. You learned the important bit.'),
   ccue(40, 'bossDefeat', 'player', 'Which bit?'),
   ccue(40, 'bossDefeat', 'the_wildcard', 'When I make noise, watch the cards.'),
+  ccue(40, 'chapterExit', null, 'He gets up and walks toward a pair of glass doors, beer still in hand.'),
   ccue(40, 'chapterExit', 'the_wildcard', 'Come on. Next room has flowers, sunlight and a man with opinions about absolutely everything.'),
   ccue(40, 'chapterExit', 'player', 'Worse than you?'),
   ccue(40, 'chapterExit', 'the_wildcard', 'Much more direct.'),
 
   // ── Chapter 5 — The Conservatory, Boss: The Optimist ──
   // Level 41 — No Hard Feelings
+  ccue(41, 'preLevel', null, 'Sunlight floods through the glass roof. THE WILDCARD steps aside as the PLAYER enters.'),
+  ccue(41, 'preLevel', null, 'Near a fountain, THE OPTIMIST is speaking to a woman at another table.'),
   ccue(41, 'preLevel', 'the_optimist', 'Dinner tonight?'),
   ccue(41, 'preLevel', 'cons_guest', 'No.'),
   ccue(41, 'preLevel', 'the_optimist', 'Perfect. Saves us both an awkward dessert. Have a beautiful evening.'),
+  ccue(41, 'preLevel', null, 'He turns immediately toward a nearby game where a player has just made a disastrous move.'),
   ccue(41, 'preLevel', 'the_optimist', 'Whoa. That was really bad.'),
+  ccue(41, 'preLevel', null, 'The player stares at him.'),
   ccue(41, 'preLevel', 'the_optimist', 'Good news: lead lower next time and half the problem disappears. You are welcome.'),
+  ccue(41, 'preLevel', null, 'He laughs and walks on. The PLAYER sits with three new opponents.'),
   ccue(41, 'preLevel', 'cons1', 'That is him.'),
   ccue(41, 'preLevel', 'cons2', 'You will know when he dislikes a play.'),
+  ccue(41, 'preLevel', null, 'THE OPTIMIST gives the PLAYER a cheerful thumbs-up from across the room.'),
 
   // Level 42 — Blunt First
+  ccue(42, 'postClear', null, 'The PLAYER chooses an overly safe line but still clears.'),
   ccue(42, 'postClear', 'the_optimist', 'Too timid.'),
+  ccue(42, 'postClear', null, 'He has appeared behind the table without warning.'),
   ccue(42, 'postClear', 'player', 'It worked.'),
   ccue(42, 'postClear', 'the_optimist', 'Yes. And crossing the street with your eyes closed can work once.'),
+  ccue(42, 'postClear', null, 'He grins before the line can sting.'),
   ccue(42, 'postClear', 'the_optimist', 'Next time, keep the safety but use the information you already earned. You had more room than you thought.'),
   ccue(42, 'postClear', 'cons3', 'Blunt first. Advice second.'),
   ccue(42, 'postClear', 'the_optimist', 'Still a clear. Take the win.'),
 
   // Level 43 — Rejected, Still Smiling
+  ccue(43, 'preLevel', null, 'Between hands, THE OPTIMIST spots another woman passing the table.'),
   ccue(43, 'preLevel', 'the_optimist', 'Coffee tomorrow?'),
   ccue(43, 'preLevel', 'cons_guest', 'Absolutely not.'),
   ccue(43, 'preLevel', 'the_optimist', 'Strong answer. I respect the confidence.'),
+  ccue(43, 'postClear', null, 'He turns back to the game, completely unfazed.'),
   ccue(43, 'postClear', 'the_optimist', 'Speaking of strong answers — that discard was good.'),
   ccue(43, 'postClear', 'player', 'Do you recover from everything that quickly?'),
   ccue(43, 'postClear', 'the_optimist', 'Why waste a perfectly good next minute on the previous one?'),
 
   // Level 44 — That Was Really Bad (Suit Void)
+  ccue(44, 'postClear', null, 'CONSERVATORY PLAYER #2 misreads the table and takes a painful trick.'),
   ccue(44, 'postClear', 'the_optimist', 'Oh, wow. That was really bad.'),
   ccue(44, 'postClear', 'cons2', 'Thank you.'),
   ccue(44, 'postClear', 'the_optimist', 'No, listen — this is good.'),
   ccue(44, 'postClear', 'cons2', 'How?'),
   ccue(44, 'postClear', 'the_optimist', 'Because now you will never do exactly that again. Next time, watch who is void before you lead the suit. Easy fix.'),
+  ccue(44, 'postClear', null, 'He laughs. Even CONSERVATORY PLAYER #2 smiles.'),
   ccue(44, 'postClear', 'cons1', 'He insults the mistake, then rescues the person.'),
 
   // Level 45 — That One Is On You
+  ccue(45, 'postClear', null, 'The PLAYER makes a small mistake and gets punished for it.'),
   ccue(45, 'postClear', 'the_optimist', 'That one is on you.'),
   ccue(45, 'postClear', 'player', 'You really go straight for it.'),
   ccue(45, 'postClear', 'the_optimist', 'Would you prefer I lie first?'),
+  ccue(45, 'postClear', null, 'He points toward the previous trick.'),
   ccue(45, 'postClear', 'the_optimist', 'You gave them control of the suit one trick too early. Hold it once longer next time and you are fine.'),
   ccue(45, 'postClear', 'player', 'And the optimism?'),
   ccue(45, 'postClear', 'the_optimist', 'You noticed the mistake. That already makes the next hand better.'),
+  ccue(45, 'postClear', null, 'The PLAYER clears despite the error. THE OPTIMIST nods as if this proves his point.'),
 
   // Level 46 — Progress
+  ccue(46, 'postClear', null, 'CONSERVATORY PLAYER #3 makes an ugly misplay.'),
   ccue(46, 'postClear', 'the_optimist', 'Terrible.'),
+  ccue(46, 'postClear', null, 'A beat.'),
   ccue(46, 'postClear', 'the_optimist', 'But impressive commitment.'),
   ccue(46, 'postClear', 'cons3', 'There is the soft landing.'),
   ccue(46, 'postClear', 'the_optimist', 'And here is the useful part: do not throw danger until you know who can return it. Try that and you will look like a different player next hand.'),
+  ccue(46, 'postClear', null, 'He notices a woman at the next table and opens his mouth.'),
   ccue(46, 'postClear', 'cons_guest', 'No.'),
   ccue(46, 'postClear', 'the_optimist', 'I had not even asked yet.'),
   ccue(46, 'postClear', 'cons_guest', 'Still no.'),
   ccue(46, 'postClear', 'the_optimist', 'Efficient. I like it.'),
 
   // Level 47 — Annoyingly Good (Avoid the Queen)
+  ccue(47, 'postClear', null, 'The PLAYER reads a late sequence perfectly, avoids the Queen and finishes with a strong clear.'),
   ccue(47, 'postClear', 'the_optimist', 'Okay.'),
+  ccue(47, 'postClear', null, 'He folds his arms, pretending to be disappointed.'),
   ccue(47, 'postClear', 'the_optimist', 'That was good.'),
   ccue(47, 'postClear', 'player', 'Only good?'),
   ccue(47, 'postClear', 'the_optimist', 'Annoyingly good. I had a whole speech ready.'),
   ccue(47, 'postClear', 'cons1', 'You can still give it.'),
   ccue(47, 'postClear', 'the_optimist', "No. Waste of everybody's time. Next hand."),
+  ccue(47, 'postClear', null, 'He stays beside the table instead of returning to the room.'),
 
   // Level 48 — No Joke This Time
+  ccue(48, 'postClear', null, 'THE OPTIMIST watches the full hand from directly behind the PLAYER. He says nothing until the last card.'),
+  ccue(48, 'postClear', null, 'The PLAYER tracks every suit correctly and clears.'),
   ccue(48, 'postClear', 'the_optimist', 'No joke this time.'),
   ccue(48, 'postClear', 'player', 'That serious?'),
   ccue(48, 'postClear', 'the_optimist', 'You saw the whole hand. Not just your cards. The whole table.'),
+  ccue(48, 'postClear', null, 'He smiles.'),
   ccue(48, 'postClear', 'the_optimist', 'That is the part people usually cannot be taught.'),
 
   // Level 49 — Probably Ready
+  ccue(49, 'preLevel', null, 'Before the hand, THE OPTIMIST spots a woman by the fountain.'),
   ccue(49, 'preLevel', 'the_optimist', 'One drink after this?'),
   ccue(49, 'preLevel', 'cons_guest', 'No.'),
   ccue(49, 'preLevel', 'the_optimist', 'Excellent. I have a boss fight anyway.'),
+  ccue(49, 'preLevel', null, 'He turns to the PLAYER table as if nothing happened.'),
   ccue(49, 'preLevel', 'cons2', 'You never get discouraged, do you?'),
   ccue(49, 'preLevel', 'the_optimist', 'Of course I do. For about four seconds.'),
+  ccue(49, 'postClear', null, 'The hand begins. He watches from behind CONSERVATORY PLAYER #3. The PLAYER clears.'),
   ccue(49, 'postClear', 'the_optimist', 'You are ready.'),
+  ccue(49, 'postClear', null, 'A beat.'),
   ccue(49, 'postClear', 'the_optimist', 'Probably.'),
   ccue(49, 'postClear', 'cons3', 'That means my seat, right?'),
   ccue(49, 'postClear', 'the_optimist', 'See? You are learning too.'),
+  ccue(49, 'postClear', null, 'CONSERVATORY PLAYER #3 stands.'),
   ccue(49, 'postClear', 'the_optimist', 'All right. No sugarcoating next hand.'),
 
   // Level 50 — BOSS: The Optimist
+  ccue(50, 'bossIntro', null, 'THE OPTIMIST takes the open seat. He looks genuinely pleased to be there.'),
   ccue(50, 'bossIntro', 'the_optimist', 'All right. No sugarcoating. Show me what you have got.'),
   ccue(50, 'bossIntro', 'player', 'And if it is bad?'),
   ccue(50, 'bossIntro', 'the_optimist', 'I will tell you immediately.'),
   ccue(50, 'bossIntro', 'player', 'I was afraid of that.'),
   ccue(50, 'bossIntro', 'the_optimist', 'Then I will tell you how to fix it. Much more useful.'),
+  ccue(50, 'bossIntro', null, 'The cards are dealt.'),
   // The screenplay gives this boss TWO alternative midpoint stingers (one
   // after a mistake, one after a strong adjustment). There's only one
   // bossMidpoint trigger and no signal to pick between them, so the
   // encouraging one is used — it fits a boss whose whole character is
   // that he tells you the fix — and the other is kept as a failure line
   // below, where its "you gave away control too early" note belongs.
+  // The story-box guide's own beat for that failure line ("He lets the
+  // sentence sit for exactly one beat") has no clean anchor here as a
+  // result — it was written against the screenplay's original two-line
+  // exchange, which this repurposing collapsed into one postFail string
+  // inside a pick:'random' bucket — so it's deliberately not inserted
+  // rather than force-split a random-pick line.
   ccue(50, 'bossMidpoint', 'the_optimist', 'There.'),
+  ccue(50, 'bossMidpoint', null, 'He points at the table.'),
   ccue(50, 'bossMidpoint', 'the_optimist', 'That is better. Same problem, better answer. See? Progress.'),
   ccue(50, 'postFail', 'the_optimist', 'That was bad. Good news: now we know exactly what to fix.', { pick: 'random' }),
   ccue(50, 'postFail', 'the_optimist', 'You lost the hand, not the ability. Again.', { pick: 'random' }),
   ccue(50, 'postFail', 'the_optimist', 'Four seconds of disappointment. One... two... three... four. Done. Deal again.', { pick: 'random' }),
   ccue(50, 'postFail', 'the_optimist', 'Whoa. That was really bad. But you know why — you gave away control too early. Fix it on the next hand and we never have to talk about it again.', { pick: 'random' }),
+  ccue(50, 'bossDefeat', null, 'The final score settles.'),
+  ccue(50, 'bossDefeat', null, 'THE OPTIMIST leans back and grins.'),
   ccue(50, 'bossDefeat', 'the_optimist', 'See?'),
   ccue(50, 'bossDefeat', 'player', 'See what?'),
   ccue(50, 'bossDefeat', 'the_optimist', 'Told you you would get it.'),
+  ccue(50, 'chapterExit', null, 'He stands and gestures toward the next set of doors beyond the conservatory.'),
   ccue(50, 'chapterExit', 'the_optimist', 'Come on. There is another room waiting.'),
   ccue(50, 'chapterExit', 'player', 'Another table?'),
   ccue(50, 'chapterExit', 'the_optimist', 'Always.'),
+  ccue(50, 'chapterExit', null, 'He starts walking, then glances toward a woman passing by.'),
   ccue(50, 'chapterExit', 'the_optimist', 'Quick question—'),
   ccue(50, 'chapterExit', 'cons_guest', 'No.'),
   ccue(50, 'chapterExit', 'the_optimist', 'Worth a try.'),
+  ccue(50, 'chapterExit', null, 'He turns back to the PLAYER, still smiling.'),
   ccue(50, 'chapterExit', 'the_optimist', 'Onward.'),
 
   // Prologue cinematic — the screenplay's opening EXT. CITY STREET beat
   // (motorcar, envelope, facade), fed in verbatim like every other cue.
-  // Appended at the very end of the array, not alongside ch1's other
-  // cues above, ON PURPOSE: ccue()'s id embeds _campaignCueSeq, a
-  // running counter over file order, so inserting these earlier would
-  // shift every subsequent cue's id and silently invalidate real
-  // players' already-persisted story_cues_seen. levelId 1 + a dedicated
-  // 'prologue' trigger keeps this bucket out of every other level/trigger
-  // filter without needing a level 0. speakerId is deliberately null —
+  // Still appended at the very end of the array rather than moved up
+  // alongside ch1's other cues, though that's no longer load-bearing —
+  // it was, back when ccue()'s id embedded a single counter running over
+  // the WHOLE file (see the id-scheme note above ccue() itself, and the
+  // one on the story-box cues threaded through Levels 2-50 below for how
+  // that got fixed). levelId 1 + a dedicated 'prologue' trigger keeps
+  // this bucket out of every other level/trigger filter without needing
+  // a level 0. speakerId is deliberately null —
   // these are narrator/scene-direction lines with nobody to anchor a
   // portrait to, so the client renders this trigger through its own
   // full-bleed cinematic overlay (campaignMaybeShowPrologue) instead of

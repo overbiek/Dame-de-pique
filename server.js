@@ -695,8 +695,9 @@ function heuristicChoose(G, pi) {
   const following = legal.filter(c => c.suit === led);
 
   if (following.length > 0) {
-    const highInTrick = [...trick].filter(t => t.card.suit === led)
-      .sort((a, b) => RV[b.card.rank] - RV[a.card.rank])[0].card;
+    const highInTrickEntry = [...trick].filter(t => t.card.suit === led)
+      .sort((a, b) => RV[b.card.rank] - RV[a.card.rank])[0];
+    const highInTrick = highInTrickEntry.card;
     const winners = following.filter(c => RV[c.rank] > RV[highInTrick.rank]);
     const losers  = following.filter(c => RV[c.rank] < RV[highInTrick.rank]);
     const penInTrick = trick.reduce((s, t) => s + Math.abs(cardVal(t.card)), 0);
@@ -740,6 +741,25 @@ function heuristicChoose(G, pi) {
     }
 
     if (losers.length) {
+      // The queen, when she's one of the (provably losing, by definition
+      // of `losers`) options, is never just "a loser" like any other card
+      // — she's the single most dangerous card in the deck, and this
+      // trick can never be safer for her than it is right now. Unload her
+      // immediately rather than letting duckCard's low/mid-card logic
+      // (built for ordinary cards worth holding onto) pass her over in
+      // favor of something smaller, UNLESS we're chasing the moon
+      // ourselves (then she's the whole point, not a liability) or doing
+      // so would hand the trick's guaranteed winner a moon of their own —
+      // same iAmLast approximation the void-discard rule below already
+      // relies on to know that for certain.
+      if (!amMoonPace) {
+        const qsLoser = losers.find(c => c.suit === '♠' && c.rank === 'Q');
+        if (qsLoser) {
+          const iAmLast = trick.length === 3;
+          const feedsPace = oppMoonPace && iAmLast && highInTrickEntry.player === moonOwner;
+          if (!feedsPace) return qsLoser;
+        }
+      }
       // Ducking under — this trick's outcome doesn't depend on which loser
       // I play, so pick based on the count: preserve keepers/promoted
       // kings first, then go low or mid depending on how much danger and
@@ -1100,9 +1120,27 @@ function applyHardRules(G, pi, legal) {
       const highSpadeSoFar = [...trick].filter(t => t.card.suit === '♠')
         .sort((a, b) => RV[b.card.rank] - RV[a.card.rank])[0];
       if (highSpadeSoFar) {
-        const saferSpades = pool.filter(c => c.suit === '♠' && c.rank !== 'Q' &&
-          RV[c.rank] < RV[highSpadeSoFar.card.rank]);
-        if (saferSpades.length) pool = saferSpades;
+        // If a strictly higher spade is already down, the queen herself is
+        // just as provably incapable of winning this trick as any other
+        // card below it — the "risk" this whole rule exists to avoid
+        // (scooping her for ourselves) is already zero. That's the exact
+        // same guarantee the void-discard rule below unconditionally
+        // dumps her on, so take it here too rather than saving her for a
+        // less certain trick later — UNLESS whoever's about to win this
+        // one is themselves chasing the moon, in which case handing her
+        // over completes their run instead of ours; only checkable for
+        // certain from the last position, same iAmLast approximation the
+        // void-discard rule already uses for the identical reason.
+        if (RV[highSpadeSoFar.card.rank] > RV.Q) {
+          const moonOwner = moonPaceOwner(G);
+          const iAmLast = trick.length === 3;
+          const feedsPace = moonOwner !== -1 && iAmLast && highSpadeSoFar.player === moonOwner;
+          if (!feedsPace) pool = [qsFollow];
+        } else {
+          const saferSpades = pool.filter(c => c.suit === '♠' && c.rank !== 'Q' &&
+            RV[c.rank] < RV[highSpadeSoFar.card.rank]);
+          if (saferSpades.length) pool = saferSpades;
+        }
       }
     }
 

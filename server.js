@@ -2360,10 +2360,16 @@ const CAMPAIGN_CHAPTERS = [
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
 //   { type:'score', min, gold }
-//   { type:'suitVoid', suit, voidByTrick, goldByTrick }
+//   { type:'suitVoid', suit, voidByTrick, goldByTrick, goldScoreBar? }
 //   { type:'avoidQueen', goldScoreBar }
 //   { type:'cleanHand', goldScoreBar }
-//   { type:'trickCount', minTricks, goldTricks }
+//   { type:'trickCount', minTricks, goldTricks, goldMoon?, goldScoreBar? }
+// goldScoreBar is optional on suitVoid/trickCount (added for Levels 29/32
+// — "void by trick N AND score X+", "win N tricks AND score X+") and
+// AND-composes with the type's own base gold condition, exactly the same
+// pattern avoidQueen/cleanHand already used for their own goldScoreBar.
+// trickCount's goldMoon AND-composes the same way, independently of
+// goldScoreBar — a level could in principle carry both.
 // All four non-score mini-ladder types are now in use — Chapter 1 wove in
 // Suit Void and Avoid the Queen, Chapter 2 (below) completes the set with
 // Clean Hand and Trick Count — so every level in both chapters uses a
@@ -2470,7 +2476,7 @@ const CAMPAIGN_LEVELS = {
           parseHand('Q♠ J♣ Q♣ 8♦ 4♠ 2♥ Q♦ 6♦ 9♦ 7♣ 10♠ 5♠ 5♥'),
           parseHand('J♣ 5♦ 10♠ 7♥ 3♣ Q♠ 2♠ 6♦ K♣ K♠ J♥ A♣ 6♣'),
         ],
-        objective: { type: 'score', min: -6, gold: 44 } },
+        objective: { type: 'score', min: 14, gold: 44 } },
 
   // Chapter 3 — also all 'keep' per the source sheet.
   21: { id: 21, chapter: 3, type: 'Harder', forcePassDir: 'keep', hands: 1,
@@ -2478,7 +2484,7 @@ const CAMPAIGN_LEVELS = {
         objective: { type: 'score', min: 3, gold: 13 } },
   22: { id: 22, chapter: 3, type: 'Normal', forcePassDir: 'keep', hands: 1,
         seed: 'ddp-main-refine-L22-c159', hand: parseHand('5♦ 2♠ J♣ K♦ 7♥ 9♣ A♥ 4♠ 2♥ Q♥ K♥ 3♣ 9♥'),
-        objective: { type: 'score', min: -10, gold: 22 } },
+        objective: { type: 'score', min: 20, gold: 60 } },
   // Original main-sheet objective for L23 was score (min -9 / gold 29).
   // Swapped for the Avoid-the-Queen ladder's rung 2 — Chapter 1 spent
   // rung 1 — against this level's own "Where the Queen Lands" beat.
@@ -2490,7 +2496,7 @@ const CAMPAIGN_LEVELS = {
         objective: { type: 'score', min: 0, gold: 23 } },
   25: { id: 25, chapter: 3, type: 'Normal', forcePassDir: 'keep', hands: 1,
         seed: 'ddp-main-refine-L25-c0', hand: parseHand('A♣ K♣ 9♦ A♦ 2♣ 8♦ 6♥ 5♦ 9♣ J♦ Q♣ 3♣ J♥'),
-        objective: { type: 'score', min: -7, gold: 68 } },
+        objective: { type: 'score', min: 20, gold: 60 } },
   26: { id: 26, chapter: 3, type: 'Normal', forcePassDir: 'keep', hands: 1,
         seed: 'ddp-main-refine-L26-c294', hand: parseHand('9♠ 4♥ 6♠ 3♣ A♠ 2♣ 7♣ J♣ A♥ 5♥ K♠ J♥ 8♠'),
         objective: { type: 'score', min: 7, gold: 25 } },
@@ -2506,7 +2512,7 @@ const CAMPAIGN_LEVELS = {
   // safe moment", which is precisely what that objective measures.
   29: { id: 29, chapter: 3, type: 'Normal', forcePassDir: 'keep', hands: 1,
         seed: 'ddp-goal-void-refine-L2-c60', hand: parseHand('9♦ 6♣ 7♠ 10♣ J♣ 2♣ Q♦ 6♥ K♣ 2♥ 7♦ 4♣ 10♠'),
-        objective: { type: 'suitVoid', suit: '♦', voidByTrick: 10, goldByTrick: 5 } },
+        objective: { type: 'suitVoid', suit: '♦', voidByTrick: 5, goldByTrick: 5, goldScoreBar: 10 } },
   30: { id: 30, chapter: 3, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_scholar',
         seed: 'ddp-boss-refine-L30-c570',
         hands4: [
@@ -2515,7 +2521,7 @@ const CAMPAIGN_LEVELS = {
           parseHand('10♦ 4♦ 8♠ 10♥ 9♥ K♥ K♦ 7♥ 2♥ 6♦ Q♣ 5♦ 3♥'),
           parseHand('5♣ 5♦ J♠ 10♠ Q♥ K♥ 4♦ 7♣ 6♣ 9♥ K♠ 8♦ K♦'),
         ],
-        objective: { type: 'score', min: -1, gold: 16 } },
+        objective: { type: 'score', min: 30, gold: 90 } },
 
   // Chapter 4 — the first chapter that MIXES pass directions (31-32 keep,
   // 33-39 left, 40 cycles). Worth noting for the two objective swaps
@@ -2531,7 +2537,7 @@ const CAMPAIGN_LEVELS = {
   // direction change and the calibration carries over intact.
   32: { id: 32, chapter: 4, type: 'Normal', forcePassDir: 'keep', hands: 1,
         seed: 'ddp-goal-tricks-refine-L3-c73', hand: parseHand('5♦ J♣ 10♦ A♣ 4♠ A♥ Q♣ 5♣ Q♦ A♠ J♦ 6♣ 7♥'),
-        objective: { type: 'trickCount', minTricks: 5, goldTricks: 9 } },
+        objective: { type: 'trickCount', minTricks: 5, goldTricks: 5, goldScoreBar: 20 } },
   33: { id: 33, chapter: 4, type: 'Harder', forcePassDir: 'left', hands: 1,
         seed: 'ddp-main-refine-L33-c51', hand: parseHand('Q♠ 10♦ 10♠ 5♦ 9♠ 5♠ 3♠ J♣ Q♣ 4♥ Q♦ A♦ K♥'),
         objective: { type: 'score', min: 6, gold: 19 } },
@@ -2556,7 +2562,7 @@ const CAMPAIGN_LEVELS = {
         objective: { type: 'score', min: -3, gold: 12 } },
   38: { id: 38, chapter: 4, type: 'Normal', forcePassDir: 'left', hands: 1,
         seed: 'ddp-main-refine-L38-c48', hand: parseHand('5♣ 5♥ J♣ 2♥ 2♣ 6♠ 10♦ K♣ 2♦ 6♦ 8♣ 7♠ 5♦'),
-        objective: { type: 'score', min: -2, gold: 17 } },
+        objective: { type: 'score', min: 10, gold: 20 } },
   39: { id: 39, chapter: 4, type: 'Harder', forcePassDir: 'left', hands: 1,
         seed: 'ddp-main-refine-L39-c27', hand: parseHand('6♦ Q♣ Q♠ K♠ 3♠ 10♦ 2♦ 7♠ 7♦ 7♥ 8♣ 6♥ 9♠'),
         objective: { type: 'score', min: 10, gold: 18 } },
@@ -2568,19 +2574,19 @@ const CAMPAIGN_LEVELS = {
           parseHand('J♣ 6♠ 5♦ Q♠ A♥ 7♣ 9♥ 10♣ 4♦ 3♣ 10♥ 6♦ 6♣'),
           parseHand('2♥ 3♦ 9♥ 5♥ J♣ J♦ 10♠ 10♦ 9♣ 3♥ 8♣ Q♠ 8♠'),
         ],
-        objective: { type: 'score', min: 3, gold: 42 } },
+        objective: { type: 'score', min: 28, gold: 80 } },
 
   // Chapter 5 — all 'left', and both mini-ladder rungs used here are
   // 'left' too, so unlike Chapter 4 there is no direction anomaly.
   41: { id: 41, chapter: 5, type: 'Normal', forcePassDir: 'left', hands: 1,
         seed: 'ddp-main-refine-L41-c99', hand: parseHand('3♦ 5♦ 3♥ A♥ 3♣ 4♠ J♥ Q♠ 5♠ K♥ 8♥ A♠ 4♦'),
-        objective: { type: 'score', min: -7, gold: 25 } },
+        objective: { type: 'score', min: 20, gold: 60 } },
   42: { id: 42, chapter: 5, type: 'Harder', forcePassDir: 'left', hands: 1,
         seed: 'ddp-main-refine-L42-c514', hand: parseHand('K♣ 7♥ 6♦ Q♠ A♥ 9♣ K♦ A♣ J♦ Q♦ K♥ 10♠ 3♠'),
-        objective: { type: 'score', min: 21, gold: 76 } },
+        objective: { type: 'score', min: 21, gold: 60 } },
   43: { id: 43, chapter: 5, type: 'Normal', forcePassDir: 'left', hands: 1,
         seed: 'ddp-main-refine-L43-c817', hand: parseHand('A♠ 10♦ 8♦ 6♣ 8♠ 10♠ Q♦ J♥ 3♦ 4♣ 2♣ J♣ K♠'),
-        objective: { type: 'score', min: 8, gold: 21 } },
+        objective: { type: 'score', min: -7, gold: 0 } },
   // Original main-sheet objective was score (min 8 / gold 21). Swapped
   // for the Suit Void ladder's rung 4 against this level's own lesson —
   // "watch who is void before you lead the suit".
@@ -4439,7 +4445,10 @@ function evaluateCampaignObjective(G) {
     // happened. See resolveTrick for the write side.
     const voidTrick = G.campaignVoidTrick;
     const cleared = voidTrick != null && voidTrick <= obj.voidByTrick;
-    const gold = voidTrick != null && voidTrick <= obj.goldByTrick;
+    // Optional goldScoreBar, same AND-composition as avoidQueen/cleanHand
+    // below: gold requires the void AND a score floor, not just the void.
+    const gold = voidTrick != null && voidTrick <= obj.goldByTrick
+      && (!obj.goldScoreBar || score >= obj.goldScoreBar);
     return { cleared, gold, metric: voidTrick };
   }
   if (obj.type === 'avoidQueen') {
@@ -4462,7 +4471,11 @@ function evaluateCampaignObjective(G) {
     // own shot-moon flag — set in endRound, so it's already settled by
     // the time this runs. See the objective's own note on why this is
     // single-hand only.
-    const gold = tricksWon >= obj.goldTricks && (!obj.goldMoon || G.moonShooter === 0);
+    // Optional goldScoreBar, same AND-composition as avoidQueen/cleanHand/
+    // suitVoid: gold can require the trick count AND a score floor, not
+    // just the trick count, alongside the pre-existing goldMoon flag.
+    const gold = tricksWon >= obj.goldTricks && (!obj.goldMoon || G.moonShooter === 0)
+      && (!obj.goldScoreBar || score >= obj.goldScoreBar);
     return { cleared: tricksWon >= obj.minTricks, gold, metric: tricksWon };
   }
   return { cleared: false, gold: false, metric: score };

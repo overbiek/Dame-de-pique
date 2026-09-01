@@ -8898,7 +8898,9 @@ function campaignObjectiveParts(level){
     gold=`Gold: <b>${signed(o.gold)}</b> or higher.`;
   }else if(o.type==='suitVoid'){
     main=`Hold zero <b>${esc(o.suit)}</b> cards by trick <b>${o.voidByTrick}</b>.`;
-    gold=`Gold: void by trick <b>${o.goldByTrick}</b>.`;
+    gold=o.goldScoreBar
+      ? `Gold: void by trick <b>${o.goldByTrick}</b> <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`
+      : `Gold: void by trick <b>${o.goldByTrick}</b>.`;
   }else if(o.type==='avoidQueen'){
     main=`Avoid taking the <b>Q♠</b>.`;
     gold=`Gold: avoid her <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`;
@@ -8909,6 +8911,8 @@ function campaignObjectiveParts(level){
     main=`Win at least <b>${o.minTricks}</b> tricks.`;
     gold=o.goldMoon
       ? `Gold: win <b>${o.goldTricks}</b> or more <i>and</i> <b>shoot the moon</b>.`
+      : o.goldScoreBar
+      ? `Gold: win <b>${o.goldTricks}</b> or more <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`
       : `Gold: win <b>${o.goldTricks}</b> or more.`;
   }
   const dir=CAMP_PASS_DIR_TEXT[level.forcePassDir]||(level.forcePassDir?'':'Pass direction cycles as usual');

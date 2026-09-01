@@ -2685,6 +2685,25 @@ before pushing.
   two columns room — this modal only ever opens over the campaign
   screen, which is landscape-only, so the extra width is never fighting
   a narrow portrait viewport.
+- **Friends' scores are gated on the PLAYER having cleared that table
+  themselves first** — deliberately, to stop a friend's best score/gold
+  from leaking "how hard this actually is" or "is Gold realistic" before
+  the player has formed their own read on the level. Enforced in
+  `db.getCampaignFriendsResults` itself (a `campaign_level_results`
+  lookup on the requester's own `(account_id, level_id)` row — that pair
+  is the table's primary key, so the check is effectively free), not
+  just hidden in the UI — the same "don't trust the client to hide it"
+  reasoning `evaluateAchievements` already applies to secret
+  achievements, so a crafted client hitting `getCampaignLevelFriends`
+  directly gets nothing back either. The client ALSO gates instantly
+  and locally, off `campaignData`'s own `level.result.cleared` (already
+  in hand, no round trip) — purely to skip a "Loading…" flash for the
+  common not-cleared case; the server's `locked` flag on the reply is
+  what actually decides the rendered message, in case local data is
+  stale. `campaignFriendsRowsHTML(rows, locked)` gained the second
+  parameter for exactly this — `locked` wins outright over whatever
+  `rows` contains, so a stale/racy `rows` payload can never leak through
+  a locked response.
 
 ## STORY BOX narration cues (inline, not the prologue's cinematic)
 - **A second, much smaller kind of narration than the prologue

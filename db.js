@@ -1613,7 +1613,21 @@ async function markCampaignCuesSeen(accountId, ids) {
 // listed (LEFT JOIN), even one who's never played this level — the
 // client renders those as "not played" rather than omitting them,
 // same "show the gap, don't hide it" reasoning as an empty leaderboard.
+// Gated on the REQUESTER having cleared this level themselves first —
+// otherwise a friend's score/gold is "extra information" about a level
+// the player hasn't beaten yet (how hard it really is, whether Gold is
+// realistic). Checked server-side, not just hidden in the UI, same
+// "don't trust the client to hide it" reasoning evaluateAchievements
+// already uses for secret achievements — a crafted client asking this
+// socket event directly must get nothing back either. The PK lookup is
+// effectively free (account_id, level_id) is campaign_level_results'
+// primary key.
 async function getCampaignFriendsResults(accountId, levelId) {
+  const { rows: mine } = await pool.query(
+    `SELECT cleared FROM campaign_level_results WHERE account_id = $1 AND level_id = $2`,
+    [accountId, levelId]
+  );
+  if (!mine[0] || !mine[0].cleared) return { locked: true, rows: [] };
   const { rows } = await pool.query(
     `SELECT a.id, a.nickname, a.avatar, r.best_score, r.cleared, r.gold
      FROM friendships f
@@ -1624,11 +1638,14 @@ async function getCampaignFriendsResults(accountId, levelId) {
               r.best_score DESC NULLS LAST, a.nickname ASC`,
     [accountId, levelId]
   );
-  return rows.map(r => ({
-    id: r.id, nickname: r.nickname, avatar: r.avatar,
-    played: r.best_score !== null, bestScore: r.best_score,
-    cleared: !!r.cleared, gold: !!r.gold,
-  }));
+  return {
+    locked: false,
+    rows: rows.map(r => ({
+      id: r.id, nickname: r.nickname, avatar: r.avatar,
+      played: r.best_score !== null, bestScore: r.best_score,
+      cleared: !!r.cleared, gold: !!r.gold,
+    })),
+  };
 }
 
 module.exports = {

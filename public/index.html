@@ -8968,7 +8968,8 @@ function campaignMyResultRowHTML(level){
     played:!!r, bestScore:r?r.bestScore:null, cleared:!!(r&&r.cleared), gold:!!(r&&r.gold),
   });
 }
-function campaignFriendsRowsHTML(rows){
+function campaignFriendsRowsHTML(rows,locked){
+  if(locked) return '<div class="camp-modal-empty">Clear this table yourself to see how your friends did.</div>';
   if(!rows||!rows.length) return '<div class="camp-modal-empty">Add friends to see how they did here.</div>';
   return rows.map(r=>campaignResultRowHTML(r)).join('');
 }
@@ -8985,8 +8986,13 @@ function campaignOpenLevelModal(levelId){
   $('camp-modal-goal-dir').textContent=obj.dir;
   $('camp-modal-opponents').innerHTML=campaignOpponentsHTML(level);
   $('camp-modal-you').innerHTML=campaignMyResultRowHTML(level);
-  $('camp-modal-friends').innerHTML='<div class="camp-modal-empty">Loading…</div>';
-  $('camp-modal-play').textContent=(level.result&&level.result.cleared)?'Play Again':'Play';
+  // Instant local gate using campaignData's own result — avoids a
+  // "Loading…" flash for the common not-cleared-yet case. The server
+  // reply below still overwrites this once it lands, since it's the
+  // authoritative check (see getCampaignFriendsResults' own note).
+  const clearedLocally=!!(level.result&&level.result.cleared);
+  $('camp-modal-friends').innerHTML=clearedLocally?'<div class="camp-modal-empty">Loading…</div>':campaignFriendsRowsHTML([],true);
+  $('camp-modal-play').textContent=clearedLocally?'Play Again':'Play';
   $('camp-level-modal').classList.add('show');
   socket.emit('getCampaignLevelFriends',{accountToken:accountToken||'',levelId});
 }
@@ -8996,7 +9002,7 @@ function campaignCloseLevelModal(){
 }
 socket.on('campaignLevelFriendsOk',d=>{
   if(campaignModalLevelId!==d.levelId) return; // stale reply for a since-closed/changed popup
-  $('camp-modal-friends').innerHTML=campaignFriendsRowsHTML(d.rows);
+  $('camp-modal-friends').innerHTML=campaignFriendsRowsHTML(d.rows,d.locked);
 });
 function campaignModalPlay(){
   const levelId=campaignModalLevelId;

@@ -6251,18 +6251,21 @@ io.on('connection', (socket) => {
 
   // For the level-detail popup's Friends section. Guests and DB-disabled
   // both degrade to an empty list rather than an error — same "nothing
-  // to show" pattern as getDailyStatus's guest branch.
+  // to show" pattern as getDailyStatus's guest branch. `locked` is true
+  // only when the requester hasn't cleared this level yet themselves —
+  // see getCampaignFriendsResults' own note on why that's enforced in
+  // the DB layer, not just left to the client to hide.
   socket.on('getCampaignLevelFriends', async ({ accountToken, levelId }) => {
     const lvl = Number(levelId);
-    if (!DB_ENABLED) return socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows: [] });
+    if (!DB_ENABLED) return socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows: [], locked: false });
     const acct = await lookupAccountByToken(accountToken);
-    if (!acct) return socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows: [] });
+    if (!acct) return socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows: [], locked: false });
     try {
-      const rows = await db.getCampaignFriendsResults(acct.id, lvl);
-      socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows });
+      const { locked, rows } = await db.getCampaignFriendsResults(acct.id, lvl);
+      socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows, locked });
     } catch (e) {
       console.error('getCampaignLevelFriends error:', e.message);
-      socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows: [] });
+      socket.emit('campaignLevelFriendsOk', { levelId: lvl, rows: [], locked: false });
     }
   });
 

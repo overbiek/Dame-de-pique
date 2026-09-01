@@ -2153,12 +2153,16 @@ function submitDailyResult(G) {
 // real cap, passed into every getCampaignState/consumeCampaignAttempt
 // call). Lowering this is safe for existing accounts — getCampaignState
 // clamps whatever is stored down to the new max on read.
-// The playtesting-only unlimited-attempts flag is back off — the stored
-// attempts_current was left completely untouched while it was on, so
-// this just resumes the normal cap exactly where it was.
-const CAMPAIGN_UNLIMITED_ATTEMPTS = false;
+// ── TEMPORARY: unlimited campaign attempts, for playtesting ──
+// Flip this ONE constant back to false to restore the normal
+// CAMPAIGN_MAX_ATTEMPTS cap. Nothing else needs changing: while it's
+// true, startCampaignLevel skips spending an attempt and the map
+// reports the pool as unlimited (the client renders ∞ instead of
+// "n/15"). The stored attempts_current is left completely untouched,
+// so whatever players had before this is exactly what they get back.
+const CAMPAIGN_UNLIMITED_ATTEMPTS = true;
 const CAMPAIGN_MAX_ATTEMPTS = 15;
-const CAMPAIGN_ATTEMPT_REFILL_MS = 60 * 60 * 1000; // 1 attempt back per hour
+const CAMPAIGN_ATTEMPT_REFILL_MS = 60 * 60 * 1000; // 1 attempt back per hour, once restored
 const CAMPAIGN_CREDITS_BY_TYPE = { Normal: 15, Harder: 22, BOSS: 60 }; // placeholder, same reason
 
 function parseCardStr(s) { return { rank: s.slice(0, -1), suit: s.slice(-1) }; }

@@ -2246,6 +2246,30 @@ const CAMPAIGN_CHARACTERS = {
   // /campaign/characters/the_countess.webp path every non-reused
   // character already uses, both at the table and in dialogue.
   the_countess:{ id: 'the_countess',name: 'The Countess' },
+  // The three "identical" women who hold all three opponent seats for
+  // the whole of Chapter 10 — not just at the x0 level, unlike every
+  // earlier chapter. All share the exact same portrait file (see
+  // CAMPAIGN_PORTRAIT_SRC on the client) since the screenplay's whole
+  // point is that they cannot be told apart.
+  dame1:       { id: 'dame1',       name: 'Woman One' },
+  dame2:       { id: 'dame2',       name: 'Woman Two' },
+  dame3:       { id: 'dame3',       name: 'Woman Three' },
+  // Used only as CAMPAIGN_CHAPTERS[10]'s bossId (the map's boss-teaser
+  // corner) and Level 100's own bossId (so the "Chapter Boss" seat tag
+  // and the in-hand leave-menu's boss name resolve to something,
+  // exactly like every other boss level) — mechanically it substitutes
+  // into the SAME seat that was already dame3, with the same portrait,
+  // so nothing actually changes at the table. That's deliberate: no
+  // seat physically turns over at Level 100 the way it does in every
+  // earlier chapter, because all three women were already seated since
+  // Level 91.
+  dame_de_pique:{ id: 'dame_de_pique', name: 'Dame de Pique' },
+  // Two one-off speakers for Level 100's ending, same "single-appearance
+  // named character" treatment as Chapter 8's nervous_player. Both share
+  // the identical portrait too — even after the "reveal," her face never
+  // changes, which is the point.
+  the_three_women:    { id: 'the_three_women',    name: 'The Three Women' },
+  the_remaining_woman:{ id: 'the_remaining_woman',name: 'The Remaining Woman' },
   player:      { id: 'player',      name: null },
 };
 
@@ -2290,6 +2314,11 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // PLAYER #3 stands. THE COUNTESS rises from her chair and crosses to
   // the table.").
   9: { regulars: ['private1', 'private2', 'private3'], bossSeat: 2 },
+  // All three seats are the "identical" women from Level 91 on — there
+  // is no ordinary-regulars-then-boss-arrives structure here. Level
+  // 100's bossId substitutes dame3's own seat with dame_de_pique (same
+  // portrait), a cosmetic relabel rather than a real seat change.
+  10: { regulars: ['dame1', 'dame2', 'dame3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2326,6 +2355,7 @@ const CAMPAIGN_CHAPTERS = [
   // placeholder until public/campaign/chapters/vault.webp exists.
   { id: 8, title: 'The Vault', levelStart: 71, levelEnd: 80, slug: 'vault', bossId: 'the_closer' },
   { id: 9, title: "The Countess's Antechamber", levelStart: 81, levelEnd: 90, slug: 'countess_antechamber', bossId: 'the_countess' },
+  { id: 10, title: 'The Hidden Throne Room', levelStart: 91, levelEnd: 100, slug: 'hidden_throne_room', bossId: 'dame_de_pique' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -2746,6 +2776,48 @@ const CAMPAIGN_LEVELS = {
           parseHand('Q♦ A♦ 3♠ 7♦ J♣ 10♣ 4♠ 6♣ 2♥ A♣ K♣ 6♠ 5♦'),
         ],
         objective: { type: 'score', min: 26, gold: 42 } },
+
+  // Chapter 10 — plain score objectives throughout, same call as
+  // Chapters 6-9. Level 99's gold(35) sitting BELOW its own min(21) is
+  // verbatim off the sheet, not a transcription error — Measured
+  // P(gold) equals Measured P(clear) at 8%, i.e. clearing the (higher)
+  // min automatically satisfies the (lower) gold bar for this one level.
+  91: { id: 91, chapter: 10, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L91-c965', hand: parseHand('6♣ 2♦ 5♠ 4♣ 5♥ Q♣ 9♥ 10♣ 8♦ A♦ A♠ K♥ J♠'),
+        objective: { type: 'score', min: 23, gold: 41 } },
+  92: { id: 92, chapter: 10, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L92-c66', hand: parseHand('K♦ 3♠ Q♥ A♣ A♠ 7♥ 8♣ 4♠ 6♦ 4♥ 4♣ A♦ J♣'),
+        objective: { type: 'score', min: 23, gold: 36 } },
+  93: { id: 93, chapter: 10, type: 'Harder', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L93-c332', hand: parseHand('J♦ 3♠ 4♦ 4♥ 2♣ 9♦ Q♥ A♦ 2♠ 9♥ 8♠ 6♥ Q♣'),
+        objective: { type: 'score', min: 23, gold: 30 } },
+  94: { id: 94, chapter: 10, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L94-c354', hand: parseHand('10♥ A♣ 7♥ J♠ A♥ 9♥ A♦ 5♦ 9♦ 7♠ K♣ 5♣ 2♦'),
+        objective: { type: 'score', min: 25, gold: 34 } },
+  95: { id: 95, chapter: 10, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L95-c795', hand: parseHand('Q♣ A♦ K♥ K♠ 8♥ 8♠ 2♦ 9♠ 7♣ 6♦ A♥ 3♦ A♣'),
+        objective: { type: 'score', min: 37, gold: 52 } },
+  96: { id: 96, chapter: 10, type: 'Harder', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L96-c83', hand: parseHand('10♠ A♠ Q♣ K♠ J♠ 10♥ 2♣ J♥ K♣ 5♣ 4♣ A♥ J♣'),
+        objective: { type: 'score', min: 49, gold: 51 } },
+  97: { id: 97, chapter: 10, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L97-c42', hand: parseHand('A♦ 4♥ 3♣ 10♠ K♥ A♣ 2♣ 8♣ K♠ J♥ A♠ Q♥ 7♦'),
+        objective: { type: 'score', min: 26, gold: 56 } },
+  98: { id: 98, chapter: 10, type: 'Normal', forcePassDir: 'across', hands: 1,
+        seed: 'ddp-main-refine-L98-c1016', hand: parseHand('9♠ J♣ 9♥ 6♠ 5♣ Q♠ A♣ 5♦ K♣ 10♠ 4♣ K♠ 10♥'),
+        objective: { type: 'score', min: 53, gold: 95 } },
+  99: { id: 99, chapter: 10, type: 'Harder', forcePassDir: 'keep', hands: 1,
+        seed: 'ddp-main-refine-L99-c300', hand: parseHand('K♣ Q♥ J♦ 5♠ K♥ J♥ 3♦ A♣ 8♥ 10♠ A♥ 9♥ Q♣'),
+        objective: { type: 'score', min: 51, gold: 35 } },
+  100: { id: 100, chapter: 10, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'dame_de_pique',
+        seed: 'ddp-boss-refine-L100-c93',
+        hands4: [
+          parseHand('J♠ K♦ J♣ A♦ 4♣ 3♥ 3♦ 9♠ 10♥ J♦ 8♦ 5♥ 4♥'),
+          parseHand('8♠ 2♣ A♠ J♥ 4♠ Q♠ 6♣ A♥ 5♥ 3♠ 7♦ 3♥ 5♠'),
+          parseHand('6♦ 3♥ 6♠ 9♥ A♥ 7♠ 4♠ 2♠ 8♦ J♠ Q♥ 10♣ A♦'),
+          parseHand('2♣ 7♠ 5♠ 10♥ 3♣ 3♦ Q♦ 9♠ 4♦ Q♣ 6♣ A♥ 7♥'),
+        ],
+        objective: { type: 'score', min: 21, gold: 55 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -4030,6 +4102,223 @@ const CAMPAIGN_STORY_CUES = [
   ccue(90, 'chapterExit', 'player', 'Which one?'),
   ccue(90, 'chapterExit', null, 'THE COUNTESS looks at the opening doors.'),
   ccue(90, 'chapterExit', 'the_countess', 'Exactly.'),
+
+  // Chapter 10 — The Hidden Throne Room. Same "nothing after ON CLEAR →
+  // no postClear bucket" rule as every chapter since 8; only 91-99 (all
+  // of them, for once) have a real line after the marker, since the
+  // screenplay closes almost every hand here with a lingering unease
+  // beat. Level 100's ending is delivered as plain sequential dialogue/
+  // narration cues in bossDefeat/chapterExit — no dedicated cinematic
+  // overlay was built for it (a deliberate scope call, not an
+  // oversight: see CLAUDE.md's own note on this chapter).
+  ccue(91, 'preLevel', null, 'The black doors open. The PLAYER stops.'),
+  ccue(91, 'preLevel', null, 'At a four-seat table beneath the distant throne sit THREE IDENTICAL WOMEN. Each wears the same black gown, the same silver crown and the same spade pendant. Their posture is identical. Their expressions are identical.'),
+  ccue(91, 'preLevel', 'player', 'Which one of you is Dame de Pique?'),
+  ccue(91, 'preLevel', null, 'The three women look at one another, then back at the PLAYER.'),
+  ccue(91, 'preLevel', 'dame1', 'Why do you assume there is only one?'),
+  ccue(91, 'preLevel', 'player', 'Because there is only one name.'),
+  ccue(91, 'preLevel', 'dame2', 'Names are convenient.'),
+  ccue(91, 'preLevel', 'dame3', 'Reality is less considerate.'),
+  ccue(91, 'preLevel', null, 'The PLAYER sits. The three women begin the hand without introducing themselves.'),
+  ccue(91, 'postClear', null, 'After the final card, all three rise at exactly the same moment, exchange seats and sit again.'),
+  ccue(91, 'postClear', 'player', 'You changed places.'),
+  ccue(91, 'postClear', 'dame1', 'Did we?'),
+
+  ccue(92, 'preLevel', null, 'The PLAYER studies their hands before the deal. WOMAN TWO appears to wear a thin black ring on her right hand.'),
+  ccue(92, 'preLevel', 'player', 'There. The ring.'),
+  ccue(92, 'preLevel', 'dame2', 'What about it?'),
+  ccue(92, 'preLevel', 'player', 'You did not all have one yesterday.'),
+  ccue(92, 'preLevel', 'dame3', 'Are you certain?'),
+  ccue(92, 'preLevel', null, 'The cards are dealt. Halfway through the hand, the PLAYER looks up. Now WOMAN ONE wears the ring. WOMAN TWO does not.'),
+  ccue(92, 'preLevel', 'player', 'You moved it.'),
+  ccue(92, 'preLevel', 'dame1', 'Or you moved the memory.'),
+  ccue(92, 'preLevel', 'dame2', 'Which is easier to prove?'),
+  ccue(92, 'postClear', null, 'The PLAYER looks back at the ring. All three women are wearing one.'),
+
+  ccue(93, 'preLevel', null, 'The three women enter from different doors but reach their chairs at the same time.'),
+  ccue(93, 'preLevel', 'player', 'Are you sisters?'),
+  ccue(93, 'preLevel', 'dame3', 'Would that explain us?'),
+  ccue(93, 'preLevel', 'player', 'It would explain the faces.'),
+  ccue(93, 'preLevel', 'dame1', 'And create a family.'),
+  ccue(93, 'preLevel', 'dame2', 'Which gives you more people to investigate.'),
+  ccue(93, 'preLevel', 'player', 'So yes?'),
+  ccue(93, 'preLevel', 'dame3', 'You wanted one answer.'),
+  ccue(93, 'preLevel', 'dame1', 'Now you have two questions.'),
+  ccue(93, 'preLevel', null, 'The hand begins.'),
+  ccue(93, 'postClear', null, "When the women stand, the PLAYER notices their footsteps sound identical on the marble."),
+
+  ccue(94, 'preLevel', null, 'The PLAYER looks beyond the table to the throne.'),
+  ccue(94, 'preLevel', 'player', 'Who built this place?'),
+  ccue(94, 'preLevel', 'dame1', 'Wrong question.'),
+  ccue(94, 'preLevel', 'player', 'What is the right question?'),
+  ccue(94, 'preLevel', 'dame2', 'Why was it built?'),
+  ccue(94, 'preLevel', 'player', 'Why was it built?'),
+  ccue(94, 'preLevel', 'dame3', 'Better.'),
+  ccue(94, 'preLevel', 'player', 'For you?'),
+  ccue(94, 'preLevel', 'dame1', 'Warmer.'),
+  ccue(94, 'preLevel', 'player', 'For what, then?'),
+  ccue(94, 'preLevel', 'dame2', 'Play.'),
+  ccue(94, 'preLevel', null, 'The women deal. No answer follows.'),
+  ccue(94, 'postClear', null, 'After the clear, the lights above the throne brighten by one degree, revealing older suit symbols carved beneath the spades.'),
+
+  ccue(95, 'preLevel', null, 'The PLAYER sits without waiting for an invitation.'),
+  ccue(95, 'preLevel', 'player', 'People say someone here controls card games far beyond this casino.'),
+  ccue(95, 'preLevel', 'dame2', 'People say many things after losing.'),
+  ccue(95, 'preLevel', 'player', 'Do you?'),
+  ccue(95, 'preLevel', 'dame3', 'Would you play differently if we said yes?'),
+  ccue(95, 'preLevel', 'player', 'Maybe.'),
+  ccue(95, 'preLevel', 'dame1', 'Then you would be playing the rumor.'),
+  ccue(95, 'preLevel', 'dame2', 'Not the cards.'),
+  ccue(95, 'preLevel', 'player', 'That sounds like something the Jester told me.'),
+  ccue(95, 'preLevel', 'dame3', 'He tells the truth more often than people notice.'),
+  ccue(95, 'preLevel', null, 'The hand begins.'),
+  ccue(95, 'postClear', 'player', 'You know him.'),
+  ccue(95, 'postClear', 'dame1', 'Another question.'),
+
+  ccue(96, 'preLevel', null, 'The PLAYER watches the three women take their seats.'),
+  ccue(96, 'preLevel', 'player', 'Why was I invited?'),
+  ccue(96, 'preLevel', 'dame1', 'You accepted.'),
+  ccue(96, 'preLevel', 'player', 'That is not what I asked.'),
+  ccue(96, 'preLevel', 'dame2', 'Many are invited to something.'),
+  ccue(96, 'preLevel', 'dame3', 'Few keep going when the invitation stops explaining itself.'),
+  ccue(96, 'preLevel', 'player', 'So I am here because I kept climbing?'),
+  ccue(96, 'preLevel', 'dame1', 'Partly.'),
+  ccue(96, 'preLevel', 'player', 'What is the other part?'),
+  ccue(96, 'preLevel', 'dame2', 'If we told you, would you trust the answer?'),
+  ccue(96, 'preLevel', null, 'The PLAYER has no reply. The cards are dealt.'),
+  ccue(96, 'postClear', null, 'For the first time, one of the women smiles slightly - but the PLAYER cannot tell which one a second later.'),
+
+  ccue(97, 'preLevel', null, 'The PLAYER arrives early and marks details mentally: a tiny fold in one sleeve, the angle of one crown, a faint beauty mark near one eye.'),
+  ccue(97, 'preLevel', 'player', 'I can tell you apart now.'),
+  ccue(97, 'preLevel', 'dame3', 'Can you?'),
+  ccue(97, 'preLevel', null, 'The hand starts. After two tricks, the sleeve fold is on WOMAN ONE. The crown angle belongs to WOMAN TWO. The beauty mark appears on WOMAN THREE - then is gone when the PLAYER looks back.'),
+  ccue(97, 'preLevel', 'player', 'That is impossible.'),
+  ccue(97, 'preLevel', 'dame2', 'Memory is easier to influence than eyesight.'),
+  ccue(97, 'preLevel', 'dame1', 'Eyesight is easier to influence than certainty.'),
+  ccue(97, 'preLevel', 'player', 'Which one are you influencing?'),
+  ccue(97, 'preLevel', 'dame3', 'Yes.'),
+  ccue(97, 'postClear', null, 'The PLAYER does not smile.'),
+
+  ccue(98, 'preLevel', null, 'The three women sit. This time they do not wait for the PLAYER to ask anything.'),
+  ccue(98, 'preLevel', 'dame1', 'You are still trying-'),
+  ccue(98, 'preLevel', 'dame2', '-to decide which of us-'),
+  ccue(98, 'preLevel', 'dame3', '-is the real one.'),
+  ccue(98, 'preLevel', 'player', 'Are you?'),
+  ccue(98, 'preLevel', 'dame1', 'Real-'),
+  ccue(98, 'preLevel', 'dame2', '-is a useful word-'),
+  ccue(98, 'preLevel', 'dame3', '-for people who need one answer.'),
+  ccue(98, 'preLevel', 'player', 'And if there is no one answer?'),
+  ccue(98, 'preLevel', 'dame2', 'Then perhaps you finally have the right question.'),
+  ccue(98, 'preLevel', null, "The hand begins. They continue finishing one another's observations as if sharing a single thought."),
+  ccue(98, 'postClear', null, 'At the end, all three look toward the throne at the same time. The PLAYER follows their gaze, but the throne is empty.'),
+
+  ccue(99, 'preLevel', null, 'The PLAYER enters and sits without studying the women.'),
+  ccue(99, 'preLevel', 'dame1', 'No ring?'),
+  ccue(99, 'preLevel', 'dame2', 'No crown?'),
+  ccue(99, 'preLevel', 'dame3', 'No search for a mark?'),
+  ccue(99, 'preLevel', 'player', 'No.'),
+  ccue(99, 'preLevel', 'dame1', 'Why?'),
+  ccue(99, 'preLevel', 'player', 'Because it changes nothing about the hand.'),
+  ccue(99, 'preLevel', null, 'For the first time, all three women smile at exactly the same moment.'),
+  ccue(99, 'preLevel', 'dame2', 'Finally.'),
+  ccue(99, 'preLevel', 'dame3', 'You stopped looking at faces.'),
+  ccue(99, 'preLevel', 'dame1', 'You started playing the table.'),
+  ccue(99, 'preLevel', null, 'The hand is the quietest of the entire campaign. No riddles during play. No distractions. The PLAYER clears.'),
+  ccue(99, 'postClear', null, 'The three women remain seated.'),
+  ccue(99, 'postClear', 'dame1', 'One table remains.'),
+  ccue(99, 'postClear', 'dame2', 'One result.'),
+  ccue(99, 'postClear', 'dame3', 'As many answers as you can carry.'),
+  ccue(99, 'postClear', null, 'The throne behind them illuminates fully. The silver spades along the floor form a path to the final table.'),
+
+  ccue(100, 'bossIntro', null, 'The PLAYER walks the silver-spade path and takes the fourth seat. The same three women sit opposite. The throne remains behind them, empty.'),
+  ccue(100, 'bossIntro', 'player', 'Before we start: are any of you actually Dame de Pique?'),
+  ccue(100, 'bossIntro', 'dame1', 'You are still asking.'),
+  ccue(100, 'bossIntro', 'dame2', 'But now you know-'),
+  ccue(100, 'bossIntro', 'dame3', '-the answer will not help you.'),
+  ccue(100, 'bossIntro', 'player', 'Maybe I just want to hear it.'),
+  ccue(100, 'bossIntro', 'dame1', 'Then earn the disappointment.'),
+  ccue(100, 'bossIntro', null, 'The final boss match begins.'),
+  // Two stinger blocks fire in sequence off the one trigger, same
+  // pattern as every earlier boss level. The first name-checks all nine
+  // earlier bosses in one breath — every id it references already
+  // exists, cross-checked before shipping.
+  ccue(100, 'bossMidpoint', 'dame2', 'The Baron noticed restraint.'),
+  ccue(100, 'bossMidpoint', 'dame3', 'The Sharp noticed discipline.'),
+  ccue(100, 'bossMidpoint', 'dame1', 'The Scholar noticed memory.'),
+  ccue(100, 'bossMidpoint', 'dame2', 'The Wildcard noticed adaptation.'),
+  ccue(100, 'bossMidpoint', 'dame3', 'The Optimist noticed recovery.'),
+  ccue(100, 'bossMidpoint', 'dame1', 'The Jester noticed perspective.'),
+  ccue(100, 'bossMidpoint', 'dame2', 'The Charmer noticed people.'),
+  ccue(100, 'bossMidpoint', 'dame3', 'The Closer noticed commitment.'),
+  ccue(100, 'bossMidpoint', 'dame1', 'The Countess noticed honesty.'),
+  ccue(100, 'bossMidpoint', 'player', 'And what do you notice?'),
+  ccue(100, 'bossMidpoint', 'the_three_women', 'Whether you needed us to be one person.'),
+  ccue(100, 'bossMidpoint', 'player', 'If I win, do I get the truth?'),
+  ccue(100, 'bossMidpoint', 'dame1', 'You get an ending.'),
+  ccue(100, 'bossMidpoint', 'dame2', 'Truth is more expensive.'),
+  ccue(100, 'bossMidpoint', 'dame3', 'And usually sold in another room.'),
+  ccue(100, 'postFail', 'dame1', 'You looked for certainty and missed the table. Again.', { pick: 'random' }),
+  ccue(100, 'postFail', 'dame2', 'The rumor distracted you. Deal again.', { pick: 'random' }),
+  ccue(100, 'postFail', 'dame3', 'You climbed one hundred levels. Do not become impatient at the last chair.', { pick: 'random' }),
+  // The immediate table-side reaction to the win — same boundary rule
+  // as every earlier boss's bossDefeat/chapterExit split (see Level
+  // 70/80/90's own notes): everything up to and including the vanish
+  // itself stays bossDefeat, since it's still the direct consequence of
+  // the result just posted; the transition to what's next (the
+  // Countess, the empty casino, the exterior tease) is chapterExit.
+  ccue(100, 'bossDefeat', null, 'The last card lands. Silence.'),
+  ccue(100, 'bossDefeat', null, 'The final score settles.'),
+  ccue(100, 'bossDefeat', null, 'The three women look at the result. Then all three stand.'),
+  ccue(100, 'bossDefeat', 'dame1', 'Better.'),
+  ccue(100, 'bossDefeat', 'dame2', 'Much better.'),
+  ccue(100, 'bossDefeat', 'dame3', 'You finally stopped asking which of us mattered.'),
+  ccue(100, 'bossDefeat', 'player', 'So which one is-'),
+  ccue(100, 'bossDefeat', null, 'A single playing card slips from somewhere high above and strikes the marble floor with a sharp crack.'),
+  ccue(100, 'bossDefeat', null, 'The PLAYER looks down for less than a second.'),
+  ccue(100, 'bossDefeat', null, 'When the PLAYER looks up, only ONE WOMAN remains.'),
+  ccue(100, 'bossDefeat', null, 'The other two chairs are empty. No footsteps. No doors moving. Nothing.'),
+  ccue(100, 'chapterExit', 'player', 'What-'),
+  ccue(100, 'chapterExit', 'the_remaining_woman', 'You were doing so well without the question.'),
+  ccue(100, 'chapterExit', 'player', 'Are you Dame de Pique?'),
+  ccue(100, 'chapterExit', null, 'She walks slowly toward the throne.'),
+  ccue(100, 'chapterExit', 'the_remaining_woman', 'Do you think a name can control every table in every city?'),
+  ccue(100, 'chapterExit', 'player', 'People say you do.'),
+  ccue(100, 'chapterExit', 'the_remaining_woman', 'People need someone to blame when chance feels organized.'),
+  ccue(100, 'chapterExit', 'player', 'That is not a denial.'),
+  ccue(100, 'chapterExit', 'the_remaining_woman', 'Good.'),
+  ccue(100, 'chapterExit', null, 'She reaches the throne, turns and produces a QUEEN OF SPADES card between two fingers.'),
+  ccue(100, 'chapterExit', 'the_remaining_woman', 'Keep asking better questions.'),
+  ccue(100, 'chapterExit', null, 'She flicks the card toward the PLAYER.'),
+  ccue(100, 'chapterExit', null, 'Before it reaches the table, black smoke blooms around the throne. A fan of playing cards flashes through it like silver birds.'),
+  ccue(100, 'chapterExit', null, 'The smoke clears. The throne is empty. The QUEEN OF SPADES card lies face-up on the table.'),
+  ccue(100, 'chapterExit', 'player', 'Dame?'),
+  ccue(100, 'chapterExit', null, 'No answer. The PLAYER turns the card over.'),
+  ccue(100, 'chapterExit', null, 'On the back, where the casino crest should be, is a single RED HEART.'),
+  ccue(100, 'chapterExit', null, 'The black doors behind the PLAYER open. THE COUNTESS stands there.'),
+  ccue(100, 'chapterExit', 'player', 'Where did she go?'),
+  ccue(100, 'chapterExit', 'the_countess', 'Which one?'),
+  ccue(100, 'chapterExit', 'player', 'Do not do that.'),
+  ccue(100, 'chapterExit', null, 'For the first time, THE COUNTESS almost laughs.'),
+  ccue(100, 'chapterExit', 'the_countess', 'Come. You have been inside long enough.'),
+  ccue(100, 'chapterExit', null, 'THE COUNTESS leads the PLAYER back through the casino. It is empty.'),
+  ccue(100, 'chapterExit', null, 'Every table is still set. Lamps are on. Glasses sit where people left them. But there are no dealers, no regulars, no bosses, no music. The rooms that were crowded all night now feel abandoned.'),
+  ccue(100, 'chapterExit', 'player', 'Where is everyone?'),
+  ccue(100, 'chapterExit', 'the_countess', 'Gone.'),
+  ccue(100, 'chapterExit', 'player', 'How long was I in there?'),
+  ccue(100, 'chapterExit', 'the_countess', 'Long enough.'),
+  ccue(100, 'chapterExit', 'player', 'It felt like minutes.'),
+  ccue(100, 'chapterExit', 'the_countess', 'That room has poor manners with time.'),
+  ccue(100, 'chapterExit', null, 'They reach the front doors. The PLAYER still holds the Queen of Spades card with the red heart on its back.'),
+  ccue(100, 'chapterExit', 'player', 'Was any of that real?'),
+  ccue(100, 'chapterExit', 'the_countess', 'Check your credits.'),
+  ccue(100, 'chapterExit', null, 'The PLAYER looks. The campaign balance is still there. So is the final emblem.'),
+  ccue(100, 'chapterExit', 'the_countess', 'Rest.'),
+  ccue(100, 'chapterExit', 'player', 'And then?'),
+  ccue(100, 'chapterExit', null, 'THE COUNTESS looks at the red heart on the card.'),
+  ccue(100, 'chapterExit', 'the_countess', 'If you still want the truth, follow the heart.'),
+  ccue(100, 'chapterExit', null, 'The PLAYER steps outside. The street is almost empty. Behind them, the spade casino doors close without a sound.'),
+  ccue(100, 'chapterExit', null, 'Across the city, far beyond the rooftops, a distant red glow pulses once like a heartbeat.'),
+  ccue(100, 'chapterExit', null, 'CAMPAIGN COMPLETE: DAME DE PIQUE — One hundred tables cleared. The heart is waiting.'),
 
   // Prologue cinematic — the screenplay's opening EXT. CITY STREET beat
   // (motorcar, envelope, facade), fed in verbatim like every other cue.

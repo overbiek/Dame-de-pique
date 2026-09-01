@@ -8321,6 +8321,12 @@ const CAMPAIGN_CHARACTERS={
   private2:{name:'Private Player #2',initial:'2'},
   private3:{name:'Private Player #3',initial:'3'},
   the_countess:{name:'The Countess',initial:'C'},
+  dame1:{name:'Woman One',initial:'1'},
+  dame2:{name:'Woman Two',initial:'2'},
+  dame3:{name:'Woman Three',initial:'3'},
+  dame_de_pique:{name:'Dame de Pique',initial:'D'},
+  the_three_women:{name:'The Three Women',initial:'3'},
+  the_remaining_woman:{name:'The Remaining Woman',initial:'D'},
   player:{name:null,initial:null},
 };
 // Which three characters sit at an ordinary (non-boss) table per chapter,
@@ -8341,6 +8347,7 @@ const CAMPAIGN_CHAPTER_ROSTER={
   7:{regulars:['ballroom1','ballroom2','ballroom3'],bossSeat:2},
   8:{regulars:['vault1','vault2','vault3'],bossSeat:2},
   9:{regulars:['private1','private2','private3'],bossSeat:2},
+  10:{regulars:['dame1','dame2','dame3'],bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/
@@ -8374,6 +8381,18 @@ const CAMPAIGN_PORTRAIT_SRC={
   the_jester:'/avatars/house-regulars/jester.webp',
   the_charmer:'/avatars/house-regulars/charmer.webp',
   the_closer:'/avatars/house-regulars/closer.webp',
+  // dame1/2/3, the_three_women and the_remaining_woman are all
+  // deliberately the SAME face — the screenplay's whole point is that
+  // they cannot be told apart — so they share dame_de_pique's own file
+  // instead of five duplicated copies. dame_de_pique itself needs no
+  // entry here: with nothing listed, campaignPortraitImg already falls
+  // through to its generic /campaign/characters/dame_de_pique.webp path,
+  // which is exactly where the real file lives.
+  dame1:'/campaign/characters/dame_de_pique.webp',
+  dame2:'/campaign/characters/dame_de_pique.webp',
+  dame3:'/campaign/characters/dame_de_pique.webp',
+  the_three_women:'/campaign/characters/dame_de_pique.webp',
+  the_remaining_woman:'/campaign/characters/dame_de_pique.webp',
 };
 // NOT lazy — same call as campaignGoldImg's, for a different reason.
 // campaignDialogueStep() replaces #camp-dlg-portrait's innerHTML on

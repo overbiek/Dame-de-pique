@@ -3205,6 +3205,141 @@ before pushing.
   81-90 are deferred along with every earlier chapter's, by the user's
   own choice.
 
+## Chapter 10 — The Hidden Throne Room (Levels 91-100, FINAL Boss: Dame de Pique)
+- **The campaign's last chapter, and structurally different from every
+  one before it.** The brief calls this out explicitly as a "special
+  finale presentation": from Level 91 onward the PLAYER faces the same
+  three visually IDENTICAL women at every table, not the usual
+  three-regulars-then-boss-arrives-at-x0 shape every other chapter uses.
+  **Confirmed before building anything that nothing in the engine
+  assumes a 9-chapter/90-level campaign** — no hardcoded `90`, no
+  chapter-count constant, `CAMPAIGN_LEVEL_LIST`/chapter nav all derive
+  from the data — so Chapter 10 needed zero engine changes, same as
+  every earlier chapter addition.
+- **Scope decision made with the user before writing anything**: the
+  brief's own "Level 91-100 special finale" section asks for live
+  portrait-swapping mid-hand and a multi-scene cinematic ending (women
+  vanishing, a card-flip reveal, an empty-casino walkthrough, an
+  exterior street beat, a dedicated "Campaign Complete" card). Asked the
+  user how much of that to build; **chosen: full dialogue only, no new
+  UI** — every line from Level 91 through the absolute end of the
+  screenplay is delivered verbatim through the existing
+  `campaignMaybeShow`/`campaignDialogueStep` card, over the one throne-
+  room background, using triggers the engine already has. No mid-hand
+  portrait swap, no scene-by-scene cinematic, no dedicated completion
+  screen. This is a real, deliberate scope reduction from the brief —
+  not a hidden gap — and it's the reason this chapter needed no new
+  code at all, only data (characters, levels, cues).
+- **Roster shape had to be different, and it's still expressed through
+  the existing generic mechanism.** `CAMPAIGN_CHAPTER_ROSTER[10] =
+  { regulars: ['dame1','dame2','dame3'], bossSeat: 2 }` — all three
+  seats are the "identical" women from Level 91, not two regulars plus a
+  later arrival. Level 100's `bossId: 'dame_de_pique'` still runs
+  through `campaignSeatCharacters`'s ordinary substitution
+  (`ids[roster.bossSeat] = level.bossId`), but since `dame_de_pique`
+  shares dame3's exact portrait, the substitution is a COSMETIC relabel
+  rather than a real seat change — matching the story precisely: nobody
+  new arrives at Level 100, because all three were already seated since
+  Level 91. This was chosen specifically so Level 100 still gets the
+  generic "Chapter Boss" seat tag and the in-hand leave-menu's boss name
+  (both keyed off `level.bossId`) without inventing a special case.
+- **Five character ids, one shared portrait file.** `dame1`/`dame2`/
+  `dame3` (Woman One/Two/Three, the table regulars), `dame_de_pique`
+  (bossId-only, never actually a distinct visual), `the_three_women` and
+  `the_remaining_woman` (two one-off Level 100 speakers, same
+  single-appearance treatment as Chapter 8's `nervous_player`) all
+  resolve to the identical `/campaign/characters/dame_de_pique.webp`
+  file via `CAMPAIGN_PORTRAIT_SRC` overrides — five entries pointing at
+  one asset rather than five duplicated copies, since the screenplay's
+  entire point is that they cannot be visually told apart, before OR
+  after the reveal.
+- **`the_three_women` exists for exactly one line** — the choral "Whether
+  you needed us to be one person," spoken by all three at once in the
+  source. Treated as a real speaker (own portrait, own name) rather than
+  narration, since it IS attributed dialogue, not scene description —
+  same reasoning that gives `nervous_player` his own id instead of
+  folding him into a `null` narration line.
+  **`the_remaining_woman` is a deliberately DIFFERENT id from
+  `dame_de_pique`** even though they're visually and possibly literally
+  the same figure — the ambiguity is the point, and collapsing them into
+  one id would quietly resolve a mystery the screenplay leaves open on
+  purpose.
+- **Level 99's objective is `{min:51, gold:35}` — gold BELOW min,
+  verified against the sheet rather than "corrected."** Every other
+  level in the game has gold strictly above min; this one doesn't, and
+  the sheet's own measured columns explain why: Measured P(gold) equals
+  Measured P(clear) at 8% for this level, meaning every run that hit the
+  (harder) min also already cleared the (easier) gold bar. Transcribed
+  verbatim, per the brief's own "do not invent poker mechanics... exact
+  targets are controlled by the separate campaign data" instruction —
+  not something for the dialogue-integration pass to second-guess.
+- **The `bossDefeat`/`chapterExit` split for Level 100 follows the exact
+  precedent from Levels 70/80/90**: the immediate table-side reaction —
+  the score settling, the three women standing, "Better."/"Much
+  better."/"...which of us mattered," right through the vanish itself
+  (only one woman remains, the other two chairs empty) — is
+  `bossDefeat`, since it's still the direct, continuous consequence of
+  the hand just played. Everything after — The Remaining Woman's
+  reveal-that-reveals-nothing, the smoke and the empty throne, the
+  Queen-of-Spades/red-heart card flip, THE COUNTESS leading the PLAYER
+  through the empty casino, and the final "CAMPAIGN COMPLETE" narration
+  — is one long `chapterExit` (41 cues), since chapterExit's whole job
+  is "hand off to what's next," and here "what's next" is the entire
+  hinted sequel rather than a chapter transition.
+  **The "CAMPAIGN COMPLETE: DAME DE PIQUE" / "ONE HUNDRED TABLES
+  CLEARED." / "THE HEART IS WAITING." title-card block was folded into
+  ONE plain narration cue** rather than three, and rendered through the
+  ordinary dialogue card rather than a bespoke title screen — a direct
+  consequence of the "full dialogue only" scope call above. Every
+  `SYSTEM / NOT SHOWN:` line in this chapter (the credit-counter roll,
+  the emblem lock, the fade-out) was skipped entirely, same treatment
+  every earlier chapter's SYSTEM notes already got.
+- **`bossMidpoint` carries BOTH final-boss stinger blocks in sequence**
+  off the one trigger, same pattern as every earlier boss level — the
+  nine-boss name-check ("The Baron noticed restraint." ... "The Countess
+  noticed honesty.") immediately followed by the "before the last hand"
+  exchange. Every one of the nine boss names it references was
+  cross-checked against this game's actual boss list before shipping.
+- Verified structurally (every speaker id — `dame1/2/3`, `dame_de_pique`,
+  `the_three_women`, `the_remaining_woman` — resolves in both the server
+  and client `CAMPAIGN_CHARACTERS` tables via a Python cross-check of
+  all 189 `ccue()` calls tagged 91-100, and every one of the 10 levels
+  correctly tagged `chapter: 10`) and live: a stubbed-`io` copy of
+  `index.html` was driven through `renderCampaignMap`/
+  `campaignRenderChapterView` with a synthetic `campaignData` unlocking
+  through Level 100, confirming the map renders "The Hidden Throne Room"
+  / "Levels 91–100" with Dame de Pique's real photo in the boss-teaser
+  corner and Table 100 marked BOSS — no onboarding popup even
+  intercepted this run, so the map screenshot is a clean, direct
+  capture. Representative sequences — Level 91's `preLevel`+`postClear`
+  (12 lines, confirming Woman One/Two/Three all correctly share the one
+  portrait file), Level 98's `preLevel` (the interleaved-sentence
+  "You are still trying- / -to decide which of us- / -is the real one."
+  exchange, 11 lines) and Level 100's COMPLETE sequence — `bossIntro`
+  (8), `bossMidpoint` (15, both stinger blocks), `postFail` (random-pick
+  confirmed to show exactly one line), `bossDefeat` (11) and
+  `chapterExit` (41, the entire ending) — were driven through the actual
+  `campaignMaybeShow`/`campaignDialogueStep` renderer (a byte-identical
+  `ccue()` re-implementation, per-bucket counter included, fed the real
+  extracted call text) and matched the intended narrator/speaker order,
+  names and portraits exactly, including "The Remaining Woman" resolving
+  the same shared portrait after the reveal.
+- **Chapter background and the portrait both arrived already in
+  Downloads and are in** — `public/campaign/chapters/
+  hidden_throne_room.webp` (from `The Queens chamber.png`, 1672×941,
+  same convention as every chapter background since Cabaret — and
+  strikingly, the supplied art already shows exactly the three-women-
+  at-the-table-with-the-throne-behind composition the screenplay
+  describes) and `public/campaign/characters/dame_de_pique.webp` (from
+  `The Dame the pique.png`, 1254×1254, circular mask at radius=width/2,
+  28px excess on the ring's own radius — comfortably inside the 627px
+  mask, no special handling needed this time).
+- **Nothing missing for this chapter or, with it, for the whole
+  campaign** — every one of the ten chapters (Levels 1-100) now has a
+  real chapter background and real art for every character with a
+  speaking role. The only art still deferred anywhere in the campaign is
+  gold medallions for Levels 51-100, by the user's own standing choice.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

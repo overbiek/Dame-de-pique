@@ -450,12 +450,24 @@ before pushing.
   no DOM change. `.menu-wrap` becomes a two-column grid: an identity
   rail (crest / title / tagline, with the How-to-play, Sound and
   Tutorial utilities at its foot) and the six tiles in column 2 as an
-  even **2×3**. There is deliberately no hero span any more: markup
-  order (Casual, Daily, Ranked, Rank, Statistics, My Account) is exactly
-  the reading order a plain 2-column grid produces, so **auto-placement
-  alone** pairs Casual above Ranked and Daily above Rank — no explicit
-  `grid-column`/`grid-row` on any tile. Reordering the markup reorders
-  the grid; that's the only control.
+  even **2×3**. Markup order (Campaign, Daily, Casual, Ranked,
+  Statistics, My Account) is exactly the reading order a plain 2-column
+  grid produces, so **auto-placement alone** pairs Campaign above
+  Casual and Daily above Ranked — no explicit `grid-column`/`grid-row`
+  on any tile. Reordering the markup reorders the grid; that's the only
+  control.
+  **Rank was a seventh candidate tile at one point and Campaign was
+  briefly a full-width hero row above this grid — neither is true any
+  more, on request.** Rank moved into the Ranked Multiplayer screen
+  instead (a plain `.tile`-styled button under "Find match" in
+  `#ranked-home`, calling the same `goRank()` — zero new CSS, since
+  `.tile` already carries the full deco-box/theme treatment and works
+  fine outside the menu grid) and Campaign folded back into an ordinary
+  tile. That's what let `grid-template-rows` go back to three EQUAL
+  `1fr` rows instead of `auto repeat(3,1fr)` — the six tiles are a bit
+  bigger again as a result, since there's no banner row taking a share
+  of the height any more. Verified non-scrolling at both 915×412 and
+  667×375 (the smallest realistic landscape phone) after the change.
   Six tiles in the height three used to occupy is tight, which is what
   the landscape tile/icon/type shrink and `display:none` on
   `.tile-arrow` are paying for. Verified non-scrolling down to

@@ -4310,29 +4310,28 @@ html.landscape-mode #s-menu .exit-row .btn{text-align:left}
    inside the installed PWA. */
 html.landscape-mode #s-menu #install{margin-top:0}
 
-/* action grid: an even 2x3. Markup order (Casual, Daily, Ranked, Rank,
-   Statistics, My Account) is exactly the reading order this produces, so
-   auto-placement alone pairs Casual above Ranked and Daily above Rank —
-   no explicit grid-column/row anywhere. The primary tile deliberately
-   does NOT span as a hero any more; it's the first cell of a level grid,
-   and its gold icon is what still marks it out.
+/* action grid: an even 2x3. Markup order (Campaign, Daily, Casual,
+   Ranked, Statistics, My Account) is exactly the reading order this
+   produces, so auto-placement alone pairs Campaign above Casual and
+   Daily above Ranked — no explicit grid-column/row anywhere. The
+   primary tile deliberately does NOT span as a hero; it's the third
+   cell of a level grid, and its gold icon is what still marks it out.
    Three rows must fit one landscape viewport without scrolling, which is
    what the tighter tile/icon sizing below is for. */
-/* align-self:stretch + three equal rows, so the six tiles divide the full
-   height of the column rather than clustering in the middle and leaving
-   dead space above and below. The tiles are the content of this screen;
-   they should own the space. */
-/* Row 1 is `auto`, not another 1fr — that's the Campaign hero banner
-   (.tile.campaign-tile below), added later than the original 6-tile 2x3
-   this comment block otherwise still describes. Markup order (Campaign,
-   Casual, Daily, Ranked, Rank, Statistics, My Account) is exactly the
-   reading order this produces: auto-placement drops Campaign into row 1
-   spanning both columns, then the original six fall into the unchanged
-   2x3 below it exactly as before — same pairings, same auto-placement,
-   no explicit grid-column/row on any of the original six. */
+/* align-self:stretch + three EQUAL rows, so the six tiles divide the
+   full height of the column rather than clustering in the middle and
+   leaving dead space above and below. The tiles are the content of this
+   screen; they should own the space.
+   This used to be `auto repeat(3,1fr)` — a spanning Campaign hero banner
+   sat in the `auto` row above an unchanged 2x3, and Rank was the sixth
+   tile in that 2x3. Campaign folded back into an ordinary tile and Rank
+   moved into the Ranked Multiplayer screen instead (see that tile's own
+   comment in the markup), which is what let this go back to three equal
+   rows — the six tiles are a bit bigger again as a result, since there's
+   no more banner row taking a share of the height. */
 html.landscape-mode #s-menu .menu-tiles{
   grid-column:2;grid-row:1 / -1;align-self:stretch;
-  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:auto repeat(3,1fr);gap:8px;
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8px;
   margin-top:0;padding-left:18px;min-height:0;
   border-left:1px solid rgba(var(--ddp-brass-rgb),.28);
 }
@@ -4345,21 +4344,6 @@ html.landscape-mode #s-menu .menu-tiles{
    being overflow:hidden that clipped the tagline by ~2px rather than
    scrolling. This buys 4px, which clears it with room to spare. */
 html.landscape-mode #s-menu .tile{min-height:0;padding:10px 12px}
-/* The Campaign hero banner spans both columns in row 1 (auto height, not
-   1fr) rather than taking a grid cell like the other six — it's a
-   feature launch, not a seventh equal tile, and a spanning hero costs
-   real height the already-tight 2x3 below can't spare. So it trades the
-   centred icon/title/subtitle STACK every other tile uses for a short
-   horizontal banner instead: icon left, title+subtitle stacked right,
-   single compact row. Kept to base .tile's shared background/border/hover
-   treatment — only the internal layout direction changes. */
-html.landscape-mode #s-menu .tile.campaign-tile{
-  grid-column:1 / -1;flex-direction:row;justify-content:flex-start;
-  text-align:left;padding:7px 14px;gap:10px;min-height:0;
-}
-html.landscape-mode #s-menu .tile.campaign-tile .tile-icon{font-size:19px}
-html.landscape-mode #s-menu .tile.campaign-tile .tile-title{font-size:12px}
-html.landscape-mode #s-menu .tile.campaign-tile .tile-sub{margin-top:1px}
 
 /* ══ Landscape content screens — casual, ranked, rank, statistics ══
    All four share one shape in portrait: a .center-wrap holding a header
@@ -5973,15 +5957,31 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
     </button>
 
     <div class="menu-tiles">
-      <!-- First in markup order on purpose: it's what lands this tile in
-           row 1 of the landscape grid's `auto repeat(3,1fr)` rows, ahead
-           of the unchanged 6-tile 2x3 that follows — see .tile.campaign-tile
-           below for why it spans full width there instead of taking a cell. -->
-      <button class="tile campaign-tile" onclick="goCampaign()">
+      <!-- Six equal tiles, 2x3. Markup order (Campaign, Daily, Casual,
+           Ranked, Statistics, My Account) is exactly the reading order
+           the landscape grid's auto-placement produces, pairing Campaign
+           above Casual and Daily above Ranked. Campaign used to be a
+           full-width hero spanning row 1 above this grid (see git
+           history) — folded back into an ordinary tile here, which is
+           what let the grid go back to three EQUAL rows instead of
+           `auto repeat(3,1fr)`, so all six tiles are a bit bigger again.
+           Rank used to be the sixth tile in this grid; it's gone from
+           here entirely and lives inside the Ranked Multiplayer screen
+           now (`#ranked-home`'s own Rank entry box) instead. -->
+      <button class="tile" onclick="goCampaign()">
         <div class="tile-icon">&#9820;&#65038;</div>
         <div class="tile-body">
           <div class="tile-title">Campaign<span class="tile-dot" id="menu-campaign-dot"></span></div>
           <div class="tile-sub">The Hundred Tables &middot; a story campaign</div>
+        </div>
+        <div class="tile-arrow">›</div>
+      </button>
+
+      <button class="tile" onclick="goDaily()">
+        <div class="tile-icon">☀︎</div>
+        <div class="tile-body">
+          <div class="tile-title">Daily Challenge<span class="tile-dot" id="menu-daily-dot"></span></div>
+          <div class="tile-sub" id="menu-daily-sub">One hand &middot; same deal for everyone</div>
         </div>
         <div class="tile-arrow">›</div>
       </button>
@@ -5995,32 +5995,11 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
         <div class="tile-arrow">›</div>
       </button>
 
-      <!-- Second in markup order, which is what puts it beside Casual Play
-           in the landscape 2x3 (and directly above Rank). The dot is set by
-           refreshDailyBadge() once today's hand is done. -->
-      <button class="tile" onclick="goDaily()">
-        <div class="tile-icon">☀︎</div>
-        <div class="tile-body">
-          <div class="tile-title">Daily Challenge<span class="tile-dot" id="menu-daily-dot"></span></div>
-          <div class="tile-sub" id="menu-daily-sub">One hand &middot; same deal for everyone</div>
-        </div>
-        <div class="tile-arrow">›</div>
-      </button>
-
       <button class="tile" onclick="goRanked()">
         <div class="tile-icon">♛</div>
         <div class="tile-body">
           <div class="tile-title">Ranked Multiplayer</div>
           <div class="tile-sub">Humans only &middot; climb the ladder</div>
-        </div>
-        <div class="tile-arrow">›</div>
-      </button>
-
-      <button class="tile" onclick="goRank()">
-        <div class="tile-icon">◆</div>
-        <div class="tile-body">
-          <div class="tile-title">Rank</div>
-          <div class="tile-sub">Leaderboard &amp; your standing</div>
         </div>
         <div class="tile-arrow">›</div>
       </button>
@@ -6403,6 +6382,18 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
         <p id="ranked-home-sub"></p>
       </div>
       <button class="btn btn-primary btn-block" style="margin-top:8px" onclick="startRankedQueue()">Find match</button>
+      <!-- Rank used to be its own main-menu tile; it now lives here
+           instead, as the natural "you're already looking at Ranked"
+           entry point. Plain .tile reuse — same deco-box-treated,
+           theme-aware component the menu tiles already are, so this
+           needed zero new CSS. -->
+      <button class="tile" style="margin-top:12px" onclick="goRank()">
+        <div class="tile-icon">◆</div>
+        <div class="tile-body">
+          <div class="tile-title">Rank</div>
+          <div class="tile-sub">Leaderboard &amp; your standing</div>
+        </div>
+      </button>
     </div>
 
     <div id="ranked-queue" style="display:none">

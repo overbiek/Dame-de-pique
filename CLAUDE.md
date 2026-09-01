@@ -98,6 +98,22 @@ before pushing.
   not a bug, if it comes up again
 - Shooting the moon (all hearts + Q♠ in one round) replaces that round's
   score entirely: shooter +60, everyone else -20
+- **+60 is therefore a hard mathematical ceiling on a single hand's
+  score, full stop — nothing scores higher.** A campaign level's `gold`
+  objective above 60 for a `hands:1` level isn't just "hard", it's
+  impossible regardless of play. This bit real levels: 75/81/84/87/95/
+  96/97/98/99 all shipped with `gold` (three of them: 84, 87, 98) above
+  60, or with `min`/`gold` far beyond what real play on that level's
+  exact fixed deal could reach even under this — traced by extracting
+  the actual `aiChoose`/`heuristicChoose`/`applyHardRules`/`sampleWorld`/
+  `aiSelectPass` functions verbatim out of `server.js` and running them
+  for real in a browser JS engine (no Node available in the environment
+  this was diagnosed in), against each level's own exact seed — the
+  deal for a fixed-hand campaign level is 100% reproducible run to run,
+  so this is the literal scenario a player faces, not an approximation.
+  All were retuned to sit inside the actually-observed achievable range;
+  a `hands:4` (BOSS) level pools score across all 4 hands, so its own
+  ceiling scales with that and wasn't affected by this bug.
 - Round count is **per room** (`G.roundsTotal`), not a global constant —
   see the Blitz section. **Ranked is now a fixed 8 rounds**
   (`RANKED_ROUNDS`, passed by `formRankedMatch`); it no longer inherits

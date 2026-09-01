@@ -8118,8 +8118,22 @@ function goDaily(){
   $('daily-error').style.display='none';
   $('daily-content').style.display='none';
   // Hidden until the board actually lands, so a stale list from an earlier
-  // visit isn't sitting there under a "Loading…" panel.
-  $('daily-board-wrap').style.display='none';
+  // visit isn't sitting there under a "Loading…" panel — UNLESS the local
+  // "played today" cache already says locked, in which case show that
+  // instantly rather than flashing "Loading…" first. The server's own
+  // `locked` flag on the dailyLeaderboardOk reply is still what actually
+  // decides it (see that handler's own note) — this is purely to skip a
+  // flash for the common not-yet-played case, same pattern the campaign
+  // level-detail popup's friends' scores gate already uses.
+  if(loadDailyDone()===todayKey()){
+    $('daily-board-wrap').style.display='none';
+  }else{
+    $('daily-board-wrap').style.display='flex';
+    $('daily-board').style.display='none';
+    $('daily-you').style.display='none';
+    $('daily-board-empty').style.display='block';
+    $('daily-board-empty').textContent="Finish today's hand to see the leaderboard.";
+  }
   socket.emit('getDailyStatus',{accountToken:account?accountToken:''});
   socket.emit('getDailyLeaderboard',{accountToken:account?accountToken:''});
 }
@@ -8182,8 +8196,11 @@ socket.on('dailyLeaderboardOk',d=>{
   const rows=d.rows||[];
   const has=rows.length>0;
   $('daily-board-wrap').style.display='flex';
-  $('daily-board').style.display=has?'table':'none';
-  $('daily-board-empty').style.display=has?'none':'block';
+  $('daily-board').style.display=(has&&!d.locked)?'table':'none';
+  $('daily-board-empty').style.display=(has&&!d.locked)?'none':'block';
+  $('daily-board-empty').textContent=d.locked
+    ?"Finish today's hand to see the leaderboard."
+    :"Nobody has finished today's hand yet. Be first.";
   // Positions come from the row order the server already sorted, but ties
   // share a rank — so read the rank off the score rather than the index,
   // which is what makes the pinned row below agree with the list.

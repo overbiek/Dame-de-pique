@@ -6177,27 +6177,34 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Gated on the REQUESTER having finished TODAY's hand first — same
+  // "don't leak information about a challenge you haven't attempted yet"
+  // reasoning as the campaign level-detail popup's friends' scores.
+  // Resets for free every day: `mine` is looked up against dailyDateKey(),
+  // so a new day with no score yet is locked again with no extra state to
+  // clear. Enforced here, not just hidden client-side, same "don't trust
+  // the client to hide it" reasoning as getCampaignFriendsResults.
   socket.on('getDailyLeaderboard', async ({ accountToken }) => {
     const date = dailyDateKey();
-    if (!DB_ENABLED) return socket.emit('dailyLeaderboardOk', { date, rows: [], you: null });
+    if (!DB_ENABLED) return socket.emit('dailyLeaderboardOk', { date, rows: [], you: null, locked: false });
     try {
-      const rows = await db.getDailyLeaderboard(date, 100);
-      let you = null;
       const acct = await lookupAccountByToken(accountToken);
+      // Guests can play but nothing is banked for them (see the Daily
+      // Challenge section of CLAUDE.md), so there's never a finished-today
+      // score to unlock the board with — always locked for a guest.
+      const mine = acct ? await db.getDailyScore(acct.id, date) : null;
+      if (!mine) return socket.emit('dailyLeaderboardOk', { date, rows: [], you: null, locked: true });
+      const rows = await db.getDailyLeaderboard(date, 100);
       // Sent whenever the player has a score today, even if they're
       // already visible in the top 100 — the client pins it to the bottom
       // of the board as a permanent "you are here", not as an
       // outside-the-list fallback the way the ranked ladder does.
-      if (acct) {
-        const standing = await db.getDailyStanding(acct.id, date);
-        if (standing) {
-          you = {
-            accountId: acct.id, position: standing.position, entries: standing.entries,
-            nickname: acct.nickname, avatar: acct.avatar, score: standing.score,
-          };
-        }
-      }
-      socket.emit('dailyLeaderboardOk', { date, rows, you });
+      const standing = await db.getDailyStanding(acct.id, date);
+      const you = standing ? {
+        accountId: acct.id, position: standing.position, entries: standing.entries,
+        nickname: acct.nickname, avatar: acct.avatar, score: standing.score,
+      } : null;
+      socket.emit('dailyLeaderboardOk', { date, rows, you, locked: false });
     } catch (e) {
       console.error('getDailyLeaderboard error:', e.message);
       socket.emit('dailyError', { msg: "Couldn't load the leaderboard. Try again." });

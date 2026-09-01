@@ -1703,6 +1703,27 @@ before pushing.
   here", not a fallback. Row numbers are computed from the score
   (equal scores share a rank) rather than the array index, so the list
   agrees with the `RANK()` figure the pinned row shows.
+- **The leaderboard itself is gated on the REQUESTER having finished
+  TODAY's hand first** — same "don't leak information about a challenge
+  you haven't attempted yet" reasoning as the campaign level-detail
+  popup's friends' scores gate, and the same two-layer enforcement:
+  `getDailyLeaderboard` (server.js) checks `db.getDailyScore(acct.id,
+  date)` before doing anything else and returns `{rows:[], you:null,
+  locked:true}` if it's empty — a crafted client asking for the board
+  directly gets nothing back either, not just a UI that hides it. Resets
+  for free every day, with no extra state to clear: `date` is always
+  `dailyDateKey()`, so a new day with no score yet is locked again purely
+  because that lookup comes back empty. Guests are always locked — they
+  can play, but nothing is ever banked for them (see below), so there's
+  never a finished-today score to unlock it with.
+  The client ALSO gates instantly and locally, in `goDaily()`, off the
+  `ddp.dailyLastCompleted` cache (`loadDailyDone()===todayKey()`) it
+  already keeps for the menu tile's dot — purely to skip a "Loading…"
+  flash for the common not-yet-played case; the server's `locked` flag
+  on the `dailyLeaderboardOk` reply is what actually decides the
+  rendered message, since local data can be stale. `locked` always wins
+  over whatever `rows` contains, so a stale/racy payload can never leak
+  a real board through a locked response.
 - **Guests can play but nothing is banked.** No leaderboard row, no
   streak, and the menu tile's dot is never set for them — "played today"
   is a fact about an *account*. This also matters mechanically: a guest

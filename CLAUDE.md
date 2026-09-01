@@ -2879,16 +2879,29 @@ before pushing.
 - **`campaignGoldImg(levelId)` needed zero code changes** — it already
   builds `/campaign/gold/${levelId}.webp` generically for any level id
   (see its own `onerror` fallback-to-star contract); this was purely an
-  asset drop-in;
-  Levels 51-100 have no medallion source art yet since those chapters
-  don't exist in `CAMPAIGN_LEVELS` at all — same "nothing to add it to
-  yet" reasoning as the story-box narration pass above.
+  asset drop-in.
 - Not added to `sw.js`'s `ASSETS` — runtime-cached on first use, same
   as every other campaign art (chapter backgrounds, character
   portraits). No `CACHE` bump needed either: these are brand-new
   filenames (`11.webp`…`50.webp`), not an in-place overwrite of
   already-cached ones, so the cache-first fetch handler just fetches
   them fresh the first time any of Levels 11-50 is cleared at Gold.
+- **Levels 51-100 got their own medallions in a later pass, once those
+  chapters existed** — `public/campaign/gold/51.webp`…`100.webp`, all 50
+  processed with the exact same pipeline as 11-50 (flood-fill background
+  removal via `scipy.ndimage.label`, trim to content, resize to
+  160×160). Source files this time had no ` gold` suffix in their
+  filename (`Level 51.png` vs the earlier batch's `Level 11 gold.png`) —
+  worth checking naming per batch rather than assuming. 14.5-28KB each.
+  Level 100's medallion uses a distinctly lighter/cream background than
+  every other level's (all of which are dark red) — deliberate for the
+  campaign's final level, and the flood-fill still isolated it cleanly
+  since the fill still starts from the border regardless of interior
+  color. Spot-checked 51/75/90/100 visually and verified all 50 outputs
+  are exactly 160×160 with no anomalies. Same "zero code changes,
+  brand-new filenames, no CACHE bump, not in `sw.js` ASSETS" story as
+  the 11-50 batch. **This completes gold medallion art for all 100
+  campaign levels.**
 
 ## Chapter 6 — The Cabaret of Oddities (Levels 51-60, Boss: The Jester)
 - **Built from a spreadsheet, not guessed** —
@@ -2953,8 +2966,9 @@ before pushing.
   smooth anti-aliased edge before downsampling to the existing 480px
   convention) — that radius keeps the ring, including whatever
   decorative studs are built into it, while geometrically excluding
-  anything in the corners. Gold medallions for Levels 51-60 are still
-  the one piece not yet supplied.
+  anything in the corners. Gold medallions for Levels 51-60 arrived in
+  a later pass alongside 61-100's — see the "Gold medallion art now
+  covers all 50 built levels" section's own follow-up note.
 
 ## Chapter 7 — The Grand Ballroom (Levels 61-70, Boss: The Charmer)
 - **Same spreadsheet source as Chapter 6** —
@@ -3031,9 +3045,9 @@ before pushing.
   per-batch rather than assuming the last batch's method transfers.
   Verified live via `campaignPortraitHTML` at real in-game size: all
   three load with no clipping.
-- Gold medallions for Levels 61-70 are deferred along with 51-60's, by
-  the user's own choice, to be done once every remaining level is built
-  rather than chapter by chapter.
+- Gold medallions for Levels 61-70 arrived in the same later pass as
+  the rest — see the "Gold medallion art now covers all 50 built
+  levels" section's own follow-up note.
 
 ## Chapter 8 — The Vault (Levels 71-80, Boss: The Closer)
 - **Same spreadsheet source as Chapters 6-7** —
@@ -3115,8 +3129,9 @@ before pushing.
   the ring's own radius by only 14-23px, comfortably inside the 627px
   mask radius. Verified live via `campaignPortraitHTML` at real in-game
   size alongside the Ballroom three: all six load with no clipping.
-- Gold medallions for Levels 71-80 are deferred along with 51-70's, by
-  the user's own choice.
+- Gold medallions for Levels 71-80 arrived in the same later pass as
+  the rest — see the "Gold medallion art now covers all 50 built
+  levels" section's own follow-up note.
 
 ## Chapter 9 — The Countess's Antechamber (Levels 81-90, Boss: The Countess)
 - **Same spreadsheet source as Chapters 6-8** — all ten levels come
@@ -3202,8 +3217,9 @@ before pushing.
   clipping.
 - **Nothing missing for this chapter** — background, all three
   regulars, and the boss all have real art. Gold medallions for Levels
-  81-90 are deferred along with every earlier chapter's, by the user's
-  own choice.
+  81-90 arrived in the same later pass as the rest — see the "Gold
+  medallion art now covers all 50 built levels" section's own follow-up
+  note.
 
 ## Chapter 10 — The Hidden Throne Room (Levels 91-100, FINAL Boss: Dame de Pique)
 - **The campaign's last chapter, and structurally different from every
@@ -3337,8 +3353,10 @@ before pushing.
 - **Nothing missing for this chapter or, with it, for the whole
   campaign** — every one of the ten chapters (Levels 1-100) now has a
   real chapter background and real art for every character with a
-  speaking role. The only art still deferred anywhere in the campaign is
-  gold medallions for Levels 51-100, by the user's own standing choice.
+  speaking role. Gold medallions for Levels 51-100 arrived in a later
+  pass too (see the "Gold medallion art now covers all 50 built levels"
+  section's own follow-up note) — **every piece of art requested for
+  the entire 100-level campaign is now in.**
 
 ## Not implemented
 - Password reset (no email service configured)

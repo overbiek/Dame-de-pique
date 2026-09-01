@@ -1129,28 +1129,44 @@ before pushing.
   the `show()` rotation. It lives outside `#app`, `position:fixed`,
   `z-index:9000`.
 - **Non-blocking by construction.** `hideSplash()` fires on socket
-  `connect` *or* a hard `SPLASH_MAX_MS` (2.2s) timeout, whichever lands
+  `connect` *or* a hard `SPLASH_MAX_MS` (3s) timeout, whichever lands
   first, and guards on an already-done flag — so an offline start or a
-  dead server can never trap anyone behind it. `SPLASH_MIN_MS` (650ms)
-  stops it flashing past on a fast local connect. It removes itself from
-  the DOM after fading.
+  dead server can never trap anyone behind it. `SPLASH_MIN_MS` (2s) is
+  the floor the splash always stays up for, even on an instant local
+  connect — deliberately raised from an original 650ms specifically so
+  the cinematic still (below) has time to actually register rather than
+  flashing past. `SPLASH_MAX_MS` was raised alongside it, kept
+  proportionally above `SPLASH_MIN_MS` (same ~1s of extra grace the
+  original 650/2200 pair left a slow-but-real connect before giving up).
+  It removes itself from the DOM after fading.
 - `pointer-events:none` throughout, deliberately: the first `pointerdown`
   anywhere is what unlocks Web Audio (see the Sound section), and a
   full-screen overlay that ate it would silently mute the first game.
 - **Not themed, on purpose** — a brand mark is the brand's colours, not
   the player's chosen felt, the same as an OS splash screen. It doesn't
   read `data-theme` at all.
-- **The landscape image is the SQUARE logo, not the portrait loading
-  screen**, and that's the whole reason two assets exist. The handoff's
-  loading screen is 1080×1920; `cover` on a ~900×412 landscape viewport
-  crops it to a thin horizontal band through the middle, losing both the
-  emblem and the wordmark. So landscape gets `marquee-logo.webp`
-  `contain`-fitted and letterboxed on `#020605` (the art's own edge
-  colour, so the join is invisible), and the portrait art is used only
-  under `@media (orientation:portrait)`, where it fits as designed.
-- Assets are **WebP, downscaled from the source PNGs** — 18KB and 40KB
-  against 3.1MB and 2.8MB. Don't commit the originals; this is a phone
-  PWA and they're in `sw.js`'s `ASSETS` (hence the `ddp-v6` bump).
+- **The landscape image is now the campaign prologue's own opening
+  cinematic still** (rain, the envelope, the casino facade — the exact
+  photo `public/campaign/prologue/1.webp` also uses, processed as its
+  own separate file rather than shared, since the two are used in
+  different contexts) — swapped in from an original square wordmark/
+  emblem mark. That swap is also why the fit mode changed from
+  `contain` to `cover`: the square mark was letterboxed on `#020605` (a
+  logo can't tolerate losing its wordmark to a crop), but a photographed
+  scene tolerates a modest edge crop on an unusual viewport aspect just
+  fine, so `cover` now gives a proper full-bleed splash instead of
+  letterboxing. Portrait keeps its own separate, unrelated art
+  untouched — no portrait crop of the new image was ever supplied, and
+  this game is landscape-first regardless.
+- Assets are **WebP, downscaled from the source PNGs** — the landscape
+  one is ~80KB (from a 2.2MB source PNG), the untouched portrait one is
+  still 40KB. Don't commit the originals; this is a phone PWA and both
+  are in `sw.js`'s `ASSETS`. **Overwriting `marquee-logo.webp` in place
+  under its existing filename needed a `CACHE` bump (`ddp-v16`)** — see
+  `sw.js`'s own note on this trap: a cache-first fetch handler never
+  re-requests a same-URL asset it already has, so skipping the bump
+  would have left every returning player looking at the old square logo
+  forever.
 - `manifest.json`'s icons are deliberately **left alone**. The handoff
   offers the seal as an icon source but warns its fine ring/tick detail
   won't survive 48px, and it's full-bleed square art with no transparent

@@ -4815,14 +4815,15 @@ html.landscape-mode #s-final .frow-score{font-size:1rem}
 .tb-badge{font-size:.5rem}
 
 /* ══ Brand splash ══
-   The handoff shipped a 1080x1920 portrait loading screen, but this game
-   is landscape-only: background-size:cover on a ~900x412 viewport would
-   crop that art to a thin horizontal band through its middle, losing
-   both the emblem and the wordmark. So the SQUARE logo is what renders
-   in landscape (contain-fitted, letterboxed on #020605, which is the
-   art's own edge colour so the join is invisible), and the portrait
-   art is used where it actually fits. Both are 900px/720px WebP,
-   18KB and 40KB — the source PNGs were 3.1MB and 2.8MB. */
+   Landscape now shows the campaign prologue's own opening cinematic
+   still (rain, the envelope, the casino facade) full-bleed via `cover`
+   — a photographed SCENE, unlike the square wordmark/emblem mark this
+   replaced, so a modest edge crop on an unusual viewport aspect costs
+   nothing worth preserving the way it would for a logo (which is why
+   that one used `contain`, letterboxed on #020605). Portrait keeps its
+   own separate, already-fitted art untouched — no portrait crop of the
+   new image was supplied, and this game is landscape-first anyway.
+   900×506 WebP, ~80KB — the source PNG was 2.2MB. */
 #splash{
   position:fixed;inset:0;z-index:9000;background:#020605;
   pointer-events:none;opacity:1;transition:opacity .5s ease;
@@ -4830,7 +4831,7 @@ html.landscape-mode #s-final .frow-score{font-size:1rem}
 #splash.gone{opacity:0}
 .splash-art{
   width:100%;height:100%;
-  background:#020605 url('/brand/marquee-logo.webp') center/contain no-repeat;
+  background:#020605 url('/brand/marquee-logo.webp') center/cover no-repeat;
 }
 @media (orientation:portrait){
   .splash-art{background-image:url('/brand/marquee-splash-portrait.webp');background-size:cover}
@@ -7535,9 +7536,15 @@ function resetCosmeticLook(){
 /* ── brand splash ──
    Removed from the DOM after fading, so nothing is left overlaying the
    app. Called from socket 'connect' and from a hard timeout, and guards
-   on already-gone so whichever arrives second is a no-op. MIN_MS stops
-   it flashing past on a fast local connect. */
-const SPLASH_MIN_MS=650, SPLASH_MAX_MS=2200;
+   on already-gone so whichever arrives second is a no-op. MIN_MS is the
+   floor the splash always stays up for, even on an instant local
+   connect — 2s specifically requested so the new cinematic still has
+   time to actually be seen rather than flashing past. MAX_MS is a
+   separate, higher ceiling for the opposite case (a dead/offline
+   connect that never fires 'connect' at all) — kept proportionally
+   above MIN_MS, same ~1s of extra grace the original 650/2200 pair
+   left a slow-but-real connect before giving up. */
+const SPLASH_MIN_MS=2000, SPLASH_MAX_MS=3000;
 const splashAt=Date.now();
 let splashDone=false;
 function hideSplash(){

@@ -63,7 +63,7 @@
 // diamond overhangs (on request, so the new lobby-seat-card overflow
 // treatment — see .slot-bg-art's own CSS note — doesn't need as much
 // clearance between rows). Same filenames, same in-place-overwrite trap.
-const CACHE = 'ddp-v15';
+const CACHE = 'ddp-v16';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
                 '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 

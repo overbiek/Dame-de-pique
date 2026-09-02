@@ -2776,7 +2776,7 @@ const CAMPAIGN_LEVELS = {
         objective: { type: 'score', min: 21, gold: 44 } },
   89: { id: 89, chapter: 9, type: 'Normal', forcePassDir: 'across', hands: 1,
         seed: 'ddp-main-refine-L89-c359', hand: parseHand('Q♥ Q♦ 10♦ 3♣ A♣ 2♠ J♠ A♥ 4♣ 5♠ 5♦ 8♥ K♦'),
-        objective: { type: 'score', min: 22, gold: 39 } },
+        objective: { type: 'score', min: 5, gold: 20 } },
   90: { id: 90, chapter: 9, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_countess',
         seed: 'ddp-boss-refine-L90-c957',
         hands4: [

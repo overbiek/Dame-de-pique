@@ -8513,7 +8513,7 @@ socket.on('campaignStateOk',d=>{
   if(!$('s-campaign').classList.contains('active')) return;
   $('camp-loading').style.display='none';
   renderCampaignMap(d);
-  campaignMaybeShowPrologue(()=>{ campaignMaybeShow(1,'chapterEnter',()=>{}); });
+  campaignMaybeShowPrologue(()=>{ campaignMaybeShowHeartsPrologue(()=>{ campaignMaybeShow(1,'chapterEnter',()=>{}); }); });
 });
 socket.on('campaignStateErr',d=>{
   if(!$('s-campaign').classList.contains('active')){ toast('err-menu',d.msg); return; }
@@ -8647,9 +8647,18 @@ $('camp-dialogue').addEventListener('click',e=>{ if(e.target.id==='camp-dialogue
 // account, in sync across devices, then hands off to `done` (the
 // existing chapterEnter dialogue) exactly like campaignMaybeShow does.
 const CAMPAIGN_PROLOGUE_BG={1:'/campaign/prologue/1.webp',2:'/campaign/prologue/2.webp',3:'/campaign/prologue/3.webp'};
+// House of Hearts prologue (server.js, levelId 101 / trigger 'prologue')
+// — the Spades-to-Hearts handoff cinematic. Only 2 stills, not 3: the
+// script's Level 0 has one background swap (cafe -> the walk to the
+// doors), not the original's three-still beat structure.
+const CAMPAIGN_PROLOGUE2_BG={1:'/campaign/prologue2/1.webp',2:'/campaign/prologue2/2.webp'};
 let campProlQueue=[];
 let campProlOnDone=null;
 let campProlBgNum=null;
+// Which bg map the currently-running prologue reads `cue.bg` against —
+// set per-run by campaignRunPrologue so the same overlay/state can serve
+// either prologue without duplicating the step/advance machinery below.
+let campProlBgMap=CAMPAIGN_PROLOGUE_BG;
 let campProlHolding=false;
 let campProlTyping=false;
 let campProlTypeTimer=null;
@@ -8657,10 +8666,26 @@ let campProlFullText='';
 function campaignMaybeShowPrologue(done){
   const cues=campaignCuesFor(1,'prologue');
   if(!cues.length||cues.every(c=>campaignSeenCues.has(c.id))){ done(); return; }
-  Object.values(CAMPAIGN_PROLOGUE_BG).forEach(src=>{ new Image().src=src; });
+  campaignRunPrologue(cues,CAMPAIGN_PROLOGUE_BG,done);
+}
+// Gated on having actually finished the House of Spades campaign —
+// clearing level 100 sets campaignData.highestUnlockedLevel to 101 in
+// advanceCampaignUnlock (db.js) regardless of whether a level 101
+// exists yet, which is exactly "cleared the whole thing" with no new
+// server field needed. Without this gate, a brand-new account would see
+// both prologues back to back on their very first visit, which narrates
+// a night that hasn't happened yet for them.
+function campaignMaybeShowHeartsPrologue(done){
+  const cues=campaignCuesFor(101,'prologue');
+  if(!cues.length||!campaignData||campaignData.highestUnlockedLevel<=100||cues.every(c=>campaignSeenCues.has(c.id))){ done(); return; }
+  campaignRunPrologue(cues,CAMPAIGN_PROLOGUE2_BG,done);
+}
+function campaignRunPrologue(cues,bgMap,done){
+  Object.values(bgMap).forEach(src=>{ new Image().src=src; });
   campProlQueue=cues.slice();
   campProlOnDone=done;
   campProlBgNum=null;
+  campProlBgMap=bgMap;
   $('camp-prologue').classList.add('show');
   campaignPrologueStep();
 }
@@ -8668,11 +8693,12 @@ function campaignPrologueSetBg(n){
   if(campProlBgNum===n) return;
   campProlBgNum=n;
   const img=$('camp-prol-bg');
+  const src=campProlBgMap[n];
   if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){
-    img.src=CAMPAIGN_PROLOGUE_BG[n]; return;
+    img.src=src; return;
   }
   img.classList.add('fading');
-  setTimeout(()=>{ img.src=CAMPAIGN_PROLOGUE_BG[n]; img.classList.remove('fading'); },300);
+  setTimeout(()=>{ img.src=src; img.classList.remove('fading'); },300);
 }
 // Same typewriter reveal as campaignTypeText (CAMP_TYPE_MS), kept as its
 // own copy rather than a shared helper — that one is hard-wired to

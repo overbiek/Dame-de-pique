@@ -4361,6 +4361,39 @@ const CAMPAIGN_STORY_CUES = [
   ccue(1, 'prologue', null, 'The car pulls away before the PLAYER can answer.', { bg: 3 }),
   ccue(1, 'prologue', null, 'Across the street, an Art Deco facade glows through the rain. Above the doors: a single gold spade.', { bg: 3 }),
   ccue(1, 'prologue', null, 'The doors open. The CONCIERGE waits inside.', { bg: 3 }),
+
+  // House of Hearts prologue cinematic — "CHAPTER - PROLOGUE - THE RED
+  // DOT" / "LEVEL 0 - THE NEXT HOUSE" from
+  // House_of_Hearts_Levels_1-100_Movie_Script, fed in verbatim (quoted
+  // dialogue folded into the narration line, same as everywhere else a
+  // STORY BOX overlay has no speaker slot to anchor it to). Keyed on
+  // levelId 101 rather than 1 — the first level of the eventual Chapter
+  // 11 ("The Red Foyer"), which doesn't exist in CAMPAIGN_LEVELS yet —
+  // so this bucket can never collide with the Spades prologue's (1,
+  // 'prologue') bucket regardless of what gets built later, and the
+  // scheme stays consistent with "levelId = first level of the chapter
+  // this prologue leads into". Gated client-side on
+  // campaignData.highestUnlockedLevel > 100 (see campaignMaybeShow
+  // HeartsPrologue) — clearing level 100 sets highest_unlocked_level to
+  // 101 in advanceCampaignUnlock (db.js) regardless of whether a level
+  // 101 exists, which is exactly the "finished the whole House of
+  // Spades campaign" signal this needs, with no schema change. `bg` 1
+  // for every beat through the PLAYER's "Fine." (the cafe, the card,
+  // the distant red glow), `bg` 2 from the moment they start walking
+  // through to the doors opening — matching /campaign/prologue2/*.webp.
+  // Chapter 1 itself (Levels 101-110, "THE RED FOYER") is intentionally
+  // not built yet; this cinematic just ends and returns to the map.
+  ccue(101, 'prologue', null, 'The PLAYER sits alone in a nearly empty cafe as dawn begins to gray the windows. On the table: the Queen of Spades card. The red heart on its back catches the light.', { bg: 1 }),
+  ccue(101, 'prologue', null, '"One answer. Two more questions."', { bg: 1 }),
+  ccue(101, 'prologue', null, 'Far across the city, the red glow is still there. A heart. High above a doorway the PLAYER has never noticed before.', { bg: 1 }),
+  ccue(101, 'prologue', null, '"Fine."', { bg: 1 }),
+  ccue(101, 'prologue', null, 'The PLAYER pockets the card, stands, and walks toward the red light.', { bg: 2 }),
+  ccue(101, 'prologue', null, 'The building is not dark like the House of Spades. Music leaks into the street. Warm light. Laughter. People enter in pairs and groups.', { bg: 2 }),
+  ccue(101, 'prologue', null, 'Above the doors, worked into red glass and gold metal: a single heart.', { bg: 2 }),
+  ccue(101, 'prologue', null, 'A DOORMAN steps forward. "Welcome to the House of Hearts."', { bg: 2 }),
+  ccue(101, 'prologue', null, '"You know who I am?" the PLAYER asks.', { bg: 2 }),
+  ccue(101, 'prologue', null, '"We know who we are expecting," the DOORMAN says.', { bg: 2 }),
+  ccue(101, 'prologue', null, 'The doors open before the PLAYER can ask the obvious next question.', { bg: 2 }),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

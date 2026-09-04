@@ -6259,7 +6259,7 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 <section id="s-campaign" class="screen">
   <div class="camp-scene" id="camp-scene">
     <div class="camp-bg" id="camp-bg"></div>
-    <button class="btn btn-ghost btn-sm camp-home" onclick="show('menu')" aria-label="Back to menu">‹</button>
+    <button class="btn btn-ghost btn-sm camp-home" onclick="campaignHomeClick()" aria-label="Back">‹</button>
 
     <div class="camp-corner-tl deco-box" id="camp-profile"></div>
 
@@ -8826,6 +8826,24 @@ function hubEnterChapter1(){
 function renderCampaignHub(d){
   $('camp-scene').classList.add('hub-mode');
   $('camp-bg').innerHTML='<img class="campaign-bg-img" src="/campaign/prologue/1.webp" alt="" aria-hidden="true"/>';
+}
+// The top-left ‹ on the campaign screen — .camp-home's one onclick,
+// shared by the hub and every chapter's table overview alike. Once an
+// account has finished the whole House of Spades campaign, the hub is
+// campaign's own "root" (the chapter tiles are how you got here), so
+// backing out of a chapter's map should land there, not drop all the
+// way out to the main menu — ordinary nested-navigation expectations.
+// Only fires that branch when there's actually a hub to return to and
+// we're not already on it: an account still working through the
+// original campaign never gets a hub at all, and pressing ‹ from the
+// hub itself already means "leave campaign", same as before.
+function campaignHomeClick(){
+  const scene=$('camp-scene');
+  if(!scene.classList.contains('hub-mode')&&campaignData&&campaignData.highestUnlockedLevel>100){
+    renderCampaignHub(campaignData);
+    return;
+  }
+  show('menu');
 }
 function campaignRunPrologue(cues,bgMap,done){
   Object.values(bgMap).forEach(src=>{ new Image().src=src; });

@@ -2353,6 +2353,16 @@ const CAMPAIGN_CHARACTERS = {
   // One-off: two brief rejection lines at Level 141, never seen again.
   woman_in_red: { id: 'woman_in_red', name: 'Woman in Red' },
   the_matchmaker: { id: 'the_matchmaker', name: 'The Matchmaker' },
+  // Chapter 6 (internal chapter id 16): The Menagerie Salon, boss The
+  // Keeper. THE JESTER is the same the_jester from House of Spades (its
+  // own Chapter 6, "The Cabaret of Oddities") — same "returning seven"
+  // reuse pattern. None of the three ordinary regulars ever get a line
+  // this chapter (only THE JESTER, THE KEEPER and the PLAYER speak), so
+  // menagerie1-3 exist purely for the seating/roster mechanism.
+  menagerie1: { id: 'menagerie1', name: 'Regular #1' },
+  menagerie2: { id: 'menagerie2', name: 'Regular #2' },
+  menagerie3: { id: 'menagerie3', name: 'Regular #3' },
+  the_keeper: { id: 'the_keeper', name: 'The Keeper' },
 };
 
 // Who sits at an ordinary (non-boss) table per chapter, and which of
@@ -2437,6 +2447,12 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // Standard bossSeat 2 — the script names "one opponent", not a seat
   // number.
   15: { regulars: ['rose1', 'rose2', 'rose3'], bossSeat: 2 },
+  // The Menagerie Salon. THE JESTER roams (standing on a chair, pointing
+  // at displays) rather than holding a chair, so menagerie1-3 hold all
+  // three ordinary seats until THE KEEPER claims one at Level 159's own
+  // preLevel beat ("takes the fourth chair") — the same one-level-early
+  // tease every other chapter's boss uses. Standard bossSeat 2.
+  16: { regulars: ['menagerie1', 'menagerie2', 'menagerie3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2485,6 +2501,7 @@ const CAMPAIGN_CHAPTERS = [
   { id: 13, title: 'The Letter Archive', levelStart: 121, levelEnd: 130, slug: 'letter_archive', bossId: 'the_archivist' },
   { id: 14, title: 'The Crimson Cabaret', levelStart: 131, levelEnd: 140, slug: 'crimson_cabaret', bossId: 'the_virtuoso' },
   { id: 15, title: 'The Rose Conservatory', levelStart: 141, levelEnd: 150, slug: 'rose_conservatory', bossId: 'the_matchmaker' },
+  { id: 16, title: 'The Menagerie Salon', levelStart: 151, levelEnd: 160, slug: 'menagerie_salon', bossId: 'the_keeper' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -3200,6 +3217,47 @@ const CAMPAIGN_LEVELS = {
            parseHand('4♦ 3♠ 5♦ 5♠ 9♥ A♥ A♠ 3♣ 7♥ 4♠ 8♥ A♦ 6♣'),
          ],
          objective: { type: 'score', min: 19, gold: 25 } },
+
+  // ═══ House of Hearts, Chapter 6: The Menagerie Salon (levels 151-160) ═══
+  // Same source/sheet/format as Chapters 1-5. Direction 'right' throughout.
+  // 152 shows "Miss" in the sheet's own In Band? column, as does the
+  // boss (160).
+  151: { id: 151, chapter: 16, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L151-score-c86', hand: parseHand('3♥ 5♠ 4♥ 10♥ A♦ 5♥ Q♠ 4♦ K♦ 2♥ 9♣ 10♣ 8♥'),
+         objective: { type: 'score', min: 34, gold: 51 } },
+  152: { id: 152, chapter: 16, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L152-score-c333', hand: parseHand('Q♣ Q♠ J♦ Q♦ 3♣ 8♥ J♥ 5♣ K♦ 4♣ 7♥ 5♠ 2♥'),
+         objective: { type: 'score', min: 20, gold: 24 } },
+  153: { id: 153, chapter: 16, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L153-void-c186', hand: parseHand('3♣ A♠ 3♦ 2♣ K♥ 8♦ 6♠ 4♥ 9♥ 9♣ Q♦ 2♠ 8♥'),
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 6, goldByTrick: 5 } },
+  154: { id: 154, chapter: 16, type: 'Harder', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L154-score-c54', hand: parseHand('3♦ J♠ 8♥ 7♥ Q♥ 4♠ 6♦ 10♦ K♠ 5♦ 9♠ J♦ 4♦'),
+         objective: { type: 'score', min: 10, gold: 13 } },
+  155: { id: 155, chapter: 16, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L155-score-c373', hand: parseHand('2♥ A♣ 9♦ 5♥ 6♣ 4♦ A♠ J♠ A♦ 9♠ Q♦ K♣ 2♠'),
+         objective: { type: 'score', min: 45, gold: 50 } },
+  156: { id: 156, chapter: 16, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L156-clean-c251', hand: parseHand('Q♦ 4♠ 8♣ 2♠ 9♠ 8♥ K♠ 3♥ 5♥ 9♥ A♠ 3♣ 8♠'),
+         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+  157: { id: 157, chapter: 16, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L157-score-c373', hand: parseHand('2♠ 5♥ 8♦ Q♠ Q♣ A♠ 3♠ 7♥ 9♠ Q♦ 9♦ A♣ K♦'),
+         objective: { type: 'score', min: 60, gold: 61 } },
+  158: { id: 158, chapter: 16, type: 'Harder', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L158-score-c365', hand: parseHand('J♥ K♥ 2♦ 2♠ 4♦ A♣ 8♣ Q♣ 4♥ A♦ 7♥ 6♥ 9♠'),
+         objective: { type: 'score', min: 13, gold: 21 } },
+  159: { id: 159, chapter: 16, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L159-queen-c214', hand: parseHand('8♠ 3♥ K♣ Q♣ K♠ 9♣ Q♥ 7♥ 8♣ 8♥ 4♦ 10♠ 6♥'),
+         objective: { type: 'avoidQueen', goldScoreBar: 30 } },
+  160: { id: 160, chapter: 16, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_keeper',
+         seed: 'ddp-ch2-L160-boss-c575',
+         hands4: [
+           parseHand('7♥ 7♠ Q♠ 7♣ K♦ 10♠ 8♣ 8♥ 4♥ 7♦ 5♠ A♦ 4♠'),
+           parseHand('4♠ 3♣ 9♣ K♣ A♠ 9♦ 6♥ 4♣ 6♣ 9♥ 9♠ 2♠ 6♦'),
+           parseHand('2♣ 8♥ Q♦ Q♥ 5♠ Q♣ 8♣ 3♣ 2♦ 10♥ 3♠ K♠ 4♠'),
+           parseHand('Q♦ Q♣ 2♦ 9♣ 7♠ 5♣ 7♦ 9♥ 2♥ 4♠ 6♠ 5♦ 10♣'),
+         ],
+         objective: { type: 'score', min: 41, gold: 60 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -5250,6 +5308,96 @@ const CAMPAIGN_STORY_CUES = [
   ccue(150, 'chapterExit', 'the_optimist', 'Fine. Your questions are a mess. But you are improving.'),
   ccue(150, 'chapterExit', null, 'A burst of laughter echoes from the next salon, followed by a voice announcing a fact nobody asked for.'),
   ccue(150, 'chapterExit', 'the_jester', 'Crows can remember human faces for years! Which feels relevant!'),
+
+  // ═══ House of Hearts, Chapter 6: The Menagerie Salon (levels 151-160) ═══
+  // THE JESTER is this chapter's returning guide (the "returning seven"
+  // pattern — he was House of Spades' own Chapter 6 boss). No level here
+  // has an ON CLEAR marker before Level 160, so 151-159 are preLevel-only.
+  // None of the three regulars ever get a line this chapter.
+  ccue(151, 'preLevel', null, 'THE JESTER is standing on a chair, explaining crows to three strangers who did not ask.'),
+  ccue(151, 'preLevel', 'the_jester', 'They remember faces. They even teach other crows which humans are dangerous.'),
+  ccue(151, 'preLevel', 'player', 'Hello.'),
+  ccue(151, 'preLevel', 'the_jester', 'Perfect timing. This House also remembers faces.'),
+  ccue(151, 'preLevel', 'player', 'That was almost useful.'),
+  ccue(151, 'preLevel', 'the_jester', 'I am growing.'),
+
+  ccue(152, 'preLevel', null, 'Four bronze animals repeat around the room: raven, stag, lion, fox. Each stands on a base marked with a tiny suit symbol.'),
+  ccue(152, 'preLevel', 'the_jester', 'Spade, heart, club, diamond.'),
+  ccue(152, 'preLevel', 'player', 'You noticed that?'),
+  ccue(152, 'preLevel', 'the_jester', 'I notice nonsense. It is my field.'),
+  ccue(152, 'preLevel', null, 'He points to the club-marked lion.'),
+  ccue(152, 'preLevel', 'the_jester', 'That one is newer.'),
+
+  ccue(153, 'preLevel', null, 'A broad-shouldered man in a dark red coat adjusts one of the animal displays with museum-level care.'),
+  ccue(153, 'preLevel', 'the_jester', 'Keeper.'),
+  ccue(153, 'preLevel', 'player', 'Of the animals?'),
+  ccue(153, 'preLevel', 'the_jester', 'Of the stories. The animals are less dramatic.'),
+  ccue(153, 'preLevel', 'the_keeper', 'And quieter.'),
+  ccue(153, 'preLevel', 'the_jester', 'Rude, but fair.'),
+
+  ccue(154, 'preLevel', null, 'The suit symbols under two displays have been swapped since the last level.'),
+  ccue(154, 'preLevel', 'player', 'Someone moved them.'),
+  ccue(154, 'preLevel', 'the_jester', 'Or they move at night when nobody watches.'),
+  ccue(154, 'preLevel', 'player', 'Please be serious.'),
+  ccue(154, 'preLevel', 'the_jester', 'I am. The first theory is more likely.'),
+  ccue(154, 'preLevel', null, 'THE KEEPER watches them from across the room.'),
+
+  ccue(155, 'preLevel', null, 'Behind a botanical case is an older crest: four suit symbols linked by one circular line.'),
+  ccue(155, 'preLevel', 'player', 'They were designed together.'),
+  ccue(155, 'preLevel', 'the_jester', 'Or somebody really loved card-themed interior design.'),
+  ccue(155, 'preLevel', 'player', 'You do not believe that.'),
+  ccue(155, 'preLevel', 'the_jester', 'I believe octopuses have three hearts. I have range.'),
+
+  ccue(156, 'preLevel', null, "THE KEEPER removes the crest from the PLAYER's hands and returns it to the display."),
+  ccue(156, 'preLevel', 'the_keeper', 'The Houses were not designed together.'),
+  ccue(156, 'preLevel', 'player', 'So what does the crest mean?'),
+  ccue(156, 'preLevel', 'the_keeper', 'That they were bound together later.'),
+  ccue(156, 'preLevel', 'player', 'By who?'),
+  ccue(156, 'preLevel', 'the_keeper', 'That is not my story to tell.'),
+  ccue(156, 'preLevel', 'the_jester', 'Excellent. One answer, two questions. We are back on brand.'),
+
+  ccue(157, 'preLevel', null, 'The club symbol appears again, this time scratched beneath a Heart House plaque as if added after installation.'),
+  ccue(157, 'preLevel', 'player', 'Clubs again.'),
+  ccue(157, 'preLevel', 'the_jester', 'You are developing a theme.'),
+  ccue(157, 'preLevel', 'player', 'Do you know anything about the House of Clubs?'),
+  ccue(157, 'preLevel', 'the_jester', 'Trees. Roots. Groups. Heavy furniture, probably.'),
+  ccue(157, 'preLevel', 'player', 'That was not an answer.'),
+  ccue(157, 'preLevel', 'the_jester', 'Correct.'),
+
+  ccue(158, 'preLevel', null, 'THE KEEPER sits nearby through the hand and quietly corrects a staff member who calls the four symbols "the four Houses."'),
+  ccue(158, 'preLevel', 'the_keeper', 'The four known Houses.'),
+  ccue(158, 'preLevel', null, 'The PLAYER turns.'),
+  ccue(158, 'preLevel', 'player', 'Known?'),
+  ccue(158, 'preLevel', 'the_keeper', 'You heard me.'),
+  ccue(158, 'preLevel', 'the_jester', 'I liked life better ten seconds ago.'),
+
+  ccue(159, 'preLevel', null, 'A hidden drawer opens beneath the old crest. Inside is a small brass token shaped like a club.'),
+  ccue(159, 'preLevel', 'player', 'You put this here?'),
+  ccue(159, 'preLevel', 'the_keeper', 'No.'),
+  ccue(159, 'preLevel', 'the_jester', 'I did not either, and I steal things recreationally.'),
+  ccue(159, 'preLevel', null, 'THE KEEPER takes the fourth chair.'),
+  ccue(159, 'preLevel', 'the_keeper', 'Earn the next question.'),
+
+  // No chapterExit bucket — same call as Level 140: nothing here marks a
+  // scene/location change, so the whole aftermath (the token, the
+  // Jester's aside, his closing joke) stays in one continuous bossDefeat.
+  ccue(160, 'bossIntro', null, 'INT. MENAGERIE SALON FEATURE TABLE - NIGHT'),
+  ccue(160, 'bossIntro', 'the_keeper', 'Stories survive because people carry them. Symbols survive because people forget who made them.'),
+  ccue(160, 'bossIntro', 'player', 'And the club?'),
+  ccue(160, 'bossIntro', 'the_keeper', 'Win.'),
+  ccue(160, 'bossIntro', null, 'The boss match begins.'),
+  ccue(160, 'bossDefeat', null, 'THE KEEPER pushes the brass club token across the table.'),
+  ccue(160, 'bossDefeat', 'the_keeper', 'This arrived with instructions to display it only if you reached me.'),
+  ccue(160, 'bossDefeat', 'player', 'From the Queen?'),
+  ccue(160, 'bossDefeat', 'the_keeper', 'No signature.'),
+  ccue(160, 'bossDefeat', 'the_jester', 'I love anonymous gifts. Less thank-you mail.'),
+  ccue(160, 'bossDefeat', null, 'THE JESTER looks at the token, then unexpectedly serious.'),
+  ccue(160, 'bossDefeat', 'the_jester', 'Do not ignore that one.'),
+  ccue(160, 'bossDefeat', 'player', 'Why?'),
+  ccue(160, 'bossDefeat', 'the_jester', 'Because the weirdest thing in this room is the only thing nobody here can explain.'),
+  ccue(160, 'bossDefeat', null, 'He immediately brightens.'),
+  ccue(160, 'bossDefeat', 'the_jester', 'Also, wombat poop is cube-shaped.'),
+  ccue(160, 'bossDefeat', 'player', 'There he is.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

@@ -2375,6 +2375,16 @@ const CAMPAIGN_CHARACTERS = {
   salon2: { id: 'salon2', name: 'Regular #2' },
   salon3: { id: 'salon3', name: 'Regular #3' },
   the_confidante: { id: 'the_confidante', name: 'The Confidante' },
+  // Chapter 8 (internal chapter id 18): The Gilded Exchange, boss The
+  // Broker. THE CLOSER is the same the_closer from House of Spades (its
+  // own Chapter 8, "The Vault") — same "returning seven" reuse pattern.
+  // Same as Chapters 6-7, none of the three ordinary regulars ever get a
+  // line — only THE CLOSER, THE BROKER and the PLAYER speak — so
+  // gilded1-3 exist purely for the seating/roster mechanism.
+  gilded1: { id: 'gilded1', name: 'Regular #1' },
+  gilded2: { id: 'gilded2', name: 'Regular #2' },
+  gilded3: { id: 'gilded3', name: 'Regular #3' },
+  the_broker: { id: 'the_broker', name: 'The Broker' },
 };
 
 // Who sits at an ordinary (non-boss) table per chapter, and which of
@@ -2472,6 +2482,13 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // — the same one-level-early tease every other chapter's boss uses.
   // Standard bossSeat 2.
   17: { regulars: ['salon1', 'salon2', 'salon3'], bossSeat: 2 },
+  // The Gilded Exchange. THE CLOSER roams (following decisions, not
+  // people) rather than holding a chair, so gilded1-3 hold all three
+  // ordinary seats until THE BROKER dismisses one at Level 179's own
+  // preLevel beat ("dismisses one regular with a look. The regular
+  // stands.") — the same one-level-early tease every other chapter's
+  // boss uses. Standard bossSeat 2.
+  18: { regulars: ['gilded1', 'gilded2', 'gilded3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2522,6 +2539,7 @@ const CAMPAIGN_CHAPTERS = [
   { id: 15, title: 'The Rose Conservatory', levelStart: 141, levelEnd: 150, slug: 'rose_conservatory', bossId: 'the_matchmaker' },
   { id: 16, title: 'The Menagerie Salon', levelStart: 151, levelEnd: 160, slug: 'menagerie_salon', bossId: 'the_keeper' },
   { id: 17, title: 'The Salon of Secrets', levelStart: 161, levelEnd: 170, slug: 'salon_of_secrets', bossId: 'the_confidante' },
+  { id: 18, title: 'The Gilded Exchange', levelStart: 171, levelEnd: 180, slug: 'gilded_exchange', bossId: 'the_broker' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -3323,6 +3341,46 @@ const CAMPAIGN_LEVELS = {
            parseHand('2♠ 10♠ K♦ 2♥ 7♠ 9♠ K♥ 8♣ 5♠ 7♥ Q♣ 3♥ 8♠'),
          ],
          objective: { type: 'score', min: 48, gold: 55 } },
+
+  // ═══ House of Hearts, Chapter 8: The Gilded Exchange (levels 171-180) ═══
+  // Same source/sheet/format as Chapters 1-7. Direction 'across'
+  // throughout.
+  171: { id: 171, chapter: 18, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L171-score-c214', hand: parseHand('A♠ 2♠ Q♦ 4♥ A♥ 6♥ 10♥ 9♠ 4♠ 9♦ 8♠ K♠ 5♦'),
+         objective: { type: 'score', min: 7, gold: 60 } },
+  172: { id: 172, chapter: 18, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L172-score-c202', hand: parseHand('10♣ Q♣ 4♦ J♦ 5♥ 8♦ J♠ J♥ A♥ 5♦ 10♠ 7♥ 6♥'),
+         objective: { type: 'score', min: 16, gold: 21 } },
+  173: { id: 173, chapter: 18, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L173-queen-c229', hand: parseHand('4♥ 3♦ 5♦ 7♠ J♣ J♦ A♥ K♣ 6♦ 2♦ K♠ 6♣ 4♦'),
+         objective: { type: 'avoidQueen', goldScoreBar: 13 } },
+  174: { id: 174, chapter: 18, type: 'Harder', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L174-score-c218', hand: parseHand('K♣ 8♦ J♠ K♠ 2♠ 10♠ 9♠ 4♥ A♦ 2♥ J♣ 10♥ 6♥'),
+         objective: { type: 'score', min: 47, gold: 57 } },
+  175: { id: 175, chapter: 18, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L175-score-c510', hand: parseHand('6♦ Q♦ J♥ 4♦ 9♥ 7♣ Q♠ J♦ 5♠ K♦ 5♦ J♠ K♥'),
+         objective: { type: 'score', min: 54, gold: 60 } },
+  176: { id: 176, chapter: 18, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L176-tricks-c740', hand: parseHand('K♥ 3♦ K♦ J♣ 9♦ 6♣ 4♣ 10♥ Q♣ J♥ 7♦ A♣ K♣'),
+         objective: { type: 'trickCount', minTricks: 11, goldTricks: 12 } },
+  177: { id: 177, chapter: 18, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L177-score-c242', hand: parseHand('9♥ K♣ 4♠ 4♣ 8♣ 7♦ 2♠ 5♠ A♠ 10♣ 7♠ A♥ K♠'),
+         objective: { type: 'score', min: 19, gold: 60 } },
+  178: { id: 178, chapter: 18, type: 'Harder', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L178-score-c0', hand: parseHand('K♠ 3♠ A♦ J♠ A♣ 9♥ 7♦ 6♥ 5♠ A♠ 7♥ K♦ Q♥'),
+         objective: { type: 'score', min: 60, gold: 61 } },
+  179: { id: 179, chapter: 18, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L179-void-c112', hand: parseHand('5♠ 10♥ 8♦ 5♣ 6♠ 9♠ 8♠ 3♠ 3♥ K♣ 2♥ 6♦ 7♥'),
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 3, goldByTrick: 2 } },
+  180: { id: 180, chapter: 18, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_broker',
+         seed: 'ddp-ch2-L180-boss-c1068',
+         hands4: [
+           parseHand('K♥ 10♠ K♣ 5♥ J♣ 7♣ Q♥ A♣ K♠ 9♣ 2♣ 3♥ 8♣'),
+           parseHand('5♦ 4♦ 4♣ Q♣ 10♠ 8♥ 9♥ 7♠ J♠ 4♠ 4♥ 6♣ 8♠'),
+           parseHand('8♣ 9♥ 10♥ A♥ K♣ 5♠ Q♠ 10♠ 3♣ 10♣ 8♥ 2♣ 2♦'),
+           parseHand('3♥ A♦ 6♥ 4♠ 6♠ A♠ 6♦ A♥ J♥ Q♦ 9♣ 7♦ J♠'),
+         ],
+         objective: { type: 'score', min: 53, gold: 64 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -5557,6 +5615,92 @@ const CAMPAIGN_STORY_CUES = [
   ccue(170, 'chapterExit', 'the_closer', 'Are you finished socializing?'),
   ccue(170, 'chapterExit', 'the_charmer', 'You missed me too.'),
   ccue(170, 'chapterExit', 'the_closer', 'No.'),
+
+  // ═══ House of Hearts, Chapter 8: The Gilded Exchange (levels 171-180) ═══
+  // THE CLOSER is this chapter's returning guide (the "returning seven"
+  // pattern — he was House of Spades' own Chapter 8 boss). No level here
+  // has an ON CLEAR marker before Level 180, so 171-179 are preLevel-only.
+  // None of the three regulars ever get a line, same as Chapters 6-7.
+  ccue(171, 'preLevel', null, 'THE CLOSER does not greet the PLAYER. He watches three staff members defer to a fourth, then watches the fourth wait for a message before acting.'),
+  ccue(171, 'preLevel', 'player', 'Hello.'),
+  ccue(171, 'preLevel', 'the_closer', 'That man is not in charge.'),
+  ccue(171, 'preLevel', 'player', 'Nice to see you too.'),
+  ccue(171, 'preLevel', 'the_closer', 'If you want answers, stop following titles. Follow decisions.'),
+
+  ccue(172, 'preLevel', null, 'A polished man at a central desk exchanges sealed envelopes for access tokens.'),
+  ccue(172, 'preLevel', 'the_closer', 'Broker.'),
+  ccue(172, 'preLevel', 'player', 'What does he sell?'),
+  ccue(172, 'preLevel', 'the_closer', 'Nothing. He moves permission.'),
+  ccue(172, 'preLevel', 'player', 'That sounds like selling.'),
+  ccue(172, 'preLevel', 'the_closer', 'No. Selling ends when money changes hands. Permission keeps paying.'),
+
+  ccue(173, 'preLevel', null, 'THE CLOSER collects copies of three authorization slips discarded after the hand.'),
+  ccue(173, 'preLevel', 'player', 'All signed with a heart.'),
+  ccue(173, 'preLevel', 'the_closer', 'Look again.'),
+  ccue(173, 'preLevel', null, 'Below the heart seal is a tiny blank circle impressed into the paper.'),
+  ccue(173, 'preLevel', 'player', 'What is that?'),
+  ccue(173, 'preLevel', 'the_closer', 'A place for a second authority.'),
+
+  ccue(174, 'preLevel', null, 'Three staff members give three different explanations for the blank seal: accounting, tradition, decoration.'),
+  ccue(174, 'preLevel', 'the_closer', 'All lies.'),
+  ccue(174, 'preLevel', 'player', 'How do you know?'),
+  ccue(174, 'preLevel', 'the_closer', 'They answered too quickly.'),
+  ccue(174, 'preLevel', 'player', 'That is it?'),
+  ccue(174, 'preLevel', 'the_closer', 'People who know the truth decide whether to tell you. People repeating a cover story recite it.'),
+
+  ccue(175, 'preLevel', null, 'One order bears the Queen of Hearts seal alone. Another bears the same seal plus the blank second impression.'),
+  ccue(175, 'preLevel', 'player', 'So even the Queen gets approval?'),
+  ccue(175, 'preLevel', 'the_closer', 'Or confirmation.'),
+  ccue(175, 'preLevel', 'player', 'From who?'),
+  ccue(175, 'preLevel', 'the_closer', 'That is the sale we have not closed yet.'),
+
+  ccue(176, 'preLevel', null, "THE BROKER removes the papers from the PLAYER's hand."),
+  ccue(176, 'preLevel', 'the_broker', 'Private operations.'),
+  ccue(176, 'preLevel', 'the_closer', 'Then stop leaving them where curious people can see them.'),
+  ccue(176, 'preLevel', 'the_broker', 'You were always unpleasant.'),
+  ccue(176, 'preLevel', 'the_closer', 'Effective.'),
+  ccue(176, 'preLevel', 'player', 'You two know each other?'),
+  ccue(176, 'preLevel', 'the_broker', 'Everyone knows someone who thinks every conversation is a negotiation.'),
+
+  ccue(177, 'preLevel', null, 'For the first time in the House of Hearts, a door closes behind the PLAYER without being invited.'),
+  ccue(177, 'preLevel', 'the_broker', 'You are close to information that does not belong to guests.'),
+  ccue(177, 'preLevel', 'player', 'Then stop putting it on my route.'),
+  ccue(177, 'preLevel', null, 'THE CLOSER almost smiles.'),
+  ccue(177, 'preLevel', 'the_closer', 'Good answer.'),
+
+  ccue(178, 'preLevel', null, 'A magnifying lens reveals a tiny shape inside the blank impression: not a heart, but four short strokes around a center point.'),
+  ccue(178, 'preLevel', 'player', 'A club?'),
+  ccue(178, 'preLevel', 'the_closer', 'Maybe.'),
+  ccue(178, 'preLevel', 'player', 'You do not sound convinced.'),
+  ccue(178, 'preLevel', 'the_closer', 'Because guessing early is how deals die.'),
+
+  ccue(179, 'preLevel', null, 'THE BROKER dismisses one regular with a look. The regular stands.'),
+  ccue(179, 'preLevel', 'the_broker', 'You have inspected enough paperwork.'),
+  ccue(179, 'preLevel', 'the_closer', 'He is going to make you earn access.'),
+  ccue(179, 'preLevel', 'player', 'Anything else?'),
+  ccue(179, 'preLevel', 'the_closer', 'Yes. He already decided whether to give it to you.'),
+  ccue(179, 'preLevel', 'player', 'How can you tell?'),
+  ccue(179, 'preLevel', 'the_closer', 'He brought the key.'),
+
+  // No chapterExit bucket, same call as Level 160: nothing here marks a
+  // scene/location change (the chapter hands off straight into Chapter
+  // 9's opening line, "The seven are waiting"), so the whole aftermath
+  // stays in one continuous bossDefeat.
+  ccue(180, 'bossIntro', null, 'INT. GILDED EXCHANGE FEATURE TABLE - NIGHT'),
+  ccue(180, 'bossIntro', 'the_broker', 'Access is never free.'),
+  ccue(180, 'bossIntro', 'player', 'I have credits.'),
+  ccue(180, 'bossIntro', 'the_broker', 'Credits are the cheap currency.'),
+  ccue(180, 'bossIntro', null, 'The boss match begins.'),
+  ccue(180, 'bossDefeat', null, 'THE BROKER places a black keycard on the table.'),
+  ccue(180, 'bossDefeat', 'the_broker', 'She wants you upstairs.'),
+  ccue(180, 'bossDefeat', 'player', 'The Queen?'),
+  ccue(180, 'bossDefeat', 'the_broker', 'Eventually.'),
+  ccue(180, 'bossDefeat', 'the_closer', 'Who has the second seal?'),
+  ccue(180, 'bossDefeat', null, 'THE BROKER looks at him.'),
+  ccue(180, 'bossDefeat', 'the_broker', 'You know better than to ask a question before the other side is ready to answer.'),
+  ccue(180, 'bossDefeat', 'the_closer', 'I also know when they are stalling.'),
+  ccue(180, 'bossDefeat', null, 'THE BROKER turns back to the PLAYER.'),
+  ccue(180, 'bossDefeat', 'the_broker', 'The seven are waiting.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

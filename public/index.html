@@ -8434,6 +8434,14 @@ const CAMPAIGN_CHARACTERS={
   crimson2:{name:'Regular #2',initial:'2'},
   crimson3:{name:'Regular #3',initial:'3'},
   the_virtuoso:{name:'The Virtuoso',initial:'V'},
+  // rose1-3, not cons1-3 — that id already belongs to the original Spades
+  // campaign's own Chapter 5 ("The Conservatory"); same collision class
+  // as crimson1-3 vs cabaret1-3 above.
+  rose1:{name:'Regular #1',initial:'1'},
+  rose2:{name:'Regular #2',initial:'2'},
+  rose3:{name:'Regular #3',initial:'3'},
+  woman_in_red:{name:'Woman in Red',initial:'W'},
+  the_matchmaker:{name:'The Matchmaker',initial:'M'},
 };
 // Which three characters sit at an ordinary (non-boss) table per chapter,
 // and who the boss replaces — used by campaignOpponentsHTML so the
@@ -8461,6 +8469,7 @@ const CAMPAIGN_CHAPTER_ROSTER={
   12:{regulars:['mirror1','mirror2','mirror3'],bossSeat:2},
   13:{regulars:['archive1','archive2','archive3'],bossSeat:2},
   14:{regulars:['crimson1','crimson2','crimson3'],bossSeat:2},
+  15:{regulars:['rose1','rose2','rose3'],bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/

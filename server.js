@@ -2331,6 +2331,28 @@ const CAMPAIGN_CHARACTERS = {
   crimson2:    { id: 'crimson2',    name: 'Regular #2' },
   crimson3:    { id: 'crimson3',    name: 'Regular #3' },
   the_virtuoso: { id: 'the_virtuoso', name: 'The Virtuoso' },
+  // Chapter 5 (internal chapter id 15): The Rose Conservatory, boss The
+  // Matchmaker. THE OPTIMIST is the same the_optimist from House of
+  // Spades (its own Chapter 5, "The Conservatory", where he was the
+  // BOSS) — same "returning seven" reuse pattern as every guide before
+  // him. He roams the conservatory (fountain, drinks, mingling) rather
+  // than holding a seat, same as every other guide. Unlike Chapters 1-4,
+  // this script never names individual table regulars beyond one-off
+  // walk-ons (a WOMAN IN RED who appears only at Level 141 and is never
+  // a card player, and a single unnamed "OPPONENT" line at Level 147) —
+  // so rose1-3 are the ordinary generic-regulars id set this chapter
+  // still needs for its three non-boss seats, with Level 147's line
+  // resolved to rose1 (nothing else establishes any of the three, so
+  // the choice carries no continuity weight). NOT named cons1-3 — that
+  // id is already taken by the ORIGINAL Spades campaign's own Chapter 5
+  // ("The Conservatory"), same collision class as crimson1-3 vs cabaret1-3
+  // above.
+  rose1: { id: 'rose1', name: 'Regular #1' },
+  rose2: { id: 'rose2', name: 'Regular #2' },
+  rose3: { id: 'rose3', name: 'Regular #3' },
+  // One-off: two brief rejection lines at Level 141, never seen again.
+  woman_in_red: { id: 'woman_in_red', name: 'Woman in Red' },
+  the_matchmaker: { id: 'the_matchmaker', name: 'The Matchmaker' },
 };
 
 // Who sits at an ordinary (non-boss) table per chapter, and which of
@@ -2407,6 +2429,14 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // ordinary seats until THE VIRTUOSO takes the empty one at Level 40's
   // own preLevel beat ("One opponent rises... takes the empty chair.").
   14: { regulars: ['crimson1', 'crimson2', 'crimson3'], bossSeat: 2 },
+  // The Rose Conservatory. THE OPTIMIST mingles rather than holding a
+  // chair, so rose1-3 hold all three ordinary seats until THE MATCHMAKER
+  // claims one at Level 149's own preLevel beat ("touches one opponent
+  // lightly on the shoulder. The opponent stands without protest") —
+  // the same one-level-early tease every other chapter's boss uses.
+  // Standard bossSeat 2 — the script names "one opponent", not a seat
+  // number.
+  15: { regulars: ['rose1', 'rose2', 'rose3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2454,6 +2484,7 @@ const CAMPAIGN_CHAPTERS = [
   { id: 12, title: 'The Mirror Gallery', levelStart: 111, levelEnd: 120, slug: 'mirror_gallery', bossId: 'the_dancer' },
   { id: 13, title: 'The Letter Archive', levelStart: 121, levelEnd: 130, slug: 'letter_archive', bossId: 'the_archivist' },
   { id: 14, title: 'The Crimson Cabaret', levelStart: 131, levelEnd: 140, slug: 'crimson_cabaret', bossId: 'the_virtuoso' },
+  { id: 15, title: 'The Rose Conservatory', levelStart: 141, levelEnd: 150, slug: 'rose_conservatory', bossId: 'the_matchmaker' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -3105,6 +3136,70 @@ const CAMPAIGN_LEVELS = {
            parseHand('6♦ K♥ 7♣ 10♥ 2♦ A♠ 8♥ 6♠ 5♣ 3♥ Q♦ 2♠ K♦'),
          ],
          objective: { type: 'score', min: 33, gold: 35 } },
+
+  // ═══ House of Hearts, Chapter 5: The Rose Conservatory (levels 141-150) ═══
+  // Same source/sheet/format as Chapters 1-4. Direction switches mid-
+  // chapter (141-142 'left', 143-149 'right') — transcribed verbatim,
+  // same "trust the sheet" call as every mixed-direction chapter before
+  // it. 145/147/148 show "Miss" in the sheet's own In Band? column.
+  // Level 150 (the boss) is a genuine 8-hand fight per the sheet's own
+  // Hands/Direction columns (every other boss so far is 4 hands) — but
+  // the original sheet only supplied 4 hands' worth of card data for it,
+  // so it was regenerated from scratch (own seed, own measured clear
+  // rates) rather than patched. See Level 150's own entry, below, for
+  // that note.
+  141: { id: 141, chapter: 15, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L141-score-c408', hand: parseHand('2♠ J♠ 5♦ 8♥ A♣ Q♥ 6♠ 4♦ A♦ 7♦ 10♦ Q♠ 8♣'),
+         objective: { type: 'score', min: 29, gold: 30 } },
+  142: { id: 142, chapter: 15, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L142-score-c720', hand: parseHand('10♥ K♦ A♦ 4♣ 3♣ Q♥ 3♦ 5♥ J♠ 7♠ K♣ A♣ J♥'),
+         objective: { type: 'score', min: 20, gold: 38 } },
+  143: { id: 143, chapter: 15, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L143-clean-c77', hand: parseHand('J♥ Q♦ 10♣ 8♣ 7♠ 4♣ Q♥ 4♦ 5♥ 2♠ K♣ 8♠ 9♣'),
+         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+  144: { id: 144, chapter: 15, type: 'Harder', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L144-score-c813', hand: parseHand('10♦ A♣ Q♣ Q♥ 9♦ 4♣ 9♠ 4♦ J♠ 3♥ A♦ K♦ 2♥'),
+         objective: { type: 'score', min: 39, gold: 40 } },
+  145: { id: 145, chapter: 15, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L145-score-c223', hand: parseHand('10♦ K♣ J♣ K♥ 4♠ 10♣ 7♦ Q♦ 7♠ 7♥ 6♣ J♠ 4♥'),
+         objective: { type: 'score', min: 17, gold: 27 } },
+  146: { id: 146, chapter: 15, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L146-queen-c357', hand: parseHand('3♥ 10♥ K♠ 7♥ 4♣ 2♦ 4♥ A♠ A♥ 5♣ K♦ 8♣ 10♦'),
+         objective: { type: 'avoidQueen', goldScoreBar: -1 } },
+  147: { id: 147, chapter: 15, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L147-score-c30', hand: parseHand('10♠ A♣ 10♥ 6♠ K♣ K♥ 9♣ 9♦ 6♦ A♦ 6♣ Q♦ K♦'),
+         objective: { type: 'score', min: 27, gold: 60 } },
+  148: { id: 148, chapter: 15, type: 'Harder', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L148-score-c980', hand: parseHand('J♥ 3♦ A♣ A♦ 10♥ 8♥ 3♥ 4♥ J♣ 6♣ Q♣ J♦ K♠'),
+         objective: { type: 'score', min: 26, gold: 34 } },
+  149: { id: 149, chapter: 15, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L149-tricks-c44', hand: parseHand('2♣ A♥ 4♦ 10♦ 10♣ J♦ J♠ 5♠ K♠ A♦ 7♦ 5♣ A♣'),
+         objective: { type: 'trickCount', minTricks: 6, goldTricks: 7 } },
+  // Level 150 is a genuine 8-hand boss fight (the original sheet's own
+  // Hands/Direction columns said so, but only supplied 4 hands of card
+  // data — see this level's own note further up). Regenerated from
+  // scratch with a fresh seed and real measured clear rates rather than
+  // patched, so its own min/gold (19/25) supersede the original sheet's
+  // unusable 39/53 entirely — trust this file's numbers, not the old
+  // sheet's, for this level specifically. hands8, not hands4 — see
+  // buildCampaignDeck's own note on why the field is named per hand
+  // count. Pass direction cycles the ordinary L/R/A/K default
+  // (forcePassDir: null) exactly twice over 8 rounds, same mechanism as
+  // the 4-hand bosses; G.dealer is already fixed at 3 for every campaign
+  // room (createCampaignRoom), matching this file's own dealerStart.
+  150: { id: 150, chapter: 15, type: 'BOSS', forcePassDir: null, hands: 8, bossId: 'the_matchmaker',
+         seed: 'ddp-fix-L150-c371',
+         hands8: [
+           parseHand('7♦ 3♥ 3♣ J♦ 5♥ 9♦ 2♥ A♦ 3♠ 4♠ 7♣ 8♦ 2♦'),
+           parseHand('6♠ 6♦ 3♣ 6♥ J♣ 6♣ 8♠ 7♠ A♦ 2♥ K♦ A♠ 9♣'),
+           parseHand('2♠ Q♦ 6♠ K♦ J♣ 9♣ 10♦ J♠ A♠ 5♥ 8♦ 10♣ 10♥'),
+           parseHand('J♦ Q♠ Q♣ 2♥ 5♣ 7♦ 2♠ 7♥ 9♣ K♠ 2♣ 4♣ 9♠'),
+           parseHand('6♥ A♠ 6♠ 2♦ 4♣ 9♥ 5♣ J♠ 2♠ Q♠ A♣ 7♣ K♦'),
+           parseHand('10♣ J♣ 10♦ 7♦ 5♠ 6♠ 8♣ 6♥ Q♠ 3♦ 4♠ K♥ 6♦'),
+           parseHand('10♦ 2♠ 8♠ 6♠ K♥ 5♠ 9♠ A♦ 9♦ A♠ 5♦ 10♠ 3♥'),
+           parseHand('4♦ 3♠ 5♦ 5♠ 9♥ A♥ A♠ 3♣ 7♥ 4♠ 8♥ A♦ 6♣'),
+         ],
+         objective: { type: 'score', min: 19, gold: 25 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -5061,6 +5156,100 @@ const CAMPAIGN_STORY_CUES = [
   ccue(140, 'bossDefeat', 'the_wildcard', 'Great. A mystery with stairs. I am going to find the bar.'),
   ccue(140, 'bossDefeat', null, 'From the next room comes a cheerful male voice followed immediately by a woman saying, "Absolutely not."'),
   ccue(140, 'bossDefeat', 'the_optimist', 'Worth a try!'),
+
+  // ═══ House of Hearts, Chapter 5: The Rose Conservatory (levels 141-150) ═══
+  // THE OPTIMIST is this chapter's returning guide (the "returning seven"
+  // pattern — he was House of Spades' own Chapter 5 boss). No level here
+  // has an ON CLEAR marker before Level 150, so 141-149 are preLevel-only.
+  ccue(141, 'preLevel', null, 'THE OPTIMIST is leaning against a fountain, speaking to a woman in red.'),
+  ccue(141, 'preLevel', 'the_optimist', 'Dinner after your game?'),
+  ccue(141, 'preLevel', 'woman_in_red', 'No.'),
+  ccue(141, 'preLevel', 'the_optimist', 'Coffee?'),
+  ccue(141, 'preLevel', 'woman_in_red', 'Also no.'),
+  ccue(141, 'preLevel', 'the_optimist', 'Good. Very clear communication. I respect it.'),
+  ccue(141, 'preLevel', null, 'She walks away. He sees the PLAYER and smiles.'),
+  ccue(141, 'preLevel', 'the_optimist', 'You look terrible. Nice to see you.'),
+
+  ccue(142, 'preLevel', null, 'THE OPTIMIST watches one trick at the PLAYER table.'),
+  ccue(142, 'preLevel', 'the_optimist', 'Whoa. That was really bad.'),
+  ccue(142, 'preLevel', null, 'The PLAYER looks at him.'),
+  ccue(142, 'preLevel', 'the_optimist', 'Good news: next time dump lower before hearts break. Easy fix.'),
+  ccue(142, 'preLevel', 'player', 'You always start with the insult?'),
+  ccue(142, 'preLevel', 'the_optimist', 'Efficiency.'),
+
+  ccue(143, 'preLevel', null, 'A poised woman moves between tables, introducing strangers who immediately seem to have something in common.'),
+  ccue(143, 'preLevel', 'the_optimist', 'That is the Matchmaker.'),
+  ccue(143, 'preLevel', 'player', 'Please do not flirt with the boss.'),
+  ccue(143, 'preLevel', 'the_optimist', 'I have standards.'),
+  ccue(143, 'preLevel', null, 'THE MATCHMAKER glances over.'),
+  ccue(143, 'preLevel', 'the_matchmaker', 'No, you do not.'),
+  ccue(143, 'preLevel', 'the_optimist', 'See? Chemistry already.'),
+
+  ccue(144, 'preLevel', null, 'THE MATCHMAKER watches players choose who receives the dangerous cards.'),
+  ccue(144, 'preLevel', 'the_matchmaker', 'Interesting.'),
+  ccue(144, 'preLevel', 'player', 'What?'),
+  ccue(144, 'preLevel', 'the_matchmaker', 'You protect people you respect even when the rules do not require it.'),
+  ccue(144, 'preLevel', 'player', 'It is a card game.'),
+  ccue(144, 'preLevel', 'the_matchmaker', 'Exactly. Low stakes reveal habits cheaply.'),
+
+  ccue(145, 'preLevel', null, 'THE OPTIMIST returns with two drinks and no phone number.'),
+  ccue(145, 'preLevel', 'player', 'Rejected again?'),
+  ccue(145, 'preLevel', 'the_optimist', 'Spectacularly.'),
+  ccue(145, 'preLevel', 'player', 'Anything useful?'),
+  ccue(145, 'preLevel', 'the_optimist', 'Yes. Staff were told to note who you trust, who you argue with, who you forgive, and who you protect at the table.'),
+  ccue(145, 'preLevel', 'player', 'Why?'),
+  ccue(145, 'preLevel', 'the_optimist', 'No idea. But hey, at least they are interested.'),
+
+  ccue(146, 'preLevel', null, 'A small red ledger sits at the dealer station. Columns are not labeled SCORE or WINS. They read TRUST. DEFLECT. PROTECT. RETALIATE.'),
+  ccue(146, 'preLevel', 'player', 'This is not about the game.'),
+  ccue(146, 'preLevel', 'the_optimist', 'Of course it is. It is just not about the score.'),
+  ccue(146, 'preLevel', 'player', 'You sound like you approve.'),
+  ccue(146, 'preLevel', 'the_optimist', 'I approve of data. Motives pending.'),
+
+  // "OPPONENT" is unnamed in the script; resolved to rose1 — nothing else
+  // establishes any of the three regulars this chapter, so the choice
+  // carries no continuity weight.
+  ccue(147, 'preLevel', null, 'An opponent takes a wildly avoidable penalty trick.'),
+  ccue(147, 'preLevel', 'the_optimist', 'That was horrendous.'),
+  ccue(147, 'preLevel', 'rose1', 'Thanks.'),
+  ccue(147, 'preLevel', 'the_optimist', 'No, seriously. Awful. But now you know exactly which card betrayed you. That is useful.'),
+  ccue(147, 'preLevel', null, 'The opponent laughs despite trying not to.'),
+  ccue(147, 'preLevel', 'player', 'You bully people into optimism.'),
+  ccue(147, 'preLevel', 'the_optimist', 'It works.'),
+
+  ccue(148, 'preLevel', null, 'THE MATCHMAKER stands directly behind the PLAYER for the entire hand.'),
+  ccue(148, 'preLevel', 'the_matchmaker', 'You noticed the ledger.'),
+  ccue(148, 'preLevel', 'player', 'You wanted me to.'),
+  ccue(148, 'preLevel', 'the_matchmaker', 'Good.'),
+  ccue(148, 'preLevel', 'player', 'Why measure who I protect?'),
+  ccue(148, 'preLevel', 'the_matchmaker', 'Because people become predictable when something matters more than winning.'),
+
+  ccue(149, 'preLevel', null, 'THE MATCHMAKER touches one opponent lightly on the shoulder. The opponent stands without protest.'),
+  ccue(149, 'preLevel', 'the_optimist', 'All right. She is terrifying.'),
+  ccue(149, 'preLevel', 'player', 'You were going to ask her out.'),
+  ccue(149, 'preLevel', 'the_optimist', 'Still might.'),
+  ccue(149, 'preLevel', 'the_matchmaker', 'No.'),
+  ccue(149, 'preLevel', 'the_optimist', 'Still optimistic.'),
+
+  // bossDefeat is the immediate table-side reaction (score settling,
+  // still at the table); chapterExit is the walk-away plus the Chapter 6
+  // tease, same split precedent as every earlier boss.
+  ccue(150, 'bossIntro', null, 'INT. ROSE CONSERVATORY FEATURE TABLE - NIGHT'),
+  ccue(150, 'bossIntro', 'the_matchmaker', 'You have learned to read cards. Now show me you can read attachment without obeying it.'),
+  ccue(150, 'bossIntro', 'player', 'You have been profiling me.'),
+  ccue(150, 'bossIntro', 'the_matchmaker', 'Everyone profiles everyone. We merely write it down.'),
+  ccue(150, 'bossIntro', null, 'The match begins.'),
+  ccue(150, 'bossDefeat', 'the_matchmaker', 'You adapt faster when you know you are being watched.'),
+  ccue(150, 'bossDefeat', 'player', 'What does the Queen want with that information?'),
+  ccue(150, 'bossDefeat', 'the_matchmaker', 'She wants to know what kind of person arrives at her table.'),
+  ccue(150, 'bossDefeat', 'player', 'She could ask.'),
+  ccue(150, 'bossDefeat', 'the_matchmaker', 'Would you answer honestly?'),
+  ccue(150, 'chapterExit', null, 'THE OPTIMIST falls into step beside the PLAYER as they leave.'),
+  ccue(150, 'chapterExit', 'the_optimist', 'For the record, I think you are doing great.'),
+  ccue(150, 'chapterExit', 'player', 'That sounded suspiciously gentle.'),
+  ccue(150, 'chapterExit', 'the_optimist', 'Fine. Your questions are a mess. But you are improving.'),
+  ccue(150, 'chapterExit', null, 'A burst of laughter echoes from the next salon, followed by a voice announcing a fact nobody asked for.'),
+  ccue(150, 'chapterExit', 'the_jester', 'Crows can remember human faces for years! Which feels relevant!'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);
@@ -5128,7 +5317,12 @@ async function createCampaignRoom(name, avatar, accountId, socketId, levelId) {
 // generation seed byte-for-byte.
 function buildCampaignDeck(G) {
   const level = campaignLevelById(G.campaignLevelId);
-  const playerHand = level.hands === 4 ? level.hands4[G.round - 1] : level.hand;
+  // hands4/hands8: which fixed-hand array a multi-hand (boss) level uses,
+  // named after its own hands count like every level before it. Only one
+  // boss so far (Level 150) needs the 8-hand array; every other boss
+  // still uses hands4.
+  const multiHands = level.hands4 || level.hands8;
+  const playerHand = multiHands ? multiHands[G.round - 1] : level.hand;
   const rest = makeDeck().filter(c => !playerHand.some(h => h.rank === c.rank && h.suit === c.suit));
   return [...playerHand, ...seededShuffle(rest, level.seed + '-r' + G.round)];
 }

@@ -5357,6 +5357,47 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 
 .camp-loading{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center}
 
+/* ── Campaign hub ("choose your house") ──
+   Shown instead of the normal per-chapter map/route once the account has
+   finished the House of Spades campaign — see renderCampaignHub. One
+   class, .hub-mode on .camp-scene, is the whole switch: it hides the
+   ordinary chrome below and reveals .camp-hub in its place, so this
+   reuses the screen's existing full-bleed-background structure instead
+   of being a second screen. .camp-home (the back-to-menu arrow) is
+   deliberately NOT in the hidden list — it stays usable in hub mode too. */
+.camp-scene.hub-mode .camp-corner-tl,
+.camp-scene.hub-mode .camp-corner-tc,
+.camp-scene.hub-mode .camp-corner-tr,
+.camp-scene.hub-mode .camp-attempts,
+.camp-scene.hub-mode .camp-route-wrap{display:none}
+.camp-hub{display:none;position:absolute;inset:0;z-index:5;isolation:isolate;align-items:center;justify-content:center}
+.camp-scene.hub-mode .camp-hub{display:flex}
+/* Permanent scrim, independent of the tiles' own opaque felt fill —
+   same reasoning as .camp-prol-vignette: the title/tagline sit directly
+   on the photo with nothing else behind them. */
+.camp-hub-vignette{
+  position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 20%,rgba(0,0,0,.6) 100%);
+}
+.camp-hub-content{
+  position:relative;z-index:1;
+  display:flex;flex-direction:column;align-items:center;gap:20px;
+  padding:24px;text-align:center;max-width:640px;
+}
+.camp-hub-title{
+  font-family:'Playfair Display',serif;font-weight:700;
+  font-size:1.7rem;letter-spacing:.02em;color:var(--cream);
+  text-shadow:0 2px 10px rgba(0,0,0,.7);margin:0;
+}
+.camp-hub-tagline{
+  font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--muted);text-shadow:0 2px 8px rgba(0,0,0,.7);margin:-12px 0 0;
+}
+.camp-hub-chapters{display:flex;gap:22px;width:100%}
+.camp-hub-chapters .tile{padding:26px 16px}
+.camp-hub-chapters .tile-icon{font-size:32px}
+.camp-hub-chapters .tile-title{font-size:16px}
+
 /* ── Level-detail popup ──
    Centred modal, opened on a map node tap, before any dialogue or the
    hand itself — objective in plain language, who's at the table, and
@@ -6216,7 +6257,7 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
      completely unmodified, exactly like Daily Challenge — this screen is
      a front door plus a map, not a table. -->
 <section id="s-campaign" class="screen">
-  <div class="camp-scene">
+  <div class="camp-scene" id="camp-scene">
     <div class="camp-bg" id="camp-bg"></div>
     <button class="btn btn-ghost btn-sm camp-home" onclick="show('menu')" aria-label="Back to menu">‹</button>
 
@@ -6235,6 +6276,35 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 
     <div class="camp-route-wrap">
       <div class="camp-route" id="camp-route"></div>
+    </div>
+
+    <!-- Chapter select hub — shown instead of the map above once the
+         account has finished the whole House of Spades campaign (see
+         renderCampaignHub/campaignStateOk). .hub-mode on .camp-scene is
+         what switches between the two; this stays in the DOM always,
+         just display:none until that class is present. -->
+    <div class="camp-hub" id="camp-hub">
+      <div class="camp-hub-vignette"></div>
+      <div class="camp-hub-content">
+        <h2 class="camp-hub-title">The Hundred Tables</h2>
+        <p class="camp-hub-tagline">Choose your house.</p>
+        <div class="camp-hub-chapters">
+          <button class="tile" onclick="hubEnterChapter1()">
+            <div class="tile-icon">&#9824;&#65038;</div>
+            <div class="tile-body">
+              <div class="tile-title">Chapter 1</div>
+              <div class="tile-sub">House of Spades</div>
+            </div>
+          </button>
+          <button class="tile" onclick="hubEnterChapter2()">
+            <div class="tile-icon">&#9829;&#65038;</div>
+            <div class="tile-body">
+              <div class="tile-title">Chapter 2</div>
+              <div class="tile-sub">House of Hearts</div>
+            </div>
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="camp-loading" id="camp-loading">
@@ -8512,8 +8582,21 @@ socket.on('campaignStateOk',d=>{
   campaignSeenCues=new Set(d.storyCuesSeen||[]);
   if(!$('s-campaign').classList.contains('active')) return;
   $('camp-loading').style.display='none';
-  renderCampaignMap(d);
-  campaignMaybeShowPrologue(()=>{ campaignMaybeShowHeartsPrologue(()=>{ campaignMaybeShow(1,'chapterEnter',()=>{}); }); });
+  // Once the whole House of Spades campaign is finished (clearing level
+  // 100 sets highestUnlockedLevel to 101 regardless of whether a level
+  // 101 exists — see advanceCampaignUnlock, db.js), a plain "Campaign"
+  // tap from the menu lands on the two-chapter hub instead of the map —
+  // that's the whole point of keeping Chapter 2 a secret until then.
+  // campaignReturnLevelId is the tell for "we're not landing fresh from
+  // the menu, we're returning from a table" (set by goCampaignFromTable,
+  // consumed by campaignRenderChapterView) — that case must always go
+  // straight back to the map, never re-surface the hub mid-replay.
+  if(d.highestUnlockedLevel>100&&!campaignReturnLevelId){
+    renderCampaignHub(d);
+  }else{
+    renderCampaignMap(d);
+    campaignMaybeShowPrologue(()=>{ campaignMaybeShow(1,'chapterEnter',()=>{}); });
+  }
 });
 socket.on('campaignStateErr',d=>{
   if(!$('s-campaign').classList.contains('active')){ toast('err-menu',d.msg); return; }
@@ -8668,17 +8751,43 @@ function campaignMaybeShowPrologue(done){
   if(!cues.length||cues.every(c=>campaignSeenCues.has(c.id))){ done(); return; }
   campaignRunPrologue(cues,CAMPAIGN_PROLOGUE_BG,done);
 }
-// Gated on having actually finished the House of Spades campaign —
-// clearing level 100 sets campaignData.highestUnlockedLevel to 101 in
-// advanceCampaignUnlock (db.js) regardless of whether a level 101
-// exists yet, which is exactly "cleared the whole thing" with no new
-// server field needed. Without this gate, a brand-new account would see
-// both prologues back to back on their very first visit, which narrates
-// a night that hasn't happened yet for them.
-function campaignMaybeShowHeartsPrologue(done){
+// Triggered by tapping the "Chapter 2: House of Hearts" tile on the
+// campaign hub (renderCampaignHub below) — deliberately NOT gated on
+// campaignSeenCues the way every other story cue is. The hub is the
+// one place this prologue lives now, so it has to be rewatchable from
+// there every time, not "once ever per account" like the rest of the
+// story-cue system. campaignMarkSeen still fires per cue inside
+// campaignPrologueStep (harmless, keeps the DB in sync) — it's just
+// never consulted to gate a replay.
+function hubEnterChapter2(){
   const cues=campaignCuesFor(101,'prologue');
-  if(!cues.length||!campaignData||campaignData.highestUnlockedLevel<=100||cues.every(c=>campaignSeenCues.has(c.id))){ done(); return; }
-  campaignRunPrologue(cues,CAMPAIGN_PROLOGUE2_BG,done);
+  if(!cues.length) return;
+  campaignRunPrologue(cues,CAMPAIGN_PROLOGUE2_BG,()=>{});
+}
+// The hub's other tile — bypasses the hub for the rest of this visit
+// (see campaignStateOk's own campaignReturnLevelId check) and drops
+// straight into the ordinary per-chapter map, using the campaignData
+// already in hand rather than a second round trip.
+function hubEnterChapter1(){
+  $('camp-scene').classList.remove('hub-mode');
+  renderCampaignMap(campaignData);
+  campaignMaybeShowPrologue(()=>{ campaignMaybeShow(1,'chapterEnter',()=>{}); });
+}
+// The campaign hub itself — shown instead of renderCampaignMap once the
+// account has finished the whole House of Spades campaign (see
+// campaignStateOk). Reuses this screen's existing "full-bleed background
+// + absolutely-positioned chrome" structure (.camp-scene/.camp-bg) rather
+// than building a second screen: .hub-mode on .camp-scene is the whole
+// switch, hiding the normal per-chapter chrome via CSS and revealing
+// .camp-hub in its place. The background is the same still already
+// processed for the Spades prologue's own first beat (the rain/motorcar
+// shot) — Intro campaign 1.png in the brief this was built from is that
+// exact source photo (same 1672×941 dimensions, and its file timestamp
+// sits minutes before /campaign/prologue/1.webp was created), so this
+// reuses that file rather than reprocessing a duplicate.
+function renderCampaignHub(d){
+  $('camp-scene').classList.add('hub-mode');
+  $('camp-bg').innerHTML='<img class="campaign-bg-img" src="/campaign/prologue/1.webp" alt="" aria-hidden="true"/>';
 }
 function campaignRunPrologue(cues,bgMap,done){
   Object.values(bgMap).forEach(src=>{ new Image().src=src; });
@@ -8770,6 +8879,13 @@ $('camp-prologue').addEventListener('click',e=>{
 // just "whichever chapter is current".
 let campaignViewChapterId=null;
 function renderCampaignMap(d){
+  // Defensive: the hub (renderCampaignHub) is the only thing that ever
+  // adds .hub-mode, and every path back into this function already
+  // removes it first (hubEnterChapter1) or never added it at all
+  // (campaignStateOk's campaignReturnLevelId branch) — but clearing it
+  // here too means a future call site can't leave the map stuck hidden
+  // behind hub CSS.
+  $('camp-scene').classList.remove('hub-mode');
   // Sets the module-level campaignData itself rather than trusting the
   // caller to have already done so — campaignRenderChapterView (and
   // campaignSwitchChapter, campaignTapNode, etc.) all read the global,

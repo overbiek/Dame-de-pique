@@ -2271,6 +2271,23 @@ const CAMPAIGN_CHARACTERS = {
   the_three_women:    { id: 'the_three_women',    name: 'The Three Women' },
   the_remaining_woman:{ id: 'the_remaining_woman',name: 'The Remaining Woman' },
   player:      { id: 'player',      name: null },
+
+  // ═══ House of Hearts (levels 101-200) ═══
+  // Chapter 1 (internal chapter id 11): The Red Foyer, boss The Host.
+  // Displayed level numbers restart at 1 (campaignTableLabel, client) —
+  // these ids stay in the flat 101+ space so highestUnlockedLevel keeps
+  // working unmodified (see the House of Hearts prologue's own note on
+  // why level 100 already advances it to 101 regardless).
+  foyer1:      { id: 'foyer1',      name: 'Regular #1' },
+  foyer2:      { id: 'foyer2',      name: 'Regular #2' },
+  foyer3:      { id: 'foyer3',      name: 'Regular #3' },
+  // No seatAvatar — no existing House Regular plays this role, unlike
+  // several House of Spades bosses. Falls back to the SVG monogram until
+  // real portrait art exists, same as every "not dropped in yet" case.
+  the_host:    { id: 'the_host',    name: 'The Host' },
+  // One-off, Level 102 only ("you ordered the same thing in the Spade
+  // House") — same single-appearance treatment as nervous_player.
+  hearts_server: { id: 'hearts_server', name: 'Server' },
 };
 
 // Who sits at an ordinary (non-boss) table per chapter, and which of
@@ -2319,6 +2336,12 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // 100's bossId substitutes dame3's own seat with dame_de_pique (same
   // portrait), a cosmetic relabel rather than a real seat change.
   10: { regulars: ['dame1', 'dame2', 'dame3'], bossSeat: 2 },
+  // House of Hearts, Chapter 1 (internal chapter id 11). bossSeat is 0
+  // here, not the usual 2 — the screenplay has REGULAR #1 (not #3) stand
+  // at Level 9's postClear ("That is my cue."), and THE HOST takes that
+  // seat at Level 10, not the third chair every earlier chapter's boss
+  // claims.
+  11: { regulars: ['foyer1', 'foyer2', 'foyer3'], bossSeat: 0 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2356,6 +2379,13 @@ const CAMPAIGN_CHAPTERS = [
   { id: 8, title: 'The Vault', levelStart: 71, levelEnd: 80, slug: 'vault', bossId: 'the_closer' },
   { id: 9, title: "The Countess's Antechamber", levelStart: 81, levelEnd: 90, slug: 'countess_antechamber', bossId: 'the_countess' },
   { id: 10, title: 'The Hidden Throne Room', levelStart: 91, levelEnd: 100, slug: 'hidden_throne_room', bossId: 'dame_de_pique' },
+  // House of Hearts begins here. Internal chapter id continues at 11 (no
+  // collision risk with anything, and levelStart/levelEnd stay in the
+  // flat 101+ id space highestUnlockedLevel already relies on) — only
+  // the DISPLAYED level numbers restart at 1, via campaignTableLabel on
+  // the client. No real background art yet — falls back to the CSS/SVG
+  // placeholder like every "not dropped in yet" chapter before it.
+  { id: 11, title: 'The Red Foyer', levelStart: 101, levelEnd: 110, slug: 'red_foyer', bossId: 'the_host' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -2830,6 +2860,55 @@ const CAMPAIGN_LEVELS = {
           parseHand('2♣ 7♠ 5♠ 10♥ 3♣ 3♦ Q♦ 9♠ 4♦ Q♣ 6♣ A♥ 7♥'),
         ],
         objective: { type: 'score', min: 21, gold: 55 } },
+
+  // ═══ House of Hearts, Chapter 1: The Red Foyer (levels 101-110) ═══
+  // From Dame-de-Pique-Campaign-Levels_1.xlsx's "Levels 101-200" sheet —
+  // the same source/format the House of Spades levels came from (Type,
+  // Direction, Hands, Min/Gold Target, the exact fixed 13-card hand,
+  // each already measured against real simulated trials). The sheet's
+  // own "Type" column uses a fourth value, 'Mission', for the three
+  // non-score objectives (103/106/109) — that's the OBJECTIVE shape, not
+  // the credits/difficulty tier CAMPAIGN_CREDITS_BY_TYPE reads, so those
+  // three are stored here as 'Normal' (matching their measured clear-rate
+  // bands, which sit in the same range as this chapter's other Normal
+  // levels), exactly like every suitVoid/avoidQueen/cleanHand/trickCount
+  // level in the original 100 already does.
+  101: { id: 101, chapter: 11, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L101-score-c24', hand: parseHand('K♣ 10♦ 5♦ 5♥ 5♣ A♥ 4♥ 2♥ 10♠ K♦ 3♦ Q♥ Q♦'),
+         objective: { type: 'score', min: 20, gold: 30 } },
+  102: { id: 102, chapter: 11, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L102-score-c864', hand: parseHand('Q♣ 9♣ 8♣ A♣ 7♠ A♠ J♦ J♥ 4♥ 2♣ A♦ 6♠ 3♠'),
+         objective: { type: 'score', min: 21, gold: 34 } },
+  103: { id: 103, chapter: 11, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L103-clean-c2', hand: parseHand('2♥ Q♥ 3♣ 4♣ 3♦ Q♦ 4♠ 5♦ 6♣ 8♠ 9♥ A♥ Q♣'),
+         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+  104: { id: 104, chapter: 11, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L104-score-c420', hand: parseHand('A♣ K♣ 9♠ 7♥ A♦ 10♣ J♠ 6♥ 3♣ J♦ 6♦ 9♥ 3♦'),
+         objective: { type: 'score', min: 35, gold: 42 } },
+  105: { id: 105, chapter: 11, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L105-score-c409', hand: parseHand('5♦ 8♦ J♣ K♥ 6♦ K♣ 4♠ 10♥ 7♦ Q♦ A♣ A♦ 10♦'),
+         objective: { type: 'score', min: 24, gold: 60 } },
+  106: { id: 106, chapter: 11, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L106-queen-c260', hand: parseHand('Q♥ 6♣ 3♦ 2♦ 4♦ 6♦ 10♦ 9♠ 8♥ 7♦ A♣ 5♣ K♦'),
+         objective: { type: 'avoidQueen', goldScoreBar: 15 } },
+  107: { id: 107, chapter: 11, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L107-score-c589', hand: parseHand('10♣ 2♣ J♠ 6♦ K♣ A♠ Q♥ Q♠ A♣ 3♠ 2♥ 4♣ 9♣'),
+         objective: { type: 'score', min: 25, gold: 60 } },
+  108: { id: 108, chapter: 11, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L108-score-c288', hand: parseHand('2♥ K♥ 2♠ K♠ K♦ A♠ 10♠ A♦ A♣ 8♥ 3♠ 9♠ 8♣'),
+         objective: { type: 'score', min: 40, gold: 47 } },
+  109: { id: 109, chapter: 11, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L109-tricks-c50', hand: parseHand('7♠ A♥ 10♣ 6♦ 3♥ A♦ 7♥ Q♣ 4♦ J♦ 8♣ 5♠ 4♥'),
+         objective: { type: 'trickCount', minTricks: 4, goldTricks: 5 } },
+  110: { id: 110, chapter: 11, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_host',
+         seed: 'ddp-ch2-L110-boss-c702',
+         hands4: [
+           parseHand('7♣ 3♠ 5♣ 4♦ 7♠ 9♠ 3♥ 2♣ 4♠ K♠ J♠ J♦ Q♦'),
+           parseHand('2♣ K♦ K♣ 9♥ K♥ 6♦ 2♠ 2♥ 5♠ 8♥ Q♥ 10♠ 10♣'),
+           parseHand('K♥ 2♥ J♥ A♣ Q♦ K♦ 2♠ 7♣ Q♣ 4♥ 10♥ 10♣ J♦'),
+           parseHand('Q♠ A♦ 2♥ 7♦ 3♦ 6♣ Q♦ 4♣ 4♦ 3♣ J♣ 7♠ 8♦'),
+         ],
+         objective: { type: 'score', min: 21, gold: 49 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -4394,6 +4473,106 @@ const CAMPAIGN_STORY_CUES = [
   ccue(101, 'prologue', null, '"You know who I am?" the PLAYER asks.', { bg: 2 }),
   ccue(101, 'prologue', null, '"We know who we are expecting," the DOORMAN says.', { bg: 2 }),
   ccue(101, 'prologue', null, 'The doors open before the PLAYER can ask the obvious next question.', { bg: 2 }),
+
+  // ═══ House of Hearts, Chapter 1: The Red Foyer (levels 101-110) ═══
+  // From House_of_Hearts_Levels_1-100_Movie_Script, "CHAPTER - I - THE
+  // RED FOYER". Fed in verbatim, level by level. Every level's own
+  // chapter-opening room description ("A red-and-gold entrance hall...")
+  // is folded into Level 101's preLevel, the same way Chapter 11 (Mirror
+  // Gallery)'s own opening STORY BOX lives in Level 11's preLevel rather
+  // than a separate chapterEnter bucket — chapterEnter is level-1-only,
+  // for the very first campaign-map visit ever, not one per chapter.
+  // Same "nothing after ON CLEAR -> no postClear cue" rule the rest of
+  // the campaign already follows: only Level 101 has content after its
+  // ON CLEAR marker in the source text; Levels 102-109 do not (several
+  // have no ON CLEAR marker at all), so those carry a preLevel bucket
+  // only. Level 110 (the boss) has no separate BOSS MIDPOINT or postFail
+  // block in the source either — its ending is short enough to sit
+  // entirely in bossDefeat, with nothing after it turning toward a
+  // chapterExit the way Levels 70/80/90/100 needed.
+  ccue(101, 'preLevel', null, 'A red-and-gold entrance hall full of music, smiling staff, deep sofas and four-player card tables. Nothing looks threatening. That is precisely what makes the PLAYER suspicious. THE HOST is everywhere at once, greeting guests by name.'),
+  ccue(101, 'preLevel', null, 'A four-seat table is already prepared. Three House regulars wait. A name card on the fourth chair reads PLAYER.'),
+  ccue(101, 'preLevel', 'player', 'I did not book a table.'),
+  ccue(101, 'preLevel', 'foyer1', 'Apparently someone did.'),
+  ccue(101, 'preLevel', null, 'The PLAYER sits. The first hand begins.'),
+  ccue(101, 'postClear', 'foyer2', 'You look disappointed.'),
+  ccue(101, 'postClear', 'player', 'I was hoping somebody would be surprised I came.'),
+  ccue(101, 'postClear', 'foyer3', 'Not in this House.'),
+
+  ccue(102, 'preLevel', null, 'A server places a drink beside the PLAYER without asking.'),
+  ccue(102, 'preLevel', 'player', 'I did not order that either.'),
+  ccue(102, 'preLevel', 'hearts_server', 'No. But you ordered the same thing in the Spade House.'),
+  ccue(102, 'preLevel', null, 'The PLAYER looks up. The server is already walking away.'),
+  ccue(102, 'preLevel', 'foyer1', 'You should play the hand.'),
+  ccue(102, 'preLevel', 'player', 'I am trying to decide which part of this is the hand.'),
+
+  ccue(103, 'preLevel', null, "Near the table sits a heavy guest book. The PLAYER opens it between hands. Today's page already contains a line in red ink: PLAYER - ARRIVED."),
+  ccue(103, 'preLevel', 'player', 'Who wrote this?'),
+  ccue(103, 'preLevel', 'foyer2', 'The House likes its records.'),
+  ccue(103, 'preLevel', 'player', 'It wrote it before I arrived.'),
+  ccue(103, 'preLevel', 'foyer2', 'Then it has excellent timing.'),
+
+  ccue(104, 'preLevel', null, 'THE HOST crosses the foyer, greeting guests without ever slowing down. He reaches the PLAYER table, straightens one card on the table edge, and smiles.'),
+  ccue(104, 'preLevel', 'the_host', 'You found us.'),
+  ccue(104, 'preLevel', 'player', 'You left the clue?'),
+  ccue(104, 'preLevel', 'the_host', 'I said you found us.'),
+  ccue(104, 'preLevel', 'player', 'That is not an answer.'),
+  ccue(104, 'preLevel', 'the_host', 'You will find the House of Hearts has very good manners and very selective answers.'),
+  ccue(104, 'preLevel', null, 'He moves on before the next card is played.'),
+
+  ccue(105, 'preLevel', null, 'The room is easy to like. The music is good. The chairs are comfortable. Nobody stares at the newcomer.'),
+  ccue(105, 'preLevel', 'foyer3', 'You can relax, you know.'),
+  ccue(105, 'preLevel', 'player', 'That is what worries me.'),
+  ccue(105, 'preLevel', 'foyer3', 'Spades did a number on you.'),
+  ccue(105, 'preLevel', 'player', 'You know about that too?'),
+  ccue(105, 'preLevel', null, 'REGULAR #3 realizes the sentence came too easily.'),
+  ccue(105, 'preLevel', 'foyer3', 'Play your card.'),
+
+  ccue(106, 'preLevel', null, 'A red line in the marble floor leads from the PLAYER table toward a closed archway. Tiny gold level markers are already set into it farther ahead.'),
+  ccue(106, 'preLevel', 'player', 'That path was here before I walked in.'),
+  ccue(106, 'preLevel', 'foyer1', 'Of course.'),
+  ccue(106, 'preLevel', 'player', 'Where does it end?'),
+  ccue(106, 'preLevel', 'foyer1', 'Nobody in the foyer gets to answer that.'),
+
+  ccue(107, 'preLevel', null, 'THE HOST returns with a small envelope and places it near the PLAYER without stopping.'),
+  ccue(107, 'preLevel', 'player', 'What is this?'),
+  ccue(107, 'preLevel', 'the_host', 'A courtesy.'),
+  ccue(107, 'preLevel', null, 'Inside is a single card. On it: THE SHARP.'),
+  ccue(107, 'preLevel', 'player', 'I know him.'),
+  ccue(107, 'preLevel', 'the_host', 'We know.'),
+  ccue(107, 'preLevel', null, 'For the first time, THE HOST looks directly amused.'),
+
+  ccue(108, 'preLevel', null, 'From somewhere above the foyer comes a familiar voice counting in a perfectly even rhythm.'),
+  ccue(108, 'preLevel', 'the_sharp', 'Five hundred thirty-seven. Five hundred thirty-eight.'),
+  ccue(108, 'preLevel', null, 'The PLAYER looks up. On an upper balcony, THE SHARP is doing pull-ups from a decorative brass beam in a flawless suit.'),
+  ccue(108, 'preLevel', 'player', 'You have got to be kidding me.'),
+  ccue(108, 'preLevel', 'foyer2', 'He arrived yesterday.'),
+  ccue(108, 'preLevel', 'player', 'Why?'),
+  ccue(108, 'preLevel', 'foyer2', 'Ask him. He loves short answers.'),
+
+  ccue(109, 'preLevel', null, 'THE HOST finally stops moving. He stands behind the empty fourth seat at a nearby table and watches the PLAYER finish the hand.'),
+  ccue(109, 'preLevel', 'the_host', 'You are less interested in winning than in understanding why the room knew you were coming.'),
+  ccue(109, 'preLevel', 'player', 'Correct.'),
+  ccue(109, 'preLevel', 'the_host', 'Good. Curiosity is expensive here.'),
+  ccue(109, 'preLevel', null, 'One regular at the PLAYER table quietly stands.'),
+  ccue(109, 'preLevel', 'foyer1', 'That is my cue.'),
+
+  ccue(110, 'bossIntro', null, 'THE HOST takes the empty seat. The foyer continues around him, but every nearby conversation becomes a little quieter.'),
+  ccue(110, 'bossIntro', 'the_host', 'You came looking for the woman behind the heart.'),
+  ccue(110, 'bossIntro', 'player', 'I came looking for answers.'),
+  ccue(110, 'bossIntro', 'the_host', 'Those are more dangerous.'),
+  ccue(110, 'bossIntro', null, 'The boss match begins. Same game. Four players. No special rules - only a better player in the fourth chair.'),
+  ccue(110, 'bossIntro', 'the_host', 'This House does not test whether you can count cards. Spades already did that.'),
+  ccue(110, 'bossIntro', 'player', 'What does Hearts test?'),
+  ccue(110, 'bossIntro', 'the_host', 'Who you listen to when the cards stop helping.'),
+  ccue(110, 'bossDefeat', null, 'THE HOST looks at the final score, then rises.'),
+  ccue(110, 'bossDefeat', 'the_host', 'You pass.'),
+  ccue(110, 'bossDefeat', 'player', 'Now answer me. How did you know I was coming?'),
+  ccue(110, 'bossDefeat', 'the_host', 'I did not.'),
+  ccue(110, 'bossDefeat', null, 'He looks toward the upper balcony.'),
+  ccue(110, 'bossDefeat', 'the_host', 'He did.'),
+  ccue(110, 'bossDefeat', null, 'THE SHARP drops from the brass beam, lands cleanly, adjusts his cuffs, and starts walking toward the next room.'),
+  ccue(110, 'bossDefeat', 'the_sharp', 'You took long enough.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

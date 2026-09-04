@@ -8413,6 +8413,11 @@ const CAMPAIGN_CHARACTERS={
   the_three_women:{name:'The Three Women',initial:'3'},
   the_remaining_woman:{name:'The Remaining Woman',initial:'D'},
   player:{name:null,initial:null},
+  foyer1:{name:'Regular #1',initial:'1'},
+  foyer2:{name:'Regular #2',initial:'2'},
+  foyer3:{name:'Regular #3',initial:'3'},
+  the_host:{name:'The Host',initial:'H'},
+  hearts_server:{name:'Server',initial:'Sv'},
 };
 // Which three characters sit at an ordinary (non-boss) table per chapter,
 // and who the boss replaces — used by campaignOpponentsHTML so the
@@ -8433,6 +8438,10 @@ const CAMPAIGN_CHAPTER_ROSTER={
   8:{regulars:['vault1','vault2','vault3'],bossSeat:2},
   9:{regulars:['private1','private2','private3'],bossSeat:2},
   10:{regulars:['dame1','dame2','dame3'],bossSeat:2},
+  // House of Hearts, Chapter 1 (internal chapter id 11) — bossSeat 0, not
+  // the usual 2: the screenplay has REGULAR #1 cede the chair THE HOST
+  // takes at Level 10, not #3 like every earlier chapter's boss.
+  11:{regulars:['foyer1','foyer2','foyer3'],bossSeat:0},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/
@@ -8610,6 +8619,13 @@ function campaignCuesFor(levelId,trigger){
   return campaignData.storyCues.filter(c=>c.levelId===levelId&&c.trigger===trigger)
     .sort((a,b)=>a.order-b.order);
 }
+// Internal level ids stay in one flat 1..N space forever (highestUnlockedLevel
+// and every progression check depends on that), but each house's own levels
+// are meant to read as "Table 1..100" to the player, not "Table 101..200" —
+// wraps every id into its own hundred-block. A no-op for ids 1-100 (the same
+// formula happens to return the id unchanged there), so every existing House
+// of Spades call site is unaffected by applying this uniformly.
+function campaignTableLabel(id){ return ((id-1)%100)+1; }
 // Shows a (levelId,trigger) bucket if it has content and hasn't been seen
 // before (a "pick:random" bucket, like Level 10's failure lines, counts
 // as seen after any one of its lines has been shown — the screenplay
@@ -8759,10 +8775,19 @@ function campaignMaybeShowPrologue(done){
 // story-cue system. campaignMarkSeen still fires per cue inside
 // campaignPrologueStep (harmless, keeps the DB in sync) — it's just
 // never consulted to gate a replay.
+// Now that Chapter 11 (The Red Foyer, levels 101-110) actually exists,
+// the prologue hands off into its map afterward instead of just
+// returning to the hub — renderCampaignMap's own "focus the account's
+// frontier" logic (campaignReturnLevelId||d.highestUnlockedLevel) already
+// lands on chapter 11 correctly for an account whose frontier is exactly
+// 101, no special-casing needed here.
 function hubEnterChapter2(){
   const cues=campaignCuesFor(101,'prologue');
   if(!cues.length) return;
-  campaignRunPrologue(cues,CAMPAIGN_PROLOGUE2_BG,()=>{});
+  campaignRunPrologue(cues,CAMPAIGN_PROLOGUE2_BG,()=>{
+    $('camp-scene').classList.remove('hub-mode');
+    renderCampaignMap(campaignData);
+  });
 }
 // The hub's other tile — bypasses the hub for the rest of this visit
 // (see campaignStateOk's own campaignReturnLevelId check) and drops
@@ -8933,7 +8958,7 @@ function campaignRenderChapterView(){
   const d=campaignData; if(!d) return;
   const ch=d.chapters.find(c=>c.id===campaignViewChapterId)||d.chapters[0];
   $('camp-chapter-title').textContent=ch.title;
-  $('camp-chapter-range').textContent=`Levels ${ch.levelStart}–${ch.levelEnd}`;
+  $('camp-chapter-range').textContent=`Levels ${campaignTableLabel(ch.levelStart)}–${campaignTableLabel(ch.levelEnd)}`;
   const levels=d.levels.filter(l=>l.chapter===ch.id);
   const clearedCount=levels.filter(l=>l.result&&l.result.cleared).length;
   $('camp-progress-fill').style.width=Math.round(clearedCount/levels.length*100)+'%';
@@ -9011,11 +9036,11 @@ function campaignNodeHTML(l,highestUnlocked){
   // onerror contract as every other drop-in asset here.
   const goldArt=gold?campaignGoldImg(l.id):'';
   if(gold&&goldArt) cls+=' has-gold-art';
-  const inner=!unlocked?'&#128274;':cleared?(gold?(goldArt||'&#9733;'):'&#10003;'):String(l.id);
+  const inner=!unlocked?'&#128274;':cleared?(gold?(goldArt||'&#9733;'):'&#10003;'):String(campaignTableLabel(l.id));
   return `<button class="${cls}" id="camp-node-${l.id}"`
     +(unlocked?` onclick="campaignTapNode(${l.id})"`:' disabled')+`>`
     +`<span class="camp-node-inner">${inner}</span>`
-    +`<span class="camp-node-label">${isBoss?'Boss':'Table '+l.id}</span>`
+    +`<span class="camp-node-label">${isBoss?'Boss':'Table '+campaignTableLabel(l.id)}</span>`
     +`</button>`;
 }
 let campaignRefillTimerHandle=null;
@@ -9135,7 +9160,7 @@ function campaignOpenLevelModal(levelId){
   if(!level) return;
   campaignModalLevelId=levelId;
   const bossName=level.bossId&&CAMPAIGN_CHARACTERS[level.bossId]?CAMPAIGN_CHARACTERS[level.bossId].name:'';
-  $('camp-modal-title').textContent=level.type==='BOSS'?'Boss Table':('Table '+levelId);
+  $('camp-modal-title').textContent=level.type==='BOSS'?'Boss Table':('Table '+campaignTableLabel(levelId));
   $('camp-modal-sub').textContent=level.type==='BOSS'?bossName:(level.type==='Harder'?'A harder hand':'');
   const obj=campaignObjectiveParts(level);
   $('camp-modal-goal-main').innerHTML=obj.main;
@@ -9208,7 +9233,7 @@ function renderCampaignResult(){
   const isBoss=(d.type||'Normal')==='BOSS';
   let h='<div class="empty-state" style="padding-top:14px">';
   h+=`<div class="empty-icon">${d.gold?'★':d.cleared?'✓':'↻'}</div>`;
-  h+=`<h3>Table ${d.levelId}${isBoss?' — Boss Cleared':''} ${d.gold?'— Gold':d.cleared?'— Cleared':'— Not this time'}</h3>`;
+  h+=`<h3>Table ${campaignTableLabel(d.levelId)}${isBoss?' — Boss Cleared':''} ${d.gold?'— Gold':d.cleared?'— Cleared':'— Not this time'}</h3>`;
   h+=`<p>Score <span class="cb-figure" id="camp-result-score">0</span>`
     +(d.creditsAwarded?` &middot; +<span class="cb-figure" id="camp-result-credits">0</span> credits`:'')+'</p>';
   if(d.guest) h+='<p>Log in to keep your progress and earn credits.</p>';
@@ -11427,7 +11452,7 @@ function openCampaignLeaveModal(){
   if(!S) return;
   const isBoss=!!S.campaignBoss;
   const bossCh=isBoss&&CAMPAIGN_CHARACTERS[S.campaignBoss];
-  $('camp-leave-title').textContent=isBoss?'Boss Table':('Table '+(S.campaignLevel||''));
+  $('camp-leave-title').textContent=isBoss?'Boss Table':('Table '+(S.campaignLevel?campaignTableLabel(S.campaignLevel):''));
   $('camp-leave-sub').textContent=bossCh?bossCh.name:'';
   const obj=campaignObjectiveParts({objective:S.campaignObjective});
   $('camp-leave-goal-main').innerHTML=obj.main;

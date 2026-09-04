@@ -2288,6 +2288,17 @@ const CAMPAIGN_CHARACTERS = {
   // One-off, Level 102 only ("you ordered the same thing in the Spade
   // House") — same single-appearance treatment as nervous_player.
   hearts_server: { id: 'hearts_server', name: 'Server' },
+  // Chapter 2 (internal chapter id 12): The Mirror Gallery, boss The
+  // Dancer. THE SHARP is NOT a new character here — he's the same
+  // the_sharp from the House of Spades campaign (Chapter 2, "The
+  // Rooftop"), returning as this chapter's recurring guide rather than
+  // its boss, exactly the premise the screenplay states up front (the
+  // seven returning bosses "become an investigator, rival, ally or
+  // source of information"). Reused verbatim, seatAvatar included.
+  mirror1:     { id: 'mirror1',     name: 'Regular #1' },
+  mirror2:     { id: 'mirror2',     name: 'Regular #2' },
+  mirror3:     { id: 'mirror3',     name: 'Regular #3' },
+  the_dancer:  { id: 'the_dancer',  name: 'The Dancer' },
 };
 
 // Who sits at an ordinary (non-boss) table per chapter, and which of
@@ -2342,6 +2353,16 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // seat at Level 10, not the third chair every earlier chapter's boss
   // claims.
   11: { regulars: ['foyer1', 'foyer2', 'foyer3'], bossSeat: 0 },
+  // The Mirror Gallery. THE SHARP walks the room as the PLAYER's guide
+  // rather than holding a chair (the screenplay only ever has him stand
+  // beside or point the PLAYER toward a table, never seated at it), so
+  // the three ordinary seats are mirror1-3 the whole chapter, same as
+  // every other "boss substitutes into a real seat" pattern — back to
+  // the standard bossSeat 2 (no script line names which regular stands
+  // at Level 19, unlike Chapter 1's explicit "REGULAR #1: That is my
+  // cue.", so this follows the majority convention every other chapter
+  // but Chapter 1 already uses).
+  12: { regulars: ['mirror1', 'mirror2', 'mirror3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2386,6 +2407,7 @@ const CAMPAIGN_CHAPTERS = [
   // the client. No real background art yet — falls back to the CSS/SVG
   // placeholder like every "not dropped in yet" chapter before it.
   { id: 11, title: 'The Red Foyer', levelStart: 101, levelEnd: 110, slug: 'red_foyer', bossId: 'the_host' },
+  { id: 12, title: 'The Mirror Gallery', levelStart: 111, levelEnd: 120, slug: 'mirror_gallery', bossId: 'the_dancer' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -2909,6 +2931,49 @@ const CAMPAIGN_LEVELS = {
            parseHand('Q♠ A♦ 2♥ 7♦ 3♦ 6♣ Q♦ 4♣ 4♦ 3♣ J♣ 7♠ 8♦'),
          ],
          objective: { type: 'score', min: 21, gold: 49 } },
+
+  // ═══ House of Hearts, Chapter 2: The Mirror Gallery (levels 111-120) ═══
+  // Same source/sheet/format as Chapter 1. Several rows here show "Miss"
+  // in the sheet's own In Band? column (111/112/114/115/118) — same
+  // "trust the measured trial data over the target band" call as every
+  // earlier chapter's own Miss rows; transcribed verbatim rather than
+  // second-guessed, per the established precedent for this data.
+  111: { id: 111, chapter: 12, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L111-score-c979', hand: parseHand('7♠ Q♣ Q♥ Q♦ 6♥ 7♦ 5♦ 4♠ Q♠ 9♥ K♣ A♦ 4♥'),
+         objective: { type: 'score', min: 20, gold: 28 } },
+  112: { id: 112, chapter: 12, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L112-score-c49', hand: parseHand('K♠ Q♦ A♠ Q♠ A♣ K♥ J♥ 2♠ J♣ 9♥ 5♠ 8♥ 10♠'),
+         objective: { type: 'score', min: 30, gold: 60 } },
+  113: { id: 113, chapter: 12, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L113-void-c57', hand: parseHand('5♥ 7♥ 7♠ Q♥ 2♠ 2♣ J♦ 7♦ 7♣ 3♦ 4♥ J♠ K♦'),
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 7, goldByTrick: 5 } },
+  114: { id: 114, chapter: 12, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L114-score-c47', hand: parseHand('3♣ A♠ K♥ K♠ 8♦ A♦ 4♥ 3♥ A♣ 2♣ A♥ 5♠ K♦'),
+         objective: { type: 'score', min: 33, gold: 40 } },
+  115: { id: 115, chapter: 12, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L115-score-c1150', hand: parseHand('5♣ 10♣ K♦ J♥ 7♠ K♥ 2♥ 5♦ 7♣ 8♦ 3♦ 3♣ A♣'),
+         objective: { type: 'score', min: 13, gold: 20 } },
+  116: { id: 116, chapter: 12, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L116-clean-c326', hand: parseHand('J♦ A♠ 4♥ K♣ Q♠ J♣ 10♦ 9♦ 2♥ 5♦ Q♥ K♥ J♥'),
+         objective: { type: 'cleanHand', goldScoreBar: 20 } },
+  117: { id: 117, chapter: 12, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L117-score-c510', hand: parseHand('6♥ Q♦ 9♠ 7♦ A♣ 2♥ 10♣ 4♣ 10♠ 10♥ A♠ 5♥ 8♠'),
+         objective: { type: 'score', min: 20, gold: 30 } },
+  118: { id: 118, chapter: 12, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L118-score-c1029', hand: parseHand('Q♣ Q♥ 10♣ 10♠ 8♣ 3♠ 10♥ 4♣ A♥ K♣ 3♦ 5♣ J♥'),
+         objective: { type: 'score', min: 47, gold: 60 } },
+  119: { id: 119, chapter: 12, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L119-queen-c516', hand: parseHand('2♣ K♠ 5♦ 4♦ 5♥ K♣ 10♠ A♦ 7♣ 3♠ 9♠ 3♣ 10♣'),
+         objective: { type: 'avoidQueen', goldScoreBar: 18 } },
+  120: { id: 120, chapter: 12, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_dancer',
+         seed: 'ddp-ch2-L120-boss-c71',
+         hands4: [
+           parseHand('10♥ 3♦ Q♠ 5♠ A♦ A♠ Q♣ 3♠ J♥ 6♥ 7♠ 2♣ 7♦'),
+           parseHand('9♥ 4♥ 4♠ Q♥ 8♠ 5♣ Q♠ 8♣ 6♠ J♥ 8♥ 2♦ K♦'),
+           parseHand('K♠ 6♥ 6♠ Q♠ J♣ 10♦ 2♠ 10♣ 5♦ 9♦ 8♣ 5♠ 7♠'),
+           parseHand('6♦ J♠ 4♠ 9♦ A♠ 7♠ 10♠ 9♥ 10♣ A♦ 5♠ J♥ J♣'),
+         ],
+         objective: { type: 'score', min: 25, gold: 37 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -4573,6 +4638,111 @@ const CAMPAIGN_STORY_CUES = [
   ccue(110, 'bossDefeat', 'the_host', 'He did.'),
   ccue(110, 'bossDefeat', null, 'THE SHARP drops from the brass beam, lands cleanly, adjusts his cuffs, and starts walking toward the next room.'),
   ccue(110, 'bossDefeat', 'the_sharp', 'You took long enough.'),
+
+  // ═══ House of Hearts, Chapter 2: The Mirror Gallery (levels 111-120) ═══
+  // Same "nothing after ON CLEAR -> no postClear cue" rule as Chapter 1.
+  // Only Level 118 has real content after its ON CLEAR marker in the
+  // source text; every other level here either has no marker at all or
+  // nothing follows it, so those carry a preLevel bucket only. Level 120
+  // (the boss) again has no separate BOSS MIDPOINT or postFail block —
+  // THE SHARP's brief "someone who reads too much" tease into Chapter 3
+  // sits entirely inside bossDefeat, same call as Level 110's ending.
+  ccue(111, 'preLevel', null, 'A long gallery of mirrored walls and red lacquer floors. Reflections make every table look doubled. THE SHARP has been studying traffic through the room and claims people are moving according to a pattern that should not exist.'),
+  ccue(111, 'preLevel', null, 'THE SHARP walks beside the PLAYER without greeting them. He is still breathing normally after the pull-ups.'),
+  ccue(111, 'preLevel', 'player', 'Why are you here?'),
+  ccue(111, 'preLevel', 'the_sharp', 'Because somebody sent me a room number.'),
+  ccue(111, 'preLevel', 'player', 'Who?'),
+  ccue(111, 'preLevel', 'the_sharp', 'If I knew, I would have said a name.'),
+  ccue(111, 'preLevel', null, 'He points to the next four-player table.'),
+  ccue(111, 'preLevel', 'the_sharp', 'Sit. Watch the mirrors, not yourself.'),
+
+  ccue(112, 'preLevel', null, 'During the hand, the PLAYER sees the same waiter cross three different mirrors at three different times - yet the real corridor is empty.'),
+  ccue(112, 'preLevel', 'player', 'Did you see that?'),
+  ccue(112, 'preLevel', 'the_sharp', 'Yesterday.'),
+  ccue(112, 'preLevel', 'player', 'And?'),
+  ccue(112, 'preLevel', 'the_sharp', 'He is not the interesting part. The timing is.'),
+
+  ccue(113, 'preLevel', null, 'THE SHARP marks three times on a folded card with a pencil.'),
+  ccue(113, 'preLevel', 'the_sharp', 'Every eleven minutes, a door opens. Every twenty-two, a table changes.'),
+  ccue(113, 'preLevel', 'player', 'You counted that?'),
+  ccue(113, 'preLevel', 'the_sharp', 'I count things.'),
+  ccue(113, 'preLevel', null, "He looks at the PLAYER's discarded card."),
+  ccue(113, 'preLevel', 'the_sharp', 'You also waste motion when you are distracted.'),
+
+  ccue(114, 'preLevel', null, 'Behind a mirror panel is a staff schedule. THE SHARP opens it for exactly three seconds.'),
+  ccue(114, 'preLevel', 'player', 'You break into places now?'),
+  ccue(114, 'preLevel', 'the_sharp', 'I opened an unlocked panel.'),
+  ccue(114, 'preLevel', 'player', 'That is your defense?'),
+  ccue(114, 'preLevel', 'the_sharp', 'No. That is the fact.'),
+  ccue(114, 'preLevel', null, 'A line on the schedule reads: PLAYER - MIRROR GALLERY - DAY 1.'),
+  ccue(114, 'preLevel', 'player', 'Day one? This was printed before I got here.'),
+  ccue(114, 'preLevel', 'the_sharp', 'Now you are paying attention.'),
+
+  ccue(115, 'preLevel', null, 'A woman in a red evening suit crosses the gallery as if the entire floor belongs to her rhythm. Everyone unconsciously makes room.'),
+  ccue(115, 'preLevel', 'the_sharp', 'That is the Dancer.'),
+  ccue(115, 'preLevel', 'player', 'Does she dance?'),
+  ccue(115, 'preLevel', 'the_sharp', 'Not when anyone asks.'),
+  ccue(115, 'preLevel', null, 'THE DANCER glances at the PLAYER in a mirror rather than directly.'),
+  ccue(115, 'preLevel', 'the_dancer', 'You are early.'),
+
+  ccue(116, 'preLevel', null, 'The PLAYER catches up to THE DANCER between tables.'),
+  ccue(116, 'preLevel', 'player', 'You said I was early.'),
+  ccue(116, 'preLevel', 'the_dancer', 'Did I?'),
+  ccue(116, 'preLevel', 'player', 'Yes.'),
+  ccue(116, 'preLevel', 'the_dancer', 'Then perhaps the schedule was wrong.'),
+  ccue(116, 'preLevel', 'player', 'Which schedule?'),
+  ccue(116, 'preLevel', null, 'She smiles and walks away.'),
+  ccue(116, 'preLevel', 'the_sharp', 'She wanted you to ask that.'),
+  ccue(116, 'preLevel', 'player', 'Helpful.'),
+  ccue(116, 'preLevel', 'the_sharp', 'I am not here to comfort you.'),
+
+  ccue(117, 'preLevel', null, 'For the first time, one of the timed doors does not open. THE SHARP stops mid-count.'),
+  ccue(117, 'preLevel', 'the_sharp', 'Interesting.'),
+  ccue(117, 'preLevel', 'player', 'That is your worried face?'),
+  ccue(117, 'preLevel', 'the_sharp', 'This is my interested face.'),
+  ccue(117, 'preLevel', null, 'The door opens six seconds late. THE DANCER is standing behind it.'),
+  ccue(117, 'preLevel', 'the_dancer', 'Patterns are useful. Until someone knows you found them.'),
+
+  ccue(118, 'preLevel', null, 'THE DANCER stands at the far end of the PLAYER table for the entire hand. She never looks at the cards. She watches faces.'),
+  ccue(118, 'preLevel', 'mirror2', 'I hate when she does that.'),
+  ccue(118, 'preLevel', 'player', 'Why?'),
+  ccue(118, 'preLevel', 'mirror2', 'Because afterward she tells you what you were thinking.'),
+  ccue(118, 'postClear', 'the_dancer', 'You distrust compliments. You trust irritation. Interesting.'),
+  ccue(118, 'postClear', 'player', 'You got that from one hand?'),
+  ccue(118, 'postClear', 'the_dancer', 'I got it from him.'),
+  ccue(118, 'postClear', null, 'She nods toward THE SHARP. He looks offended by the efficiency of the answer.'),
+
+  ccue(119, 'preLevel', null, 'One mirror slides aside. A small private table waits behind it. One regular quietly leaves the PLAYER table.'),
+  ccue(119, 'preLevel', 'the_sharp', "Her turn."),
+  ccue(119, 'preLevel', 'player', 'Anything useful before she sits?'),
+  ccue(119, 'preLevel', 'the_sharp', 'Yes.'),
+  ccue(119, 'preLevel', 'player', 'Go on.'),
+  ccue(119, 'preLevel', 'the_sharp', 'Do not let her set your pace.'),
+  ccue(119, 'preLevel', null, 'Beat.'),
+  ccue(119, 'preLevel', 'the_sharp', 'And your left shoulder moves before you dump a dangerous card.'),
+  ccue(119, 'preLevel', 'player', 'You could have mentioned that sooner.'),
+  ccue(119, 'preLevel', 'the_sharp', 'You did not ask.'),
+
+  ccue(120, 'bossIntro', null, 'THE DANCER takes the empty seat. Reflections multiply the four players into dozens.'),
+  ccue(120, 'bossIntro', 'the_dancer', 'Every table has a rhythm. Most players think they choose it.'),
+  ccue(120, 'bossIntro', 'player', 'And you think you do?'),
+  ccue(120, 'bossIntro', 'the_dancer', 'No. I notice who already has.'),
+  ccue(120, 'bossIntro', null, 'The match begins.'),
+  ccue(120, 'bossIntro', 'the_dancer', 'You changed your shoulder.'),
+  ccue(120, 'bossIntro', 'player', 'You noticed.'),
+  ccue(120, 'bossIntro', 'the_dancer', 'That is why he told you.'),
+  ccue(120, 'bossDefeat', null, 'THE DANCER accepts the loss with a small bow.'),
+  ccue(120, 'bossDefeat', 'the_dancer', 'Good. You can change tempo without losing the song.'),
+  ccue(120, 'bossDefeat', 'player', 'The schedule. Who wrote it?'),
+  ccue(120, 'bossDefeat', 'the_dancer', 'Someone who was certain you would follow the heart.'),
+  ccue(120, 'bossDefeat', 'player', 'The Queen?'),
+  ccue(120, 'bossDefeat', 'the_dancer', 'You keep asking for the last page before reading the middle.'),
+  ccue(120, 'bossDefeat', null, 'THE SHARP joins the PLAYER at the door.'),
+  ccue(120, 'bossDefeat', 'the_sharp', 'I am done here.'),
+  ccue(120, 'bossDefeat', 'player', 'That is it?'),
+  ccue(120, 'bossDefeat', 'the_sharp', 'No. I sent someone a copy of the schedule.'),
+  ccue(120, 'bossDefeat', 'player', 'Who?'),
+  ccue(120, 'bossDefeat', 'the_sharp', 'Someone who reads too much.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

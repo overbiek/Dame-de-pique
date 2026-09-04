@@ -8418,6 +8418,10 @@ const CAMPAIGN_CHARACTERS={
   foyer3:{name:'Regular #3',initial:'3'},
   the_host:{name:'The Host',initial:'H'},
   hearts_server:{name:'Server',initial:'Sv'},
+  mirror1:{name:'Regular #1',initial:'1'},
+  mirror2:{name:'Regular #2',initial:'2'},
+  mirror3:{name:'Regular #3',initial:'3'},
+  the_dancer:{name:'The Dancer',initial:'D'},
 };
 // Which three characters sit at an ordinary (non-boss) table per chapter,
 // and who the boss replaces — used by campaignOpponentsHTML so the
@@ -8442,6 +8446,7 @@ const CAMPAIGN_CHAPTER_ROSTER={
   // the usual 2: the screenplay has REGULAR #1 cede the chair THE HOST
   // takes at Level 10, not #3 like every earlier chapter's boss.
   11:{regulars:['foyer1','foyer2','foyer3'],bossSeat:0},
+  12:{regulars:['mirror1','mirror2','mirror3'],bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/

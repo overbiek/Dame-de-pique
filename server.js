@@ -2385,7 +2385,37 @@ const CAMPAIGN_CHARACTERS = {
   gilded2: { id: 'gilded2', name: 'Regular #2' },
   gilded3: { id: 'gilded3', name: 'Regular #3' },
   the_broker: { id: 'the_broker', name: 'The Broker' },
+  // Chapter 9 (internal chapter id 19): The Inner Circle, boss The
+  // Chamberlain. No new regulars — all three ordinary seats are held by
+  // the seven returning bosses, rotating per level (see
+  // CAMPAIGN_CHAPTER_ROSTER's own note).
+  the_chamberlain: { id: 'the_chamberlain', name: 'The Chamberlain' },
 };
+
+// Chapter 9 (The Inner Circle) is the one chapter with no chapter-
+// specific regulars at all — the screenplay puts all seven returning
+// House of Spades bosses "in the room together" (Level 81) instead of
+// introducing new strangers, and the user asked for them to actually
+// hold the three ordinary seats, rotating rather than three of them
+// picked once and stuck there for all 10 levels. `roster.regulars` is
+// therefore allowed to be a FUNCTION of levelId instead of a fixed
+// 3-array — campaignSeatCharacters/campaignOpponentsHTML both check for
+// that. The rotation itself is a plain round-robin, 3 seats advancing 3
+// places through the 7 each level — the screenplay's own dialogue at
+// levels 81-89 has anywhere from 2 to 7 of them speaking in a single
+// scene, far too loose to hang a "who's literally seated" mapping off
+// of, so a mechanical cycle is the only reading that doesn't invent
+// meaning the text doesn't support. Level 90 (the boss) continues the
+// same cycle for its two non-boss seats, then substitutes bossSeat with
+// THE CHAMBERLAIN as usual.
+const CHAPTER9_SEVEN = ['the_sharp', 'the_scholar', 'the_wildcard', 'the_optimist', 'the_jester', 'the_charmer', 'the_closer'];
+// levelId is the internal id (181-190), NOT the on-screen "Table 81-90"
+// label campaignTableLabel derives from it — subtract the chapter's own
+// levelStart (181), not the display number.
+function chapter9Regulars(levelId) {
+  const offset = ((levelId - 181) * 3) % 7;
+  return [CHAPTER9_SEVEN[offset], CHAPTER9_SEVEN[(offset + 1) % 7], CHAPTER9_SEVEN[(offset + 2) % 7]];
+}
 
 // Who sits at an ordinary (non-boss) table per chapter, and which of
 // those three seats the chapter boss takes over at the x0 level. The
@@ -2489,12 +2519,16 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // stands.") — the same one-level-early tease every other chapter's
   // boss uses. Standard bossSeat 2.
   18: { regulars: ['gilded1', 'gilded2', 'gilded3'], bossSeat: 2 },
+  // The Inner Circle. No chapter-specific regulars — see
+  // chapter9Regulars's own note above. Standard bossSeat 2 for THE
+  // CHAMBERLAIN's Level 90 substitution.
+  19: { regulars: chapter9Regulars, bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
   const chapter = (CAMPAIGN_CHAPTERS.find(c => c.id === level.chapter) || {}).id;
   const roster = CAMPAIGN_CHAPTER_ROSTER[chapter] || CAMPAIGN_CHAPTER_ROSTER[1];
-  const ids = roster.regulars.slice();
+  const ids = (typeof roster.regulars === 'function' ? roster.regulars(level.id) : roster.regulars).slice();
   if (level.type === 'BOSS' && level.bossId) ids[roster.bossSeat] = level.bossId;
   return ids;
 }
@@ -2540,6 +2574,7 @@ const CAMPAIGN_CHAPTERS = [
   { id: 16, title: 'The Menagerie Salon', levelStart: 151, levelEnd: 160, slug: 'menagerie_salon', bossId: 'the_keeper' },
   { id: 17, title: 'The Salon of Secrets', levelStart: 161, levelEnd: 170, slug: 'salon_of_secrets', bossId: 'the_confidante' },
   { id: 18, title: 'The Gilded Exchange', levelStart: 171, levelEnd: 180, slug: 'gilded_exchange', bossId: 'the_broker' },
+  { id: 19, title: 'The Inner Circle', levelStart: 181, levelEnd: 190, slug: 'inner_circle', bossId: 'the_chamberlain' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -3381,6 +3416,47 @@ const CAMPAIGN_LEVELS = {
            parseHand('3♥ A♦ 6♥ 4♠ 6♠ A♠ 6♦ A♥ J♥ Q♦ 9♣ 7♦ J♠'),
          ],
          objective: { type: 'score', min: 53, gold: 64 } },
+
+  // ═══ House of Hearts, Chapter 9: The Inner Circle (levels 181-190) ═══
+  // Same source/sheet/format as Chapters 1-8. Direction switches mid-
+  // chapter (181-186 'across', 187-189 'keep'). 184/185/188 show "Miss"
+  // in the sheet's own In Band? column.
+  181: { id: 181, chapter: 19, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L181-score-c172', hand: parseHand('4♦ 9♣ K♣ 3♥ Q♠ A♦ J♣ 7♦ 3♠ K♥ 10♥ 2♥ J♥'),
+         objective: { type: 'score', min: 17, gold: 20 } },
+  182: { id: 182, chapter: 19, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L182-score-c77', hand: parseHand('K♣ A♠ 10♦ 4♣ 9♥ Q♠ 3♣ K♠ 2♥ J♣ 6♥ 5♥ K♥'),
+         objective: { type: 'score', min: 35, gold: 43 } },
+  183: { id: 183, chapter: 19, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L183-clean-c498', hand: parseHand('4♠ 4♣ J♦ A♥ 9♠ J♠ 6♦ 6♠ A♠ 7♦ 5♣ 8♣ 10♣'),
+         objective: { type: 'cleanHand', goldScoreBar: 0 } },
+  184: { id: 184, chapter: 19, type: 'Harder', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L184-score-c973', hand: parseHand('10♣ 8♣ 2♥ 2♣ 4♥ 8♦ Q♣ A♠ K♣ 9♥ 4♣ J♥ 6♦'),
+         objective: { type: 'score', min: 36, gold: 45 } },
+  185: { id: 185, chapter: 19, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L185-score-c1143', hand: parseHand('A♦ Q♦ 6♣ 6♥ 10♥ J♥ Q♠ J♠ 4♥ J♦ 6♦ 3♦ Q♥'),
+         objective: { type: 'score', min: 43, gold: 45 } },
+  186: { id: 186, chapter: 19, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L186-queen-c247', hand: parseHand('Q♥ 5♠ 8♠ 3♠ 3♣ 5♦ A♣ J♠ 10♣ 8♦ Q♣ 8♥ Q♦'),
+         objective: { type: 'avoidQueen', goldScoreBar: 2 } },
+  187: { id: 187, chapter: 19, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L187-score-c295', hand: parseHand('A♠ 10♥ 5♦ 7♠ 8♣ 7♦ Q♠ K♠ 4♣ 4♠ Q♥ 7♥ J♥'),
+         objective: { type: 'score', min: 3, gold: 14 } },
+  188: { id: 188, chapter: 19, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L188-score-c297', hand: parseHand('7♥ 3♣ 9♦ 9♠ J♠ 10♥ 8♦ K♠ Q♣ J♥ A♥ 4♥ 9♥'),
+         objective: { type: 'score', min: 28, gold: 30 } },
+  189: { id: 189, chapter: 19, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L189-tricks-c947', hand: parseHand('5♣ 8♠ Q♠ A♣ 7♠ 8♣ J♣ 10♣ 7♦ 7♣ A♦ Q♥ K♦'),
+         objective: { type: 'trickCount', minTricks: 10, goldTricks: 11 } },
+  190: { id: 190, chapter: 19, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_chamberlain',
+         seed: 'ddp-ch2-L190-boss-c177',
+         hands4: [
+           parseHand('10♦ J♣ Q♥ 7♣ 10♠ Q♠ 4♠ K♠ 4♣ A♣ 6♣ 7♦ J♥'),
+           parseHand('2♣ Q♠ 8♠ 2♠ 2♦ 10♦ A♣ 4♣ 8♣ 6♣ 6♥ Q♦ 9♠'),
+           parseHand('J♥ Q♥ 6♦ 4♦ 9♥ 3♦ Q♠ K♠ 10♦ 7♦ 9♦ A♣ 9♣'),
+           parseHand('3♥ K♠ 9♥ 10♥ A♦ 8♥ 6♠ 9♠ A♣ J♣ Q♥ 6♣ 2♣'),
+         ],
+         objective: { type: 'score', min: 54, gold: 57 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -5701,6 +5777,112 @@ const CAMPAIGN_STORY_CUES = [
   ccue(180, 'bossDefeat', 'the_closer', 'I also know when they are stalling.'),
   ccue(180, 'bossDefeat', null, 'THE BROKER turns back to the PLAYER.'),
   ccue(180, 'bossDefeat', 'the_broker', 'The seven are waiting.'),
+
+  // ═══ House of Hearts, Chapter 9: The Inner Circle (levels 181-190) ═══
+  // No new "returning guide" here — all seven are on screen together for
+  // the first time, and everyone gets lines across this chapter rather
+  // than one character carrying it. No level has an ON CLEAR marker
+  // before Level 190, so 181-189 are preLevel-only.
+  ccue(181, 'preLevel', null, 'A long side room opens off the card floor. THE SHARP, THE SCHOLAR, THE WILDCARD, THE OPTIMIST, THE JESTER, THE CHARMER and THE CLOSER are all there.'),
+  ccue(181, 'preLevel', 'the_wildcard', 'Finally. Group project.'),
+  ccue(181, 'preLevel', 'the_sharp', 'Do not call it that.'),
+  ccue(181, 'preLevel', 'the_scholar', 'Woof.'),
+  ccue(181, 'preLevel', 'the_optimist', 'I missed this.'),
+  ccue(181, 'preLevel', 'the_closer', 'No one asked.'),
+  ccue(181, 'preLevel', 'player', 'Why are all of you here?'),
+  ccue(181, 'preLevel', 'the_charmer', 'That is what we were hoping you knew.'),
+
+  ccue(182, 'preLevel', null, 'The seven place what they found on one table: the schedule, copied letters, staff assignments, bond ledger notes, brass club token, names and authorization slips.'),
+  ccue(182, 'preLevel', 'the_scholar', 'Individually, these prove almost nothing.'),
+  ccue(182, 'preLevel', 'the_sharp', 'Together, they prove preparation.'),
+  ccue(182, 'preLevel', 'the_closer', 'And coordination.'),
+  ccue(182, 'preLevel', 'the_jester', 'And terrible stationery choices.'),
+  ccue(182, 'preLevel', 'the_optimist', 'Focus.'),
+  ccue(182, 'preLevel', 'the_jester', 'That was me focusing.'),
+
+  ccue(183, 'preLevel', null, 'A tall man in a dark red tailcoat enters. Nobody introduced him, yet every staff member straightens.'),
+  ccue(183, 'preLevel', 'the_closer', 'There.'),
+  ccue(183, 'preLevel', 'player', 'In charge?'),
+  ccue(183, 'preLevel', 'the_closer', 'Closer than anyone we have seen.'),
+  ccue(183, 'preLevel', 'the_chamberlain', 'How flattering.'),
+  ccue(183, 'preLevel', null, 'He looks around the room.'),
+  ccue(183, 'preLevel', 'the_chamberlain', 'The Queen asked that all eight of you reach this floor.'),
+
+  ccue(184, 'preLevel', 'player', 'Eight?'),
+  ccue(184, 'preLevel', 'the_chamberlain', 'Seven guests. One player.'),
+  ccue(184, 'preLevel', 'the_sharp', 'Why?'),
+  ccue(184, 'preLevel', 'the_chamberlain', 'Because each of you notices a different form of dishonesty.'),
+  ccue(184, 'preLevel', 'the_scholar', 'And she wanted a panel of experts?'),
+  ccue(184, 'preLevel', 'the_chamberlain', 'She wanted company for the truth.'),
+
+  ccue(185, 'preLevel', null, 'The room goes still.'),
+  ccue(185, 'preLevel', 'player', 'Did the Queen of Spades send me here?'),
+  ccue(185, 'preLevel', 'the_chamberlain', 'She left you a heart.'),
+  ccue(185, 'preLevel', 'player', 'That is not the same thing.'),
+  ccue(185, 'preLevel', 'the_chamberlain', 'No. It is more elegant.'),
+  ccue(185, 'preLevel', 'the_wildcard', 'I hate when the mysterious people are good at lines.'),
+
+  ccue(186, 'preLevel', 'the_scholar', 'The letters prove the Houses communicate.'),
+  ccue(186, 'preLevel', 'the_chamberlain', 'Of course they do.'),
+  ccue(186, 'preLevel', 'player', 'Are they allies?'),
+  ccue(186, 'preLevel', 'the_chamberlain', 'Sometimes.'),
+  ccue(186, 'preLevel', 'player', 'Enemies?'),
+  ccue(186, 'preLevel', 'the_chamberlain', 'Sometimes.'),
+  ccue(186, 'preLevel', 'the_jester', 'Wonderful. Diplomacy.'),
+
+  ccue(187, 'preLevel', 'the_charmer', 'Do the Queens know each other personally?'),
+  ccue(187, 'preLevel', 'the_chamberlain', 'Yes.'),
+  ccue(187, 'preLevel', null, 'A rare clean answer. Everyone notices.'),
+  ccue(187, 'preLevel', 'player', 'Finally.'),
+  ccue(187, 'preLevel', 'the_chamberlain', 'Do not celebrate yet.'),
+  ccue(187, 'preLevel', 'player', 'Why?'),
+  ccue(187, 'preLevel', 'the_chamberlain', 'Because knowing someone is not the same as serving the same purpose.'),
+
+  ccue(188, 'preLevel', null, 'THE CLOSER lays the second-seal paper beside the club token.'),
+  ccue(188, 'preLevel', 'the_closer', 'Who authorizes the Queen?'),
+  ccue(188, 'preLevel', 'the_chamberlain', 'Wrong question.'),
+  ccue(188, 'preLevel', 'the_closer', 'No. Inconvenient question.'),
+  ccue(188, 'preLevel', null, 'THE CHAMBERLAIN gives him a small approving nod.'),
+  ccue(188, 'preLevel', 'the_chamberlain', 'Better.'),
+  ccue(188, 'preLevel', 'player', 'So there is someone above the Houses?'),
+  ccue(188, 'preLevel', 'the_chamberlain', 'I did not say that.'),
+  ccue(188, 'preLevel', 'the_optimist', 'That means maybe.'),
+  ccue(188, 'preLevel', 'the_chamberlain', 'That means I did not say that.'),
+
+  // The one-level-early tease: THE CHAMBERLAIN takes the empty fourth
+  // seat here, ahead of Level 190's boss fight.
+  ccue(189, 'preLevel', null, 'Two red doors at the end of the floor unlock. A heart-shaped line of light appears between them.'),
+  ccue(189, 'preLevel', 'the_chamberlain', 'The Queen will see you.'),
+  ccue(189, 'preLevel', 'player', 'All of us?'),
+  ccue(189, 'preLevel', 'the_chamberlain', 'No.'),
+  ccue(189, 'preLevel', null, 'The seven exchange looks.'),
+  ccue(189, 'preLevel', 'the_sharp', 'You are going alone.'),
+  ccue(189, 'preLevel', 'the_optimist', 'You will be fine.'),
+  ccue(189, 'preLevel', 'the_closer', 'Do not tell him that.'),
+  ccue(189, 'preLevel', 'the_optimist', 'He will probably be fine.'),
+  ccue(189, 'preLevel', 'the_wildcard', 'Much better.'),
+  ccue(189, 'preLevel', null, 'THE CHAMBERLAIN takes the empty fourth seat.'),
+
+  // bossDefeat is the immediate table-side reaction (still all together,
+  // doors just opened); chapterExit is the PLAYER actually walking
+  // through them alone — a real scene/departure marker, same split
+  // precedent as every chapter with an explicit transition.
+  ccue(190, 'bossIntro', null, 'INT. INNER CIRCLE FEATURE TABLE - NIGHT'),
+  ccue(190, 'bossIntro', 'the_chamberlain', 'One last table before the throne.'),
+  ccue(190, 'bossIntro', 'player', 'What are you testing?'),
+  ccue(190, 'bossIntro', 'the_chamberlain', 'Whether you still play your own game after seven people fill your head with theirs.'),
+  ccue(190, 'bossIntro', null, 'The boss match begins.'),
+  ccue(190, 'bossDefeat', null, 'THE CHAMBERLAIN stands and opens the red doors.'),
+  ccue(190, 'bossDefeat', 'the_chamberlain', 'Go.'),
+  ccue(190, 'bossDefeat', 'player', 'Any advice?'),
+  ccue(190, 'bossDefeat', 'the_sharp', 'Watch everything.'),
+  ccue(190, 'bossDefeat', 'the_scholar', 'Question the record.'),
+  ccue(190, 'bossDefeat', 'the_wildcard', 'Have fun.'),
+  ccue(190, 'bossDefeat', 'the_optimist', 'Do not catastrophize.'),
+  ccue(190, 'bossDefeat', 'the_jester', 'If she says a platypus fact, verify it.'),
+  ccue(190, 'bossDefeat', 'the_charmer', 'Listen to what she does not ask.'),
+  ccue(190, 'bossDefeat', 'the_closer', 'Know when the conversation is already decided.'),
+  ccue(190, 'chapterExit', null, 'The PLAYER looks at all seven, then walks through the doors alone.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

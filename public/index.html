@@ -8454,7 +8454,16 @@ const CAMPAIGN_CHARACTERS={
   gilded2:{name:'Regular #2',initial:'2'},
   gilded3:{name:'Regular #3',initial:'3'},
   the_broker:{name:'The Broker',initial:'B'},
+  the_chamberlain:{name:'The Chamberlain',initial:'Ch'},
 };
+// Mirrors chapter9Regulars in server.js — Chapter 9 has no chapter-
+// specific regulars, the seven returning bosses rotate through the
+// three ordinary seats instead. Keep in step with the server copy.
+const CHAPTER9_SEVEN=['the_sharp','the_scholar','the_wildcard','the_optimist','the_jester','the_charmer','the_closer'];
+function chapter9Regulars(levelId){
+  const offset=((levelId-181)*3)%7;
+  return [CHAPTER9_SEVEN[offset],CHAPTER9_SEVEN[(offset+1)%7],CHAPTER9_SEVEN[(offset+2)%7]];
+}
 // Which three characters sit at an ordinary (non-boss) table per chapter,
 // and who the boss replaces — used by campaignOpponentsHTML so the
 // level-detail popup shows the right cast instead of always Chapter 1's.
@@ -8485,6 +8494,7 @@ const CAMPAIGN_CHAPTER_ROSTER={
   16:{regulars:['menagerie1','menagerie2','menagerie3'],bossSeat:2},
   17:{regulars:['salon1','salon2','salon3'],bossSeat:2},
   18:{regulars:['gilded1','gilded2','gilded3'],bossSeat:2},
+  19:{regulars:chapter9Regulars,bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/
@@ -9181,7 +9191,7 @@ const CAMP_PASS_DIR_TEXT={left:'Pass 2 cards left',right:'Pass 2 cards right',ac
 // something sensible rather than an empty popup).
 function campaignOpponentsHTML(level){
   const roster=CAMPAIGN_CHAPTER_ROSTER[level&&level.chapter]||CAMPAIGN_CHAPTER_ROSTER[1];
-  const ids=roster.regulars.slice();
+  const ids=(typeof roster.regulars==='function'?roster.regulars(level&&level.id):roster.regulars).slice();
   if(level&&level.type==='BOSS'&&level.bossId) ids[roster.bossSeat]=level.bossId;
   return ids.map(id=>{
     const ch=CAMPAIGN_CHARACTERS[id]||{name:'?'};

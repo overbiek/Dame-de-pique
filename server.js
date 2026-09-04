@@ -2299,6 +2299,19 @@ const CAMPAIGN_CHARACTERS = {
   mirror2:     { id: 'mirror2',     name: 'Regular #2' },
   mirror3:     { id: 'mirror3',     name: 'Regular #3' },
   the_dancer:  { id: 'the_dancer',  name: 'The Dancer' },
+  // Chapter 3 (internal chapter id 13): The Letter Archive, boss The
+  // Archivist. THE SCHOLAR is the same the_scholar from House of Spades
+  // (its own Chapter 3, "The Grand Library") — same "returning seven"
+  // reuse as the_sharp in Chapter 2. He never sits this chapter (always
+  // "at a desk" or standing beside the table, same as Chapter 2's
+  // the_sharp), so archive1-3 hold all three ordinary seats until THE
+  // ARCHIVIST claims one at Level 130. THE WILDCARD (also reused,
+  // already exists) makes a one-line cameo at the very end, teasing
+  // Chapter 4.
+  archive1:    { id: 'archive1',    name: 'Regular #1' },
+  archive2:    { id: 'archive2',    name: 'Regular #2' },
+  archive3:    { id: 'archive3',    name: 'Regular #3' },
+  the_archivist: { id: 'the_archivist', name: 'The Archivist' },
 };
 
 // Who sits at an ordinary (non-boss) table per chapter, and which of
@@ -2363,6 +2376,13 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // cue.", so this follows the majority convention every other chapter
   // but Chapter 1 already uses).
   12: { regulars: ['mirror1', 'mirror2', 'mirror3'], bossSeat: 2 },
+  // The Letter Archive. THE SCHOLAR reads at a desk / stands beside the
+  // table the whole chapter (never described seated), so archive1-3 hold
+  // all three ordinary seats until THE ARCHIVIST unlocks the fourth
+  // chair and sits at Level 129's own preLevel beat (no ON CLEAR marker
+  // that level, so it's the very last line before Level 130 begins).
+  // Standard bossSeat 2 — no script line names which regular it replaces.
+  13: { regulars: ['archive1', 'archive2', 'archive3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2408,6 +2428,7 @@ const CAMPAIGN_CHAPTERS = [
   // placeholder like every "not dropped in yet" chapter before it.
   { id: 11, title: 'The Red Foyer', levelStart: 101, levelEnd: 110, slug: 'red_foyer', bossId: 'the_host' },
   { id: 12, title: 'The Mirror Gallery', levelStart: 111, levelEnd: 120, slug: 'mirror_gallery', bossId: 'the_dancer' },
+  { id: 13, title: 'The Letter Archive', levelStart: 121, levelEnd: 130, slug: 'letter_archive', bossId: 'the_archivist' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -2974,6 +2995,49 @@ const CAMPAIGN_LEVELS = {
            parseHand('6♦ J♠ 4♠ 9♦ A♠ 7♠ 10♠ 9♥ 10♣ A♦ 5♠ J♥ J♣'),
          ],
          objective: { type: 'score', min: 25, gold: 37 } },
+
+  // ═══ House of Hearts, Chapter 3: The Letter Archive (levels 121-130) ═══
+  // Same source/sheet/format as Chapters 1-2. Direction is 'left' for
+  // this whole chapter (not 'keep' like 1-2) — matches the sheet's own
+  // Direction column, transcribed as given. Several rows show "Miss" in
+  // the sheet's own In Band? column (124/127) — same "trust the measured
+  // trial data over the target band" call as every earlier chapter.
+  121: { id: 121, chapter: 13, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L121-score-c738', hand: parseHand('A♦ 10♥ 3♥ J♥ 7♦ 2♣ 4♣ 6♠ 10♠ 9♦ 3♦ Q♦ 9♠'),
+         objective: { type: 'score', min: 17, gold: 24 } },
+  122: { id: 122, chapter: 13, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L122-score-c308', hand: parseHand('K♠ 4♥ A♦ A♠ 10♠ 10♦ 4♣ 2♥ J♥ 3♥ 7♣ J♠ 7♥'),
+         objective: { type: 'score', min: 24, gold: 30 } },
+  123: { id: 123, chapter: 13, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L123-tricks-c256', hand: parseHand('8♥ 9♥ Q♣ J♣ 10♣ 2♠ 10♦ 5♥ K♦ 6♥ Q♠ 2♥ 4♣'),
+         objective: { type: 'trickCount', minTricks: 5, goldTricks: 6 } },
+  124: { id: 124, chapter: 13, type: 'Harder', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L124-score-c498', hand: parseHand('K♥ 6♠ 3♠ 4♦ 7♥ J♠ 8♥ 6♥ 4♣ K♠ 2♠ 7♠ 9♥'),
+         objective: { type: 'score', min: 49, gold: 60 } },
+  125: { id: 125, chapter: 13, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L125-score-c22', hand: parseHand('A♣ 7♥ 4♠ A♦ 4♦ 6♠ J♣ 10♦ 5♣ K♣ J♠ 9♦ 3♣'),
+         objective: { type: 'score', min: -2, gold: 60 } },
+  126: { id: 126, chapter: 13, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L126-void-c102', hand: parseHand('6♦ 8♦ 4♣ 7♠ A♥ 2♦ 10♥ 10♠ 6♠ 4♠ 5♥ 5♣ 9♠'),
+         objective: { type: 'suitVoid', suit: '♦', voidByTrick: 7, goldByTrick: 4 } },
+  127: { id: 127, chapter: 13, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L127-score-c1176', hand: parseHand('K♦ 5♣ Q♥ J♠ 8♦ 7♥ 6♠ A♠ 5♦ K♥ A♣ J♣ 7♣'),
+         objective: { type: 'score', min: 35, gold: 41 } },
+  128: { id: 128, chapter: 13, type: 'Harder', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L128-score-c1019', hand: parseHand('9♠ 6♥ 2♣ 9♥ 5♦ 3♥ 3♠ 9♦ A♦ J♥ K♦ 8♠ 10♣'),
+         objective: { type: 'score', min: 30, gold: 31 } },
+  129: { id: 129, chapter: 13, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L129-clean-c28', hand: parseHand('Q♦ 9♠ A♥ J♥ 4♥ 8♠ 10♠ 2♣ 3♣ 5♠ 10♣ 8♥ 5♦'),
+         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+  130: { id: 130, chapter: 13, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_archivist',
+         seed: 'ddp-ch2-L130-boss-c293',
+         hands4: [
+           parseHand('4♥ 7♣ 9♣ 3♣ 3♥ 6♠ 10♦ 7♠ 6♣ Q♠ 5♣ Q♦ 4♠'),
+           parseHand('4♦ K♦ 2♣ 10♠ K♣ 7♥ 9♠ 7♣ J♣ 6♠ J♠ 10♣ A♥'),
+           parseHand('4♦ Q♥ 8♣ Q♣ 10♥ J♥ 6♦ 5♥ A♠ 9♦ K♥ 7♣ 2♦'),
+           parseHand('K♣ 9♠ 5♦ 5♣ 4♦ 8♣ A♥ Q♣ K♠ 9♦ 3♦ K♦ 10♠'),
+         ],
+         objective: { type: 'score', min: 28, gold: 37 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -4743,6 +4807,103 @@ const CAMPAIGN_STORY_CUES = [
   ccue(120, 'bossDefeat', 'the_sharp', 'No. I sent someone a copy of the schedule.'),
   ccue(120, 'bossDefeat', 'player', 'Who?'),
   ccue(120, 'bossDefeat', 'the_sharp', 'Someone who reads too much.'),
+
+  // ═══ House of Hearts, Chapter 3: The Letter Archive (levels 121-130) ═══
+  // Same "nothing after ON CLEAR -> no postClear cue" rule as Chapters
+  // 1-2 — this chapter has exactly ONE ON CLEAR marker in the whole
+  // source text (Level 130's own), so Levels 121-129 carry a preLevel
+  // bucket only. Level 130's ending (THE WILDCARD's cameo, teasing
+  // Chapter 4) sits entirely in bossDefeat, same call as every earlier
+  // boss level's short transition tease.
+  ccue(121, 'preLevel', null, 'A quiet wing filled with red leather correspondence books, private boxes and centuries of sealed letters. THE SCHOLAR is already at a desk with three books open, round glasses low on his nose.'),
+  ccue(121, 'preLevel', null, 'THE SCHOLAR turns a page as the PLAYER enters. He does not look up.'),
+  ccue(121, 'preLevel', 'the_scholar', 'Woof.'),
+  ccue(121, 'preLevel', 'player', 'Good to see you too.'),
+  ccue(121, 'preLevel', 'the_scholar', 'The Sharp sent me a photograph of a schedule and three sentences with no punctuation.'),
+  ccue(121, 'preLevel', 'player', 'That sounds like him.'),
+  ccue(121, 'preLevel', 'the_scholar', 'It was practically emotional.'),
+
+  ccue(122, 'preLevel', null, 'The PLAYER plays at a table between archive cabinets while THE SCHOLAR reads a bundle of old correspondence nearby.'),
+  ccue(122, 'preLevel', 'the_scholar', 'This House has kept letters for at least ninety years.'),
+  ccue(122, 'preLevel', 'player', 'From who?'),
+  ccue(122, 'preLevel', 'the_scholar', 'From everyone who thought paper was safer than memory.'),
+  ccue(122, 'preLevel', null, 'He barks once, quietly, and turns another page.'),
+  ccue(122, 'preLevel', 'player', 'Still doing that.'),
+  ccue(122, 'preLevel', 'the_scholar', 'Yes.'),
+
+  ccue(123, 'preLevel', null, 'THE SCHOLAR slides a letter under the table edge between hands. Two wax marks sit on the back: a heart and a spade.'),
+  ccue(123, 'preLevel', 'player', 'They wrote to each other.'),
+  ccue(123, 'preLevel', 'the_scholar', 'Houses do not exist in separate universes.'),
+  ccue(123, 'preLevel', 'player', 'The Queens know each other?'),
+  ccue(123, 'preLevel', 'the_scholar', 'That letter predates the women currently wearing either title.'),
+  ccue(123, 'preLevel', null, 'The PLAYER looks at him.'),
+  ccue(123, 'preLevel', 'player', 'Wearing the title?'),
+  ccue(123, 'preLevel', 'the_scholar', 'Play.'),
+
+  ccue(124, 'preLevel', null, 'A thin man in red gloves appears at the end of the aisle and closes a cabinet with a key.'),
+  ccue(124, 'preLevel', 'the_archivist', 'Some letters are private.'),
+  ccue(124, 'preLevel', 'the_scholar', 'Most history is.'),
+  ccue(124, 'preLevel', 'the_archivist', 'And yet you keep touching it.'),
+  ccue(124, 'preLevel', 'the_scholar', 'That is how reading works.'),
+  ccue(124, 'preLevel', null, 'THE ARCHIVIST gives the PLAYER a measured look.'),
+  ccue(124, 'preLevel', 'the_archivist', 'Your friend is exhausting.'),
+  ccue(124, 'preLevel', 'player', 'You get used to the barking.'),
+
+  ccue(125, 'preLevel', null, 'A ledger lists four columns marked only by suit symbols: spade, heart, club, diamond.'),
+  ccue(125, 'preLevel', 'player', 'There are records for all four.'),
+  ccue(125, 'preLevel', 'the_scholar', 'Yes.'),
+  ccue(125, 'preLevel', 'player', 'Four Houses.'),
+  ccue(125, 'preLevel', 'the_scholar', 'At least four.'),
+  ccue(125, 'preLevel', 'player', 'At least?'),
+  ccue(125, 'preLevel', 'the_scholar', 'I enjoy leaving you with something to worry about.'),
+  ccue(125, 'preLevel', 'player', 'That is new.'),
+  ccue(125, 'preLevel', 'the_scholar', 'Woof.'),
+
+  ccue(126, 'preLevel', null, 'A sequence of numbered letters skips one entry. The missing number matches the night the PLAYER entered the House of Spades.'),
+  ccue(126, 'preLevel', 'player', 'What was here?'),
+  ccue(126, 'preLevel', 'the_scholar', 'Something recent enough to matter.'),
+  ccue(126, 'preLevel', 'the_archivist', 'Something removed by someone authorized.'),
+  ccue(126, 'preLevel', 'player', 'You?'),
+  ccue(126, 'preLevel', 'the_archivist', 'If it were me, the gap would not be visible.'),
+
+  ccue(127, 'preLevel', null, 'THE SCHOLAR finds a carbon impression on the page beneath the missing letter. Only two lines can be read.'),
+  ccue(127, 'preLevel', 'the_scholar', '"The player has entered." And below it: "Send the red mark when ready."'),
+  ccue(127, 'preLevel', 'player', 'Who signed it?'),
+  ccue(127, 'preLevel', 'the_scholar', 'Initials. H.Q.'),
+  ccue(127, 'preLevel', 'player', 'Heart Queen?'),
+  ccue(127, 'preLevel', 'the_scholar', 'Or Harold Quince. Do not marry a theory because it is attractive.'),
+
+  ccue(128, 'preLevel', null, 'THE ARCHIVIST remains beside the PLAYER table through the whole hand, key ring motionless in one hand.'),
+  ccue(128, 'preLevel', 'the_archivist', 'You came here because of one symbol on one card.'),
+  ccue(128, 'preLevel', 'player', 'Correct.'),
+  ccue(128, 'preLevel', 'the_archivist', 'That is either admirable or very easy to manipulate.'),
+  ccue(128, 'preLevel', 'player', 'Which do you think?'),
+  ccue(128, 'preLevel', 'the_archivist', 'I keep records. I do not give comfort.'),
+
+  ccue(129, 'preLevel', null, 'One archive box sits on the feature table. Its label reads: CROSS-HOUSE CORRESPONDENCE.'),
+  ccue(129, 'preLevel', 'the_scholar', 'He will make you earn the key.'),
+  ccue(129, 'preLevel', 'player', 'And if I do?'),
+  ccue(129, 'preLevel', 'the_scholar', 'Then we finally get to read something somebody tried to hide.'),
+  ccue(129, 'preLevel', null, 'THE ARCHIVIST unlocks the fourth chair and sits.'),
+
+  ccue(130, 'bossIntro', 'the_archivist', 'Information changes people before it changes outcomes.'),
+  ccue(130, 'bossIntro', 'player', 'Open the box.'),
+  ccue(130, 'bossIntro', 'the_archivist', 'Win first.'),
+  ccue(130, 'bossIntro', null, 'The boss match begins among shelves of sealed history.'),
+  ccue(130, 'bossDefeat', null, 'THE ARCHIVIST places the key on the table.'),
+  ccue(130, 'bossDefeat', 'the_archivist', 'A promise is a promise.'),
+  ccue(130, 'bossDefeat', null, 'THE SCHOLAR opens the box. Inside are copies of letters between the Houses. Several are signed only with suit symbols.'),
+  ccue(130, 'bossDefeat', 'the_scholar', 'Spade knew Heart was watching.'),
+  ccue(130, 'bossDefeat', 'player', 'Watching me?'),
+  ccue(130, 'bossDefeat', 'the_scholar', 'Yes.'),
+  ccue(130, 'bossDefeat', 'player', 'Why?'),
+  ccue(130, 'bossDefeat', 'the_scholar', 'The letter does not say.'),
+  ccue(130, 'bossDefeat', null, 'He removes one smaller envelope.'),
+  ccue(130, 'bossDefeat', 'the_scholar', 'But this one says the House of Hearts requested "the seven."'),
+  ccue(130, 'bossDefeat', 'player', 'Seven what?'),
+  ccue(130, 'bossDefeat', 'the_scholar', 'People, I think.'),
+  ccue(130, 'bossDefeat', null, 'From the hallway comes a huge familiar laugh.'),
+  ccue(130, 'bossDefeat', 'the_wildcard', 'Please tell me I am one of the seven. I hate being left out.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

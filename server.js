@@ -4555,7 +4555,15 @@ function submitCampaignLevelResult(G) {
     return;
   }
   const socketId = p.socketId;
-  const payload = { levelId: level.id, cleared, gold, metric, score: p.score };
+  // `type` rides along so the client knows whether this was a boss clear
+  // (and therefore whether to queue bossDefeat/chapterExit dialogue)
+  // without keeping its own copy of which level ids are bosses — the
+  // client used to hardcode that in CAMPAIGN_LEVEL_META, which was never
+  // extended past level 50 when chapters 6-10 were added, so every boss
+  // level from 60 through 100 silently skipped its bossDefeat/chapterExit
+  // dialogue on the result screen. Sending it here removes the duplicate
+  // table entirely instead of just patching its range.
+  const payload = { levelId: level.id, cleared, gold, metric, score: p.score, type: level.type };
 
   if (!DB_ENABLED || !p.accountId) {
     // Guests can't reach this at all today (campaign requires login — see

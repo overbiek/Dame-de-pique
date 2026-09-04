@@ -9082,10 +9082,17 @@ function renderCampaignResult(){
   const el=$('f-campaign');
   if(!el||!lastCampaignResult) return;
   const d=lastCampaignResult;
-  const level=CAMPAIGN_LEVEL_META[d.levelId]||{id:d.levelId,type:'Normal'};
+  // d.type comes straight from the server's own level record now (see
+  // submitCampaignLevelResult, server.js) rather than a client-side
+  // id->type table — that table (CAMPAIGN_LEVEL_META) was never extended
+  // past level 50 when chapters 6-10 were added, so every boss level from
+  // 60 through 100 silently fell through to 'Normal' here and skipped its
+  // bossDefeat/chapterExit dialogue entirely. Falling back to 'Normal' for
+  // an older cached client that predates the server sending `type`.
+  const isBoss=(d.type||'Normal')==='BOSS';
   let h='<div class="empty-state" style="padding-top:14px">';
   h+=`<div class="empty-icon">${d.gold?'★':d.cleared?'✓':'↻'}</div>`;
-  h+=`<h3>Table ${d.levelId}${level.type==='BOSS'?' — Boss Cleared':''} ${d.gold?'— Gold':d.cleared?'— Cleared':'— Not this time'}</h3>`;
+  h+=`<h3>Table ${d.levelId}${isBoss?' — Boss Cleared':''} ${d.gold?'— Gold':d.cleared?'— Cleared':'— Not this time'}</h3>`;
   h+=`<p>Score <span class="cb-figure" id="camp-result-score">0</span>`
     +(d.creditsAwarded?` &middot; +<span class="cb-figure" id="camp-result-credits">0</span> credits`:'')+'</p>';
   if(d.guest) h+='<p>Log in to keep your progress and earn credits.</p>';
@@ -9096,27 +9103,13 @@ function renderCampaignResult(){
   if(d.creditsAwarded) animateNumber($('camp-result-credits'),0,d.creditsAwarded,650);
 
   const queue=d.cleared?['postClear']:['postFail'];
-  if(d.cleared&&level.type==='BOSS') queue.push('bossDefeat','chapterExit');
+  if(d.cleared&&isBoss) queue.push('bossDefeat','chapterExit');
   const runNext=()=>{
     if(!queue.length){ lastCampaignResult=null; return; }
     campaignMaybeShow(d.levelId,queue.shift(),runNext);
   };
   runNext();
 }
-// Static id->type lookup for the result screen, since campaignData may
-// already have been cleared (see campaignResult above) by the time this
-// renders. Kept intentionally tiny — just enough to know if Table 10 was
-// a boss clear for the result heading and the bossDefeat/chapterExit cues.
-const CAMPAIGN_LEVEL_META={1:{type:'Normal'},2:{type:'Normal'},3:{type:'Harder'},4:{type:'Normal'},
-  5:{type:'Normal'},6:{type:'Harder'},7:{type:'Normal'},8:{type:'Normal'},9:{type:'Harder'},10:{type:'BOSS'},
-  11:{type:'Normal'},12:{type:'Harder'},13:{type:'Normal'},14:{type:'Normal'},15:{type:'Harder'},
-  16:{type:'Normal'},17:{type:'Normal'},18:{type:'Harder'},19:{type:'Normal'},20:{type:'BOSS'},
-  21:{type:'Harder'},22:{type:'Normal'},23:{type:'Normal'},24:{type:'Harder'},25:{type:'Normal'},
-  26:{type:'Normal'},27:{type:'Harder'},28:{type:'Normal'},29:{type:'Normal'},30:{type:'BOSS'},
-  31:{type:'Normal'},32:{type:'Normal'},33:{type:'Harder'},34:{type:'Normal'},35:{type:'Normal'},
-  36:{type:'Harder'},37:{type:'Normal'},38:{type:'Normal'},39:{type:'Harder'},40:{type:'BOSS'},
-  41:{type:'Normal'},42:{type:'Harder'},43:{type:'Normal'},44:{type:'Normal'},45:{type:'Harder'},
-  46:{type:'Normal'},47:{type:'Normal'},48:{type:'Harder'},49:{type:'Normal'},50:{type:'BOSS'}};
 
 // Drives every "roll the number upward" moment (Campaign's credit/score
 // counters) — no prior counter animation existed anywhere in this

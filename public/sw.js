@@ -63,7 +63,18 @@
 // diamond overhangs (on request, so the new lobby-seat-card overflow
 // treatment — see .slot-bg-art's own CSS note — doesn't need as much
 // clearance between rows). Same filenames, same in-place-overwrite trap.
-const CACHE = 'ddp-v16';
+// v16: replaced icon-192/512, icon-maskable-512 and apple-touch-icon in
+// place again (Ace-of-spades card -> the black envelope with the gold
+// spade seal from the campaign prologue's own opening beat), same v10
+// trap and same fix. The maskable variant is composited fresh rather
+// than a plain resize of the source: the source is full-bleed with the
+// envelope's corners close to the frame edges, which a circular/squircle
+// launcher mask would clip — content is scaled to 72% of the canvas on
+// a solid near-black background sampled from the source's own corner
+// colour, comfortably inside the standard ~80% maskable safe zone. The
+// two 'any'-purpose icons and the Apple touch icon stay plain resizes,
+// same convention as the icon they replaced.
+const CACHE = 'ddp-v17';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
                 '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 

@@ -2363,6 +2363,18 @@ const CAMPAIGN_CHARACTERS = {
   menagerie2: { id: 'menagerie2', name: 'Regular #2' },
   menagerie3: { id: 'menagerie3', name: 'Regular #3' },
   the_keeper: { id: 'the_keeper', name: 'The Keeper' },
+  // Chapter 7 (internal chapter id 17): The Salon of Secrets, boss The
+  // Confidante. THE CHARMER is the same the_charmer from House of Spades
+  // (its own Chapter 7, "The Grand Ballroom") — same "returning seven"
+  // reuse pattern. Same as Chapter 6, none of the three ordinary
+  // regulars ever get a line — only THE CHARMER, THE CONFIDANTE and the
+  // PLAYER speak — so salon1-3 exist purely for the seating/roster
+  // mechanism. THE CLOSER (also reused, already exists) makes a one-line
+  // cameo at the very end, teasing Chapter 8.
+  salon1: { id: 'salon1', name: 'Regular #1' },
+  salon2: { id: 'salon2', name: 'Regular #2' },
+  salon3: { id: 'salon3', name: 'Regular #3' },
+  the_confidante: { id: 'the_confidante', name: 'The Confidante' },
 };
 
 // Who sits at an ordinary (non-boss) table per chapter, and which of
@@ -2453,6 +2465,13 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // preLevel beat ("takes the fourth chair") — the same one-level-early
   // tease every other chapter's boss uses. Standard bossSeat 2.
   16: { regulars: ['menagerie1', 'menagerie2', 'menagerie3'], bossSeat: 2 },
+  // The Salon of Secrets. THE CHARMER mingles (greeting guests, walking
+  // between tables) rather than holding a chair, so salon1-3 hold all
+  // three ordinary seats until THE CONFIDANTE claims one at Level 169's
+  // own preLevel beat ("rises and gestures to the empty fourth chair")
+  // — the same one-level-early tease every other chapter's boss uses.
+  // Standard bossSeat 2.
+  17: { regulars: ['salon1', 'salon2', 'salon3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2502,6 +2521,7 @@ const CAMPAIGN_CHAPTERS = [
   { id: 14, title: 'The Crimson Cabaret', levelStart: 131, levelEnd: 140, slug: 'crimson_cabaret', bossId: 'the_virtuoso' },
   { id: 15, title: 'The Rose Conservatory', levelStart: 141, levelEnd: 150, slug: 'rose_conservatory', bossId: 'the_matchmaker' },
   { id: 16, title: 'The Menagerie Salon', levelStart: 151, levelEnd: 160, slug: 'menagerie_salon', bossId: 'the_keeper' },
+  { id: 17, title: 'The Salon of Secrets', levelStart: 161, levelEnd: 170, slug: 'salon_of_secrets', bossId: 'the_confidante' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -3258,6 +3278,51 @@ const CAMPAIGN_LEVELS = {
            parseHand('Q♦ Q♣ 2♦ 9♣ 7♠ 5♣ 7♦ 9♥ 2♥ 4♠ 6♠ 5♦ 10♣'),
          ],
          objective: { type: 'score', min: 41, gold: 60 } },
+
+  // ═══ House of Hearts, Chapter 7: The Salon of Secrets (levels 161-170) ═══
+  // Same source/sheet/format as Chapters 1-6. Direction switches mid-
+  // chapter (161-164 'right', 165-169 'across') — transcribed verbatim,
+  // same "trust the sheet" call as every mixed-direction chapter before
+  // it. 161/167 show "Miss" in the sheet's own In Band? column. Level
+  // 170's seed carries the same "ddp-fix-" prefix Level 150's
+  // regenerated data used, but this one ships a normal 4-hand shape with
+  // all 4 hands supplied — nothing to reconcile, just transcribed.
+  161: { id: 161, chapter: 17, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L161-score-c662', hand: parseHand('7♣ K♠ 4♣ A♣ A♦ Q♦ 7♠ J♥ 6♥ 9♣ 10♥ 5♥ 8♣'),
+         objective: { type: 'score', min: 4, gold: 60 } },
+  162: { id: 162, chapter: 17, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L162-score-c236', hand: parseHand('6♦ 6♥ 10♠ 2♥ J♣ J♥ J♠ 3♥ 7♦ K♣ Q♠ 4♦ A♣'),
+         objective: { type: 'score', min: 40, gold: 50 } },
+  163: { id: 163, chapter: 17, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L163-tricks-c47', hand: parseHand('A♠ 10♦ 2♦ 6♣ 6♦ 10♥ 5♠ J♦ 2♣ 7♦ Q♦ J♥ 7♥'),
+         objective: { type: 'trickCount', minTricks: 8, goldTricks: 9 } },
+  164: { id: 164, chapter: 17, type: 'Harder', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch2-L164-score-c8', hand: parseHand('4♦ J♣ 10♦ 10♠ 10♣ 5♦ 10♥ Q♦ K♦ A♦ 7♥ 3♥ 8♣'),
+         objective: { type: 'score', min: 15, gold: 24 } },
+  165: { id: 165, chapter: 17, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L165-score-c379', hand: parseHand('9♠ 8♠ 6♠ 9♣ K♥ J♣ Q♣ 6♥ 5♥ 2♦ A♦ J♠ 10♥'),
+         objective: { type: 'score', min: 40, gold: 45 } },
+  166: { id: 166, chapter: 17, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L166-void-c107', hand: parseHand('7♥ 4♦ 3♥ K♥ 8♣ 5♥ K♣ 9♣ 9♥ J♦ 4♥ Q♥ A♦'),
+         objective: { type: 'suitVoid', suit: '♦', voidByTrick: 2, goldByTrick: 1 } },
+  167: { id: 167, chapter: 17, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L167-score-c165', hand: parseHand('4♥ 2♥ A♦ 8♣ J♠ 9♣ 8♥ 3♥ 9♠ 5♠ 2♣ Q♦ K♣'),
+         objective: { type: 'score', min: 29, gold: 31 } },
+  168: { id: 168, chapter: 17, type: 'Harder', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L168-score-c43', hand: parseHand('4♦ 7♥ 3♣ 2♠ 10♦ 2♣ J♣ A♣ 10♣ 4♥ 6♥ Q♠ 7♣'),
+         objective: { type: 'score', min: 10, gold: 21 } },
+  169: { id: 169, chapter: 17, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch2-L169-clean-c11', hand: parseHand('6♦ 6♠ 7♠ J♣ 9♦ 10♠ 5♦ 7♥ 3♣ Q♣ A♦ 7♣ 8♦'),
+         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+  170: { id: 170, chapter: 17, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_confidante',
+         seed: 'ddp-fix-L170-c522',
+         hands4: [
+           parseHand('5♦ J♣ J♠ J♥ Q♣ K♠ 9♠ 6♣ Q♥ 3♣ 3♦ 8♣ 6♦'),
+           parseHand('8♣ 5♠ 6♣ 4♠ Q♦ 5♦ 10♥ A♥ 9♦ Q♥ 2♦ 2♣ 10♠'),
+           parseHand('4♥ 6♦ 4♦ 9♦ 5♦ 8♠ K♥ 4♠ K♦ J♠ 5♥ A♥ 9♣'),
+           parseHand('2♠ 10♠ K♦ 2♥ 7♠ 9♠ K♥ 8♣ 5♠ 7♥ Q♣ 3♥ 8♠'),
+         ],
+         objective: { type: 'score', min: 48, gold: 55 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -5398,6 +5463,100 @@ const CAMPAIGN_STORY_CUES = [
   ccue(160, 'bossDefeat', null, 'He immediately brightens.'),
   ccue(160, 'bossDefeat', 'the_jester', 'Also, wombat poop is cube-shaped.'),
   ccue(160, 'bossDefeat', 'player', 'There he is.'),
+
+  // ═══ House of Hearts, Chapter 7: The Salon of Secrets (levels 161-170) ═══
+  // THE CHARMER is this chapter's returning guide (the "returning seven"
+  // pattern — he was House of Spades' own Chapter 7 boss). No level here
+  // has an ON CLEAR marker before Level 170, so 161-169 are preLevel-only.
+  // None of the three regulars ever get a line, same as Chapter 6.
+  ccue(161, 'preLevel', null, 'Three people greet THE CHARMER before the PLAYER reaches the first table.'),
+  ccue(161, 'preLevel', 'the_charmer', 'You made it.'),
+  ccue(161, 'preLevel', 'player', 'You sound like you expected me.'),
+  ccue(161, 'preLevel', 'the_charmer', 'At this point, everyone does.'),
+  ccue(161, 'preLevel', null, 'He smiles.'),
+  ccue(161, 'preLevel', 'the_charmer', 'Relax. I am here for the gossip.'),
+
+  ccue(162, 'preLevel', null, 'THE CHARMER returns from a five-minute conversation with a woman he has apparently known for five minutes.'),
+  ccue(162, 'preLevel', 'the_charmer', 'Staff received your description three days before you arrived.'),
+  ccue(162, 'preLevel', 'player', 'Three days? I was still in the Spade House.'),
+  ccue(162, 'preLevel', 'the_charmer', 'Exactly.'),
+  ccue(162, 'preLevel', 'player', 'How did you get that out of her?'),
+  ccue(162, 'preLevel', 'the_charmer', 'I asked about her dog.'),
+  ccue(162, 'preLevel', 'player', 'That makes no sense.'),
+  ccue(162, 'preLevel', 'the_charmer', 'People make sense. Questions do not have to.'),
+
+  ccue(163, 'preLevel', null, 'A woman in deep crimson listens to two guests speak in a private booth. She says almost nothing. Both leave looking relieved.'),
+  ccue(163, 'preLevel', 'the_charmer', 'The Confidante.'),
+  ccue(163, 'preLevel', 'player', 'What does she know?'),
+  ccue(163, 'preLevel', 'the_charmer', 'Everything people wanted somebody to know.'),
+  ccue(163, 'preLevel', 'player', 'And what did you tell her?'),
+  ccue(163, 'preLevel', 'the_charmer', 'Nothing important.'),
+  ccue(163, 'preLevel', null, 'THE CONFIDANTE looks over and smiles, suggesting otherwise.'),
+
+  ccue(164, 'preLevel', null, 'THE CHARMER lowers his voice for the first time.'),
+  ccue(164, 'preLevel', 'the_charmer', 'Someone in this House asked about you by name before the Spade finale.'),
+  ccue(164, 'preLevel', 'player', 'The Queen of Hearts.'),
+  ccue(164, 'preLevel', 'the_charmer', 'Probably.'),
+  ccue(164, 'preLevel', 'player', 'Probably?'),
+  ccue(164, 'preLevel', 'the_charmer', 'I charm people. I do not invent certainty.'),
+
+  ccue(165, 'preLevel', null, 'The PLAYER plays while THE CHARMER watches the room rather than the cards.'),
+  ccue(165, 'preLevel', 'player', 'What did she ask?'),
+  ccue(165, 'preLevel', 'the_charmer', 'Whether you protect weaker players. Whether you hold grudges after a bad hand. Whether you change your play when someone insults you.'),
+  ccue(165, 'preLevel', 'player', 'That sounds like the Matchmaker ledger.'),
+  ccue(165, 'preLevel', 'the_charmer', 'It sounds like someone was building it before you walked through the door.'),
+
+  ccue(166, 'preLevel', null, 'THE CONFIDANTE sits beside the table, not yet taking a player seat.'),
+  ccue(166, 'preLevel', 'player', 'Did the Queen ask about me?'),
+  ccue(166, 'preLevel', 'the_confidante', 'Yes.'),
+  ccue(166, 'preLevel', 'player', 'Why?'),
+  ccue(166, 'preLevel', 'the_confidante', 'Because she had heard you were coming.'),
+  ccue(166, 'preLevel', 'player', 'From Spades?'),
+  ccue(166, 'preLevel', 'the_confidante', 'You keep asking questions with answers inside them.'),
+
+  ccue(167, 'preLevel', null, 'THE CHARMER walks with the PLAYER between tables.'),
+  ccue(167, 'preLevel', 'the_charmer', 'Ask something she does not expect.'),
+  ccue(167, 'preLevel', 'player', 'Such as?'),
+  ccue(167, 'preLevel', 'the_charmer', 'Who was she afraid would come with you?'),
+  ccue(167, 'preLevel', null, 'The PLAYER looks at him.'),
+  ccue(167, 'preLevel', 'the_charmer', 'Fear tells you more than preparation.'),
+
+  ccue(168, 'preLevel', null, 'THE CONFIDANTE watches the PLAYER complete a clean hand.'),
+  ccue(168, 'preLevel', 'player', 'Who was the Queen afraid would come with me?'),
+  ccue(168, 'preLevel', null, 'THE CONFIDANTE pauses. The first real pause.'),
+  ccue(168, 'preLevel', 'the_confidante', 'Nobody.'),
+  ccue(168, 'preLevel', 'player', 'Then what was she afraid of?'),
+  ccue(168, 'preLevel', 'the_confidante', 'That you would come alone and stay that way.'),
+
+  ccue(169, 'preLevel', null, 'THE CHARMER understands before the PLAYER does.'),
+  ccue(169, 'preLevel', 'the_charmer', 'The seven invitations.'),
+  ccue(169, 'preLevel', 'player', 'She wanted all of you here.'),
+  ccue(169, 'preLevel', 'the_charmer', 'Looks that way.'),
+  ccue(169, 'preLevel', 'player', 'Why?'),
+  ccue(169, 'preLevel', 'the_charmer', 'Maybe she wanted witnesses.'),
+  ccue(169, 'preLevel', null, 'THE CONFIDANTE rises and gestures to the empty fourth chair.'),
+  ccue(169, 'preLevel', 'the_confidante', 'Or company.'),
+
+  // bossDefeat is the immediate table-side reaction (score settling,
+  // still at the table); chapterExit is the lift arriving with THE
+  // CLOSER — a real scene/arrival marker, same split precedent as every
+  // chapter with an explicit transition (Levels 100/150 etc).
+  ccue(170, 'bossIntro', null, 'INT. SALON OF SECRETS FEATURE TABLE - NIGHT'),
+  ccue(170, 'bossIntro', 'the_confidante', 'People speak differently when they believe somebody is listening kindly.'),
+  ccue(170, 'bossIntro', 'player', 'Is that how you get secrets?'),
+  ccue(170, 'bossIntro', 'the_confidante', 'No. That is how people give them away.'),
+  ccue(170, 'bossIntro', null, 'The match begins.'),
+  ccue(170, 'bossDefeat', 'player', 'Why did she want the seven here?'),
+  ccue(170, 'bossDefeat', 'the_confidante', 'Because each of them sees something you do not.'),
+  ccue(170, 'bossDefeat', 'player', 'And together?'),
+  ccue(170, 'bossDefeat', 'the_confidante', 'Together you are harder to lie to.'),
+  ccue(170, 'bossDefeat', null, "THE CHARMER's smile fades just a little."),
+  ccue(170, 'bossDefeat', 'the_charmer', 'That is not comforting.'),
+  ccue(170, 'bossDefeat', 'the_confidante', 'It was not intended to be.'),
+  ccue(170, 'chapterExit', null, 'A lift at the end of the salon opens. Inside stands THE CLOSER.'),
+  ccue(170, 'chapterExit', 'the_closer', 'Are you finished socializing?'),
+  ccue(170, 'chapterExit', 'the_charmer', 'You missed me too.'),
+  ccue(170, 'chapterExit', 'the_closer', 'No.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

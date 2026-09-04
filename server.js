@@ -2312,6 +2312,25 @@ const CAMPAIGN_CHARACTERS = {
   archive2:    { id: 'archive2',    name: 'Regular #2' },
   archive3:    { id: 'archive3',    name: 'Regular #3' },
   the_archivist: { id: 'the_archivist', name: 'The Archivist' },
+  // Chapter 4 (internal chapter id 14): The Crimson Cabaret, boss The
+  // Virtuoso. THE WILDCARD is the same the_wildcard from House of Spades
+  // (its own Chapter 4, "The Carnival Lounge") — same "returning seven"
+  // reuse pattern. He never sits at the 4-player table either — "drops
+  // into the chair beside the PLAYER" (Level 35) reads as a nearby
+  // chair, not a table seat, matching his own established "roams rather
+  // than sitting" characterization — so crimson1-3 hold all three
+  // ordinary seats until THE VIRTUOSO claims one at Level 40. Only ONE
+  // of the three regulars gets a line this chapter (Level 33's singular
+  // "CABARET REGULAR", not numbered — resolved to crimson1).
+  // NOT named cabaret1-3 — that id is already taken by the ORIGINAL
+  // Spades campaign's own Chapter 6 ("The Cabaret of Oddities"). Reusing
+  // it here would silently overwrite those entries' names (later object
+  // literal keys win) and corrupt that already-shipped chapter's
+  // dialogue — caught before shipping, not after.
+  crimson1:    { id: 'crimson1',    name: 'Regular #1' },
+  crimson2:    { id: 'crimson2',    name: 'Regular #2' },
+  crimson3:    { id: 'crimson3',    name: 'Regular #3' },
+  the_virtuoso: { id: 'the_virtuoso', name: 'The Virtuoso' },
 };
 
 // Who sits at an ordinary (non-boss) table per chapter, and which of
@@ -2383,6 +2402,11 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // that level, so it's the very last line before Level 130 begins).
   // Standard bossSeat 2 — no script line names which regular it replaces.
   13: { regulars: ['archive1', 'archive2', 'archive3'], bossSeat: 2 },
+  // The Crimson Cabaret. THE WILDCARD roams (bar, backstage, teaching
+  // strangers) rather than holding a chair, so crimson1-3 hold all three
+  // ordinary seats until THE VIRTUOSO takes the empty one at Level 40's
+  // own preLevel beat ("One opponent rises... takes the empty chair.").
+  14: { regulars: ['crimson1', 'crimson2', 'crimson3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2429,6 +2453,7 @@ const CAMPAIGN_CHAPTERS = [
   { id: 11, title: 'The Red Foyer', levelStart: 101, levelEnd: 110, slug: 'red_foyer', bossId: 'the_host' },
   { id: 12, title: 'The Mirror Gallery', levelStart: 111, levelEnd: 120, slug: 'mirror_gallery', bossId: 'the_dancer' },
   { id: 13, title: 'The Letter Archive', levelStart: 121, levelEnd: 130, slug: 'letter_archive', bossId: 'the_archivist' },
+  { id: 14, title: 'The Crimson Cabaret', levelStart: 131, levelEnd: 140, slug: 'crimson_cabaret', bossId: 'the_virtuoso' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -3038,6 +3063,48 @@ const CAMPAIGN_LEVELS = {
            parseHand('K♣ 9♠ 5♦ 5♣ 4♦ 8♣ A♥ Q♣ K♠ 9♦ 3♦ K♦ 10♠'),
          ],
          objective: { type: 'score', min: 28, gold: 37 } },
+
+  // ═══ House of Hearts, Chapter 4: The Crimson Cabaret (levels 131-140) ═══
+  // Same source/sheet/format as Chapters 1-3, Direction 'left' throughout
+  // like Chapter 3. Several rows show "Miss" in the sheet's own In Band?
+  // column (132/135/140) — same "trust the measured trial data" call as
+  // every earlier chapter.
+  131: { id: 131, chapter: 14, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L131-score-c41', hand: parseHand('9♦ Q♣ 8♠ A♦ J♥ A♣ K♦ 4♥ 5♥ 10♦ 10♥ A♠ 7♠'),
+         objective: { type: 'score', min: 40, gold: 67 } },
+  132: { id: 132, chapter: 14, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L132-score-c316', hand: parseHand('A♣ 8♥ 2♣ 8♠ 5♥ Q♥ J♠ 8♣ A♦ Q♦ 7♥ 9♥ 10♠'),
+         objective: { type: 'score', min: 34, gold: 36 } },
+  133: { id: 133, chapter: 14, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L133-queen-c297', hand: parseHand('K♦ 5♠ 4♠ K♠ 8♣ 9♣ A♥ 7♠ 8♠ 10♣ 3♠ 5♥ A♦'),
+         objective: { type: 'avoidQueen', goldScoreBar: 26 } },
+  134: { id: 134, chapter: 14, type: 'Harder', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L134-score-c1119', hand: parseHand('K♦ K♣ A♣ 9♦ A♠ 10♦ A♦ 4♥ 10♣ K♥ 9♠ 10♥ A♥'),
+         objective: { type: 'score', min: 56, gold: 57 } },
+  135: { id: 135, chapter: 14, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L135-score-c661', hand: parseHand('A♥ 4♣ A♦ 4♥ Q♥ 8♥ 5♠ 4♠ 10♠ Q♣ K♦ 10♣ 10♦'),
+         objective: { type: 'score', min: 29, gold: 34 } },
+  136: { id: 136, chapter: 14, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L136-tricks-c150', hand: parseHand('8♠ J♣ K♠ 4♣ 4♥ 6♠ 9♥ 8♣ 6♦ 5♥ J♠ 7♠ 9♠'),
+         objective: { type: 'trickCount', minTricks: 4, goldTricks: 7 } },
+  137: { id: 137, chapter: 14, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L137-score-c985', hand: parseHand('8♦ Q♥ 10♥ 3♠ A♠ 4♣ 7♥ 9♥ A♦ K♥ 10♣ J♠ 8♠'),
+         objective: { type: 'score', min: 14, gold: 27 } },
+  138: { id: 138, chapter: 14, type: 'Harder', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L138-score-c870', hand: parseHand('3♣ A♦ Q♥ K♦ 8♠ A♣ 2♦ 8♦ 3♠ 6♥ J♠ K♠ Q♠'),
+         objective: { type: 'score', min: 24, gold: 34 } },
+  139: { id: 139, chapter: 14, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch2-L139-void-c74', hand: parseHand('9♦ 7♣ 7♥ 6♠ 8♥ K♥ J♠ J♦ 6♦ Q♠ 2♦ Q♣ 3♣'),
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 6, goldByTrick: 5 } },
+  140: { id: 140, chapter: 14, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_virtuoso',
+         seed: 'ddp-ch2-L140-boss-c551',
+         hands4: [
+           parseHand('K♣ 7♦ Q♠ 2♠ 4♥ 8♥ 7♠ 9♥ 5♦ 8♠ 2♥ 9♦ 7♥'),
+           parseHand('7♦ A♠ 5♥ 2♠ J♦ 3♦ 7♣ 3♥ J♠ K♣ Q♥ A♥ 4♠'),
+           parseHand('9♠ 5♠ K♦ A♦ K♥ 3♣ 4♦ 3♠ 10♦ 3♦ K♠ 7♠ 7♦'),
+           parseHand('6♦ K♥ 7♣ 10♥ 2♦ A♠ 8♥ 6♠ 5♣ 3♥ Q♦ 2♠ K♦'),
+         ],
+         objective: { type: 'score', min: 33, gold: 35 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -4904,6 +4971,96 @@ const CAMPAIGN_STORY_CUES = [
   ccue(130, 'bossDefeat', 'the_scholar', 'People, I think.'),
   ccue(130, 'bossDefeat', null, 'From the hallway comes a huge familiar laugh.'),
   ccue(130, 'bossDefeat', 'the_wildcard', 'Please tell me I am one of the seven. I hate being left out.'),
+
+  // ═══ House of Hearts, Chapter 4: The Crimson Cabaret (levels 131-140) ═══
+  // Same "nothing after ON CLEAR -> no postClear cue" rule as every
+  // earlier chapter here — Level 33 has an ON CLEAR marker with nothing
+  // following it (next line is the Level 34 header), so it's preLevel
+  // only like every other level in this chapter. Level 40's ending (THE
+  // WILDCARD and THE OPTIMIST's cameo, teasing Chapter 5) sits entirely
+  // in bossDefeat, same call as every earlier boss level's transition.
+  ccue(131, 'preLevel', null, 'A red velvet performance room built around card tables and a small stage. THE WILDCARD moves through it with a beer in hand, joking with staff, teaching strangers, and paying suspiciously close attention to doors marked STAFF ONLY.'),
+  ccue(131, 'preLevel', null, 'THE WILDCARD hands the PLAYER a beer, then takes it back before the PLAYER can touch it.'),
+  ccue(131, 'preLevel', 'the_wildcard', 'Sorry. That one is mine.'),
+  ccue(131, 'preLevel', 'player', 'Why are you here?'),
+  ccue(131, 'preLevel', 'the_wildcard', 'Invitation. Free room. Terrible wording. Excellent breakfast.'),
+  ccue(131, 'preLevel', 'player', 'Who invited you?'),
+  ccue(131, 'preLevel', 'the_wildcard', 'No name. Red heart seal.'),
+  ccue(131, 'preLevel', null, 'He takes a sip.'),
+  ccue(131, 'preLevel', 'the_wildcard', 'You are doing the serious face. Try cards first.'),
+
+  ccue(132, 'preLevel', null, 'At another table, a guest takes a painful Queen of Spades trick and groans.'),
+  ccue(132, 'preLevel', 'the_wildcard', 'Oof. That was ugly.'),
+  ccue(132, 'preLevel', null, 'The guest glares.'),
+  ccue(132, 'preLevel', 'the_wildcard', 'Good news: ugly is memorable. Next time, count the spades before you get brave.'),
+  ccue(132, 'preLevel', null, 'He laughs, clinks his bottle against the table edge, and walks on.'),
+  ccue(132, 'preLevel', 'player', 'Still teaching strangers?'),
+  ccue(132, 'preLevel', 'the_wildcard', 'Only the ones with tuition paid in embarrassment.'),
+
+  ccue(133, 'preLevel', null, 'THE WILDCARD disappears through a STAFF ONLY door while carrying a tray he definitely did not arrive with.'),
+  ccue(133, 'preLevel', 'player', 'Does he work here?'),
+  ccue(133, 'preLevel', 'crimson1', 'No.'),
+  ccue(133, 'preLevel', 'player', 'Does anyone stop him?'),
+  ccue(133, 'preLevel', 'crimson1', 'Apparently also no.'),
+
+  ccue(134, 'preLevel', null, 'A pianist at the stage finishes a flawless run without looking at the keys. Applause rises. THE VIRTUOSO stands and bows.'),
+  ccue(134, 'preLevel', 'the_wildcard', 'That one is dangerous.'),
+  ccue(134, 'preLevel', 'player', 'The pianist?'),
+  ccue(134, 'preLevel', 'the_wildcard', 'No. The man who knows everybody is watching the piano.'),
+  ccue(134, 'preLevel', null, 'THE VIRTUOSO looks directly at them from across the room.'),
+
+  ccue(135, 'preLevel', null, 'THE WILDCARD drops into the chair beside the PLAYER, beer still in hand, and slides a brass key across the table with one finger.'),
+  ccue(135, 'preLevel', 'player', 'You stole that.'),
+  ccue(135, 'preLevel', 'the_wildcard', 'Borrowed.'),
+  ccue(135, 'preLevel', 'player', 'From who?'),
+  ccue(135, 'preLevel', 'the_wildcard', 'A very nice man who does not know me.'),
+  ccue(135, 'preLevel', 'player', 'That is stealing.'),
+  ccue(135, 'preLevel', 'the_wildcard', 'Words are so judgmental.'),
+
+  ccue(136, 'preLevel', null, "The key opens a narrow staff corridor. A board inside lists table assignments. The PLAYER's name appears across all ten chapters of the House of Hearts."),
+  ccue(136, 'preLevel', 'player', 'This goes all the way to one hundred.'),
+  ccue(136, 'preLevel', 'the_wildcard', 'Yep.'),
+  ccue(136, 'preLevel', 'player', 'It was written before I entered.'),
+  ccue(136, 'preLevel', 'the_wildcard', 'Also yep.'),
+  ccue(136, 'preLevel', 'player', 'Can you stop enjoying this?'),
+  ccue(136, 'preLevel', 'the_wildcard', 'Absolutely not.'),
+
+  ccue(137, 'preLevel', null, 'Below the PLAYER schedule are seven handwritten names: SHARP. SCHOLAR. WILDCARD. OPTIMIST. JESTER. CHARMER. CLOSER.'),
+  ccue(137, 'preLevel', 'player', 'There are the seven.'),
+  ccue(137, 'preLevel', 'the_wildcard', 'I made the list.'),
+  ccue(137, 'preLevel', 'player', 'Why us?'),
+  ccue(137, 'preLevel', 'the_wildcard', 'Maybe they wanted a good party.'),
+  ccue(137, 'preLevel', null, 'Beat.'),
+  ccue(137, 'preLevel', 'the_wildcard', 'That was a joke. I also want to know.'),
+
+  ccue(138, 'preLevel', null, 'The piano goes silent mid-song. THE VIRTUOSO is now standing behind the PLAYER table.'),
+  ccue(138, 'preLevel', 'the_virtuoso', 'You have been backstage.'),
+  ccue(138, 'preLevel', 'the_wildcard', 'Beautiful acoustics back there.'),
+  ccue(138, 'preLevel', 'the_virtuoso', 'You took a key.'),
+  ccue(138, 'preLevel', 'the_wildcard', 'Borrowed.'),
+  ccue(138, 'preLevel', 'the_virtuoso', 'Of course.'),
+  ccue(138, 'preLevel', null, 'He looks at the PLAYER.'),
+  ccue(138, 'preLevel', 'the_virtuoso', 'You are making your arrival noisier than expected.'),
+
+  ccue(139, 'preLevel', null, 'THE VIRTUOSO plays one final piece while the PLAYER finishes the hand. The melody ends exactly as the last card lands.'),
+  ccue(139, 'preLevel', 'the_wildcard', 'Show-off.'),
+  ccue(139, 'preLevel', 'player', 'You are calling someone else a show-off?'),
+  ccue(139, 'preLevel', 'the_wildcard', 'I contain multitudes.'),
+  ccue(139, 'preLevel', null, 'One opponent rises. THE VIRTUOSO closes the piano lid and takes the empty chair.'),
+
+  ccue(140, 'bossIntro', 'the_virtuoso', 'People reveal themselves when they think the performance is somewhere else.'),
+  ccue(140, 'bossIntro', 'player', 'You mean the House was watching while I watched the stage.'),
+  ccue(140, 'bossIntro', 'the_virtuoso', 'Now you understand cabaret.'),
+  ccue(140, 'bossIntro', null, 'The match begins.'),
+  ccue(140, 'bossDefeat', 'the_virtuoso', 'Well played.'),
+  ccue(140, 'bossDefeat', 'player', 'Why were our names on the board?'),
+  ccue(140, 'bossDefeat', 'the_virtuoso', 'Because someone wanted seven people around you who already knew how you play.'),
+  ccue(140, 'bossDefeat', 'player', 'The Queen of Hearts?'),
+  ccue(140, 'bossDefeat', 'the_virtuoso', 'Ask her when you get there.'),
+  ccue(140, 'bossDefeat', null, 'THE WILDCARD laughs and raises his beer.'),
+  ccue(140, 'bossDefeat', 'the_wildcard', 'Great. A mystery with stairs. I am going to find the bar.'),
+  ccue(140, 'bossDefeat', null, 'From the next room comes a cheerful male voice followed immediately by a woman saying, "Absolutely not."'),
+  ccue(140, 'bossDefeat', 'the_optimist', 'Worth a try!'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

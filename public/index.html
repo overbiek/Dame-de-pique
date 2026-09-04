@@ -8426,6 +8426,14 @@ const CAMPAIGN_CHARACTERS={
   archive2:{name:'Regular #2',initial:'2'},
   archive3:{name:'Regular #3',initial:'3'},
   the_archivist:{name:'The Archivist',initial:'A'},
+  // crimson1-3, not cabaret1-3 — that id already belongs to the original
+  // Spades campaign's own Chapter 6 ("The Cabaret of Oddities"); reusing
+  // it here would silently overwrite those entries (see server.js's own
+  // note on this).
+  crimson1:{name:'Regular #1',initial:'1'},
+  crimson2:{name:'Regular #2',initial:'2'},
+  crimson3:{name:'Regular #3',initial:'3'},
+  the_virtuoso:{name:'The Virtuoso',initial:'V'},
 };
 // Which three characters sit at an ordinary (non-boss) table per chapter,
 // and who the boss replaces — used by campaignOpponentsHTML so the
@@ -8452,6 +8460,7 @@ const CAMPAIGN_CHAPTER_ROSTER={
   11:{regulars:['foyer1','foyer2','foyer3'],bossSeat:0},
   12:{regulars:['mirror1','mirror2','mirror3'],bossSeat:2},
   13:{regulars:['archive1','archive2','archive3'],bossSeat:2},
+  14:{regulars:['crimson1','crimson2','crimson3'],bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/

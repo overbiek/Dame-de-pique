@@ -2390,6 +2390,16 @@ const CAMPAIGN_CHARACTERS = {
   // the seven returning bosses, rotating per level (see
   // CAMPAIGN_CHAPTER_ROSTER's own note).
   the_chamberlain: { id: 'the_chamberlain', name: 'The Chamberlain' },
+  // Chapter 10 (internal chapter id 20): The Rose Throne, House of
+  // Hearts' own finale, boss the QUEEN OF HEARTS. She never sits at the
+  // ordinary table — she stays on/beside the throne through Level 199,
+  // same "roams rather than sitting" pattern as every other chapter
+  // guide/boss before claiming a seat — so courtier1-3 hold the three
+  // ordinary seats. None of them ever get a line, same as Chapters 6-8.
+  courtier1: { id: 'courtier1', name: 'Heart Courtier' },
+  courtier2: { id: 'courtier2', name: 'Heart Courtier' },
+  courtier3: { id: 'courtier3', name: 'Heart Courtier' },
+  queen_of_hearts: { id: 'queen_of_hearts', name: 'Queen of Hearts' },
 };
 
 // Chapter 9 (The Inner Circle) is the one chapter with no chapter-
@@ -2523,6 +2533,14 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // chapter9Regulars's own note above. Standard bossSeat 2 for THE
   // CHAMBERLAIN's Level 90 substitution.
   19: { regulars: chapter9Regulars, bossSeat: 2 },
+  // The Rose Throne. courtier1-3 hold all three ordinary seats until
+  // the QUEEN OF HEARTS claims one at Level 199's own preLevel beat
+  // ("The QUEEN walks toward it but stops behind the seat" — she does
+  // not actually sit until Level 200 itself) — the same one-level-early
+  // tease every other chapter's boss uses. Standard bossSeat 2 — "Two
+  // Heart Courtiers remain" at Level 200 confirms it's exactly one seat
+  // she takes, not more.
+  20: { regulars: ['courtier1', 'courtier2', 'courtier3'], bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2575,6 +2593,7 @@ const CAMPAIGN_CHAPTERS = [
   { id: 17, title: 'The Salon of Secrets', levelStart: 161, levelEnd: 170, slug: 'salon_of_secrets', bossId: 'the_confidante' },
   { id: 18, title: 'The Gilded Exchange', levelStart: 171, levelEnd: 180, slug: 'gilded_exchange', bossId: 'the_broker' },
   { id: 19, title: 'The Inner Circle', levelStart: 181, levelEnd: 190, slug: 'inner_circle', bossId: 'the_chamberlain' },
+  { id: 20, title: 'The Rose Throne', levelStart: 191, levelEnd: 200, slug: 'rose_throne', bossId: 'queen_of_hearts' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -3275,8 +3294,10 @@ const CAMPAIGN_LEVELS = {
   // buildCampaignDeck's own note on why the field is named per hand
   // count. Pass direction cycles the ordinary L/R/A/K default
   // (forcePassDir: null) exactly twice over 8 rounds, same mechanism as
-  // the 4-hand bosses; G.dealer is already fixed at 3 for every campaign
-  // room (createCampaignRoom), matching this file's own dealerStart.
+  // the 4-hand bosses; this level's own design data has dealerStart:3,
+  // which already matches createCampaignRoom's default — no explicit
+  // dealerStart field needed here. Level 200 is the one that does (see
+  // its own note).
   150: { id: 150, chapter: 15, type: 'BOSS', forcePassDir: null, hands: 8, bossId: 'the_matchmaker',
          seed: 'ddp-fix-L150-c371',
          hands8: [
@@ -3457,6 +3478,63 @@ const CAMPAIGN_LEVELS = {
            parseHand('3♥ K♠ 9♥ 10♥ A♦ 8♥ 6♠ 9♠ A♣ J♣ Q♥ 6♣ 2♣'),
          ],
          objective: { type: 'score', min: 54, gold: 57 } },
+
+  // ═══ House of Hearts, Chapter 10: The Rose Throne (levels 191-200) ═══
+  // House of Hearts' own finale. Same source/sheet/format as Chapters
+  // 1-9. Direction 'keep' throughout.
+  191: { id: 191, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L191-score-c313', hand: parseHand('4♠ A♦ 7♠ 9♦ K♣ 6♠ J♠ J♦ 9♥ 3♥ J♥ 3♣ A♣'),
+         objective: { type: 'score', min: 45, gold: 50 } },
+  192: { id: 192, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L192-score-c94', hand: parseHand('6♦ Q♦ 5♦ 4♠ 10♠ 3♣ 10♥ K♥ 6♠ A♥ K♣ 8♥ Q♥'),
+         objective: { type: 'score', min: 60, gold: 61 } },
+  193: { id: 193, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L193-void-c102', hand: parseHand('Q♦ 8♦ 6♥ A♣ J♠ 2♠ Q♠ 5♥ K♣ 6♠ 4♥ 7♦ 5♠'),
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 2, goldByTrick: 1 } },
+  194: { id: 194, chapter: 20, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L194-score-c392', hand: parseHand('Q♣ 10♥ Q♥ J♣ 3♠ 8♥ A♣ Q♦ 4♦ 6♣ 9♥ A♠ 4♣'),
+         objective: { type: 'score', min: 3, gold: 22 } },
+  195: { id: 195, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L195-score-c597', hand: parseHand('K♠ J♦ 6♦ 10♥ 3♠ 4♦ 8♦ J♥ K♦ A♦ 2♥ 10♦ 4♣'),
+         objective: { type: 'score', min: 16, gold: 60 } },
+  196: { id: 196, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L196-clean-c5', hand: parseHand('10♣ 9♦ A♦ Q♥ 10♠ 4♥ 8♣ J♦ 4♣ 7♠ 4♦ 6♦ 5♠'),
+         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+  197: { id: 197, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L197-score-c83', hand: parseHand('J♠ 6♣ K♠ A♥ A♦ Q♣ K♦ 9♠ Q♥ 8♦ 4♠ Q♠ K♥'),
+         objective: { type: 'score', min: 4, gold: 18 } },
+  198: { id: 198, chapter: 20, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L198-score-c257', hand: parseHand('2♣ 2♠ Q♥ A♥ A♣ 5♠ 9♣ 7♥ J♥ K♠ 10♥ K♥ 6♥'),
+         objective: { type: 'score', min: 10, gold: 13 } },
+  199: { id: 199, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch2-L199-queen-c448', hand: parseHand('A♦ 9♦ 5♠ Q♣ 7♦ 6♠ 2♣ A♠ Q♦ 8♥ 10♦ 4♦ 4♣'),
+         objective: { type: 'avoidQueen', goldScoreBar: -4 } },
+  // Level 200, the campaign's own final boss, is a genuine 8-hand fight
+  // like Level 150 — but unlike 150, the original sheet's own row was
+  // never actually broken (all 8 hands generate from one continuous
+  // process; the sheet's column layout just physically stops at 4). The
+  // user's design file completes it: same seed as the sheet
+  // ('ddp-ch2-L200-boss-c668'), first 4 hands byte-identical to the
+  // sheet's own, hands 5-8 and the real measured min/gold (58/61)
+  // supplied alongside. The sheet's own Gold Target column (66) was
+  // calculated against an incomplete 4-hand assumption and is
+  // superseded here, same "trust the completed data" call as Level 150.
+  // dealerStart:0 (this level's own design data) does NOT match
+  // createCampaignRoom's normal default of 3 — the first level that
+  // needed the new per-level dealerStart override for that reason.
+  200: { id: 200, chapter: 20, type: 'BOSS', forcePassDir: null, hands: 8, bossId: 'queen_of_hearts',
+         seed: 'ddp-ch2-L200-boss-c668', dealerStart: 0,
+         hands8: [
+           parseHand('6♣ 3♦ 10♠ A♠ 2♦ Q♥ K♣ J♦ 9♠ J♠ Q♦ 9♥ 10♥'),
+           parseHand('4♠ 3♠ Q♣ A♠ 5♥ 6♦ J♥ 6♠ 9♠ 8♠ 8♥ K♥ 8♦'),
+           parseHand('K♦ 8♣ 8♠ 5♥ 4♣ J♠ 2♥ 7♦ 9♦ K♣ 3♠ 4♥ Q♠'),
+           parseHand('2♠ 3♦ 6♦ 10♠ 3♠ Q♠ 8♦ Q♦ 4♥ 5♥ 4♠ 5♦ 6♥'),
+           parseHand('5♥ 6♦ 6♣ 9♠ 2♣ Q♣ 10♥ 2♠ J♣ K♣ J♥ 8♦ 9♦'),
+           parseHand('3♦ 7♦ 8♠ 4♥ 5♠ A♠ A♣ 5♥ 7♣ 3♥ 5♣ J♣ 10♥'),
+           parseHand('2♦ 3♥ 8♦ A♣ 4♣ 10♣ 2♠ 7♠ K♠ 9♣ J♥ 4♥ 4♠'),
+           parseHand('3♠ Q♦ 9♥ 2♣ 4♣ K♥ 10♥ 8♣ J♦ 5♥ Q♣ 5♣ 7♣'),
+         ],
+         objective: { type: 'score', min: 58, gold: 61 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -5883,6 +5961,163 @@ const CAMPAIGN_STORY_CUES = [
   ccue(190, 'bossDefeat', 'the_charmer', 'Listen to what she does not ask.'),
   ccue(190, 'bossDefeat', 'the_closer', 'Know when the conversation is already decided.'),
   ccue(190, 'chapterExit', null, 'The PLAYER looks at all seven, then walks through the doors alone.'),
+
+  // ═══ House of Hearts, Chapter 10: The Rose Throne (levels 191-200) ═══
+  // House of Hearts' own finale — the PLAYER meets the QUEEN OF HEARTS
+  // alone. Unlike every earlier chapter, most levels here have an ON
+  // CLEAR marker and NO preLevel text at all: 192/193/194/196/197/198
+  // are postClear-only (the Queen speaks about the hand just played,
+  // not before it), while 191/195/199 are preLevel-only (no ON CLEAR in
+  // the source for those three). Transcribed exactly as laid out in the
+  // script rather than normalized to one shape.
+  ccue(191, 'preLevel', null, 'INT. ROSE THRONE - NIGHT'),
+  ccue(191, 'preLevel', null, 'The QUEEN OF HEARTS sits on the throne in a deep red gown, no mask, no duplicate, no smoke.'),
+  ccue(191, 'preLevel', 'queen_of_hearts', 'You look disappointed.'),
+  ccue(191, 'preLevel', 'player', 'There is only one of you.'),
+  ccue(191, 'preLevel', 'queen_of_hearts', 'Were you hoping for three?'),
+  ccue(191, 'preLevel', 'player', 'I was hoping to know what was real.'),
+  ccue(191, 'preLevel', 'queen_of_hearts', 'Then you came to the wrong profession.'),
+  ccue(191, 'preLevel', null, 'Three Heart Courtiers wait at the four-player table. The Queen remains on the throne.'),
+
+  ccue(192, 'postClear', null, 'After the hand, the QUEEN descends one step from the throne.'),
+  ccue(192, 'postClear', 'queen_of_hearts', 'She left you a heart. You followed it.'),
+  ccue(192, 'postClear', 'player', 'You knew she would?'),
+  ccue(192, 'postClear', 'queen_of_hearts', 'I knew she might.'),
+  ccue(192, 'postClear', 'player', 'That is weaker than everything else in this House suggested.'),
+  ccue(192, 'postClear', 'queen_of_hearts', 'Good. You are learning to separate preparation from certainty.'),
+
+  ccue(193, 'postClear', 'player', 'You invited the seven.'),
+  ccue(193, 'postClear', 'queen_of_hearts', 'Yes.'),
+  ccue(193, 'postClear', 'player', 'Why?'),
+  ccue(193, 'postClear', 'queen_of_hearts', 'Because Spades taught you to distrust appearances. I wanted to know whether that lesson would make you distrust people too.'),
+  ccue(193, 'postClear', 'player', 'So they were a test.'),
+  ccue(193, 'postClear', 'queen_of_hearts', 'They were people. That was the test.'),
+
+  ccue(194, 'postClear', 'player', 'Do you know the Queen of Spades?'),
+  ccue(194, 'postClear', 'queen_of_hearts', 'Yes.'),
+  ccue(194, 'postClear', 'player', 'Is she your enemy?'),
+  ccue(194, 'postClear', 'queen_of_hearts', 'Sometimes.'),
+  ccue(194, 'postClear', 'player', 'Your ally?'),
+  ccue(194, 'postClear', 'queen_of_hearts', 'Sometimes.'),
+  ccue(194, 'postClear', 'player', 'You all love that answer.'),
+  ccue(194, 'postClear', 'queen_of_hearts', 'Because it survives longer than simple ones.'),
+
+  ccue(195, 'preLevel', null, 'The QUEEN stands beside the final route rather than returning to the throne.'),
+  ccue(195, 'preLevel', 'player', 'The Scholar said letters predate the current Queens.'),
+  ccue(195, 'preLevel', 'queen_of_hearts', 'He reads carefully.'),
+  ccue(195, 'preLevel', 'player', 'So Queen of Hearts is a title.'),
+  ccue(195, 'preLevel', 'queen_of_hearts', 'Of course.'),
+  ccue(195, 'preLevel', 'player', 'And Dame de Pique?'),
+  ccue(195, 'preLevel', 'queen_of_hearts', 'Also a title.'),
+  ccue(195, 'preLevel', 'player', 'Who chooses you?'),
+  ccue(195, 'preLevel', null, 'The QUEEN smiles.'),
+  ccue(195, 'preLevel', 'queen_of_hearts', 'That is finally an interesting question.'),
+
+  ccue(196, 'postClear', 'player', 'The Closer found orders with a second seal.'),
+  ccue(196, 'postClear', 'queen_of_hearts', 'He would.'),
+  ccue(196, 'postClear', 'player', 'Who approves your decisions?'),
+  ccue(196, 'postClear', 'queen_of_hearts', 'Not every second signature is approval.'),
+  ccue(196, 'postClear', 'player', 'Then what is it?'),
+  ccue(196, 'postClear', 'queen_of_hearts', 'Sometimes it is a witness. Sometimes a warning. Sometimes a debt.'),
+  ccue(196, 'postClear', 'player', 'And that mark looked like a club.'),
+  ccue(196, 'postClear', 'queen_of_hearts', 'Did it?'),
+
+  ccue(197, 'postClear', null, 'The QUEEN walks past a carved panel where four suit symbols meet at the center.'),
+  ccue(197, 'postClear', 'player', 'There is a House of Clubs.'),
+  ccue(197, 'postClear', 'queen_of_hearts', 'Yes.'),
+  ccue(197, 'postClear', 'player', 'What is there?'),
+  ccue(197, 'postClear', 'queen_of_hearts', 'Roots.'),
+  ccue(197, 'postClear', 'player', 'That is deliberately vague.'),
+  ccue(197, 'postClear', 'queen_of_hearts', 'Deliberately.'),
+  ccue(197, 'postClear', 'player', 'Why should I go?'),
+  ccue(197, 'postClear', 'queen_of_hearts', 'Because you are already asking the questions they keep.'),
+
+  ccue(198, 'postClear', 'queen_of_hearts', 'Do you know what this House wanted from you?'),
+  ccue(198, 'postClear', 'player', 'To see who I trust.'),
+  ccue(198, 'postClear', 'queen_of_hearts', 'Partly.'),
+  ccue(198, 'postClear', 'player', 'To study my reactions.'),
+  ccue(198, 'postClear', 'queen_of_hearts', 'Partly.'),
+  ccue(198, 'postClear', 'player', 'Then tell me.'),
+  ccue(198, 'postClear', 'queen_of_hearts', 'Spades asked whether you could see through deception. Hearts asked whether seeing deception would make you incapable of connection.'),
+  ccue(198, 'postClear', null, 'The PLAYER looks back toward the closed doors where the seven are waiting beyond.'),
+
+  // The one-level-early tease: the QUEEN approaches the empty fourth
+  // seat but does not sit — she takes it only at Level 200 itself.
+  ccue(199, 'preLevel', null, 'At the final table, one Heart Courtier stands. The fourth chair remains empty. The QUEEN walks toward it but stops behind the seat.'),
+  ccue(199, 'preLevel', 'queen_of_hearts', 'One more question before I sit.'),
+  ccue(199, 'preLevel', 'player', 'Go on.'),
+  ccue(199, 'preLevel', 'queen_of_hearts', 'If I answer everything, will you stop?'),
+  ccue(199, 'preLevel', 'player', 'No.'),
+  ccue(199, 'preLevel', null, 'The QUEEN smiles, genuinely pleased.'),
+  ccue(199, 'preLevel', 'queen_of_hearts', 'Good.'),
+  ccue(199, 'preLevel', null, 'She pulls out the chair.'),
+  ccue(199, 'preLevel', 'queen_of_hearts', 'Then Level One Hundred may be worth playing.'),
+
+  // bossDefeat is the immediate table-side reaction (still at the
+  // table); chapterExit is the doors opening on the seven, plus the
+  // whole epilogue that follows — House of Hearts has no separate
+  // "Levels: -" epilogue chapter to hang that on, so it's folded into
+  // this bucket entire, same call as the original House of Spades
+  // finale folding its own ending into Level 100's 41-cue chapterExit.
+  ccue(200, 'bossIntro', null, 'INT. ROSE THRONE FINAL TABLE - NIGHT'),
+  ccue(200, 'bossIntro', null, 'The QUEEN OF HEARTS takes the fourth seat. Two Heart Courtiers remain. The PLAYER sits opposite the woman the entire House has been preparing them to meet.'),
+  ccue(200, 'bossIntro', 'queen_of_hearts', 'No doubles. No smoke. No disappearing act.'),
+  ccue(200, 'bossIntro', 'player', 'That is reassuring.'),
+  ccue(200, 'bossIntro', 'queen_of_hearts', 'It should not be.'),
+  ccue(200, 'bossIntro', null, 'The final boss match begins.'),
+  ccue(200, 'bossIntro', 'queen_of_hearts', 'You came here for certainty.'),
+  ccue(200, 'bossIntro', 'player', 'I came for answers.'),
+  ccue(200, 'bossIntro', 'queen_of_hearts', 'Same mistake, prettier word.'),
+  ccue(200, 'bossIntro', null, 'Later in the match, the Queen watches the PLAYER choose a difficult line.'),
+  ccue(200, 'bossIntro', 'queen_of_hearts', 'There. That is why she marked you.'),
+  ccue(200, 'bossIntro', 'player', 'The Queen of Spades?'),
+  ccue(200, 'bossIntro', 'queen_of_hearts', 'Play.'),
+  ccue(200, 'bossDefeat', null, 'The last card lands. The QUEEN OF HEARTS studies the table, then laughs once under her breath.'),
+  ccue(200, 'bossDefeat', 'queen_of_hearts', 'You beat me.'),
+  ccue(200, 'bossDefeat', 'player', 'Now tell me what she wanted.'),
+  ccue(200, 'bossDefeat', 'queen_of_hearts', 'No.'),
+  ccue(200, 'bossDefeat', null, 'The PLAYER stares at her.'),
+  ccue(200, 'bossDefeat', 'queen_of_hearts', 'I said I would meet you. I did not say I would finish her story.'),
+  ccue(200, 'bossDefeat', 'player', 'Then why bring me here?'),
+  ccue(200, 'bossDefeat', 'queen_of_hearts', 'To find out whether you would arrive alone.'),
+  ccue(200, 'bossDefeat', 'player', 'And?'),
+  ccue(200, 'bossDefeat', 'queen_of_hearts', 'You did.'),
+  ccue(200, 'bossDefeat', null, 'She looks toward the doors behind the PLAYER.'),
+  ccue(200, 'bossDefeat', 'queen_of_hearts', 'But you did not stay that way.'),
+  ccue(200, 'chapterExit', null, 'The red doors open. The seven former bosses stand beyond them - not at the table, but present.'),
+  ccue(200, 'chapterExit', 'the_wildcard', 'We heard "beat me." Felt relevant.'),
+  ccue(200, 'chapterExit', 'the_sharp', 'He won.'),
+  ccue(200, 'chapterExit', 'the_scholar', 'Obviously.'),
+  ccue(200, 'chapterExit', 'the_optimist', 'I told you he would be fine.'),
+  ccue(200, 'chapterExit', 'the_closer', 'Eventually.'),
+  ccue(200, 'chapterExit', null, 'THE QUEEN OF HEARTS rises. From beneath the table, she produces a small black envelope sealed with dark green wax.'),
+  ccue(200, 'chapterExit', 'queen_of_hearts', 'You wanted the next question.'),
+  ccue(200, 'chapterExit', null, 'She places the envelope in front of the PLAYER.'),
+  ccue(200, 'chapterExit', 'queen_of_hearts', 'Here it is.'),
+  ccue(200, 'chapterExit', null, 'The PLAYER breaks the seal. Inside is a single black card. On its face: a green club.'),
+  ccue(200, 'chapterExit', 'player', 'House of Clubs.'),
+  ccue(200, 'chapterExit', 'queen_of_hearts', 'If they let you call it that.'),
+  ccue(200, 'chapterExit', 'player', 'What does that mean?'),
+  ccue(200, 'chapterExit', 'queen_of_hearts', 'You will find out.'),
+  ccue(200, 'chapterExit', 'player', 'Are you sending me?'),
+  ccue(200, 'chapterExit', 'queen_of_hearts', 'No.'),
+  ccue(200, 'chapterExit', null, 'She smiles in exactly the way the Queen of Spades never did - open, almost warm.'),
+  ccue(200, 'chapterExit', 'queen_of_hearts', 'I am trusting that you will go.'),
+  // The "CHAPTER - EPILOGUE - THE GREEN MARK" text, folded in — see
+  // this bucket's own opening note.
+  ccue(200, 'chapterExit', null, 'The House of Hearts does not vanish. It stays lit behind the PLAYER, full of music and people. That difference matters. For the first time, the PLAYER leaves one House knowing the people inside were real - even if their motives were not simple.'),
+  ccue(200, 'chapterExit', null, 'Outside, dawn has become morning. The seven former bosses spill out behind the PLAYER in no organized formation whatsoever.'),
+  ccue(200, 'chapterExit', 'the_wildcard', 'Breakfast?'),
+  ccue(200, 'chapterExit', 'the_sharp', 'No.'),
+  ccue(200, 'chapterExit', 'the_optimist', 'Yes.'),
+  ccue(200, 'chapterExit', 'the_closer', 'We have work.'),
+  ccue(200, 'chapterExit', 'the_jester', 'Breakfast is work if you respect it.'),
+  ccue(200, 'chapterExit', 'the_scholar', 'Woof.'),
+  ccue(200, 'chapterExit', 'the_charmer', 'He makes a compelling case.'),
+  ccue(200, 'chapterExit', null, 'The PLAYER looks down at the black card with the green club.'),
+  ccue(200, 'chapterExit', 'player', 'First we recover.'),
+  ccue(200, 'chapterExit', null, 'Across the city, beyond the red glass of the House of Hearts, a different light is barely visible through the morning haze. Green. Low. Steady.'),
+  ccue(200, 'chapterExit', 'player', 'Then we find the next House.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);
@@ -5908,7 +6143,12 @@ async function createCampaignRoom(name, avatar, accountId, socketId, levelId) {
   G.campaignBossId = level.bossId || null;
   G.campaignResultSubmitted = false;
   G.campaignVoidTrick = null;
-  G.dealer = 3;
+  // Every level so far leaves this unset and gets the same fixed 3 —
+  // player (seat 0) always leads trick 1 of round 1. Level 200 is the
+  // first to need a different starting dealer (its own calibration data
+  // assumes 0), so this reads an optional per-level override instead of
+  // hardcoding the single value that used to be here.
+  G.dealer = level.dealerStart != null ? level.dealerStart : 3;
   const token = makeToken();
   Object.assign(G.players[0], { socketId, connected: true, token });
   if (accountId) Object.assign(G.players[0], await lookupSeatCosmetics(accountId));

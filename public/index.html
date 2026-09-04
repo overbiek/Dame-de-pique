@@ -8773,26 +8773,23 @@ function campaignMaybeShowPrologue(done){
   campaignRunPrologue(cues,CAMPAIGN_PROLOGUE_BG,done);
 }
 // Triggered by tapping the "Chapter 2: House of Hearts" tile on the
-// campaign hub (renderCampaignHub below) — deliberately NOT gated on
-// campaignSeenCues the way every other story cue is. The hub is the
-// one place this prologue lives now, so it has to be rewatchable from
-// there every time, not "once ever per account" like the rest of the
-// story-cue system. campaignMarkSeen still fires per cue inside
-// campaignPrologueStep (harmless, keeps the DB in sync) — it's just
-// never consulted to gate a replay.
-// Now that Chapter 11 (The Red Foyer, levels 101-110) actually exists,
-// the prologue hands off into its map afterward instead of just
-// returning to the hub — renderCampaignMap's own "focus the account's
-// frontier" logic (campaignReturnLevelId||d.highestUnlockedLevel) already
-// lands on chapter 11 correctly for an account whose frontier is exactly
-// 101, no special-casing needed here.
+// campaign hub (renderCampaignHub below). Gated on campaignSeenCues like
+// every other story cue — plays once, the first time the account ever
+// reaches Chapter 2, then never again; a later tap goes straight to the
+// map. campaignMarkSeen (inside campaignPrologueStep) is what records
+// that first watch server-side, so it stays gated across sessions too.
+// The map is rendered FIRST, before the (possibly no-op) prologue check —
+// the prologue overlay is a full-bleed fixed layer that sits above
+// everything regardless (z-index 2100+), so the map is simply already
+// correct underneath by the time the overlay clears, no second render
+// needed in a done callback.
 function hubEnterChapter2(){
+  $('camp-scene').classList.remove('hub-mode');
+  renderCampaignMap(campaignData);
   const cues=campaignCuesFor(101,'prologue');
-  if(!cues.length) return;
-  campaignRunPrologue(cues,CAMPAIGN_PROLOGUE2_BG,()=>{
-    $('camp-scene').classList.remove('hub-mode');
-    renderCampaignMap(campaignData);
-  });
+  if(cues.length&&!cues.every(c=>campaignSeenCues.has(c.id))){
+    campaignRunPrologue(cues,CAMPAIGN_PROLOGUE2_BG,()=>{});
+  }
 }
 // The hub's other tile — bypasses the hub for the rest of this visit
 // (see campaignStateOk's own campaignReturnLevelId check) and drops
@@ -8801,6 +8798,17 @@ function hubEnterChapter2(){
 function hubEnterChapter1(){
   $('camp-scene').classList.remove('hub-mode');
   renderCampaignMap(campaignData);
+  // renderCampaignMap's own "focus the account's frontier" logic lands
+  // wherever campaignData.highestUnlockedLevel currently sits — which,
+  // now that House of Hearts levels exist and are unlocked, is a HEARTS
+  // chapter, not Spades. Tapping "Chapter 1: House of Spades" specifically
+  // means the Spades map, so pin it back to the last Spades chapter —
+  // the same landing every other "everything in this arc is cleared"
+  // case already gets (campaignRenderChapterView's own fallback, from
+  // before Hearts chapters existed to compete for the frontier).
+  const spadesChapters=campaignData.chapters.filter(c=>c.levelEnd<=100);
+  campaignViewChapterId=spadesChapters[spadesChapters.length-1].id;
+  campaignRenderChapterView();
   campaignMaybeShowPrologue(()=>{ campaignMaybeShow(1,'chapterEnter',()=>{}); });
 }
 // The campaign hub itself — shown instead of renderCampaignMap once the

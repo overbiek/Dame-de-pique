@@ -3202,7 +3202,7 @@ const CAMPAIGN_LEVELS = {
            parseHand('4♦ Q♥ 8♣ Q♣ 10♥ J♥ 6♦ 5♥ A♠ 9♦ K♥ 7♣ 2♦'),
            parseHand('K♣ 9♠ 5♦ 5♣ 4♦ 8♣ A♥ Q♣ K♠ 9♦ 3♦ K♦ 10♠'),
          ],
-         objective: { type: 'score', min: 28, gold: 37 } },
+         objective: { type: 'score', min: 11, gold: 20 } },
 
   // ═══ House of Hearts, Chapter 4: The Crimson Cabaret (levels 131-140) ═══
   // Same source/sheet/format as Chapters 1-3, Direction 'left' throughout

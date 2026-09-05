@@ -5423,14 +5423,19 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
    containing-block ambiguity entirely and guarantee both are identical. */
 .camp-hub-chapters{display:flex;gap:22px;justify-content:center}
 .camp-hub-chapters .tile{padding:28px 18px;flex:0 0 178px}
-.camp-hub-chapters .tile-icon{font-size:32px}
 .camp-hub-chapters .tile-title{font-size:16px;white-space:nowrap}
 /* Each house's own envelope photo as the tile's backdrop, in place of the
    plain felt gradient — a dark scrim layer sits between the art and the
-   existing brass glow so the icon/title/subtitle (unchanged, still cream/
-   muted) stay legible over a photo. Fixed art, not re-themed per palette —
-   same call as the chapter background photos and the splash art: this is
-   the house's own identity, not felt/card colour.
+   title/subtitle (unchanged, still cream/muted) so they stay legible over
+   a photo. Fixed art, not re-themed per palette — same call as the
+   chapter background photos and the splash art: this is the house's own
+   identity, not felt/card colour.
+   The suit-glyph icon these tiles used to carry above the title is gone —
+   the envelope photo's own wax seal already shows the suit, so the glyph
+   was pure redundancy once the photo backdrop shipped. Removing it (see
+   the markup) lets "Chapter 1"/"Chapter 2" take the icon's old spot at
+   the top of the centred flex stack for free, with "House of Spades"/
+   "House of Hearts" unchanged below it.
    The scrim is much lighter than the .32-.72 a typical chapter photo
    gets — reported as "sometimes don't show, or show the old style", i.e.
    indistinguishable from the plain felt tile this replaced. Root cause:
@@ -5438,8 +5443,9 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
    (deliberately, for the wax-seal reveal), averaging ~10-40/255 even
    before any scrim — stacking the standard scrim on an already-dark photo
    crushed the one bright feature (the seal) into the noise. Measured
-   against the actual composited pixels the icon/title/subtitle sit on
-   (not guessed): even at this much lower opacity, contrast against the
+   against the actual composited pixels the title/subtitle (and, at the
+   time, the icon above them) sit on — not guessed: even at this much
+   lower opacity, contrast against the
    cream text is 14.3-16.0:1 at every one of the three text rows on both
    images, miles past AA's 4.5 — the photo itself is dark enough that the
    scrim barely needs to do any legibility work here. */
@@ -6365,14 +6371,12 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
         <p class="camp-hub-tagline">Choose your house.</p>
         <div class="camp-hub-chapters">
           <button class="tile hub-tile-spades" onclick="hubEnterChapter1()">
-            <div class="tile-icon">&#9824;&#65038;</div>
             <div class="tile-body">
               <div class="tile-title">Chapter 1</div>
               <div class="tile-sub">House of Spades</div>
             </div>
           </button>
           <button class="tile hub-tile-hearts" onclick="hubEnterChapter2()">
-            <div class="tile-icon">&#9829;&#65038;</div>
             <div class="tile-body">
               <div class="tile-title">Chapter 2</div>
               <div class="tile-sub">House of Hearts</div>

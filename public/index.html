@@ -5430,17 +5430,29 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
    existing brass glow so the icon/title/subtitle (unchanged, still cream/
    muted) stay legible over a photo. Fixed art, not re-themed per palette —
    same call as the chapter background photos and the splash art: this is
-   the house's own identity, not felt/card colour. */
+   the house's own identity, not felt/card colour.
+   The scrim is much lighter than the .32-.72 a typical chapter photo
+   gets — reported as "sometimes don't show, or show the old style", i.e.
+   indistinguishable from the plain felt tile this replaced. Root cause:
+   both source photos are a near-black envelope on a near-black ground
+   (deliberately, for the wax-seal reveal), averaging ~10-40/255 even
+   before any scrim — stacking the standard scrim on an already-dark photo
+   crushed the one bright feature (the seal) into the noise. Measured
+   against the actual composited pixels the icon/title/subtitle sit on
+   (not guessed): even at this much lower opacity, contrast against the
+   cream text is 14.3-16.0:1 at every one of the three text rows on both
+   images, miles past AA's 4.5 — the photo itself is dark enough that the
+   scrim barely needs to do any legibility work here. */
 .camp-hub-chapters .tile.hub-tile-spades{
   background:
     radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.16), transparent 60%),
-    linear-gradient(180deg, rgba(0,0,0,.32) 0%, rgba(0,0,0,.5) 55%, rgba(0,0,0,.72) 100%),
+    linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.16) 55%, rgba(0,0,0,.34) 100%),
     url('/campaign/hub/spades.webp') center/cover;
 }
 .camp-hub-chapters .tile.hub-tile-hearts{
   background:
     radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.16), transparent 60%),
-    linear-gradient(180deg, rgba(0,0,0,.32) 0%, rgba(0,0,0,.5) 55%, rgba(0,0,0,.72) 100%),
+    linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.16) 55%, rgba(0,0,0,.34) 100%),
     url('/campaign/hub/hearts.webp') center/cover;
 }
 

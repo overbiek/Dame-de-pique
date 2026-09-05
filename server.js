@@ -3318,7 +3318,7 @@ const CAMPAIGN_LEVELS = {
   // boss (160).
   151: { id: 151, chapter: 16, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch2-L151-score-c86', hand: parseHand('3♥ 5♠ 4♥ 10♥ A♦ 5♥ Q♠ 4♦ K♦ 2♥ 9♣ 10♣ 8♥'),
-         objective: { type: 'score', min: 30, gold: 34 } },
+         objective: { type: 'score', min: 20, gold: 34 } },
   152: { id: 152, chapter: 16, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch2-L152-score-c333', hand: parseHand('Q♣ Q♠ J♦ Q♦ 3♣ 8♥ J♥ 5♣ K♦ 4♣ 7♥ 5♠ 2♥'),
          objective: { type: 'score', min: 20, gold: 24 } },

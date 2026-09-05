@@ -3387,7 +3387,7 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 10, gold: 21 } },
   169: { id: 169, chapter: 17, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch2-L169-clean-c11', hand: parseHand('6♦ 6♠ 7♠ J♣ 9♦ 10♠ 5♦ 7♥ 3♣ Q♣ A♦ 7♣ 8♦'),
-         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+         objective: { type: 'score', min: -1, gold: 15 } },
   170: { id: 170, chapter: 17, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_confidante',
          seed: 'ddp-fix-L170-c522',
          hands4: [
@@ -3508,7 +3508,7 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 10, gold: 13 } },
   199: { id: 199, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch2-L199-queen-c448', hand: parseHand('A♦ 9♦ 5♠ Q♣ 7♦ 6♠ 2♣ A♠ Q♦ 8♥ 10♦ 4♦ 4♣'),
-         objective: { type: 'avoidQueen', goldScoreBar: -4 } },
+         objective: { type: 'score', min: 1, gold: 4 } },
   // Level 200, the campaign's own final boss, is a genuine 8-hand fight
   // like Level 150 — but unlike 150, the original sheet's own row was
   // never actually broken (all 8 hands generate from one continuous

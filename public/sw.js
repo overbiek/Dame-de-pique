@@ -74,7 +74,7 @@
 // colour, comfortably inside the standard ~80% maskable safe zone. The
 // two 'any'-purpose icons and the Apple touch icon stay plain resizes,
 // same convention as the icon they replaced.
-const CACHE = 'ddp-v17';
+const CACHE = 'ddp-v18';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
                 '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 

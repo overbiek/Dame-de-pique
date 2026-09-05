@@ -3211,7 +3211,7 @@ const CAMPAIGN_LEVELS = {
   // every earlier chapter.
   131: { id: 131, chapter: 14, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch2-L131-score-c41', hand: parseHand('9♦ Q♣ 8♠ A♦ J♥ A♣ K♦ 4♥ 5♥ 10♦ 10♥ A♠ 7♠'),
-         objective: { type: 'score', min: 40, gold: 67 } },
+         objective: { type: 'score', min: 26, gold: 38 } },
   132: { id: 132, chapter: 14, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch2-L132-score-c316', hand: parseHand('A♣ 8♥ 2♣ 8♠ 5♥ Q♥ J♠ 8♣ A♦ Q♦ 7♥ 9♥ 10♠'),
          objective: { type: 'score', min: 34, gold: 36 } },
@@ -3220,7 +3220,7 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'avoidQueen', goldScoreBar: 26 } },
   134: { id: 134, chapter: 14, type: 'Harder', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch2-L134-score-c1119', hand: parseHand('K♦ K♣ A♣ 9♦ A♠ 10♦ A♦ 4♥ 10♣ K♥ 9♠ 10♥ A♥'),
-         objective: { type: 'score', min: 56, gold: 57 } },
+         objective: { type: 'score', min: 34, gold: 48 } },
   135: { id: 135, chapter: 14, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch2-L135-score-c661', hand: parseHand('A♥ 4♣ A♦ 4♥ Q♥ 8♥ 5♠ 4♠ 10♠ Q♣ K♦ 10♣ 10♦'),
          objective: { type: 'score', min: 29, gold: 34 } },

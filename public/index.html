@@ -4195,6 +4195,16 @@ html.landscape-mode .card-turn.cw>*{transform:translate(-50%,-50%) rotate(90deg)
    above, which subtracts exactly these gaps. */
 html.landscape-mode #s-pass .hand,html.landscape-mode #s-play .hand{
   flex:0 0 auto;padding:4px 10px;align-items:center;
+  /* Reserve a full card-height (plus this rule's own 4px top/bottom
+     padding, since box-sizing is border-box — a bare var(--ch) here left
+     an 8px residual gap, one padding pair short) even with zero cards
+     left in hand — same "reserve constant space" rule as .mystrip's turn
+     badge. Without this, playing the round's very last card emptied the
+     row down to just its padding, .table-wrap/.table (both flex:1 1 auto,
+     filling whatever the hand gives up) grew into the freed space, and
+     their centered content (.mid, the trick cross) visibly shifted down
+     as the box grew under it. */
+  min-height:calc(var(--ch) + 8px);
 }
 html.landscape-mode #s-pass .hand .card-slot,html.landscape-mode #s-play .hand .card-slot{
   transform:none !important;
@@ -5393,10 +5403,19 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
   font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;
   color:var(--muted);text-shadow:0 2px 8px rgba(0,0,0,.7);margin:-12px 0 0;
 }
-.camp-hub-chapters{display:flex;gap:22px;width:100%}
-.camp-hub-chapters .tile{padding:26px 16px}
+/* .camp-hub-content is a centred (align-items:center) flex column, so it
+   hugs its own content width rather than actually reaching its 640px
+   max-width — a plain width:100% on this row (and on .tile below) was
+   resolving against that ill-defined containing block and shrink-wrapping
+   both tiles down to a hair's-breadth 125px, barely enough for "CHAPTER 1"
+   and not quite enough for "CHAPTER 2" (its "2" glyph is a hair wider than
+   "1" in this font), which wrapped it to a second line and made the two
+   tiles visibly different heights. Fixed flex-basis tiles sidestep the
+   containing-block ambiguity entirely and guarantee both are identical. */
+.camp-hub-chapters{display:flex;gap:22px;justify-content:center}
+.camp-hub-chapters .tile{padding:28px 18px;flex:0 0 178px}
 .camp-hub-chapters .tile-icon{font-size:32px}
-.camp-hub-chapters .tile-title{font-size:16px}
+.camp-hub-chapters .tile-title{font-size:16px;white-space:nowrap}
 
 /* ── Level-detail popup ──
    Centred modal, opened on a map node tap, before any dialogue or the
@@ -12435,6 +12454,11 @@ let dragEl=null, dragStartX=0, dragStartY=0, dragStartAt=0;
 const DOUBLE_TAP_MS=320;   // maximum gap between the two taps
 const TAP_SLOP_PX=12;      // a tap is a press that didn't really move...
 const TAP_MAX_MS=250;      // ...and wasn't a deliberate long press
+// How far outside .mid's own (card-sized) box a drag-release still counts
+// as a drop. Widened from the original 30 on request — cards stay the same
+// size, this only makes the drop MORE forgiving. Shared by the live hover
+// highlight and the real drop test so what lights up matches what commits.
+const REAL_DROP_PAD=55;
 let tapArmKey=null, tapArmAt=0, tapArmEl=null, tapArmTimer=null;
 function disarmTap(){
   if(tapArmTimer){ clearTimeout(tapArmTimer); tapArmTimer=null; }
@@ -12467,7 +12491,7 @@ function moveCardDrag(e){
   if(!dragEl)return;
   dragEl.style.transform=`translate(${e.clientX-dragStartX}px,${e.clientY-dragStartY}px) scale(1.06)`;
   const mid=document.querySelector('#g-table .mid');
-  if(mid) mid.classList.toggle('drop-hover',isOverDropZone(e.clientX,e.clientY,mid));
+  if(mid) mid.classList.toggle('drop-hover',isOverDropZone(e.clientX,e.clientY,mid,REAL_DROP_PAD));
 }
 function resetDragStyles(el){
   el.classList.remove('dragging');
@@ -12485,7 +12509,7 @@ function endCardDrag(e){
   // Kept modest: this was briefly set far wider while chasing the
   // "tutorial gets stuck" report, but that turned out to be the
   // destructuring bug in tutorialAutoPlay, not a missed drop.
-  const dropped=mid&&isOverDropZone(e.clientX,e.clientY,mid,tutorialActive?110:30);
+  const dropped=mid&&isOverDropZone(e.clientX,e.clientY,mid,tutorialActive?110:REAL_DROP_PAD);
   if(mid) mid.classList.remove('drop-hover');
   if(dropped){
     disarmTap();

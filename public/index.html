@@ -5416,6 +5416,24 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 .camp-hub-chapters .tile{padding:28px 18px;flex:0 0 178px}
 .camp-hub-chapters .tile-icon{font-size:32px}
 .camp-hub-chapters .tile-title{font-size:16px;white-space:nowrap}
+/* Each house's own envelope photo as the tile's backdrop, in place of the
+   plain felt gradient — a dark scrim layer sits between the art and the
+   existing brass glow so the icon/title/subtitle (unchanged, still cream/
+   muted) stay legible over a photo. Fixed art, not re-themed per palette —
+   same call as the chapter background photos and the splash art: this is
+   the house's own identity, not felt/card colour. */
+.camp-hub-chapters .tile.hub-tile-spades{
+  background:
+    radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.16), transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,.32) 0%, rgba(0,0,0,.5) 55%, rgba(0,0,0,.72) 100%),
+    url('/campaign/hub/spades.webp') center/cover;
+}
+.camp-hub-chapters .tile.hub-tile-hearts{
+  background:
+    radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.16), transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,.32) 0%, rgba(0,0,0,.5) 55%, rgba(0,0,0,.72) 100%),
+    url('/campaign/hub/hearts.webp') center/cover;
+}
 
 /* ── Level-detail popup ──
    Centred modal, opened on a map node tap, before any dialogue or the
@@ -5726,6 +5744,23 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 [data-theme="sable"] .camp-mf-pos{color:#15522C}
 [data-theme="clair"] .camp-mf-neg,
 [data-theme="sable"] .camp-mf-neg{color:#7E241B}
+/* The two envelope-photo hub tiles are fixed dark art (see their own
+   background rules above) — same "not themed" call as the chapter
+   background photos. --cream/--muted are tuned to flip dark on Clair and
+   Sable specifically (both are pale-felt themes), which is correct
+   everywhere they normally sit on that theme's own light felt, but here
+   they'd be dark ink on a permanently dark photo: measured 1.14/1.70
+   (cream) and 3.01/3.38 (muted) against the scrim, both badly under AA.
+   Fall back to fixed warm tones (the other six themes' own cream/muted
+   values) rather than a theme token, since the art itself never lightens. */
+[data-theme="clair"] .hub-tile-spades .tile-title,
+[data-theme="clair"] .hub-tile-hearts .tile-title,
+[data-theme="sable"] .hub-tile-spades .tile-title,
+[data-theme="sable"] .hub-tile-hearts .tile-title{color:#EDE1CC}
+[data-theme="clair"] .hub-tile-spades .tile-sub,
+[data-theme="clair"] .hub-tile-hearts .tile-sub,
+[data-theme="sable"] .hub-tile-spades .tile-sub,
+[data-theme="sable"] .hub-tile-hearts .tile-sub{color:#C9B8A8}
 </style>
 </head>
 <body>
@@ -6308,14 +6343,14 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
         <h2 class="camp-hub-title">The Hundred Tables</h2>
         <p class="camp-hub-tagline">Choose your house.</p>
         <div class="camp-hub-chapters">
-          <button class="tile" onclick="hubEnterChapter1()">
+          <button class="tile hub-tile-spades" onclick="hubEnterChapter1()">
             <div class="tile-icon">&#9824;&#65038;</div>
             <div class="tile-body">
               <div class="tile-title">Chapter 1</div>
               <div class="tile-sub">House of Spades</div>
             </div>
           </button>
-          <button class="tile" onclick="hubEnterChapter2()">
+          <button class="tile hub-tile-hearts" onclick="hubEnterChapter2()">
             <div class="tile-icon">&#9829;&#65038;</div>
             <div class="tile-body">
               <div class="tile-title">Chapter 2</div>

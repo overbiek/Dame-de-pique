@@ -3454,18 +3454,35 @@ before pushing.
   photo, same failure those two rules already exist to fix for Spades/
   Hearts.
   **`hubEnterChapter2` needed a real bug fix, not just a new sibling
-  function.** It never pinned its own map view to a Hearts-range
+  function — and the FIRST fix attempt introduced a worse bug that
+  actually shipped.** It never pinned its own map view to a Hearts-range
   chapter the way `hubEnterChapter1` already does for Spades — harmless
   while Hearts was the frontier's ceiling, but with Clubs levels now
   existing, an account that finishes House of Hearts would have this
   tile land on a CLUBS chapter instead (`renderCampaignMap`'s own
   default just follows `highestUnlockedLevel` wherever it currently
-  sits). Fixed with the same `chapters.filter(...)` + pin pattern
-  `hubEnterChapter1` already uses. `hubEnterChapter3` gets the same
-  pin against its own range pre-emptively — inert today (no House of
-  Diamonds exists yet to compete for the frontier), but it's the same
-  bug waiting to happen the moment one is added, so it's fixed before
-  it ships rather than after.
+  sits — which, on its own, already lands correctly on the player's
+  real current Hearts chapter while still mid-house). The first fix
+  blindly copied `hubEnterChapter1`'s own pattern — pin UNCONDITIONALLY
+  to the last chapter in the house's range — and shipped that way. It's
+  correct for `hubEnterChapter1` specifically because Spades is
+  guaranteed 100% finished for anyone who can even see the hub, but
+  wrong here: it stomped on `renderCampaignMap`'s already-correct result
+  every single time, including for an account genuinely still partway
+  through Hearts. **Reported for real**: tapping this tile at Table 60
+  (mid Chapter 6, Menagerie Salon) jumped straight to the Rose Throne
+  (Hearts' own finale) instead of showing where the player actually
+  was. Fixed properly: the pin now only fires when Hearts is ACTUALLY
+  fully finished (`highestUnlockedLevel` past the last Hearts chapter's
+  own `levelEnd`) — the one case `renderCampaignMap`'s default gets
+  wrong (it would otherwise show a Clubs chapter for a completed
+  Hearts). Mid-house, no pin fires at all; the earlier call to
+  `renderCampaignMap` is left standing. `hubEnterChapter3` had the exact
+  same flaw and got the same fix — and this one was NOT just
+  future-proofing the way it was first documented: an account partway
+  through Clubs today (not hypothetically, right now) would hit the
+  identical "jumped to the finale" bug without it, well before any House
+  of Diamonds exists to also push the frontier past Clubs.
   **The Clubs tile itself stays hidden until House of Hearts is
   actually finished** (`highestUnlockedLevel>200`, i.e. Level 200
   cleared) — unlike Spades/Hearts, which are always both shown the

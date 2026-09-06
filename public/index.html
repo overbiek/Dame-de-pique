@@ -9061,14 +9061,22 @@ function campaignMaybeShowPrologue(done){
 function hubEnterChapter2(){
   $('camp-scene').classList.remove('hub-mode');
   renderCampaignMap(campaignData);
-  // Same pin as hubEnterChapter1 below, now that House of Clubs levels
-  // exist too — without it, an account whose frontier has moved past
-  // Level 200 would have this tile land on a CLUBS chapter instead of
-  // Hearts, since renderCampaignMap's own default just follows
-  // highestUnlockedLevel wherever it currently sits.
+  // Pin to the LAST Hearts chapter ONLY when Hearts is actually fully
+  // finished (the frontier has moved past it, into Clubs or beyond) —
+  // that's the one case renderCampaignMap's own default (follow
+  // highestUnlockedLevel wherever it currently sits, which already
+  // lands correctly on the player's real current chapter otherwise)
+  // gets wrong, landing on a CLUBS chapter instead of Hearts.
+  // **This used to pin unconditionally, and that was a real shipped
+  // bug**: tapping this tile while genuinely still partway through
+  // Hearts (e.g. at Table 60, mid Chapter 6) jumped straight to the
+  // Rose Throne (Hearts' own finale) instead of showing where the
+  // player actually was — renderCampaignMap's own call two lines up had
+  // already gotten it right before this code stomped on it.
   const heartsChapters=campaignData.chapters.filter(c=>c.levelStart>=101&&c.levelEnd<=200);
-  if(heartsChapters.length){
-    campaignViewChapterId=heartsChapters[heartsChapters.length-1].id;
+  const lastHearts=heartsChapters[heartsChapters.length-1];
+  if(lastHearts&&campaignData.highestUnlockedLevel>lastHearts.levelEnd){
+    campaignViewChapterId=lastHearts.id;
     campaignRenderChapterView();
   }
   const cues=campaignCuesFor(101,'prologue');
@@ -9076,17 +9084,20 @@ function hubEnterChapter2(){
     campaignRunPrologue(cues,CAMPAIGN_PROLOGUE2_BG,()=>{});
   }
 }
-// Same tile pattern as hubEnterChapter2, for the third house. Pins to the
-// last House of Clubs chapter for the same reason — harmless today (no
-// House of Diamonds exists yet to compete for the frontier), but keeps
-// this tile correct the moment one is added, without needing to remember
-// to come back here.
+// Same fix as hubEnterChapter2, for the third house — pins to the last
+// House of Clubs chapter only once Clubs is actually fully finished
+// (frontier past Level 300), not unconditionally. Live today, not just
+// future-proofing: an account partway through Clubs (e.g. mid Chapter
+// 25) would already hit the same "jumped to the finale" bug this tile
+// had before the fix, well before any House of Diamonds exists to push
+// the frontier past it.
 function hubEnterChapter3(){
   $('camp-scene').classList.remove('hub-mode');
   renderCampaignMap(campaignData);
   const clubsChapters=campaignData.chapters.filter(c=>c.levelStart>=201&&c.levelEnd<=300);
-  if(clubsChapters.length){
-    campaignViewChapterId=clubsChapters[clubsChapters.length-1].id;
+  const lastClubs=clubsChapters[clubsChapters.length-1];
+  if(lastClubs&&campaignData.highestUnlockedLevel>lastClubs.levelEnd){
+    campaignViewChapterId=lastClubs.id;
     campaignRenderChapterView();
   }
   const cues=campaignCuesFor(201,'prologue');

@@ -5471,6 +5471,12 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
     linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.16) 55%, rgba(0,0,0,.34) 100%),
     url('/campaign/hub/hearts.webp') center/cover;
 }
+.camp-hub-chapters .tile.hub-tile-clubs{
+  background:
+    radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.16), transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.16) 55%, rgba(0,0,0,.34) 100%),
+    url('/campaign/hub/clubs.webp') center/cover;
+}
 
 /* ── Level-detail popup ──
    Centred modal, opened on a map node tap, before any dialogue or the
@@ -5792,12 +5798,16 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
    values) rather than a theme token, since the art itself never lightens. */
 [data-theme="clair"] .hub-tile-spades .tile-title,
 [data-theme="clair"] .hub-tile-hearts .tile-title,
+[data-theme="clair"] .hub-tile-clubs .tile-title,
 [data-theme="sable"] .hub-tile-spades .tile-title,
-[data-theme="sable"] .hub-tile-hearts .tile-title{color:#EDE1CC}
+[data-theme="sable"] .hub-tile-hearts .tile-title,
+[data-theme="sable"] .hub-tile-clubs .tile-title{color:#EDE1CC}
 [data-theme="clair"] .hub-tile-spades .tile-sub,
 [data-theme="clair"] .hub-tile-hearts .tile-sub,
+[data-theme="clair"] .hub-tile-clubs .tile-sub,
 [data-theme="sable"] .hub-tile-spades .tile-sub,
-[data-theme="sable"] .hub-tile-hearts .tile-sub{color:#C9B8A8}
+[data-theme="sable"] .hub-tile-hearts .tile-sub,
+[data-theme="sable"] .hub-tile-clubs .tile-sub{color:#C9B8A8}
 </style>
 </head>
 <body>
@@ -6390,6 +6400,12 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
             <div class="tile-body">
               <div class="tile-title">Chapter 2</div>
               <div class="tile-sub">House of Hearts</div>
+            </div>
+          </button>
+          <button class="tile hub-tile-clubs" id="hub-tile-clubs-btn" onclick="hubEnterChapter3()">
+            <div class="tile-body">
+              <div class="tile-title">Chapter 3</div>
+              <div class="tile-sub">House of Clubs</div>
             </div>
           </button>
         </div>
@@ -8586,6 +8602,48 @@ const CAMPAIGN_CHARACTERS={
   courtier2:{name:'Heart Courtier',initial:'2'},
   courtier3:{name:'Heart Courtier',initial:'3'},
   queen_of_hearts:{name:'Queen of Hearts',initial:'Q'},
+  // House of Clubs — mirrors server.js's own CAMPAIGN_CHARACTERS
+  // additions for Chapters 1-10 (internal chapter ids 21-30). Keep the
+  // two in step.
+  vestibule1:{name:'Regular #1',initial:'1'},
+  vestibule2:{name:'Regular #2',initial:'2'},
+  the_warden:{name:'The Warden',initial:'W'},
+  map_assistant:{name:'Map Assistant',initial:'MA'},
+  maproom1:{name:'Regular',initial:'R'},
+  the_cartographer:{name:'The Cartographer',initial:'C'},
+  clerk1:{name:'Clerk #1',initial:'1'},
+  clerk2:{name:'Clerk #2',initial:'2'},
+  maze1:{name:'Regular #1',initial:'1'},
+  maze2:{name:'Regular #2',initial:'2'},
+  the_courier:{name:'The Courier',initial:'C'},
+  chamber_server:{name:'Server',initial:'Sv'},
+  debate1:{name:'Regular #1',initial:'1'},
+  debate2:{name:'Regular #2',initial:'2'},
+  the_mediator:{name:'The Mediator',initial:'M'},
+  gallery1:{name:'Regular #1',initial:'1'},
+  gallery2:{name:'Regular #2',initial:'2'},
+  the_naturalist:{name:'The Naturalist',initial:'N'},
+  lantern_server:{name:'Server',initial:'Sv'},
+  lantern1:{name:'Regular #1',initial:'1'},
+  lantern2:{name:'Regular #2',initial:'2'},
+  // Deliberately `the_confidant` (no trailing "e") — distinct from
+  // `the_confidante` above, a different character from a different
+  // House. See server.js's own note on this collision.
+  the_confidant:{name:'The Confidant',initial:'Cf'},
+  ledger1:{name:'Ledger Clerk',initial:'1'},
+  ledger2:{name:'Ledger Clerk',initial:'2'},
+  // The script's own boss is "The Broker" too — distinct from
+  // `the_broker` above, a different character from a different House.
+  // See server.js's own note on this collision.
+  ledger_broker:{name:'The Broker',initial:'B'},
+  council1:{name:'Regular',initial:'R'},
+  the_captain:{name:'The Captain',initial:'Ca'},
+  diamond_observer:{name:'Diamond Observer',initial:'D'},
+  the_steward:{name:'The Steward',initial:'St'},
+  champion1:{name:'Club Champion',initial:'1'},
+  champion2:{name:'Club Champion',initial:'2'},
+  champion3:{name:'Club Champion',initial:'3'},
+  queen_of_clubs:{name:'Queen of Clubs',initial:'Q'},
 };
 // Mirrors chapter9Regulars in server.js — Chapter 9 has no chapter-
 // specific regulars, the seven returning bosses rotate through the
@@ -8593,6 +8651,25 @@ const CAMPAIGN_CHARACTERS={
 const CHAPTER9_SEVEN=['the_sharp','the_scholar','the_wildcard','the_optimist','the_jester','the_charmer','the_closer'];
 function chapter9Regulars(levelId){
   const offset=((levelId-181)*3)%7;
+  return [CHAPTER9_SEVEN[offset],CHAPTER9_SEVEN[(offset+1)%7],CHAPTER9_SEVEN[(offset+2)%7]];
+}
+// Mirrors server.js's own chapter28Companions — a 2-of-7 rotation plus
+// one real generic regular (`council1`), NOT a pure 3-of-7 rotation like
+// chapter9Regulars/chapter29Companions/chapter30Companions. See that
+// function's own note in server.js.
+function chapter28Companions(levelId){
+  const offset=((levelId-271)*2)%7;
+  return [CHAPTER9_SEVEN[offset],CHAPTER9_SEVEN[(offset+1)%7],'council1'];
+}
+function chapter29Companions(levelId){
+  const offset=((levelId-281)*3)%7;
+  return [CHAPTER9_SEVEN[offset],CHAPTER9_SEVEN[(offset+1)%7],CHAPTER9_SEVEN[(offset+2)%7]];
+}
+// The Root Crown Chamber's own finale table (Level 300) drops the seven
+// from the AI seats entirely — mirrors server.js's own chapter30Companions.
+function chapter30Companions(levelId){
+  if(levelId===300) return ['champion1','champion2','champion3'];
+  const offset=((levelId-291)*3)%7;
   return [CHAPTER9_SEVEN[offset],CHAPTER9_SEVEN[(offset+1)%7],CHAPTER9_SEVEN[(offset+2)%7]];
 }
 // Which three characters sit at an ordinary (non-boss) table per chapter,
@@ -8627,6 +8704,19 @@ const CAMPAIGN_CHAPTER_ROSTER={
   18:{regulars:['gilded1','gilded2','gilded3'],bossSeat:2},
   19:{regulars:chapter9Regulars,bossSeat:2},
   20:{regulars:['courtier1','courtier2','courtier3'],bossSeat:2},
+  // House of Clubs. THE SHARP/THE SCHOLAR/etc genuinely SIT this house
+  // (each chapter's own "Partner focus" character), unlike every Hearts
+  // chapter's roaming guide — see server.js's own note.
+  21:{regulars:['the_sharp','vestibule1','vestibule2'],bossSeat:2},
+  22:{regulars:['the_scholar','map_assistant','maproom1'],bossSeat:2},
+  23:{regulars:['the_wildcard','maze1','maze2'],bossSeat:2},
+  24:{regulars:['the_optimist','debate1','debate2'],bossSeat:2},
+  25:{regulars:['the_jester','gallery1','gallery2'],bossSeat:2},
+  26:{regulars:['the_charmer','lantern1','lantern2'],bossSeat:2},
+  27:{regulars:['the_closer','ledger1','ledger2'],bossSeat:2},
+  28:{regulars:chapter28Companions,bossSeat:2},
+  29:{regulars:chapter29Companions,bossSeat:2},
+  30:{regulars:chapter30Companions,bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/
@@ -8936,6 +9026,11 @@ const CAMPAIGN_PROLOGUE_BG={1:'/campaign/prologue/1.webp',2:'/campaign/prologue/
 // script's Level 0 has one background swap (cafe -> the walk to the
 // doors), not the original's three-still beat structure.
 const CAMPAIGN_PROLOGUE2_BG={1:'/campaign/prologue2/1.webp',2:'/campaign/prologue2/2.webp'};
+// House of Clubs prologue (server.js, levelId 201 / trigger 'prologue')
+// — the Hearts-to-Clubs "reunion" cinematic. Only 1 still, not 2 or 3:
+// the script's Level 0 is one continuous scene at the green door (no
+// location change), so every cue shares the same bg.
+const CAMPAIGN_PROLOGUE3_BG={1:'/campaign/prologue3/1.webp'};
 let campProlQueue=[];
 let campProlOnDone=null;
 let campProlBgNum=null;
@@ -8966,12 +9061,40 @@ function campaignMaybeShowPrologue(done){
 function hubEnterChapter2(){
   $('camp-scene').classList.remove('hub-mode');
   renderCampaignMap(campaignData);
+  // Same pin as hubEnterChapter1 below, now that House of Clubs levels
+  // exist too — without it, an account whose frontier has moved past
+  // Level 200 would have this tile land on a CLUBS chapter instead of
+  // Hearts, since renderCampaignMap's own default just follows
+  // highestUnlockedLevel wherever it currently sits.
+  const heartsChapters=campaignData.chapters.filter(c=>c.levelStart>=101&&c.levelEnd<=200);
+  if(heartsChapters.length){
+    campaignViewChapterId=heartsChapters[heartsChapters.length-1].id;
+    campaignRenderChapterView();
+  }
   const cues=campaignCuesFor(101,'prologue');
   if(cues.length&&!cues.every(c=>campaignSeenCues.has(c.id))){
     campaignRunPrologue(cues,CAMPAIGN_PROLOGUE2_BG,()=>{});
   }
 }
-// The hub's other tile — bypasses the hub for the rest of this visit
+// Same tile pattern as hubEnterChapter2, for the third house. Pins to the
+// last House of Clubs chapter for the same reason — harmless today (no
+// House of Diamonds exists yet to compete for the frontier), but keeps
+// this tile correct the moment one is added, without needing to remember
+// to come back here.
+function hubEnterChapter3(){
+  $('camp-scene').classList.remove('hub-mode');
+  renderCampaignMap(campaignData);
+  const clubsChapters=campaignData.chapters.filter(c=>c.levelStart>=201&&c.levelEnd<=300);
+  if(clubsChapters.length){
+    campaignViewChapterId=clubsChapters[clubsChapters.length-1].id;
+    campaignRenderChapterView();
+  }
+  const cues=campaignCuesFor(201,'prologue');
+  if(cues.length&&!cues.every(c=>campaignSeenCues.has(c.id))){
+    campaignRunPrologue(cues,CAMPAIGN_PROLOGUE3_BG,()=>{});
+  }
+}
+// The hub's first tile — bypasses the hub for the rest of this visit
 // (see campaignStateOk's own campaignReturnLevelId check) and drops
 // straight into the ordinary per-chapter map, using the campaignData
 // already in hand rather than a second round trip.
@@ -9006,6 +9129,15 @@ function hubEnterChapter1(){
 function renderCampaignHub(d){
   $('camp-scene').classList.add('hub-mode');
   $('camp-bg').innerHTML='<img class="campaign-bg-img" src="/campaign/prologue/1.webp" alt="" aria-hidden="true"/>';
+  // House of Clubs' own tile stays hidden until the account has finished
+  // the whole House of Hearts campaign (clearing Level 200 advances
+  // highestUnlockedLevel to 201) — same "don't reveal the next house
+  // until the current one is done" gate the hub itself already uses for
+  // Spades/100. Toggled here rather than baked into the tile's initial
+  // markup state since this function re-runs on every hub visit
+  // (campaignHomeClick included), so a mid-session Hearts clear reveals
+  // the tile immediately without a page reload.
+  $('hub-tile-clubs-btn').style.display = d.highestUnlockedLevel>200 ? '' : 'none';
 }
 // The top-left ‹ on the campaign screen — .camp-home's one onclick,
 // shared by the hub and every chapter's table overview alike. Once an

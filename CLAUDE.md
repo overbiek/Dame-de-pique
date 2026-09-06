@@ -3442,6 +3442,326 @@ before pushing.
   section's own follow-up note) — **every piece of art requested for
   the entire 100-level campaign is now in.**
 
+## House of Clubs (levels 201-300) — hub tile + Chapter 1 built
+- **Third house, same "campaign hub" entry point as Hearts** — a third
+  tile, `.hub-tile-clubs` (`hubEnterChapter3()`), added to `#camp-hub`
+  beside the existing Spades/Hearts ones. Its envelope-photo background
+  is `public/campaign/hub/clubs.webp`, processed identically to the
+  other two (1254×1254 source `clubs enveloppe.png` → 700×700 WebP) —
+  and, like them, needed adding to the Clair/Sable dark-envelope text
+  correction's selector lists (`.hub-tile-clubs .tile-title`/`.tile-sub`)
+  or its cream/muted text would sit at ~1.1-1.7:1 on the near-black
+  photo, same failure those two rules already exist to fix for Spades/
+  Hearts.
+  **`hubEnterChapter2` needed a real bug fix, not just a new sibling
+  function.** It never pinned its own map view to a Hearts-range
+  chapter the way `hubEnterChapter1` already does for Spades — harmless
+  while Hearts was the frontier's ceiling, but with Clubs levels now
+  existing, an account that finishes House of Hearts would have this
+  tile land on a CLUBS chapter instead (`renderCampaignMap`'s own
+  default just follows `highestUnlockedLevel` wherever it currently
+  sits). Fixed with the same `chapters.filter(...)` + pin pattern
+  `hubEnterChapter1` already uses. `hubEnterChapter3` gets the same
+  pin against its own range pre-emptively — inert today (no House of
+  Diamonds exists yet to compete for the frontier), but it's the same
+  bug waiting to happen the moment one is added, so it's fixed before
+  it ships rather than after.
+  **The Clubs tile itself stays hidden until House of Hearts is
+  actually finished** (`highestUnlockedLevel>200`, i.e. Level 200
+  cleared) — unlike Spades/Hearts, which are always both shown the
+  moment the hub exists at all. `renderCampaignHub` toggles
+  `#hub-tile-clubs-btn`'s `display` on every hub render (including a
+  bare `campaignHomeClick` back-out, not just the first visit after a
+  fresh `campaignStateOk`), so clearing Level 200 mid-session reveals
+  the tile immediately with no reload needed. This is a UI-only gate on
+  top of an ALREADY-existing one: the chapter nav arrows
+  (`campaignRenderChapterNav`/`campaignSwitchChapter`) were already
+  disabled toward any chapter whose `levelStart` exceeds
+  `highestUnlockedLevel`, so an account partway through Hearts could
+  never have arrowed forward into Chapter 21 either way — the hub tile
+  was the only place the next house was being advertised early.
+- **Internal chapter id continues at 21** (`CAMPAIGN_CHAPTERS`), same
+  "flat id space, displayed numbers restart at 1" convention Hearts
+  already established starting at 11. Chapter 21: **The Green
+  Vestibule**, levels 201-210, boss **The Warden**. Real chapter
+  background at `public/campaign/chapters/green_vestibule.webp` (from
+  `Green vestibule.png`, 1672×941 → 1400×788, same convention as every
+  earlier chapter background).
+- **This chapter's returning House of Spades character (THE SHARP)
+  does not roam — he SITS**, and that's a genuine structural difference
+  from every House of Hearts chapter. The screenplay's own header calls
+  it "Partner focus: The Sharp," and he's described at the PLAYER's own
+  table across Levels 1/4/8/10, not observing from outside it. So
+  `CAMPAIGN_CHAPTER_ROSTER[21].regulars` is `['the_sharp', 'vestibule1',
+  'vestibule2']` — he holds a real AI seat for the whole chapter — rather
+  than the "guide who never sits, three room regulars hold all three
+  seats" pattern every Hearts chapter used. `bossSeat: 2` still applies
+  normally: THE WARDEN claims `vestibule2`'s seat at Level 210 ("THE
+  WARDEN takes the third seat... THE SHARP remains beside the PLAYER"),
+  with no one-level-early tease this time — Level 209's own preLevel
+  ends with the seat still described as *waiting* for him, only actually
+  filled once Level 210 begins.
+- **Data source**: `Dame-de-Pique-Campaign-Levels_3.xlsx`'s "Levels
+  201-300" sheet, same Type/Direction/Hands/Min-Gold-Target/fixed-hand
+  format every earlier house's sheet used. The sheet's own `Mission`
+  Type value (203 clean hand, 206 avoid the queen, 209 trick count) is
+  the OBJECTIVE shape, not the credits/difficulty tier, so those three
+  are stored as `Normal` — same call as every earlier house's own
+  Mission rows. Level 210 (BOSS, x4 L/R/A/K) uses `hands4`, one
+  independently-dealt hand per round rather than four hands cut from one
+  shared deck — confirmed by checking already-shipped precedent (Levels
+  110/120's own `hands4` arrays also don't form a non-overlapping
+  52-card deck), so this is how every 4-hand boss level's data has
+  always worked, not a defect in this sheet.
+- **Reunion cinematic (Level 0) plays through the SAME full-bleed
+  narrator overlay as the Spades/Hearts prologues** (`campaignRunPrologue`),
+  keyed on levelId 201 so it can never collide with `(1,'prologue')` or
+  `(101,'prologue')`. Single still for the whole scene —
+  `public/campaign/prologue3/1.webp` (from `Prologue background house of
+  clubs.png`, 1672×941 → 1600×900, same convention as the original
+  prologue stills) — since this is one continuous beat at the green
+  door, not the location-to-location journey the earlier two prologues
+  needed multiple stills for.
+  **This is a real multi-character ensemble scene (all seven returning
+  House of Spades characters plus a one-off GREEN ATTENDANT), and
+  `campaignPrologueStep` (client) never reads `cue.speakerId` at all —
+  it only ever types `cue.text` with no name or portrait slot.** So
+  unlike ordinary dialogue, every speaking line here has its attribution
+  folded straight into the text (`'THE SHARP: "Five hundred
+  thirty-seven..."'`), extending the same "quoted dialogue folded into
+  the narration line" convention the Spades/Hearts prologues already
+  used for their own one or two quoted lines — just applied to every
+  line here since there's no single obvious speaker context can imply,
+  the way a solitary PLAYER-in-a-cafe scene has one. Because of that,
+  **`green_attendant` was never added to `CAMPAIGN_CHARACTERS`** — she
+  only ever appears as folded-in prologue text, never as a real
+  `speakerId` anywhere, so a character entry for her would be dead data
+  (confirmed by cross-checking every `ccue()` speakerId against the
+  registry — she's the one name in the script with zero real-speakerId
+  uses).
+- **No Node runtime was available to run any of this**, same as every
+  earlier campaign chapter's own build note. Verified statically
+  instead: a custom JS-aware scanner (respecting `'`/`"`/`` ` `` string
+  escaping and `//`/`/* */` comments) confirmed the whole file's
+  brace/bracket/paren nesting balances with zero real errors (its one
+  flagged line is a pre-existing false positive from a regex literal,
+  `/[&<>"]/g`, unrelated to anything touched here); a second pass
+  cross-checked every one of the file's 2000+ `ccue()` speakerIds
+  against `CAMPAIGN_CHARACTERS` and found zero unresolved ids; and every
+  `parseHand()` string for Levels 201-210 was checked for exactly 13
+  valid, non-duplicated (rank, suit) pairs.
+
+### Chapter 2 — The Map Room (levels 211-220, boss The Cartographer)
+- **Same source/format as Chapter 1** — `Dame-de-Pique-Campaign-Levels_3.xlsx`'s
+  "Levels 201-300" sheet, rows 211-220. Direction is `'left'` for the
+  whole chapter (not `'keep'`), transcribed as given. The sheet's three
+  `Mission` rows (213 suit void, 216 clean hand, 219 avoid the queen)
+  are stored as `Normal`, same call as everywhere else this pattern
+  appears.
+- **THE SCHOLAR sits too, same as THE SHARP in Chapter 1** — this
+  house's "Partner focus" framing is a real per-chapter mechanic, not a
+  one-off for Chapter 1. `CAMPAIGN_CHAPTER_ROSTER[22].regulars` is
+  `['the_scholar', 'map_assistant', 'maproom1']`: the_scholar holds
+  ids[0] permanently, MAP ASSISTANT — a real speaking character
+  (Level 212) confirmed still seated by Level 220's own text ("A Map
+  Assistant fills the fourth chair") — holds ids[1] permanently too, and
+  `maproom1` is the one seat the script never names an occupant for
+  before THE CARTOGRAPHER replaces it at Level 220 (`bossSeat: 2`,
+  "takes the seat opposite the PLAYER" — a different chair from Map
+  Assistant's own, confirming she isn't the one replaced).
+- **Real chapter background at `public/campaign/chapters/map_room.webp`**
+  (from `Map room.png`, 1672×941 → 1400×788, same convention as every
+  other chapter background). **No character portraits yet** for THE
+  CARTOGRAPHER or MAP ASSISTANT — both fall back to the SVG monogram,
+  same as THE WARDEN/vestibule1/vestibule2 in Chapter 1.
+- Verified the same way as Chapter 1: the JS-aware balance scanner
+  found zero new errors, every speakerId used in Levels 211-220
+  resolves against `CAMPAIGN_CHARACTERS` (including `map_assistant` and
+  `the_cartographer`; `maproom1` is correctly never used as a real
+  speakerId, matching the note above), and all 13 `parseHand()` strings
+  for this chapter check out as valid, non-duplicated hands.
+
+### Art status across the house, as of Chapter 2
+- **Chapter backgrounds done**: Chapter 1 (`green_vestibule.webp`),
+  Chapter 2 (`map_room.webp`).
+- **Chapter backgrounds already sitting in Downloads, not yet placed**
+  (chapters not built yet) — same 1672×941 source convention, ready to
+  convert the moment each chapter is built: `Service maze.png` (Ch3),
+  `Common chamber.png` (Ch4), `Root gallery.png` (Ch5), `Lantern
+  salon.png` (Ch6), `Ledger room.png` (Ch7), `Council gallery.png`
+  (Ch8), `Twin table hall.png` (Ch9), `Root crown chamber.png` (Ch10).
+
+### Chapters 3-10 — the rest of House of Clubs (levels 221-300)
+- **Same source/format as Chapters 1-2 throughout** —
+  `Dame-de-Pique-Campaign-Levels_3.xlsx`'s "Levels 201-300" sheet for
+  every level's Type/Direction/Hands/Min-Gold-Target/fixed hand, and
+  `House_of_Clubs_Levels_1-100_Movie_Script_Human_Dialogue`'s "CHAPTER
+  III" through "CHAPTER X" for every level's dialogue, fed in verbatim.
+  Each chapter's own opening room description folds into its first
+  level's `preLevel`, same convention as Chapters 1-2. Two levels (224,
+  285) have a BLANK gold target in the sheet — checked against their own
+  "Ceiling (observed)" column rather than guessed: both ceilings exactly
+  equal their own min (40 and 60), meaning the level's fixed hand cannot
+  score any higher than the clear bar, so gold is set equal to min for
+  both — the only reading consistent with the measured ceiling.
+- **Chapters 1-7 each partner the PLAYER with one specific returning
+  House of Spades character, and that character SITS as a real AI seat
+  for the whole chapter** — the_sharp (Ch1), the_scholar (Ch2),
+  the_wildcard (Ch3), the_optimist (Ch4), the_jester (Ch5), the_charmer
+  (Ch6), the_closer (Ch7) — matching every chapter's own "Partner focus:
+  X" header. This is a genuine departure from House of Hearts, where the
+  reused character always roamed rather than holding a seat; House of
+  Clubs' whole premise ("connection under pressure... whether eight
+  strong individuals can become one dependable circle") calls for the
+  partner to be visibly, mechanically present at the table instead.
+- **Two boss-id collisions with existing House of Hearts characters,
+  both real coincidences in the two scripts, not typos** — Chapter 6's
+  boss ("The Confidant") is stored as `the_confidant` (no trailing "e")
+  to stay distinct from Hearts' own `the_confidante` (Salon of Secrets);
+  Chapter 7's boss ("The Broker") is stored as `ledger_broker` to stay
+  distinct from Hearts' own `the_broker` (Gilded Exchange). Same
+  collision class this file already documents for `crimson1-3` vs
+  `cabaret1-3` and `cons1-3` vs `rose1-3` — caught before either could
+  silently overwrite an already-shipped character's name.
+- **Chapters 8-10 are House of Clubs' own "full group phase"** — same
+  premise as House of Hearts' Chapter 9 (The Inner Circle): all seven
+  returning characters share the room instead of one chapter-specific
+  partner, and the screenplay's own dialogue has anywhere from 2 to 8 of
+  them speaking in a single scene, far too loose to hang a "who's
+  literally seated" mapping off of. `chapter28Companions`/
+  `chapter29Companions`/`chapter30Companions` are three near-identical
+  round-robins over `CHAPTER9_SEVEN` (only the levelStart offset
+  differs), reusing `chapter9Regulars`'s own exact mechanism rather than
+  inventing a new one. **Level 300 (the finale) is the one exception**:
+  its own text drops the seven from the AI seats entirely ("Two Club
+  Champions take the remaining chairs... They may not advise you"), so
+  `chapter30Companions` special-cases that one id, returning
+  `['champion1','champion2','champion3']` instead of a rotation —
+  `bossSeat: 2` then replaces `champion3` with `queen_of_clubs`, leaving
+  the two champions in place, exactly matching "Two Club Champions" (not
+  one).
+- **Two boss levels are genuine 12-hand fights, not 4** — Level 250 (The
+  Naturalist) and Level 300 (Queen of Clubs, the house finale) both
+  carry the sheet's own `'x12 (L/R/A/K)'` Direction value with 12 real
+  fixed hands, three full cycles of the pass rotation rather than the
+  usual one. This needed one real server.js code change, not just data:
+  `buildCampaignDeck`'s own `multiHands` line only ever checked for
+  `level.hands4 || level.hands8` (Levels 150/200 already used the
+  8-hand array) — extended to `|| level.hands12` so these two levels'
+  own `hands12` arrays are actually read. Confirmed the two levels'
+  hands are legitimately NOT a single shared 52-card deck cut twelve
+  ways (matches the already-shipped 4- and 8-hand bosses, which aren't
+  either) — each is its own independently-dealt round for the PLAYER's
+  own seat, same mechanism `hands4`/`hands8` already use.
+- Chapter 10's Level 300 `bossDefeat`/`chapterExit` split follows the
+  exact precedent set by House of Hearts' own Level 200: the immediate
+  table-side reaction (the score settling, "You beat me." / "We did." /
+  "Exactly.") is `bossDefeat`; everything from the envelope reveal
+  onward — the Queen's summary of all three Houses, the walk outside,
+  the "Great Eight" naming banter, and the post-credit stinger between
+  THE STEWARD and the Queen — is one long `chapterExit` (69 cues). The
+  screenplay's own "CHARACTER CONTINUITY GUIDE" and "HOUSE OF DIAMONDS
+  HANDOFF" sections after "FADE OUT." are production notes, not
+  narration or dialogue — skipped entirely, same treatment "SYSTEM / NOT
+  SHOWN" lines already get everywhere else. No "CAMPAIGN COMPLETE"
+  banner — Clubs isn't the last house (Diamonds isn't built), matching
+  how Hearts' own Level 200 ending also skipped that banner.
+- **Verified the same way as Chapters 1-2, at the full new scale**: the
+  JS-aware balance scanner found zero errors across the whole file
+  (3000+ `ccue()` calls); every speakerId used across Levels 221-300
+  resolves against `CAMPAIGN_CHARACTERS` (zero unresolved ids); every
+  chapter id 1-30 has both a `CAMPAIGN_CHAPTERS` entry and a
+  `CAMPAIGN_CHAPTER_ROSTER` entry; every chapter's `bossId` resolves to
+  a real character; and all 80 levels' `parseHand()` strings (221-300,
+  including the 24 hands across the two 12-hand bosses) check out as
+  exactly 13 valid, non-duplicated cards each.
+
+### Art status for the whole House of Clubs, as of Chapter 10
+- **All 10 chapter backgrounds are done** — `green_vestibule.webp`,
+  `map_room.webp`, `service_maze.webp`, `common_chamber.webp`,
+  `root_gallery.webp`, `lantern_salon.webp`, `ledger_room.webp`,
+  `council_gallery.webp`, `twin_table_hall.webp`,
+  `root_crown_chamber.webp` — all converted from the same 1672×941
+  source-photo convention every earlier house's chapter art used.
+- **All 10 named boss/recurring-character portraits landed in a later
+  pass** — The Warden, The Cartographer, The Courier, The Mediator, The
+  Naturalist, The Confidant, the ledger Broker, The Captain, The
+  Steward, Queen of Clubs — `public/campaign/characters/<id>.webp`, same
+  1254×1254-medallion, flood-fill-background-removal, 480×480 RGBA
+  pipeline every earlier house's character art used (`scipy.ndimage.label`
+  on a near-black mask, keeping only components that touch a border,
+  padded to square before the final resize so a non-square trim doesn't
+  distort). Two similarly-named source files were correctly left
+  untouched rather than reprocessed: `The broker.png`/`The confidante.png`
+  are the PRE-EXISTING House of Hearts assets (`the_broker.webp`/
+  `the_confidante.webp`, already in the repo since before this house was
+  built) — the "clubs"-suffixed `The broker clubs.png` is the one that's
+  actually new, and maps to `ledger_broker` per the collision note above.
+  Both the server (`CAMPAIGN_CHARACTERS`) and client (its own required
+  mirror, plus the client's own `CAMPAIGN_CHAPTER_ROSTER` mirror and the
+  three `chapter28/29/30Companions` rotation functions) needed the same
+  additions — the client copy exists specifically so a cold reconnect
+  straight into a boss hand has a name/initial ready before the full
+  `campaignData` payload arrives, and the roster mirror is what feeds the
+  level-detail popup's "who's at this table" cast before a level starts.
+  Verified both files' registries and rosters are byte-for-byte in sync
+  across all 30 chapters (whitespace-normalized diff: zero mismatches).
+- **Generic seat-filler regulars got their own portraits in a later
+  pass too** — `vestibule1/2`, `maze1/2`, `debate1/2`, `gallery1/2`,
+  `lantern1/2`, `ledger1/2`, `champion1/2` (`champion3` needs none: it's
+  only ever used at Level 300, where `bossSeat` immediately overwrites
+  it with `queen_of_clubs` before it can render — the source art
+  confirms this exactly, since only 2 champion portraits were ever
+  supplied), and `council1` (see below). Same medallion pipeline as the
+  named characters. **A real file-dating trap surfaced while sourcing
+  these, worth remembering for next time**: `gallery player 1/2/3.png`
+  (dated two days before this session's own new art) LOOKED like a
+  plausible match for `gallery1/gallery2` by name alone, but are
+  visually House of Hearts-styled (red/heart-jeweled frame, a mirrored
+  hall) — mismatched, and reverted before shipping. The genuinely new
+  files, `root gallery regular 1/2.png`, arrived later dated to this
+  same session and are correctly green/brass/clover-styled like
+  everything else in this house. **When sourcing character art from a
+  shared Downloads folder, checking the file's own modified date against
+  when the rest of the batch landed is a cheap, reliable filter** —
+  every file actually meant for this pass shares the same date; anything
+  older is leftover from a different house's own batch and should be
+  treated as a false match until visually confirmed.
+- **One real roster bug was caught by the art itself, not by re-reading
+  the script**: `Council gallery regular 1.png` — exactly ONE file —
+  didn't fit the 3-of-7 rotation `chapter28Companions` originally used
+  for Chapter 8 (The Council Gallery), which left no generic-regular
+  slot for a single portrait to fill. Re-checking Level 272's own text
+  confirmed the file was right and the code was wrong: "THE PLAYER sits
+  with THE SCHOLAR and THE JESTER against ONE HOUSE REGULAR" is only 2
+  rotating companions, not 3. `chapter28Companions` (both server and
+  client copies) now rotates 2-of-7 plus a fixed `council1` id, which
+  Level 280's boss text independently confirms ("THE CAPTAIN takes one
+  seat... points to the seven. 'Choose two.'" — Captain replacing
+  `council1`'s own seat lands exactly on "Captain + two chosen"). Chapters
+  9 and 10 (`chapter29Companions`/`chapter30Companions`) were re-checked
+  against this same question and confirmed correct as originally built —
+  Level 82 explicitly seats 3 named companions at once ("PLAYER, SHARP,
+  JESTER and CHARMER at Table One") and Level 92 explicitly says "three
+  different allies," so both really are pure 3-of-7 rotations with no
+  generic seat to fill.
+- **Still genuinely missing**: Map Assistant, the two ledger/records
+  clerks (Level 225), the two servers (chamber_server/lantern_server),
+  and Diamond Observer — all one-off or lightly-recurring characters
+  with no dedicated art supplied, still on the SVG monogram fallback.
+  `map regular 2.png` was left unclaimed (only `map regular 1.png` was
+  used, for `maproom1`) — two were supplied against only one generic
+  slot in this chapter's roster, same "more art than slots" surplus
+  this codebase has hit before (the original 20-avatar and gold-crest
+  batches both had a similar spare).
+- **No gold-medallion crest art exists yet for Levels 201-300**
+  (`public/campaign/gold/` stops at `200.webp`) — `campaignGoldImg`
+  degrades to its existing star-icon fallback for all 100, same as any
+  level whose medallion hasn't been dropped in yet; not supplied in
+  Downloads for this house so far.
+- **The hub tile envelope art is done** (Chapter 1's tile only — a house
+  gets exactly one hub tile regardless of how many chapters it has).
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

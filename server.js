@@ -2400,6 +2400,123 @@ const CAMPAIGN_CHARACTERS = {
   courtier2: { id: 'courtier2', name: 'Heart Courtier' },
   courtier3: { id: 'courtier3', name: 'Heart Courtier' },
   queen_of_hearts: { id: 'queen_of_hearts', name: 'Queen of Hearts' },
+
+  // ═══ House of Clubs (levels 201-300) ═══
+  // Chapter 1 (internal chapter id 21): The Green Vestibule, boss The
+  // Warden. Unlike every House of Hearts chapter, the returning House of
+  // Spades character (THE SHARP, reused verbatim — same id/seatAvatar as
+  // Chapters 2/11) does not roam this chapter — the screenplay's own
+  // header calls it "Partner focus: The Sharp", and he is described
+  // sitting at the PLAYER's own table across Levels 1/4/8/10 rather than
+  // observing from outside it. So he holds a real AI seat for the whole
+  // chapter (see CAMPAIGN_CHAPTER_ROSTER's own note below) instead of the
+  // "guide who never sits" pattern every Hearts chapter used.
+  vestibule1: { id: 'vestibule1', name: 'Regular #1' },
+  vestibule2: { id: 'vestibule2', name: 'Regular #2' },
+  // No seatAvatar — no existing art for him yet, same "falls back to the
+  // SVG monogram" treatment as the_host/the_dancer/etc before their art
+  // was dropped in.
+  the_warden: { id: 'the_warden', name: 'The Warden' },
+  // Chapter 2 (internal chapter id 22): The Map Room, boss The
+  // Cartographer. THE SCHOLAR is the same the_scholar reused from House
+  // of Spades — same "returning seven" id as always — and, like THE
+  // SHARP in Chapter 1, genuinely SITS this chapter ("sits beside the
+  // PLAYER at the next table", Level 211; "sits beside the PLAYER, book
+  // closed", Level 220) rather than roaming, matching this house's own
+  // "Partner focus" convention for every chapter. MAP ASSISTANT speaks
+  // only at Level 212 but is confirmed literally seated by Level 220's
+  // own text ("A Map Assistant fills the fourth chair"), so she's this
+  // chapter's second recurring seat rather than a one-off — see
+  // CAMPAIGN_CHAPTER_ROSTER's own note on the seat layout this implies.
+  map_assistant: { id: 'map_assistant', name: 'Map Assistant' },
+  // The one seat the script never names an occupant for — no line is
+  // ever attributed to it before THE CARTOGRAPHER takes it at Level 220.
+  maproom1: { id: 'maproom1', name: 'Regular' },
+  // No seatAvatar — no existing art for her yet.
+  the_cartographer: { id: 'the_cartographer', name: 'The Cartographer' },
+
+  // Chapter 3 (internal chapter id 23): The Service Maze, boss The
+  // Courier. THE WILDCARD is the same the_wildcard reused from House of
+  // Spades, sitting as this chapter's partner exactly like THE SHARP/THE
+  // SCHOLAR before him.
+  // One-off: two clerks overheard through a records hatch at Level 225,
+  // never seated, never seen again.
+  clerk1: { id: 'clerk1', name: 'Clerk #1' },
+  clerk2: { id: 'clerk2', name: 'Clerk #2' },
+  maze1: { id: 'maze1', name: 'Regular #1' },
+  maze2: { id: 'maze2', name: 'Regular #2' },
+  // No seatAvatar — no existing art for him yet.
+  the_courier: { id: 'the_courier', name: 'The Courier' },
+
+  // Chapter 4 (internal chapter id 24): The Common Chamber, boss The
+  // Mediator. THE OPTIMIST sits, same pattern.
+  // One-off: the server THE OPTIMIST hits on at Level 232.
+  chamber_server: { id: 'chamber_server', name: 'Server' },
+  debate1: { id: 'debate1', name: 'Regular #1' },
+  debate2: { id: 'debate2', name: 'Regular #2' },
+  the_mediator: { id: 'the_mediator', name: 'The Mediator' },
+
+  // Chapter 5 (internal chapter id 25): The Root Gallery, boss The
+  // Naturalist. THE JESTER sits, same pattern.
+  gallery1: { id: 'gallery1', name: 'Regular #1' },
+  gallery2: { id: 'gallery2', name: 'Regular #2' },
+  the_naturalist: { id: 'the_naturalist', name: 'The Naturalist' },
+
+  // Chapter 6 (internal chapter id 26): The Lantern Salon, boss The
+  // Confidant. THE CHARMER sits, same pattern. Deliberately
+  // `the_confidant` (no trailing "e") — the existing `the_confidante` id
+  // belongs to a DIFFERENT character, House of Hearts' own Chapter 7
+  // boss ("The Salon of Secrets"). Same naming-collision class this file
+  // already warns about for crimson1-3/cabaret1-3 and cons1-3/rose1-3 —
+  // caught before it could silently overwrite that already-shipped
+  // character's name. Same reasoning kept `lantern1`/`lantern2` distinct
+  // from the pre-existing `salon1`/`salon2`/`salon3` (Hearts' own "Salon
+  // of Secrets" regulars).
+  lantern_server: { id: 'lantern_server', name: 'Server' },
+  lantern1: { id: 'lantern1', name: 'Regular #1' },
+  lantern2: { id: 'lantern2', name: 'Regular #2' },
+  the_confidant: { id: 'the_confidant', name: 'The Confidant' },
+
+  // Chapter 7 (internal chapter id 27): The Ledger Room. The script's own
+  // boss is named "The Broker" too — but `the_broker` already exists as
+  // House of Hearts' own Chapter 8 boss ("The Gilded Exchange"). A
+  // genuine same-title coincidence between two unrelated Houses' own
+  // scripts, not a typo; disambiguated as `ledger_broker` rather than
+  // silently colliding with (and overwriting) the existing character.
+  ledger1: { id: 'ledger1', name: 'Ledger Clerk' },
+  ledger2: { id: 'ledger2', name: 'Ledger Clerk' },
+  ledger_broker: { id: 'ledger_broker', name: 'The Broker' },
+
+  // Chapter 8 (internal chapter id 28): The Council Gallery, boss The
+  // Captain. "Full group phase", but NOT a pure 3-of-7 rotation like
+  // Hearts' own Chapter 9 — see chapter28Companions's own note. council1
+  // is the one real generic regular this chapter needs (Level 272:
+  // "against one House regular"), until THE CAPTAIN claims that same
+  // seat at Level 280.
+  council1: { id: 'council1', name: 'Regular' },
+  the_captain: { id: 'the_captain', name: 'The Captain' },
+
+  // Chapter 9 (internal chapter id 29): The Twin Table Hall, boss The
+  // Steward. "Two-table preview" — same full-rotation mechanism as
+  // Chapter 8's Council Gallery; the second table the script describes
+  // is pure narrative flavor, never a real second game room (this engine
+  // plays one table per level, same as every other chapter in the game).
+  // One-off: a background Diamond-affiliated character glimpsed once at
+  // Level 87, never seen again.
+  diamond_observer: { id: 'diamond_observer', name: 'Diamond Observer' },
+  the_steward: { id: 'the_steward', name: 'The Steward' },
+
+  // Chapter 10 (internal chapter id 30): The Root Crown Chamber, House
+  // of Clubs' own finale, boss QUEEN OF CLUBS. Levels 291-299 rotate the
+  // same seven through the ordinary seat trio (chapter30Companions); the
+  // final table (Level 300) drops the seven from the AI seats entirely
+  // ("Two Club Champions take the remaining chairs... They may not
+  // advise you") — champion1/2 are that level's own generic seats,
+  // champion3 the one `bossSeat` replaces with the Queen herself.
+  champion1: { id: 'champion1', name: 'Club Champion' },
+  champion2: { id: 'champion2', name: 'Club Champion' },
+  champion3: { id: 'champion3', name: 'Club Champion' },
+  queen_of_clubs: { id: 'queen_of_clubs', name: 'Queen of Clubs' },
 };
 
 // Chapter 9 (The Inner Circle) is the one chapter with no chapter-
@@ -2424,6 +2541,33 @@ const CHAPTER9_SEVEN = ['the_sharp', 'the_scholar', 'the_wildcard', 'the_optimis
 // levelStart (181), not the display number.
 function chapter9Regulars(levelId) {
   const offset = ((levelId - 181) * 3) % 7;
+  return [CHAPTER9_SEVEN[offset], CHAPTER9_SEVEN[(offset + 1) % 7], CHAPTER9_SEVEN[(offset + 2) % 7]];
+}
+// Same rotation mechanism as chapter9Regulars, reused for House of
+// Clubs' own two "full group phase" chapters (see
+// CAMPAIGN_CHAPTER_ROSTER's own note on both) — only the levelStart
+// offset differs.
+// Unlike chapter9Regulars/chapter29Companions/chapter30Companions, this
+// one only rotates TWO of the seven, not three — Level 272's own text is
+// explicit ("THE PLAYER sits with THE SCHOLAR and THE JESTER against
+// ONE HOUSE REGULAR"), and Level 280's boss text confirms it structurally
+// ("THE CAPTAIN takes one seat... points to the seven. 'Choose two.'"):
+// the third AI seat is a real generic regular (`council1`), not a third
+// rotating companion — bossSeat then replaces council1's own seat with
+// THE CAPTAIN, landing exactly on "Captain + two chosen companions".
+function chapter28Companions(levelId) {
+  const offset = ((levelId - 271) * 2) % 7;
+  return [CHAPTER9_SEVEN[offset], CHAPTER9_SEVEN[(offset + 1) % 7], 'council1'];
+}
+function chapter29Companions(levelId) {
+  const offset = ((levelId - 281) * 3) % 7;
+  return [CHAPTER9_SEVEN[offset], CHAPTER9_SEVEN[(offset + 1) % 7], CHAPTER9_SEVEN[(offset + 2) % 7]];
+}
+// The Root Crown Chamber's own finale table (Level 300) drops the seven
+// from the AI seats entirely — see CAMPAIGN_CHAPTER_ROSTER's own note.
+function chapter30Companions(levelId) {
+  if (levelId === 300) return ['champion1', 'champion2', 'champion3'];
+  const offset = ((levelId - 291) * 3) % 7;
   return [CHAPTER9_SEVEN[offset], CHAPTER9_SEVEN[(offset + 1) % 7], CHAPTER9_SEVEN[(offset + 2) % 7]];
 }
 
@@ -2541,6 +2685,65 @@ const CAMPAIGN_CHAPTER_ROSTER = {
   // Heart Courtiers remain" at Level 200 confirms it's exactly one seat
   // she takes, not more.
   20: { regulars: ['courtier1', 'courtier2', 'courtier3'], bossSeat: 2 },
+  // The Green Vestibule. THE SHARP sits as a real ongoing table companion
+  // this whole chapter (see CAMPAIGN_CHARACTERS's own note) rather than
+  // roaming, so he occupies ids[0] permanently — only vestibule1/2 fill
+  // the other two ordinary seats. THE WARDEN claims vestibule2's seat
+  // (bossSeat 2) at Level 210 ("THE WARDEN takes the third seat... THE
+  // SHARP remains beside the PLAYER"); no one-level-early tease this
+  // time — Level 209's own preLevel ends with the seat still described
+  // as waiting for him, and he's only actually seated once Level 210
+  // begins, matching that level's own bossIntro text.
+  21: { regulars: ['the_sharp', 'vestibule1', 'vestibule2'], bossSeat: 2 },
+  // The Map Room. THE SCHOLAR sits permanently at ids[0] (see
+  // CAMPAIGN_CHARACTERS's own note), MAP ASSISTANT at ids[1] — she's
+  // confirmed still seated at Level 220 ("A Map Assistant fills the
+  // fourth chair"), never replaced — and the never-named third regular
+  // at ids[2] is who THE CARTOGRAPHER's bossSeat actually replaces:
+  // Level 220 has her "take the seat opposite the PLAYER", a different
+  // chair from Map Assistant's own.
+  22: { regulars: ['the_scholar', 'map_assistant', 'maproom1'], bossSeat: 2 },
+  // The Service Maze. THE WILDCARD sits at ids[0]; maze1/maze2 hold the
+  // other two seats until THE COURIER claims ids[2] at Level 230
+  // ("THE WILDCARD sits beside the PLAYER. One clerk joins them" — the
+  // "one clerk" is maze1, unreplaced, matching the standard bossSeat 2).
+  23: { regulars: ['the_wildcard', 'maze1', 'maze2'], bossSeat: 2 },
+  // The Common Chamber. THE OPTIMIST sits at ids[0]; THE MEDIATOR claims
+  // ids[2] at Level 240 ("A debate regular fills the fourth chair" is
+  // debate1, unreplaced).
+  24: { regulars: ['the_optimist', 'debate1', 'debate2'], bossSeat: 2 },
+  // The Root Gallery. THE JESTER sits at ids[0]; THE NATURALIST claims
+  // ids[2] at Level 250 ("A gallery curator takes the fourth chair" is
+  // gallery1, unreplaced).
+  25: { regulars: ['the_jester', 'gallery1', 'gallery2'], bossSeat: 2 },
+  // The Lantern Salon. THE CHARMER sits at ids[0]; THE CONFIDANT claims
+  // ids[2] at Level 260 ("A quiet Club regular takes the last chair" is
+  // lantern1, unreplaced).
+  26: { regulars: ['the_charmer', 'lantern1', 'lantern2'], bossSeat: 2 },
+  // The Ledger Room. THE CLOSER sits at ids[0]; LEDGER_BROKER claims
+  // ids[2] at Level 270 ("A ledger clerk takes the fourth chair" is
+  // ledger1, unreplaced).
+  27: { regulars: ['the_closer', 'ledger1', 'ledger2'], bossSeat: 2 },
+  // Levels 71-80 (The Council Gallery) and 81-90 (The Twin Table Hall)
+  // are House of Clubs' own "full group phase" chapters — same premise
+  // as House of Hearts' Chapter 9 (The Inner Circle): all seven
+  // returning House of Spades characters share the room instead of one
+  // chapter-specific partner. Chapter 9 (Twin Table Hall, below) is a
+  // pure 3-of-7 rotation like Hearts' own Chapter 9 — the screenplay's
+  // dialogue there genuinely seats 3 companions at a time (Level 82:
+  // "PLAYER, SHARP, JESTER and CHARMER at Table One"). Chapter 8 (Council
+  // Gallery) is NOT — see chapter28Companions's own note for why it's a
+  // 2-of-7 rotation plus one real generic regular instead.
+  28: { regulars: chapter28Companions, bossSeat: 2 },
+  29: { regulars: chapter29Companions, bossSeat: 2 },
+  // The Root Crown Chamber (House of Clubs' own finale) keeps the same
+  // rotation for its own nine ordinary levels (291-299, "the Queen
+  // changes the seating herself" through several of them, same loose-
+  // attribution reasoning as Chapters 8/9 above) — but the final table
+  // (Level 300) drops the seven entirely: "Two Club Champions take the
+  // remaining chairs... They may not advise you." chapter30Companions
+  // special-cases that one id rather than reusing the generic rotation.
+  30: { regulars: chapter30Companions, bossSeat: 2 },
 };
 // The three AI seats (1..3) for a level, boss substitution applied.
 function campaignSeatCharacters(level) {
@@ -2594,6 +2797,21 @@ const CAMPAIGN_CHAPTERS = [
   { id: 18, title: 'The Gilded Exchange', levelStart: 171, levelEnd: 180, slug: 'gilded_exchange', bossId: 'the_broker' },
   { id: 19, title: 'The Inner Circle', levelStart: 181, levelEnd: 190, slug: 'inner_circle', bossId: 'the_chamberlain' },
   { id: 20, title: 'The Rose Throne', levelStart: 191, levelEnd: 200, slug: 'rose_throne', bossId: 'queen_of_hearts' },
+  // House of Clubs begins here. Internal chapter id continues at 21, same
+  // "flat id space, displayed numbers restart at 1" convention as House
+  // of Hearts starting at 11. Real background art at
+  // public/campaign/chapters/green_vestibule.webp.
+  { id: 21, title: 'The Green Vestibule', levelStart: 201, levelEnd: 210, slug: 'green_vestibule', bossId: 'the_warden' },
+  // Real background art at public/campaign/chapters/map_room.webp.
+  { id: 22, title: 'The Map Room', levelStart: 211, levelEnd: 220, slug: 'map_room', bossId: 'the_cartographer' },
+  { id: 23, title: 'The Service Maze', levelStart: 221, levelEnd: 230, slug: 'service_maze', bossId: 'the_courier' },
+  { id: 24, title: 'The Common Chamber', levelStart: 231, levelEnd: 240, slug: 'common_chamber', bossId: 'the_mediator' },
+  { id: 25, title: 'The Root Gallery', levelStart: 241, levelEnd: 250, slug: 'root_gallery', bossId: 'the_naturalist' },
+  { id: 26, title: 'The Lantern Salon', levelStart: 251, levelEnd: 260, slug: 'lantern_salon', bossId: 'the_confidant' },
+  { id: 27, title: 'The Ledger Room', levelStart: 261, levelEnd: 270, slug: 'ledger_room', bossId: 'ledger_broker' },
+  { id: 28, title: 'The Council Gallery', levelStart: 271, levelEnd: 280, slug: 'council_gallery', bossId: 'the_captain' },
+  { id: 29, title: 'The Twin Table Hall', levelStart: 281, levelEnd: 290, slug: 'twin_table_hall', bossId: 'the_steward' },
+  { id: 30, title: 'The Root Crown Chamber', levelStart: 291, levelEnd: 300, slug: 'root_crown_chamber', bossId: 'queen_of_clubs' },
 ];
 
 // Objective shapes (evaluated by evaluateCampaignObjective):
@@ -3535,6 +3753,449 @@ const CAMPAIGN_LEVELS = {
            parseHand('3♠ Q♦ 9♥ 2♣ 4♣ K♥ 10♥ 8♣ J♦ 5♥ Q♣ 5♣ 7♣'),
          ],
          objective: { type: 'score', min: 58, gold: 61 } },
+
+  // ═══ House of Clubs, Chapter 1: The Green Vestibule (levels 201-210) ═══
+  // From Dame-de-Pique-Campaign-Levels_3.xlsx's "Levels 201-300" sheet —
+  // same source/format as every earlier house (Type, Direction, Hands,
+  // Min/Gold Target, the exact fixed 13-card hand, each already measured
+  // against real simulated trials). The sheet's own 'Mission' Type value
+  // is the OBJECTIVE shape (203 clean hand, 206 avoid the queen, 209 trick
+  // count), not the credits/difficulty tier, so those three are stored
+  // here as 'Normal' — same call as every earlier house's own Mission
+  // rows.
+  201: { id: 201, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L201-score-c55', hand: parseHand('5♠ 10♥ 4♥ A♥ 5♣ Q♦ K♣ 6♠ J♦ A♠ Q♠ 8♣ 4♠'),
+         objective: { type: 'score', min: 30, gold: 48 } },
+  202: { id: 202, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L202-score-c324', hand: parseHand('10♠ 4♥ A♣ 4♠ Q♠ K♠ J♠ 4♦ 2♣ A♠ 8♠ 9♣ J♣'),
+         objective: { type: 'score', min: 24, gold: 35 } },
+  203: { id: 203, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L203-clean-c49', hand: parseHand('6♠ 9♣ 7♥ 8♥ K♣ 4♣ 3♦ 8♠ 6♣ J♦ 10♣ K♠ 4♠'),
+         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+  204: { id: 204, chapter: 21, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L204-score-c432', hand: parseHand('K♠ J♦ 5♠ 2♥ Q♠ K♣ 4♣ 7♠ 3♣ 3♦ 2♠ Q♦ K♦'),
+         objective: { type: 'score', min: 35, gold: 41 } },
+  205: { id: 205, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L205-score-c86', hand: parseHand('7♥ A♦ A♠ 3♥ 5♥ 6♣ 6♠ 2♠ 10♠ K♥ A♣ 5♠ 8♦'),
+         objective: { type: 'score', min: 40, gold: 52 } },
+  206: { id: 206, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L206-queen-c57', hand: parseHand('9♥ 4♥ 10♥ 6♦ 2♥ 7♦ A♠ 2♠ K♥ Q♣ K♠ J♦ A♦'),
+         objective: { type: 'avoidQueen', goldScoreBar: 26 } },
+  207: { id: 207, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L207-score-c892', hand: parseHand('4♥ 8♣ 5♠ A♠ 3♠ 7♠ 3♥ 10♥ Q♣ A♦ J♣ 5♦ K♥'),
+         objective: { type: 'score', min: 22, gold: 32 } },
+  208: { id: 208, chapter: 21, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L208-score-c489', hand: parseHand('Q♥ A♦ K♦ 9♥ Q♣ 5♦ K♥ A♥ 8♣ K♣ 10♣ 5♥ 6♦'),
+         objective: { type: 'score', min: 42, gold: 45 } },
+  209: { id: 209, chapter: 21, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L209-tricks-c32', hand: parseHand('9♣ Q♥ J♠ 5♥ 2♣ 10♦ K♠ 8♣ 7♣ 2♦ 3♠ 6♠ J♦'),
+         objective: { type: 'trickCount', minTricks: 5, goldTricks: 6 } },
+  210: { id: 210, chapter: 21, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_warden',
+         seed: 'ddp-ch3-L210-boss-c566',
+         hands4: [
+           parseHand('A♠ 2♠ 6♣ A♣ 5♣ J♣ 6♠ 8♦ 5♦ 7♠ 3♦ A♥ 6♦'),
+           parseHand('J♠ 8♠ A♥ Q♦ 9♠ 8♣ Q♣ J♦ 5♣ 4♣ 4♥ 10♣ 8♥'),
+           parseHand('6♦ A♠ J♠ A♣ 3♥ 9♠ J♥ 9♦ 4♠ 3♠ 10♣ A♥ 7♠'),
+           parseHand('5♠ 10♠ 2♣ 8♠ 3♦ Q♣ J♣ A♠ 5♦ 4♠ 10♥ 4♦ 8♣'),
+         ],
+         objective: { type: 'score', min: 38, gold: 81 } },
+
+  // ═══ House of Clubs, Chapter 2: The Map Room (levels 211-220) ═══
+  // Same source/sheet/format as Chapter 1. Direction is 'left' for this
+  // whole chapter (not 'keep') — matches the sheet's own Direction
+  // column, transcribed as given. The sheet's 'Mission' rows (213 void,
+  // 216 clean hand, 219 avoid the queen) are stored as 'Normal', same
+  // call as every earlier chapter's own Mission rows.
+  211: { id: 211, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L211-score-c403', hand: parseHand('10♠ J♠ J♣ 2♠ A♠ Q♠ 4♠ K♥ A♦ A♥ 9♣ 8♥ 6♣'),
+         objective: { type: 'score', min: 17, gold: 34 } },
+  212: { id: 212, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L212-score-c1032', hand: parseHand('10♣ 2♦ 3♦ 8♠ K♦ Q♠ A♦ A♣ 2♣ Q♥ 10♦ 7♥ 3♠'),
+         objective: { type: 'score', min: 24, gold: 46 } },
+  213: { id: 213, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L213-void-c41', hand: parseHand('Q♣ 10♥ K♠ 5♣ J♠ A♥ 5♠ 2♥ 6♣ 5♥ 9♦ 2♣ 5♦'),
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 8, goldByTrick: 7 } },
+  214: { id: 214, chapter: 22, type: 'Harder', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L214-score-c428', hand: parseHand('J♦ 7♥ K♥ Q♥ 9♠ J♥ A♣ A♠ 3♥ 4♠ K♣ 9♥ A♦'),
+         objective: { type: 'score', min: 43, gold: 47 } },
+  215: { id: 215, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L215-score-c1020', hand: parseHand('10♠ 2♠ 8♥ 7♦ Q♠ J♠ A♠ 2♥ 6♥ 4♠ K♦ 10♥ 3♦'),
+         objective: { type: 'score', min: 32, gold: 46 } },
+  216: { id: 216, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L216-clean-c11', hand: parseHand('5♦ 9♣ 2♣ 3♣ K♠ 7♥ 2♦ 6♦ Q♥ 10♠ 2♠ 5♠ 9♥'),
+         objective: { type: 'cleanHand', goldScoreBar: 0 } },
+  217: { id: 217, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L217-score-c432', hand: parseHand('8♠ 10♠ A♥ K♦ K♣ 3♣ 2♠ J♦ 4♠ 2♣ K♠ Q♦ 6♣'),
+         objective: { type: 'score', min: 22, gold: 38 } },
+  218: { id: 218, chapter: 22, type: 'Harder', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L218-score-c238', hand: parseHand('7♣ 2♣ 6♣ K♦ 9♦ K♥ A♥ J♠ A♠ 10♣ A♦ 8♥ 2♥'),
+         objective: { type: 'score', min: 41, gold: 45 } },
+  219: { id: 219, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L219-queen-c253', hand: parseHand('10♥ A♥ 2♣ Q♥ 6♣ J♣ K♣ J♥ A♦ 2♦ A♠ 3♥ K♠'),
+         objective: { type: 'avoidQueen', goldScoreBar: 22 } },
+  220: { id: 220, chapter: 22, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_cartographer',
+         seed: 'ddp-ch3-L220-boss-c180',
+         hands4: [
+           parseHand('Q♦ 5♦ 8♥ 6♠ A♣ 4♣ 3♥ 4♥ J♦ Q♣ 8♣ 10♥ 7♥'),
+           parseHand('8♠ Q♠ 6♦ 7♥ 10♣ A♣ 3♥ A♠ J♣ 9♣ 9♥ 4♥ 2♦'),
+           parseHand('3♠ K♣ A♦ 2♥ Q♥ 9♦ 4♠ 2♣ Q♦ 7♣ 2♠ 2♦ 5♠'),
+           parseHand('9♥ 6♣ 4♥ 10♦ 4♣ 9♣ 6♦ K♥ 8♥ 7♣ 7♠ 2♦ 7♦'),
+         ],
+         objective: { type: 'score', min: 51, gold: 65 } },
+
+  // ═══ House of Clubs, Chapter 3: The Service Maze (levels 221-230) ═══
+  // Same source/sheet/format as every earlier chapter. Direction 'left'
+  // throughout. Levels 224 and (in Chapter 9 below) 285 have a BLANK
+  // gold target in the sheet — checked against their own "Ceiling
+  // (observed)" column rather than guessed: both ceilings exactly equal
+  // their own min (40 and 60 respectively), meaning the level's fixed
+  // hand cannot score any higher than the clear bar itself, so there is
+  // no room for a separate higher gold tier. Set gold = min for both,
+  // the only reading consistent with the measured ceiling.
+  221: { id: 221, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L221-score-c523', hand: parseHand('8♥ Q♦ 6♥ K♣ 4♥ K♦ J♥ 3♣ 10♦ A♦ A♠ Q♣ J♠'),
+         objective: { type: 'score', min: 30, gold: 48 } },
+  222: { id: 222, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L222-score-c956', hand: parseHand('A♣ 3♣ 6♦ 7♦ A♠ 7♥ 3♥ 9♦ 4♠ 6♥ K♠ 7♠ Q♦'),
+         objective: { type: 'score', min: 30, gold: 35 } },
+  223: { id: 223, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L223-tricks-c76', hand: parseHand('9♥ 5♦ Q♥ 9♦ 2♣ 8♦ 5♥ J♦ 6♦ 5♣ 5♠ 2♥ Q♦'),
+         objective: { type: 'trickCount', minTricks: 5, goldTricks: 6 } },
+  224: { id: 224, chapter: 23, type: 'Harder', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L224-score-c974', hand: parseHand('4♣ Q♠ A♣ 7♠ 3♥ Q♦ A♦ 5♥ 6♦ 4♥ J♠ 2♠ 5♦'),
+         objective: { type: 'score', min: 40, gold: 40 } },
+  225: { id: 225, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L225-score-c104', hand: parseHand('6♣ Q♠ K♥ Q♦ A♦ 5♣ 8♠ A♠ J♠ 10♥ 9♠ K♣ 10♦'),
+         objective: { type: 'score', min: 20, gold: 44 } },
+  226: { id: 226, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L226-void-c220', hand: parseHand('6♣ A♥ 4♠ Q♣ 4♣ 5♥ 6♠ J♦ J♥ A♠ 10♠ 5♦ 8♦'),
+         objective: { type: 'suitVoid', suit: '♦', voidByTrick: 7, goldByTrick: 6 } },
+  227: { id: 227, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L227-score-c161', hand: parseHand('K♣ A♣ 4♠ K♦ 10♦ 9♠ Q♥ 5♥ 8♦ 2♦ A♦ 5♠ 4♦'),
+         objective: { type: 'score', min: 32, gold: 41 } },
+  228: { id: 228, chapter: 23, type: 'Harder', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L228-score-c234', hand: parseHand('8♣ 6♦ 10♠ K♦ A♦ 9♣ 4♠ 2♥ 9♠ J♠ K♣ Q♣ 8♠'),
+         objective: { type: 'score', min: 40, gold: 48 } },
+  229: { id: 229, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L229-clean-c47', hand: parseHand('5♥ 7♠ 6♦ 3♦ 8♣ 3♠ 10♥ 2♣ 6♠ J♠ 3♣ 9♥ 10♦'),
+         objective: { type: 'cleanHand', goldScoreBar: 0 } },
+  230: { id: 230, chapter: 23, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_courier',
+         seed: 'ddp-ch3-L230-boss-c446',
+         hands4: [
+           parseHand('K♠ 4♠ 8♥ 8♦ 8♣ 9♥ 3♥ 3♠ 9♠ A♣ 5♥ Q♠ 6♣'),
+           parseHand('5♦ A♣ Q♦ 3♣ 3♥ 10♠ 5♥ 7♥ 6♣ Q♣ 9♠ K♥ J♦'),
+           parseHand('10♦ J♣ 8♣ 10♠ 6♦ 6♠ 6♣ 8♥ 3♦ A♥ Q♦ K♥ K♣'),
+           parseHand('5♠ Q♣ 8♦ 3♦ 6♦ 10♦ K♠ 6♠ K♥ 6♥ 9♣ 5♦ 8♠'),
+         ],
+         objective: { type: 'score', min: 51, gold: 77 } },
+
+  // ═══ House of Clubs, Chapter 4: The Common Chamber (levels 231-240) ═══
+  // Direction 'right' throughout.
+  231: { id: 231, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L231-score-c824', hand: parseHand('7♥ K♦ 8♥ 5♠ A♠ 3♠ K♣ J♦ J♣ 10♥ 2♣ 9♦ J♥'),
+         objective: { type: 'score', min: 12, gold: 29 } },
+  232: { id: 232, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L232-score-c29', hand: parseHand('3♥ K♣ 8♥ 6♠ 4♠ A♦ 2♠ J♦ A♣ 3♦ J♠ 8♠ J♣'),
+         objective: { type: 'score', min: 40, gold: 46 } },
+  233: { id: 233, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L233-queen-c59', hand: parseHand('10♦ 8♦ 2♣ 6♠ 6♥ 10♥ Q♣ 8♥ Q♥ 2♠ Q♠ A♣ 3♠'),
+         objective: { type: 'avoidQueen', goldScoreBar: -20 } },
+  234: { id: 234, chapter: 24, type: 'Harder', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L234-score-c574', hand: parseHand('K♣ 8♥ A♦ 8♦ K♥ J♦ Q♦ 2♠ K♠ Q♠ 5♥ 5♠ 6♦'),
+         objective: { type: 'score', min: 28, gold: 37 } },
+  235: { id: 235, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L235-score-c316', hand: parseHand('9♦ A♦ 5♠ 10♠ J♥ 8♥ Q♠ 4♣ 2♠ Q♣ J♠ 10♦ 2♥'),
+         objective: { type: 'score', min: 32, gold: 42 } },
+  236: { id: 236, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L236-tricks-c26', hand: parseHand('J♦ J♠ 8♥ 9♣ 7♦ 3♥ A♦ Q♣ 3♣ 5♠ 2♥ K♥ J♥'),
+         objective: { type: 'trickCount', minTricks: 6, goldTricks: 7 } },
+  237: { id: 237, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L237-score-c39', hand: parseHand('K♣ 6♦ 2♥ 4♥ A♦ 7♣ J♦ A♣ 9♦ 4♦ Q♦ 7♦ Q♥'),
+         objective: { type: 'score', min: 37, gold: 51 } },
+  238: { id: 238, chapter: 24, type: 'Harder', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L238-score-c857', hand: parseHand('A♣ J♠ 6♠ 7♠ 5♥ A♦ K♦ 6♦ K♣ 10♦ 4♦ K♠ 10♣'),
+         objective: { type: 'score', min: 50, gold: 54 } },
+  239: { id: 239, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L239-void-c37', hand: parseHand('4♦ A♠ 8♥ Q♣ A♦ 2♣ 7♦ 5♥ 8♠ 8♦ 6♣ 10♦ Q♠'),
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 6, goldByTrick: 5 } },
+  240: { id: 240, chapter: 24, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_mediator',
+         seed: 'ddp-ch3-L240-boss-c2',
+         hands4: [
+           parseHand('7♣ J♣ Q♥ A♥ K♣ J♦ 5♦ 10♠ 4♣ 8♥ 2♦ 4♦ A♦'),
+           parseHand('8♥ 7♦ 7♣ 7♠ 5♥ 2♣ 8♦ 3♥ 3♠ 3♣ 8♠ Q♣ A♥'),
+           parseHand('6♠ 5♥ 6♦ 8♣ K♣ A♦ 4♠ A♥ J♥ 4♣ 8♦ K♠ J♠'),
+           parseHand('4♥ J♥ 9♦ 10♣ 2♣ 9♥ 8♠ 4♣ 10♦ 4♠ K♣ 7♠ A♠'),
+         ],
+         objective: { type: 'score', min: 61, gold: 73 } },
+
+  // ═══ House of Clubs, Chapter 5: The Root Gallery (levels 241-250) ═══
+  // Direction 'right' throughout. Level 250 (the boss) is a genuine
+  // 12-hand fight — the sheet's own Hands/Direction columns say 'x12
+  // (L/R/A/K)', three full cycles of the pass rotation rather than the
+  // usual one, matching precedent set by Levels 150/200's own 8-hand
+  // fights. Uses hands12 (see buildCampaignDeck's own note).
+  241: { id: 241, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L241-score-c287', hand: parseHand('A♣ 10♣ A♠ 5♠ 2♥ J♣ 4♣ A♥ K♥ K♦ 5♦ 7♦ 2♣'),
+         objective: { type: 'score', min: 21, gold: 32 } },
+  242: { id: 242, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L242-score-c248', hand: parseHand('A♠ 3♥ 3♣ 10♥ K♣ Q♥ K♦ A♦ 2♥ 8♦ 3♠ 7♣ 8♣'),
+         objective: { type: 'score', min: 33, gold: 45 } },
+  243: { id: 243, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L243-clean-c64', hand: parseHand('7♠ 8♦ K♠ 6♥ A♦ J♦ A♥ K♣ J♠ 9♠ 4♠ 5♦ 6♦'),
+         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+  244: { id: 244, chapter: 25, type: 'Harder', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L244-score-c85', hand: parseHand('J♠ 7♦ 9♥ 3♥ 7♠ 6♣ K♠ Q♠ 9♣ K♥ A♥ A♦ 8♠'),
+         objective: { type: 'score', min: 22, gold: 29 } },
+  245: { id: 245, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L245-score-c448', hand: parseHand('8♣ J♠ 3♦ 9♣ 5♥ A♣ 3♣ J♦ K♥ K♦ 4♥ 7♦ 9♥'),
+         objective: { type: 'score', min: 40, gold: 46 } },
+  246: { id: 246, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L246-queen-c249', hand: parseHand('3♦ 5♠ K♠ 2♣ 2♥ 9♦ 7♥ 9♣ 10♣ A♣ 7♣ Q♥ 8♣'),
+         objective: { type: 'avoidQueen', goldScoreBar: 16 } },
+  247: { id: 247, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L247-score-c240', hand: parseHand('10♠ J♦ 9♥ 9♠ Q♦ K♦ K♥ 5♦ J♥ 4♣ A♣ 5♠ J♠'),
+         objective: { type: 'score', min: 36, gold: 40 } },
+  248: { id: 248, chapter: 25, type: 'Harder', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L248-score-c375', hand: parseHand('A♦ Q♥ K♥ 6♦ 9♠ 7♦ 6♥ 5♠ 8♦ K♦ 4♠ 6♠ 8♠'),
+         objective: { type: 'score', min: 26, gold: 46 } },
+  249: { id: 249, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
+         seed: 'ddp-ch3-L249-tricks-c132', hand: parseHand('J♦ 9♣ Q♣ 5♦ 4♠ 10♦ 7♦ 3♥ A♦ A♣ A♥ 10♥ 10♠'),
+         objective: { type: 'trickCount', minTricks: 7, goldTricks: 8 } },
+  250: { id: 250, chapter: 25, type: 'BOSS', forcePassDir: null, hands: 12, bossId: 'the_naturalist',
+         seed: 'ddp-ch3-L250-boss-c541',
+         hands12: [
+           parseHand('8♦ 10♣ 8♠ 9♥ 5♠ 2♠ 10♠ 9♠ 6♥ 8♣ 7♥ 8♥ 3♥'),
+           parseHand('A♦ 8♥ 4♦ 4♥ 9♦ 2♥ J♠ 10♣ 5♣ K♠ J♥ J♦ 3♠'),
+           parseHand('4♠ 10♦ J♦ 10♣ K♣ A♦ A♥ 8♣ K♥ 5♦ J♣ Q♦ 9♦'),
+           parseHand('K♠ 9♥ 6♦ Q♣ 2♥ J♣ 4♦ 3♥ 9♦ A♠ 8♠ 9♣ 8♦'),
+           parseHand('5♠ K♣ 2♥ Q♥ 7♥ 5♣ A♠ 8♥ 4♦ 4♠ K♥ 9♣ 5♥'),
+           parseHand('10♣ 3♠ A♥ 6♥ 7♦ A♦ 3♦ 5♣ 9♥ Q♥ A♣ K♦ 6♣'),
+           parseHand('K♠ A♣ A♠ J♠ J♦ 2♥ 6♦ J♥ Q♦ K♦ 8♥ 5♥ A♥'),
+           parseHand('Q♥ 6♠ J♦ A♥ 4♥ 8♠ 8♣ J♠ 8♦ 10♥ 10♣ 6♦ 2♦'),
+           parseHand('7♥ 10♠ 2♥ 4♦ 9♦ 8♥ 2♠ 3♠ 8♦ 5♣ 8♠ Q♦ A♦'),
+           parseHand('4♥ 2♣ 6♥ 5♦ K♥ 9♥ 10♣ 4♦ 8♠ 3♦ 7♥ 10♥ 9♦'),
+           parseHand('Q♣ J♦ J♠ 2♠ 9♣ 7♣ K♠ J♥ 4♥ 9♥ A♣ 9♦ J♣'),
+           parseHand('10♠ 3♥ A♠ 5♦ 7♣ 8♠ 9♠ 2♣ 9♣ A♦ 6♥ 7♠ 6♣'),
+         ],
+         objective: { type: 'score', min: 98, gold: 115 } },
+
+  // ═══ House of Clubs, Chapter 6: The Lantern Salon (levels 251-260) ═══
+  // Direction 'across' throughout.
+  251: { id: 251, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L251-score-c251', hand: parseHand('9♥ J♣ 5♦ A♣ 10♥ 7♥ 2♣ 3♥ Q♠ A♦ J♠ Q♣ 7♣'),
+         objective: { type: 'score', min: 45, gold: 51 } },
+  252: { id: 252, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L252-score-c40', hand: parseHand('4♠ 5♠ 7♦ A♣ J♦ J♣ A♦ 10♥ 3♠ K♣ K♠ 2♥ 4♥'),
+         objective: { type: 'score', min: 35, gold: 42 } },
+  253: { id: 253, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L253-void-c143', hand: parseHand('Q♣ A♠ 8♣ 10♠ K♣ 7♠ 10♦ 5♦ J♦ Q♦ 3♦ 9♥ A♣'),
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 5, goldByTrick: 4 } },
+  254: { id: 254, chapter: 26, type: 'Harder', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L254-score-c404', hand: parseHand('4♦ A♣ Q♠ 5♥ A♥ 6♣ A♠ 3♥ Q♣ 4♥ 2♠ J♠ K♣'),
+         objective: { type: 'score', min: 46, gold: 48 } },
+  255: { id: 255, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L255-score-c32', hand: parseHand('J♠ J♦ 9♣ 9♦ 8♠ 3♠ 10♥ Q♦ 2♣ K♦ 3♥ 6♥ Q♣'),
+         objective: { type: 'score', min: 30, gold: 36 } },
+  256: { id: 256, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L256-clean-c111', hand: parseHand('K♦ J♥ 10♠ J♦ Q♠ A♠ A♣ 4♣ 3♣ 10♦ 9♠ 6♣ 3♠'),
+         objective: { type: 'cleanHand', goldScoreBar: 20 } },
+  257: { id: 257, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L257-score-c535', hand: parseHand('J♣ 10♠ J♦ 2♥ 9♥ 5♦ 9♦ 2♣ K♦ 8♥ 7♠ A♥ K♠'),
+         objective: { type: 'score', min: 29, gold: 42 } },
+  258: { id: 258, chapter: 26, type: 'Harder', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L258-score-c1114', hand: parseHand('3♦ 6♠ 2♥ 9♦ 10♦ 3♣ 10♥ K♣ 7♣ 10♠ J♦ 6♦ K♦'),
+         objective: { type: 'score', min: 19, gold: 26 } },
+  259: { id: 259, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L259-queen-c109', hand: parseHand('8♦ A♠ 3♣ 9♠ A♦ Q♦ 10♣ 2♣ 5♦ 5♥ J♥ 5♠ 3♥'),
+         objective: { type: 'avoidQueen', goldScoreBar: 3 } },
+  260: { id: 260, chapter: 26, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_confidant',
+         seed: 'ddp-ch3-L260-boss-c191',
+         hands4: [
+           parseHand('A♠ 5♠ 3♠ 2♣ 4♣ 3♥ 10♥ 4♥ A♣ 10♠ 8♥ J♥ 3♣'),
+           parseHand('5♣ 7♥ J♥ 9♠ A♣ A♠ 7♣ Q♦ 3♣ 10♠ 9♦ 8♠ J♦'),
+           parseHand('J♥ 2♥ J♦ 10♥ 10♦ 2♠ 3♣ 3♥ Q♠ 3♠ K♠ 2♣ 7♠'),
+           parseHand('9♥ K♣ 8♥ A♥ Q♦ A♠ 7♣ 8♣ 9♣ J♥ 5♥ 10♥ 10♦'),
+         ],
+         objective: { type: 'score', min: 50, gold: 60 } },
+
+  // ═══ House of Clubs, Chapter 7: The Ledger Room (levels 261-270) ═══
+  // Direction 'across' throughout.
+  261: { id: 261, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L261-score-c374', hand: parseHand('4♠ Q♦ 3♣ J♦ A♦ 7♥ K♦ 7♠ 6♣ 3♦ Q♠ A♥ A♣'),
+         objective: { type: 'score', min: 39, gold: 43 } },
+  262: { id: 262, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L262-score-c1171', hand: parseHand('3♠ 10♥ 7♥ 8♠ 2♠ 6♠ K♠ J♣ 4♥ 4♠ 10♦ J♠ 8♣'),
+         objective: { type: 'score', min: 26, gold: 46 } },
+  263: { id: 263, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L263-tricks-c117', hand: parseHand('3♥ 9♥ 4♥ 5♠ 6♦ K♠ K♥ A♥ A♠ 10♥ 9♦ Q♣ J♣'),
+         objective: { type: 'trickCount', minTricks: 7, goldTricks: 8 } },
+  264: { id: 264, chapter: 27, type: 'Harder', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L264-score-c230', hand: parseHand('K♣ 9♠ 3♥ A♥ 10♠ 2♥ A♦ 9♦ K♦ 10♦ J♠ 4♦ 8♠'),
+         objective: { type: 'score', min: 20, gold: 30 } },
+  265: { id: 265, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L265-score-c274', hand: parseHand('10♦ 9♣ K♦ 8♥ 4♠ 9♦ J♠ J♦ K♣ 3♣ 2♥ A♣ 9♥'),
+         objective: { type: 'score', min: 36, gold: 44 } },
+  266: { id: 266, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L266-void-c29', hand: parseHand('8♣ K♦ 6♠ Q♠ 2♣ 5♦ K♣ 2♠ J♥ A♠ 5♣ 2♦ 5♠'),
+         objective: { type: 'suitVoid', suit: '♦', voidByTrick: 4, goldByTrick: 3 } },
+  267: { id: 267, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L267-score-c1025', hand: parseHand('K♣ J♠ K♦ 6♠ 4♣ A♦ 6♦ A♣ 7♥ 9♠ 2♥ J♣ Q♣'),
+         objective: { type: 'score', min: 53, gold: 60 } },
+  268: { id: 268, chapter: 27, type: 'Harder', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L268-score-c553', hand: parseHand('J♦ Q♣ 7♦ 9♠ 10♠ K♠ Q♦ 4♠ K♣ 6♦ 10♣ 7♥ 10♦'),
+         objective: { type: 'score', min: 29, gold: 35 } },
+  269: { id: 269, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L269-clean-c28', hand: parseHand('8♥ 3♦ Q♣ 4♣ J♠ Q♦ Q♠ 5♠ 8♦ 5♣ K♥ 10♠ J♥'),
+         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+  270: { id: 270, chapter: 27, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'ledger_broker',
+         seed: 'ddp-ch3-L270-boss-c68',
+         hands4: [
+           parseHand('4♥ Q♥ J♥ 4♦ 3♠ 4♣ K♦ K♣ 10♥ 9♣ A♦ 10♦ Q♠'),
+           parseHand('6♥ K♦ 3♦ A♥ J♦ 7♥ A♣ 8♥ 7♠ 2♥ A♠ 7♣ Q♥'),
+           parseHand('5♥ 7♥ A♥ 7♠ 10♣ A♠ 4♥ 6♦ 3♦ 4♣ 2♦ A♦ 6♣'),
+           parseHand('A♦ 7♦ Q♣ A♣ 10♣ 5♠ 10♠ 6♦ K♣ 8♦ Q♠ 9♣ 6♥'),
+         ],
+         objective: { type: 'score', min: 18, gold: 27 } },
+
+  // ═══ House of Clubs, Chapter 8: The Council Gallery (levels 271-280) ═══
+  // "Full group phase" — no chapter-specific regulars; the three AI seats
+  // rotate through the seven returning House of Spades characters via
+  // chapter28Companions (see CAMPAIGN_CHAPTER_ROSTER's own note), same
+  // mechanism as House of Hearts' own Chapter 9. Direction is 'across'
+  // for Levels 271-274 then switches to 'keep' for 275-279 — transcribed
+  // exactly as the sheet gives it, not normalized to one direction.
+  271: { id: 271, chapter: 28, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L271-score-c294', hand: parseHand('A♣ Q♠ 7♥ 10♥ 2♣ 9♥ K♣ 9♦ 9♠ K♠ 9♣ 3♥ 6♠'),
+         objective: { type: 'score', min: 28, gold: 35 } },
+  272: { id: 272, chapter: 28, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L272-score-c91', hand: parseHand('K♠ J♠ 9♣ A♣ K♣ 5♣ Q♣ 5♥ J♦ 3♥ A♦ Q♦ 2♠'),
+         objective: { type: 'score', min: 28, gold: 40 } },
+  273: { id: 273, chapter: 28, type: 'Normal', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L273-queen-c37', hand: parseHand('4♣ 8♣ 6♦ K♦ J♣ 5♥ A♦ 7♦ 2♦ 5♠ K♥ 9♣ 4♦'),
+         objective: { type: 'avoidQueen', goldScoreBar: 28 } },
+  274: { id: 274, chapter: 28, type: 'Harder', forcePassDir: 'across', hands: 1,
+         seed: 'ddp-ch3-L274-score-c132', hand: parseHand('2♣ 7♦ 9♥ J♣ 4♦ 7♣ 8♣ K♣ 3♥ 2♥ A♥ 7♥ 10♥'),
+         objective: { type: 'score', min: 22, gold: 45 } },
+  275: { id: 275, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L275-score-c444', hand: parseHand('8♦ K♠ 5♠ 3♥ Q♣ 9♥ 9♠ Q♠ A♦ 4♥ K♣ 9♣ K♦'),
+         objective: { type: 'score', min: 53, gold: 59 } },
+  276: { id: 276, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L276-tricks-c409', hand: parseHand('A♣ 4♠ 9♠ 7♠ J♥ 8♥ 8♣ 10♣ 7♥ 4♦ 8♠ 6♥ K♥'),
+         objective: { type: 'trickCount', minTricks: 9, goldTricks: 10 } },
+  277: { id: 277, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L277-score-c270', hand: parseHand('J♠ 3♥ 9♥ A♦ 8♥ 7♥ A♣ Q♦ K♣ 4♠ 9♠ A♠ J♥'),
+         objective: { type: 'score', min: 47, gold: 55 } },
+  278: { id: 278, chapter: 28, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L278-score-c77', hand: parseHand('A♥ 7♦ 4♥ 10♥ A♠ K♠ 2♥ Q♥ 8♦ 10♠ 3♠ 10♣ 6♣'),
+         objective: { type: 'score', min: 24, gold: 28 } },
+  279: { id: 279, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L279-void-c66', hand: parseHand('Q♠ 9♦ K♣ 7♦ 3♥ 7♣ 6♦ 6♥ 5♦ 9♥ 5♥ 9♣ 4♦'),
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 3, goldByTrick: 2 } },
+  280: { id: 280, chapter: 28, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_captain',
+         seed: 'ddp-ch3-L280-boss-c450',
+         hands4: [
+           parseHand('4♦ 10♥ 3♣ 6♥ A♣ 5♣ A♥ 9♣ A♠ 7♥ 5♦ 8♠ J♥'),
+           parseHand('10♣ J♥ 3♥ 6♠ 2♠ Q♣ 10♥ 8♣ 3♦ J♠ 10♦ 6♥ 9♥'),
+           parseHand('8♣ 4♦ 8♥ A♦ 10♦ Q♦ 10♣ A♥ K♥ 7♠ 9♠ 9♥ K♣'),
+           parseHand('9♦ 2♥ A♥ 8♠ 3♦ 5♣ 3♣ J♥ A♣ K♦ 2♠ 9♥ 4♣'),
+         ],
+         objective: { type: 'score', min: 23, gold: 31 } },
+
+  // ═══ House of Clubs, Chapter 9: The Twin Table Hall (levels 281-290) ═══
+  // "Two-table preview" — same rotation mechanism as Chapter 8, via
+  // chapter29Companions. Direction 'keep' throughout. Level 285's blank
+  // gold target is the same "ceiling equals min" case as Level 224 above
+  // — its own Ceiling (observed) is 60, identical to its min, so gold is
+  // set to 60 rather than left undefined.
+  281: { id: 281, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L281-score-c435', hand: parseHand('3♥ A♠ 10♥ A♣ 6♥ 9♦ 9♥ Q♦ K♣ 4♥ 6♠ 8♣ 9♣'),
+         objective: { type: 'score', min: 48, gold: 55 } },
+  282: { id: 282, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L282-score-c312', hand: parseHand('4♣ A♠ 2♣ K♦ 5♥ 9♣ A♣ 7♦ 10♥ K♣ K♠ A♦ J♣'),
+         objective: { type: 'score', min: 46, gold: 54 } },
+  283: { id: 283, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L283-clean-c58', hand: parseHand('3♦ Q♥ A♠ 6♥ 7♣ 7♥ 10♦ J♦ 3♠ K♦ 9♦ 8♠ 4♠'),
+         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+  284: { id: 284, chapter: 29, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L284-score-c193', hand: parseHand('8♠ J♠ K♠ K♦ 6♥ 4♦ 4♠ 8♥ 7♥ J♥ J♣ Q♠ 4♥'),
+         objective: { type: 'score', min: 30, gold: 36 } },
+  285: { id: 285, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L285-score-c328', hand: parseHand('7♣ 4♠ 5♠ 6♣ 7♦ A♦ 10♦ 4♣ 9♥ Q♣ K♣ 9♦ Q♦'),
+         objective: { type: 'score', min: 60, gold: 60 } },
+  286: { id: 286, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L286-queen-c110', hand: parseHand('Q♣ 6♣ 2♣ 2♥ 10♣ 9♠ J♣ K♦ 10♠ 2♠ 3♥ A♣ 3♦'),
+         objective: { type: 'avoidQueen', goldScoreBar: -6 } },
+  287: { id: 287, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L287-score-c121', hand: parseHand('J♣ A♣ 2♥ 3♥ J♠ 2♣ 6♥ 6♠ K♠ 10♣ A♠ A♦ K♦'),
+         objective: { type: 'score', min: 52, gold: 57 } },
+  288: { id: 288, chapter: 29, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L288-score-c248', hand: parseHand('K♠ Q♣ 2♥ 6♦ 9♦ 5♥ 4♥ A♦ 8♦ Q♦ 7♠ 10♥ 5♠'),
+         objective: { type: 'score', min: 46, gold: 52 } },
+  289: { id: 289, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L289-tricks-c549', hand: parseHand('A♦ J♦ 8♣ 7♣ J♣ A♣ 4♦ 3♣ Q♥ 8♥ K♦ 7♥ 2♣'),
+         objective: { type: 'trickCount', minTricks: 10, goldTricks: 11 } },
+  290: { id: 290, chapter: 29, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_steward',
+         seed: 'ddp-ch3-L290-boss-c634',
+         hands4: [
+           parseHand('Q♠ 8♥ 9♣ 3♥ J♣ J♦ 5♣ 3♣ 10♥ 10♣ 7♥ 5♥ 4♣'),
+           parseHand('3♠ 6♣ 7♠ Q♦ A♠ K♦ Q♣ J♥ 6♠ 10♦ 5♣ 7♥ 10♥'),
+           parseHand('4♣ 8♥ 7♦ K♦ 6♥ 2♣ 7♠ 6♦ Q♦ J♥ 10♦ J♠ Q♠'),
+           parseHand('10♣ 2♥ 8♥ 3♠ 8♠ 9♦ 3♥ K♦ 4♥ 2♠ Q♦ K♥ A♠'),
+         ],
+         objective: { type: 'score', min: 63, gold: 72 } },
+
+  // ═══ House of Clubs, Chapter 10: The Root Crown Chamber (291-300) ═══
+  // House of Clubs' own finale — same rotation mechanism as Chapters 8-9
+  // for Levels 291-299 (chapter30Companions), dropping to the two generic
+  // Club Champions plus QUEEN OF CLUBS for Level 300 itself (see that
+  // function's own note). Direction 'keep' for 291-296, 'left' for
+  // 297-299, 'x12 (L/R/A/K)' for the finale — transcribed exactly as
+  // given, same as Chapter 8's own mid-chapter direction switch. Level
+  // 300 uses hands12, same reasoning as Level 250 above.
+  291: { id: 291, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L291-score-c572', hand: parseHand('A♦ 9♣ Q♥ K♦ 3♥ K♣ 4♥ A♠ 6♣ 10♠ 10♦ 9♠ 4♠'),
+         objective: { type: 'score', min: 44, gold: 51 } },
+  292: { id: 292, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L292-score-c5', hand: parseHand('3♣ 4♥ 9♣ J♥ 7♦ K♣ A♣ 8♠ 10♠ 3♠ 7♠ 10♥ 2♦'),
+         objective: { type: 'score', min: 32, gold: 37 } },
+  293: { id: 293, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L293-void-c123', hand: parseHand('6♥ 3♦ J♣ 10♣ 10♥ 10♦ 6♦ Q♥ 9♥ K♠ 7♠ 4♦ J♠'),
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 2, goldByTrick: 1 } },
+  294: { id: 294, chapter: 30, type: 'Harder', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L294-score-c204', hand: parseHand('3♠ 10♦ J♥ 8♥ J♠ 3♥ A♣ 9♣ A♦ Q♦ Q♥ 3♣ 5♠'),
+         objective: { type: 'score', min: 44, gold: 48 } },
+  295: { id: 295, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L295-score-c293', hand: parseHand('9♣ Q♥ 8♥ K♥ J♠ 7♥ 9♥ 2♠ 3♣ 9♦ 7♦ 10♠ A♠'),
+         objective: { type: 'score', min: 27, gold: 47 } },
+  296: { id: 296, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
+         seed: 'ddp-ch3-L296-clean-c82', hand: parseHand('Q♥ 6♦ 2♠ 9♣ 2♥ 4♦ K♥ Q♦ 5♠ 7♣ J♥ 10♥ Q♠'),
+         objective: { type: 'cleanHand', goldScoreBar: 0 } },
+  297: { id: 297, chapter: 30, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L297-score-c551', hand: parseHand('Q♠ 3♠ 4♣ 9♥ Q♥ 7♦ 7♥ 10♥ 4♥ K♦ 9♠ 5♦ K♥'),
+         objective: { type: 'score', min: 28, gold: 47 } },
+  298: { id: 298, chapter: 30, type: 'Harder', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L298-score-c125', hand: parseHand('9♠ J♠ A♣ 10♥ 5♦ Q♠ 3♠ 2♠ 2♦ 5♠ 9♥ J♦ 10♦'),
+         objective: { type: 'score', min: 12, gold: 20 } },
+  299: { id: 299, chapter: 30, type: 'Normal', forcePassDir: 'left', hands: 1,
+         seed: 'ddp-ch3-L299-queen-c357', hand: parseHand('10♣ 7♥ 4♠ A♣ A♠ 5♦ 2♥ 4♥ 2♣ 7♠ K♦ A♦ 8♥'),
+         objective: { type: 'avoidQueen', goldScoreBar: 17 } },
+  300: { id: 300, chapter: 30, type: 'BOSS', forcePassDir: null, hands: 12, bossId: 'queen_of_clubs',
+         seed: 'ddp-ch3-L300-boss-c335',
+         hands12: [
+           parseHand('9♠ 7♦ 10♦ A♠ K♥ Q♠ 10♥ 2♦ 2♣ 6♣ 4♣ J♦ 7♠'),
+           parseHand('2♣ 9♣ 9♦ A♠ 6♠ 6♣ 8♣ 2♠ 4♠ J♥ A♦ 7♠ K♥'),
+           parseHand('9♣ K♣ 9♠ 3♣ 6♠ 7♣ K♠ 7♦ A♦ 7♥ 10♠ 3♠ Q♥'),
+           parseHand('8♣ A♣ 2♣ 3♠ 10♣ K♠ 7♥ Q♦ K♥ 2♠ J♥ K♦ K♣'),
+           parseHand('5♠ 8♣ A♠ Q♦ K♥ 3♣ 6♣ J♥ 4♥ 10♦ Q♠ 3♥ 7♥'),
+           parseHand('A♣ A♥ 4♠ K♣ 7♥ 3♦ K♠ 10♣ 8♠ 5♥ 3♣ 2♣ 5♦'),
+           parseHand('7♠ Q♣ Q♦ 10♣ 6♣ 9♠ 5♦ Q♠ J♥ 2♣ 3♥ A♦ K♥'),
+           parseHand('K♣ 3♣ 2♠ Q♥ 6♥ 4♣ 7♣ 2♣ 6♦ 3♦ 7♥ J♠ Q♠'),
+           parseHand('Q♠ 8♣ 6♥ J♠ 4♦ 4♣ J♣ K♥ 3♣ 10♣ 5♦ 2♥ 10♥'),
+           parseHand('2♠ K♣ A♦ K♦ A♣ 6♠ 4♥ 3♦ K♥ 9♠ Q♦ 2♣ 7♠'),
+           parseHand('6♣ 8♣ 7♥ J♠ 3♣ Q♣ 5♠ 5♥ 8♠ 8♦ 4♥ 10♥ 2♥'),
+           parseHand('4♣ 4♥ 3♥ 2♠ A♠ 10♦ 7♥ Q♣ 8♦ 3♦ A♥ 6♠ 2♥'),
+         ],
+         objective: { type: 'score', min: 119, gold: 130 } },
 };
 const CAMPAIGN_LEVEL_LIST = Object.values(CAMPAIGN_LEVELS).sort((a, b) => a.id - b.id);
 function campaignLevelById(id) { return CAMPAIGN_LEVELS[id] || null; }
@@ -6118,6 +6779,1239 @@ const CAMPAIGN_STORY_CUES = [
   ccue(200, 'chapterExit', 'player', 'First we recover.'),
   ccue(200, 'chapterExit', null, 'Across the city, beyond the red glass of the House of Hearts, a different light is barely visible through the morning haze. Green. Low. Steady.'),
   ccue(200, 'chapterExit', 'player', 'Then we find the next House.'),
+
+  // House of Clubs "reunion" cinematic — "CHAPTER - PROLOGUE - EIGHT AT
+  // THE GREEN DOOR" / "LEVEL 0 - THE REUNION" from
+  // House_of_Clubs_Levels_1-100_Movie_Script_Human_Dialogue, fed in
+  // verbatim. Played through the same full-bleed narrator cinematic as
+  // the Spades and Hearts prologues (campaignRunPrologue) — art landed
+  // for it (public/campaign/prologue3/1.webp, from "Prologue background
+  // house of clubs.png"), one still for the whole scene rather than the
+  // 2-3 location changes the earlier two prologues needed, since this is
+  // one continuous beat at the green door rather than a journey between
+  // locations. Every cue therefore carries the same `bg:1`.
+  // campaignPrologueStep (client) never reads speakerId — it only ever
+  // types `cue.text` with no name or portrait slot — so unlike the
+  // ordinary dialogue system, every speaking line here folds its
+  // attribution into the text itself ("THE SHARP: ..."), the same
+  // "quoted dialogue folded into the narration line" convention the
+  // Spades/Hearts prologues already used for their own one or two quoted
+  // lines, just extended to attribute each of this scene's many speakers
+  // by name rather than leaving it to context (there's no single obvious
+  // speaker here the way a solitary PLAYER-in-a-cafe scene has one).
+  // Keyed on levelId 201 (Chapter 21's first level) for the same reason
+  // Hearts keyed its own on 101: it can never collide with an earlier
+  // house's (1,'prologue')/(101,'prologue') bucket regardless of what's
+  // built later. See hubEnterChapter3 (client), which calls
+  // campaignRunPrologue(cues, CAMPAIGN_PROLOGUE3_BG, ...) exactly like
+  // hubEnterChapter2 does for its own Hearts-prologue cues.
+  ccue(201, 'prologue', null, 'Several days have passed since the House of Hearts. The green club card has not changed, vanished or explained itself. The PLAYER has slept, eaten, replayed too many conversations in their head, and finally followed the address hidden in the card.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'The House of Clubs stands at the end of a narrow stone street. Dark walnut doors. Deep green glass. Brass worked into shapes that resemble branches and roots before resolving into clubs. No queue. No music leaking outside. Just a building that looks as if it has been waiting longer than the city around it.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'The PLAYER is not the first to arrive.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE SHARP hangs from the iron crossbar above the side entrance in a perfectly fitted shirt and trousers, doing slow pull-ups as if this were a normal place to do them.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE SHARP: "Five hundred thirty-seven. Five hundred thirty-eight."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'PLAYER: "You started without us?"', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE SHARP: "You\'re late."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE SCHOLAR stands beneath him with a thick book open in one hand. He adjusts his glasses without looking up.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE SCHOLAR: "You\'re both early." ... "Woof."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'PLAYER: "Good. Some things survived Hearts."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE WILDCARD comes around the corner carrying a beer.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE WILDCARD: "Hydration is important before research."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE SHARP: "That\'s not hydration."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE WILDCARD: "That\'s negativity. Different department."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE OPTIMIST arrives next and immediately notices the green-coated woman standing beside the doors.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE OPTIMIST: "You look like the reason people invent secret entrances."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'GREEN ATTENDANT: "No."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE OPTIMIST: "Strong answer. Honest. I respect that."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE CHARMER greets the attendant by the name on her small brass badge and asks whether the dog pictured inside her locket is hers. It is. Within fifteen seconds they are discussing its favorite place to sleep.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE WILDCARD: "Show-off."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE CHARMER: "I asked a question."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE OPTIMIST: "I asked one too."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE CHARMER: "No, you made a declaration and hoped it would turn into a question."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE JESTER steps from behind the PLAYER as if he has been there for several minutes.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE JESTER: "Did you know trees can exchange nutrients through fungal networks underground?"', { bg: 1 }),
+  ccue(201, 'prologue', null, 'PLAYER: "Hello to you too."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE JESTER: "I\'m just saying, the building has a theme."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE CLOSER arrives last. He looks at the door, the seven people, the PLAYER, and the green card.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE CLOSER: "Nobody stayed home."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'PLAYER: "You sound surprised."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE CLOSER: "I\'m adjusting the odds."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'For a moment nobody jokes. They all understand the same thing: no Queen ordered this meeting. They chose it.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'PLAYER: "Before we go in, we do this differently this time."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE SHARP: "Define differently."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'PLAYER: "Nobody disappears chasing a clue alone. We pair up. We compare everything. If one of us finds something, all eight know it."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE WILDCARD: "Responsible. Sensible. Honestly, a little disappointing."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE OPTIMIST: "It\'s a good plan. Annoyingly good."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE SCHOLAR: "It\'s the first actual plan we\'ve had."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE JESTER: "That explains why I liked the old one."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE CHARMER: "And if the House tries to split us?"', { bg: 1 }),
+  ccue(201, 'prologue', null, 'PLAYER: "We let it. Then we come back together."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'THE CLOSER: "That, I can work with."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'The green-coated attendant unlocks the doors.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'GREEN ATTENDANT: "All eight. Good."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'Every head turns toward her.', { bg: 1 }),
+  ccue(201, 'prologue', null, 'PLAYER: "You were counting?"', { bg: 1 }),
+  ccue(201, 'prologue', null, 'GREEN ATTENDANT: "The House was."', { bg: 1 }),
+  ccue(201, 'prologue', null, 'The doors open.', { bg: 1 }),
+
+  // ═══ House of Clubs, Chapter 1: The Green Vestibule (levels 201-210) ═══
+  // From House_of_Clubs_Levels_1-100_Movie_Script_Human_Dialogue, "CHAPTER
+  // I - THE GREEN VESTIBULE". Fed in verbatim, level by level. The
+  // chapter's own opening room description folds into Level 201's
+  // preLevel, same convention as every earlier house's Chapter 1. Same
+  // "nothing after ON CLEAR -> no postClear cue" rule as every earlier
+  // house: only Levels 202 and 208 have real content after their ON CLEAR
+  // marker in the source text; every other level here has none, so those
+  // carry a preLevel bucket only. Level 210 (the boss) has no separate
+  // BOSS MIDPOINT or postFail block — its ending sits entirely in
+  // bossDefeat, same call as Levels 110/120's endings. "REGULAR #1"/"#2"
+  // in the source resolve to vestibule1/vestibule2 (see
+  // CAMPAIGN_CHARACTERS's own note on why THE SHARP, not a third
+  // vestibule regular, fills this chapter's remaining AI seat).
+  ccue(201, 'preLevel', null, 'A long entrance hall of dark wood, green velvet and brass lines that branch across the floor like roots. Eight cloak hooks stand beside eight numbered brass drawers. The House is quieter than Hearts, but nothing about it feels empty. THE SHARP stays nearest the PLAYER, noticing every count, interval and inconsistency.'),
+  ccue(201, 'preLevel', null, 'A Club regular leads the group toward two nearby four-seat tables. Before sitting, THE SHARP stops at the cloak wall.'),
+  ccue(201, 'preLevel', 'the_sharp', 'Eight hooks.'),
+  ccue(201, 'preLevel', 'player', 'Well, there are eight of us.'),
+  ccue(201, 'preLevel', 'the_sharp', 'They were polished before we arrived. The ninth is dusty.'),
+  ccue(201, 'preLevel', null, 'The PLAYER looks. There is, in fact, a ninth hook farther down the wall. Untouched.'),
+  ccue(201, 'preLevel', 'the_sharp', 'They prepared for eight. Not a group. A number.'),
+  ccue(201, 'preLevel', null, 'For the first playable table, THE PLAYER and THE SHARP sit together with two House regulars. It is the first time the PLAYER has played beside the man who once entered as a boss.'),
+  ccue(201, 'preLevel', 'vestibule1', 'You two know each other?'),
+  ccue(201, 'preLevel', 'player', 'He tried to beat me.'),
+  ccue(201, 'preLevel', 'the_sharp', 'He was difficult.'),
+  ccue(201, 'preLevel', 'player', 'That almost sounded affectionate.'),
+
+  ccue(202, 'preLevel', null, 'Eight brass drawers beneath the cloak hooks open when the green club card is placed against the panel. Each drawer contains one plain wooden token. No names.'),
+  ccue(202, 'preLevel', 'player', 'Why eight blank tokens?'),
+  ccue(202, 'preLevel', 'the_sharp', "Because they didn't need our names."),
+  ccue(202, 'preLevel', 'vestibule2', 'Or because the House is polite.'),
+  ccue(202, 'preLevel', 'the_sharp', 'No House is this polite.'),
+  ccue(202, 'postClear', null, "THE SHARP places his token beside the PLAYER's instead of pocketing it."),
+
+  ccue(203, 'preLevel', null, 'Between levels, THE SHARP uses a balcony rail for another set of pull-ups. Two Club guests stare openly.'),
+  ccue(203, 'preLevel', 'the_sharp', 'Five hundred forty-nine. Five hundred fifty.'),
+  ccue(203, 'preLevel', 'player', 'Do you ever relax?'),
+  ccue(203, 'preLevel', 'the_sharp', 'Yes.'),
+  ccue(203, 'preLevel', 'player', 'When?'),
+  ccue(203, 'preLevel', 'the_sharp', 'Efficiently.'),
+  ccue(203, 'preLevel', null, 'He drops lightly to the floor and points toward a staff door that has opened exactly every six minutes.'),
+  ccue(203, 'preLevel', 'the_sharp', "Same porter. Same route. Same interval. Something's moving through that door."),
+  ccue(203, 'preLevel', 'player', 'You noticed that while doing pull-ups?'),
+  ccue(203, 'preLevel', 'the_sharp', "You didn't?"),
+
+  ccue(204, 'preLevel', null, 'The PLAYER and THE SHARP sit again with two new House opponents. THE SHARP glances at the PLAYER\'s posture before the hand.'),
+  ccue(204, 'preLevel', 'the_sharp', "You lean forward when you're trying not to force a play."),
+  ccue(204, 'preLevel', 'player', 'You learned that while trying to beat me.'),
+  ccue(204, 'preLevel', 'the_sharp', 'I notice useful things.'),
+  ccue(204, 'preLevel', 'player', 'And now you\'re telling me?'),
+  ccue(204, 'preLevel', 'the_sharp', 'Now it helps both of us.'),
+  ccue(204, 'preLevel', null, 'That sentence lands harder than he intended. He looks away first.'),
+
+  ccue(205, 'preLevel', null, 'A tall man in a green waistcoat watches the entrance from beside a brass gate. He has been there all evening and has not once needed to raise his voice.'),
+  ccue(205, 'preLevel', 'vestibule1', "That's the Warden."),
+  ccue(205, 'preLevel', 'player', 'He guards the door?'),
+  ccue(205, 'preLevel', 'vestibule1', 'He guards who belongs beyond it.'),
+  ccue(205, 'preLevel', 'the_sharp', 'He has checked us fourteen times.'),
+  ccue(205, 'preLevel', 'player', 'You counted.'),
+  ccue(205, 'preLevel', 'the_sharp', 'Obviously.'),
+  ccue(205, 'preLevel', null, "THE WARDEN meets the PLAYER's eyes, then THE SHARP's. He makes one note on a small card."),
+
+  ccue(206, 'preLevel', null, 'The group gathers briefly between tables. THE SCHOLAR has counted the drawers. THE JESTER has counted the chairs. THE WILDCARD has counted beers and contributes nothing useful.'),
+  ccue(206, 'preLevel', 'the_scholar', 'Every public room so far has eight reserved positions somewhere in the architecture.'),
+  ccue(206, 'preLevel', 'the_jester', 'Eight is also the number of arms on an octopus.'),
+  ccue(206, 'preLevel', 'the_wildcard', 'Three hearts.'),
+  ccue(206, 'preLevel', 'player', 'We already used that fact.'),
+  ccue(206, 'preLevel', 'the_jester', 'Good facts deserve sequels.'),
+  ccue(206, 'preLevel', 'the_sharp', 'Focus.'),
+  ccue(206, 'preLevel', 'the_optimist', 'You say that like a man doing five hundred pull-ups in formalwear.'),
+
+  ccue(207, 'preLevel', null, 'After the clear, THE WARDEN stops beside the table.'),
+  ccue(207, 'preLevel', 'the_warden', "Feels different, doesn't it?"),
+  ccue(207, 'preLevel', 'player', 'What is?'),
+  ccue(207, 'preLevel', 'the_warden', 'Playing beside someone whose habits you already know.'),
+  ccue(207, 'preLevel', 'the_sharp', "Knowing someone's habits makes their mistakes easier to predict."),
+  ccue(207, 'preLevel', 'the_warden', 'And predictable rescues.'),
+  ccue(207, 'preLevel', null, 'THE WARDEN walks on before either can ask what he means.'),
+
+  ccue(208, 'preLevel', null, 'THE SHARP and the PLAYER finish another level. A risky moment passes because each correctly predicts what the other will avoid.'),
+  ccue(208, 'preLevel', 'player', 'You trusted me there.'),
+  ccue(208, 'preLevel', 'the_sharp', 'I predicted you.'),
+  ccue(208, 'preLevel', 'player', "That's your version of trust?"),
+  ccue(208, 'preLevel', 'the_sharp', "It's got better data."),
+  ccue(208, 'preLevel', 'player', 'And if the data is wrong?'),
+  ccue(208, 'preLevel', null, 'THE SHARP takes a beat.'),
+  ccue(208, 'preLevel', 'the_sharp', 'Then I adjust.'),
+  ccue(208, 'postClear', null, 'For THE SHARP, this appears to be a deeply personal admission.'),
+
+  ccue(209, 'preLevel', null, 'The brass gate at the end of the vestibule unlocks. THE WARDEN stands beside a four-seat feature table. One House regular rises.'),
+  ccue(209, 'preLevel', 'the_warden', "You've been watching the House."),
+  ccue(209, 'preLevel', 'the_sharp', 'The House has been watching us.'),
+  ccue(209, 'preLevel', 'the_warden', "Good. Tomorrow's question can wait. Sit down and play tonight's table."),
+  ccue(209, 'preLevel', 'player', 'What does that mean?'),
+  ccue(209, 'preLevel', 'the_warden', "Win, and I'll show you."),
+  ccue(209, 'preLevel', null, 'THE SHARP sits beside the PLAYER. The empty chair opposite them waits for THE WARDEN.'),
+
+  ccue(210, 'bossIntro', null, 'INT. GREEN VESTIBULE FEATURE TABLE - NIGHT'),
+  ccue(210, 'bossIntro', null, 'THE WARDEN takes the third seat. A Club regular takes the fourth. THE SHARP remains beside the PLAYER. No one calls them a team, but the seating makes the idea impossible to ignore.'),
+  ccue(210, 'bossIntro', 'the_warden', "Eight people walked through my door. I'd like to see whether all eight walk back out."),
+  ccue(210, 'bossIntro', 'player', 'You expected us.'),
+  ccue(210, 'bossIntro', 'the_warden', 'I expected a number.'),
+  ccue(210, 'bossIntro', 'the_sharp', 'Not names.'),
+  ccue(210, 'bossIntro', 'the_warden', 'Exactly.'),
+  ccue(210, 'bossIntro', null, 'The boss match begins.'),
+  ccue(210, 'bossIntro', 'the_warden', 'Mr. Sharp, you keep trying to solve him.'),
+  ccue(210, 'bossIntro', 'the_sharp', 'It works.'),
+  ccue(210, 'bossIntro', 'the_warden', 'Until friendship changes the equation.'),
+  ccue(210, 'bossIntro', 'player', 'Did you just call this friendship?'),
+  ccue(210, 'bossIntro', 'the_sharp', 'Play.'),
+  ccue(210, 'bossIntro', null, 'Later, the PLAYER deliberately chooses a line THE SHARP would not have predicted. THE SHARP notices, recalculates and does not complain.'),
+  ccue(210, 'bossIntro', 'the_warden', 'There. Better.'),
+  ccue(210, 'bossDefeat', null, 'THE WARDEN unlocks the gate. Beyond it is a room filled with maps, plans and suspended brass route-lines.'),
+  ccue(210, 'bossDefeat', 'the_warden', "The House didn't reserve a chair for you."),
+  ccue(210, 'bossDefeat', 'player', 'It reserved eight.'),
+  ccue(210, 'bossDefeat', 'the_warden', 'Before any of you agreed to come together.'),
+  ccue(210, 'bossDefeat', null, 'THE SHARP stares into the Map Room.'),
+  ccue(210, 'bossDefeat', 'the_sharp', "That's worse."),
+  ccue(210, 'bossDefeat', 'player', 'You say that a lot.'),
+  ccue(210, 'bossDefeat', 'the_sharp', 'The Houses keep earning it.'),
+
+  // ═══ House of Clubs, Chapter 2: The Map Room (levels 211-220) ═══
+  // From House_of_Clubs_Levels_1-100_Movie_Script_Human_Dialogue, "CHAPTER
+  // II - THE MAP ROOM". Fed in verbatim, level by level. The chapter's
+  // own opening room description folds into Level 211's preLevel, same
+  // convention as every earlier chapter. Same "nothing after ON CLEAR ->
+  // no postClear cue" rule: NONE of Levels 211-219 have real content
+  // after their ON CLEAR marker in the source text (several have no
+  // marker at all), so each carries a preLevel bucket only. Level 220
+  // (the boss) has no separate BOSS MIDPOINT or postFail block — its
+  // ending sits entirely in bossDefeat, same call as Levels 110/120/210's
+  // endings.
+  ccue(211, 'preLevel', null, 'A circular chamber of green felt walls, brass rails and layered maps. Routes from different Houses overlap like veins. THE SCHOLAR immediately takes over the investigation, reading labels, dates and old annotations while THE PLAYER learns that his need for answers is more personal than simple curiosity.'),
+  ccue(211, 'preLevel', null, 'THE SCHOLAR sits beside the PLAYER at the next table. Behind them, a wall map shows three marked districts: Spades, Hearts and Clubs.'),
+  ccue(211, 'preLevel', 'player', 'That could have been drawn yesterday.'),
+  ccue(211, 'preLevel', 'the_scholar', "It wasn't."),
+  ccue(211, 'preLevel', null, "He points to a date stamped beneath the frame. It predates the PLAYER's first night in the House of Spades."),
+  ccue(211, 'preLevel', 'the_scholar', 'Woof.'),
+  ccue(211, 'preLevel', 'player', 'Concern bark?'),
+  ccue(211, 'preLevel', 'the_scholar', 'Technical term.'),
+
+  ccue(212, 'preLevel', null, 'A thin woman with ink-stained fingers moves small brass markers across a floor map without looking at the tables.'),
+  ccue(212, 'preLevel', 'map_assistant', 'The Cartographer.'),
+  ccue(212, 'preLevel', 'player', 'She maps the House?'),
+  ccue(212, 'preLevel', 'map_assistant', 'She maps movement.'),
+  ccue(212, 'preLevel', 'the_scholar', 'People?'),
+  ccue(212, 'preLevel', 'map_assistant', 'Mostly.'),
+  ccue(212, 'preLevel', null, 'THE CARTOGRAPHER places eight markers at the House of Clubs entrance.'),
+
+  ccue(213, 'preLevel', null, 'THE SCHOLAR finds a route line from the House of Hearts to the House of Clubs. The line is dated weeks before the Queen of Hearts handed the PLAYER the green card.'),
+  ccue(213, 'preLevel', 'player', 'That route existed before we had the clue.'),
+  ccue(213, 'preLevel', 'the_scholar', "The route isn't the part that bothers me."),
+  ccue(213, 'preLevel', 'player', 'What is?'),
+  ccue(213, 'preLevel', 'the_scholar', 'Someone wrote "arrival probable" beside it.'),
+  ccue(213, 'preLevel', 'player', 'Probable?'),
+  ccue(213, 'preLevel', 'the_scholar', 'In red ink.'),
+
+  ccue(214, 'preLevel', null, 'During a quiet break, THE SCHOLAR closes his book for once.'),
+  ccue(214, 'preLevel', 'player', 'You hate not knowing.'),
+  ccue(214, 'preLevel', 'the_scholar', 'Everyone hates not knowing.'),
+  ccue(214, 'preLevel', 'player', 'Not like you.'),
+  ccue(214, 'preLevel', null, 'He considers denying it.'),
+  ccue(214, 'preLevel', 'the_scholar', 'A missing fact is rarely just missing. Someone removed it, forgot it, or never bothered to record it. None of those options is comforting.'),
+  ccue(214, 'preLevel', 'player', 'So you read everything.'),
+  ccue(214, 'preLevel', 'the_scholar', 'I prefer my surprises with footnotes.'),
+  ccue(214, 'preLevel', 'the_scholar', 'Woof.'),
+
+  ccue(215, 'preLevel', null, 'THE CARTOGRAPHER moves eight brass pins one room ahead of the group before they leave their current table.'),
+  ccue(215, 'preLevel', 'player', 'She keeps predicting where we go.'),
+  ccue(215, 'preLevel', 'the_scholar', 'No. Look closer.'),
+  ccue(215, 'preLevel', null, 'Each route offers only one unlocked choice.'),
+  ccue(215, 'preLevel', 'the_scholar', "She's not predicting us. She's narrowing our options."),
+  ccue(215, 'preLevel', 'player', 'Much more comforting.'),
+  ccue(215, 'preLevel', 'the_scholar', "Sarcasm still isn't evidence."),
+
+  ccue(216, 'preLevel', null, 'The PLAYER finally looks directly at THE SCHOLAR after another perfectly timed bark.'),
+  ccue(216, 'preLevel', 'player', 'Are you ever going to explain that?'),
+  ccue(216, 'preLevel', 'the_scholar', 'No.'),
+  ccue(216, 'preLevel', 'player', 'Fair.'),
+  ccue(216, 'preLevel', 'the_scholar', 'Thank you.'),
+  ccue(216, 'preLevel', null, 'Two beats pass.'),
+  ccue(216, 'preLevel', 'the_scholar', 'Woof.'),
+  ccue(216, 'preLevel', 'player', 'You enjoyed that one.'),
+  ccue(216, 'preLevel', 'the_scholar', 'Unsupported claim. Nice try.'),
+
+  ccue(217, 'preLevel', null, 'A folded architectural plan slides from behind an older map. At the far end of the House of Clubs, one room is drawn differently: two four-seat tables side by side.'),
+  ccue(217, 'preLevel', 'player', 'Eight seats again.'),
+  ccue(217, 'preLevel', 'the_scholar', 'Two tables.'),
+  ccue(217, 'preLevel', 'player', 'What room is that?'),
+  ccue(217, 'preLevel', null, 'The room name has been cut away from the plan.'),
+  ccue(217, 'preLevel', 'the_scholar', 'A missing fact.'),
+  ccue(217, 'preLevel', 'player', 'Dangerous?'),
+  ccue(217, 'preLevel', 'the_scholar', "Now you're learning."),
+
+  ccue(218, 'preLevel', null, 'THE SCHOLAR overlays three transparent map sheets. Routes from Spades, Hearts and Clubs do not form a line. They form a funnel toward the same unmarked district beyond Clubs.'),
+  ccue(218, 'preLevel', 'player', 'The fourth House.'),
+  ccue(218, 'preLevel', 'the_scholar', 'Likely.'),
+  ccue(218, 'preLevel', 'player', 'Diamonds.'),
+  ccue(218, 'preLevel', 'the_scholar', "Don't turn a theory into a fact just because the deck has four suits."),
+  ccue(218, 'preLevel', 'player', 'You think there could be more.'),
+  ccue(218, 'preLevel', 'the_scholar', 'The Keeper in Hearts said "four known Houses." I\'m not ignoring the word \'known\'.'),
+
+  ccue(219, 'preLevel', null, 'For the first time, THE CARTOGRAPHER stops moving pins and looks directly at the PLAYER and THE SCHOLAR.'),
+  ccue(219, 'preLevel', 'the_cartographer', "Maps don't really tell you where you're going."),
+  ccue(219, 'preLevel', 'player', 'That seems like a design flaw.'),
+  ccue(219, 'preLevel', 'the_cartographer', 'They tell you which decisions made the destination possible.'),
+  ccue(219, 'preLevel', 'the_scholar', 'And who made those decisions?'),
+  ccue(219, 'preLevel', 'the_cartographer', "Win tomorrow's hand."),
+  ccue(219, 'preLevel', null, 'She places her own marker at the feature table.'),
+
+  ccue(220, 'bossIntro', null, 'INT. MAP ROOM FEATURE TABLE - NIGHT'),
+  ccue(220, 'bossIntro', null, 'THE CARTOGRAPHER takes the seat opposite the PLAYER. THE SCHOLAR sits beside the PLAYER, book closed. A Map Assistant fills the fourth chair.'),
+  ccue(220, 'bossIntro', 'the_cartographer', "You've spent twenty levels asking where the Houses lead."),
+  ccue(220, 'bossIntro', 'player', 'Good question.'),
+  ccue(220, 'bossIntro', 'the_cartographer', 'Incomplete question.'),
+  ccue(220, 'bossIntro', 'the_scholar', 'Who drew the route?'),
+  ccue(220, 'bossIntro', 'the_cartographer', 'Better.'),
+  ccue(220, 'bossIntro', null, 'The boss match begins. THE CARTOGRAPHER is exact, calm and impossible to hurry.'),
+  ccue(220, 'bossIntro', 'the_cartographer', 'You two are similar.'),
+  ccue(220, 'bossIntro', 'player', 'He is going to hate that.'),
+  ccue(220, 'bossIntro', 'the_scholar', 'I already do.'),
+  ccue(220, 'bossIntro', 'the_cartographer', 'You both assume the unknown is an opponent.'),
+  ccue(220, 'bossIntro', null, 'Later, THE SCHOLAR chooses not to correct a small assumption the PLAYER makes, letting the PLAYER discover the answer through play.'),
+  ccue(220, 'bossIntro', 'player', 'You knew.'),
+  ccue(220, 'bossIntro', 'the_scholar', 'You needed to know.'),
+  ccue(220, 'bossDefeat', null, 'THE CARTOGRAPHER unclips a narrow map strip and slides it across the table. It shows routes from the House of Spades and House of Hearts converging on Clubs. The drawing is dated before the PLAYER entered Spades.'),
+  ccue(220, 'bossDefeat', 'the_cartographer', 'Nobody followed you here.'),
+  ccue(220, 'bossDefeat', 'player', 'We were mapped here.'),
+  ccue(220, 'bossDefeat', 'the_scholar', 'Before we met.'),
+  ccue(220, 'bossDefeat', 'the_cartographer', 'Before you knew you were part of the same route.'),
+  ccue(220, 'bossDefeat', null, 'THE SCHOLAR stares at the map for a long moment.'),
+  ccue(220, 'bossDefeat', 'the_scholar', 'We were plotted.'),
+  ccue(220, 'bossDefeat', 'player', 'Or expected.'),
+  ccue(220, 'bossDefeat', 'the_scholar', 'Those two are way too close for comfort.'),
+
+  // ═══ House of Clubs, Chapter 3: The Service Maze (levels 221-230) ═══
+  // From House_of_Clubs_Levels_1-100_Movie_Script_Human_Dialogue, "CHAPTER
+  // III - THE SERVICE MAZE". Fed in verbatim. Same "nothing after ON
+  // CLEAR -> no postClear cue" rule: none of Levels 221-229 have real
+  // content after their ON CLEAR marker, so each carries a preLevel
+  // bucket only. Level 230 (the boss) has no separate BOSS MIDPOINT or
+  // postFail block — its ending sits entirely in bossDefeat.
+  ccue(221, 'preLevel', null, 'Behind the polished public rooms is a service network of narrow corridors, dumbwaiters, green-painted doors and message tubes. THE WILDCARD is delighted. His beer remains somehow present. His jokes keep landing one beat before useful observations, and the PLAYER begins to understand that his chaos is often a way of making frightened people breathe.'),
+  ccue(221, 'preLevel', null, 'THE WILDCARD opens a staff door marked PRIVATE and gestures grandly.'),
+  ccue(221, 'preLevel', 'the_wildcard', "Technically, if it opens, that's an invitation."),
+  ccue(221, 'preLevel', 'player', "That's really not how privacy works."),
+  ccue(221, 'preLevel', 'the_wildcard', 'Good lesson. Remember it when we get caught.'),
+  ccue(221, 'preLevel', null, 'They sit at a small staff table with two off-duty Club players before continuing deeper.'),
+
+  ccue(222, 'preLevel', null, 'After the clear, THE WILDCARD keeps walking while facing the PLAYER.'),
+  ccue(222, 'preLevel', 'the_wildcard', 'Pop quiz. What did the man behind you carry?'),
+  ccue(222, 'preLevel', 'player', 'What man?'),
+  ccue(222, 'preLevel', 'the_wildcard', 'Excellent. You failed quickly. Saves time.'),
+  ccue(222, 'preLevel', null, 'The PLAYER turns. A messenger has just disappeared around a corner with three sealed envelopes.'),
+  ccue(222, 'preLevel', 'the_wildcard', 'Cards teach you to watch what leaves the table. Corridors do too.'),
+  ccue(222, 'preLevel', 'player', 'Was that the lesson?'),
+  ccue(222, 'preLevel', 'the_wildcard', "There's always a lesson. Ruins the joke, but apparently people remember it better."),
+
+  ccue(223, 'preLevel', null, 'A dropped envelope lies beside a message chute. Green wax seals it. Beneath the cracked edge is an older black wax impression: a spade.'),
+  ccue(223, 'preLevel', 'player', 'Spades sent this.'),
+  ccue(223, 'preLevel', 'the_wildcard', 'Or Clubs resealed it.'),
+  ccue(223, 'preLevel', 'player', 'Which is worse?'),
+  ccue(223, 'preLevel', 'the_wildcard', 'Depends how much you enjoy organized conspiracy.'),
+  ccue(223, 'preLevel', null, 'A bell rings. THE WILDCARD hands the envelope back to a rushing clerk before the clerk notices it was ever examined.'),
+
+  ccue(224, 'preLevel', null, 'A compact man in a dark green coat passes them twice from opposite directions without seeming hurried. Every time, he carries a different set of sealed messages.'),
+  ccue(224, 'preLevel', 'the_wildcard', 'That man has the walk of someone who knows every door and owns none of them.'),
+  ccue(224, 'preLevel', 'player', 'The Courier?'),
+  ccue(224, 'preLevel', 'the_wildcard', "Either that or the world's least relaxed waiter."),
+  ccue(224, 'preLevel', null, 'THE COURIER hears him and almost smiles.'),
+
+  ccue(225, 'preLevel', null, 'The PLAYER and THE WILDCARD pause beside a half-open records hatch. Two clerks speak inside.'),
+  ccue(225, 'preLevel', 'clerk1', 'Candidate Eight is with Instinct tonight.'),
+  ccue(225, 'preLevel', 'clerk2', 'Then update the rotation.'),
+  ccue(225, 'preLevel', null, 'THE PLAYER freezes. THE WILDCARD stops smiling.'),
+  ccue(225, 'preLevel', 'player', 'Candidate Eight.'),
+  ccue(225, 'preLevel', 'the_wildcard', "And I'm guessing I'm Instinct. Which is flattering in a way I deeply distrust."),
+
+  ccue(226, 'preLevel', null, 'They sit on a service stair with the noise of the House muffled behind the walls.'),
+  ccue(226, 'preLevel', 'player', 'Do you ever get serious before the joke?'),
+  ccue(226, 'preLevel', 'the_wildcard', 'Sometimes.'),
+  ccue(226, 'preLevel', 'player', 'When?'),
+  ccue(226, 'preLevel', 'the_wildcard', 'When the room needs it.'),
+  ccue(226, 'preLevel', null, 'He turns the beer bottle slowly in his hand.'),
+  ccue(226, 'preLevel', 'the_wildcard', 'Most people learn better after they stop being afraid of looking stupid. Joke first. Lesson second. Ego has less time to barricade the door.'),
+  ccue(226, 'preLevel', 'player', 'That sounded almost wise.'),
+  ccue(226, 'preLevel', 'the_wildcard', "Terrible. I'll drink until it passes."),
+
+  ccue(227, 'preLevel', null, 'A storage shelf contains eight identical black envelopes tied with green thread. Each is dated before the first Spade level. Seven carry simple role marks. One carries a blank space.'),
+  ccue(227, 'preLevel', 'player', 'No names.'),
+  ccue(227, 'preLevel', 'the_wildcard', 'They were selecting types before people.'),
+  ccue(227, 'preLevel', 'player', 'Or waiting to decide which people fit.'),
+  ccue(227, 'preLevel', 'the_wildcard', "Either way, I'd like a refund on my free will."),
+
+  ccue(228, 'preLevel', null, 'THE COURIER stands at the end of the corridor. He has clearly been there long enough to hear everything.'),
+  ccue(228, 'preLevel', 'the_courier', "You're not supposed to be here."),
+  ccue(228, 'preLevel', 'the_wildcard', 'Then the labeling is excellent. Very educational.'),
+  ccue(228, 'preLevel', 'the_courier', 'Why do you trust him?'),
+  ccue(228, 'preLevel', null, 'The question is for the PLAYER.'),
+  ccue(228, 'preLevel', 'player', 'Because he jokes when he is scared.'),
+  ccue(228, 'preLevel', 'the_wildcard', 'Rude.'),
+  ccue(228, 'preLevel', 'player', 'Accurate?'),
+  ccue(228, 'preLevel', 'the_wildcard', 'Unfortunately.'),
+
+  ccue(229, 'preLevel', null, 'THE COURIER leaves one envelope on the next table before walking away. It bears black spade wax, red heart wax and green club wax layered at three corners.'),
+  ccue(229, 'preLevel', 'player', 'He wants us to open it.'),
+  ccue(229, 'preLevel', 'the_wildcard', 'Which makes opening it much less fun.'),
+  ccue(229, 'preLevel', null, 'Inside is one line: EIGHT CANDIDATES CONFIRMED. SEND THE MARKED PLAYER FIRST.'),
+  ccue(229, 'preLevel', 'the_wildcard', 'Well.'),
+  ccue(229, 'preLevel', 'player', 'We were all selected.'),
+  ccue(229, 'preLevel', 'the_wildcard', 'I miss when the mystery was just women disappearing in smoke.'),
+
+  ccue(230, 'bossIntro', null, 'INT. SERVICE TABLE - NIGHT'),
+  ccue(230, 'bossIntro', null, 'THE COURIER takes the fourth seat at a plain service table. THE WILDCARD sits beside the PLAYER. One clerk joins them. No audience. No decoration.'),
+  ccue(230, 'bossIntro', 'the_courier', 'Messages change meaning depending on who carries them.'),
+  ccue(230, 'bossIntro', 'the_wildcard', 'And depending on whether the carrier lets people read them in hallways.'),
+  ccue(230, 'bossIntro', 'the_courier', 'You were meant to.'),
+  ccue(230, 'bossIntro', 'player', 'All of it?'),
+  ccue(230, 'bossIntro', 'the_courier', 'Enough.'),
+  ccue(230, 'bossIntro', null, 'The boss match begins.'),
+  ccue(230, 'bossIntro', 'the_courier', 'Instinct is useful until it mistakes motion for direction.'),
+  ccue(230, 'bossIntro', 'the_wildcard', "I've been insulted by professionals. That one was respectable."),
+  ccue(230, 'bossIntro', null, "Later, THE PLAYER waits instead of following THE WILDCARD's impulsive suggestion. THE WILDCARD sees why and laughs."),
+  ccue(230, 'bossIntro', 'the_wildcard', 'Good. Never trust a teacher who gets offended when you think for yourself.'),
+  ccue(230, 'bossDefeat', null, 'THE COURIER returns the three-sealed letter.'),
+  ccue(230, 'bossDefeat', 'the_courier', "The seven weren't accidents in your journey. And you weren't an accident in theirs."),
+  ccue(230, 'bossDefeat', 'player', 'Who chose us?'),
+  ccue(230, 'bossDefeat', 'the_courier', 'That question is above my route.'),
+  ccue(230, 'bossDefeat', 'the_wildcard', 'And where does your route go next?'),
+  ccue(230, 'bossDefeat', null, 'THE COURIER points toward a pair of broad doors. Voices argue behind them.'),
+  ccue(230, 'bossDefeat', 'the_courier', 'Somewhere people enjoy being right more than being useful.'),
+  ccue(230, 'bossDefeat', 'the_wildcard', 'Ah. A conference room.'),
+
+  // ═══ House of Clubs, Chapter 4: The Common Chamber (levels 231-240) ═══
+  // Same "nothing after ON CLEAR -> no postClear" rule — none of Levels
+  // 231-239 have content after their marker. Level 240's ending sits
+  // entirely in bossDefeat, same as every earlier chapter's boss.
+  ccue(231, 'preLevel', null, 'A lively chamber of long tables, debate circles and open card games. Club members argue about strategy without lowering their voices. THE OPTIMIST thrives here: brutally direct, cheerfully resilient, frequently rejected and never discouraged. The PLAYER learns that optimism, for him, is not softness. It is the refusal to let a bad moment decide the next one.'),
+  ccue(231, 'preLevel', null, 'THE PLAYER finishes explaining the three-seal letter. THE OPTIMIST responds immediately.'),
+  ccue(231, 'preLevel', 'the_optimist', 'That theory is terrible.'),
+  ccue(231, 'preLevel', 'player', 'Good evening to you too.'),
+  ccue(231, 'preLevel', 'the_optimist', 'No, listen. You\'re assuming "selected" means "controlled." It could mean they saw something useful and waited to see what we chose.'),
+  ccue(231, 'preLevel', 'player', 'You could have started with that.'),
+  ccue(231, 'preLevel', 'the_optimist', "Then you might've missed just how bad the first theory was."),
+
+  ccue(232, 'preLevel', null, 'A server sets down four glasses. THE OPTIMIST smiles at her.'),
+  ccue(232, 'preLevel', 'the_optimist', 'You\'re very attractive. Would you like to have dinner with me after your shift?'),
+  ccue(232, 'preLevel', 'chamber_server', 'Absolutely not.'),
+  ccue(232, 'preLevel', 'the_optimist', 'Clear. Efficient. Thank you. I respect that.'),
+  ccue(232, 'preLevel', 'player', 'Does that ever work?'),
+  ccue(232, 'preLevel', 'the_optimist', 'Statistically, it only needs to work once.'),
+  ccue(232, 'preLevel', 'the_sharp', "That's not how statistics work."),
+  ccue(232, 'preLevel', 'the_optimist', 'See? Teamwork already improving the pitch.'),
+
+  ccue(233, 'preLevel', null, 'A woman in a dark green suit moves between two arguing tables, never telling either side to calm down. She simply asks one question, and both sides lower their voices themselves.'),
+  ccue(233, 'preLevel', 'player', 'The Mediator.'),
+  ccue(233, 'preLevel', 'the_optimist', 'I like her.'),
+  ccue(233, 'preLevel', 'player', "She hasn't spoken to you."),
+  ccue(233, 'preLevel', 'the_optimist', 'Exactly. No rejection yet.'),
+  ccue(233, 'preLevel', null, 'THE MEDIATOR looks over.'),
+  ccue(233, 'preLevel', 'the_mediator', 'No.'),
+  ccue(233, 'preLevel', 'the_optimist', "There it's."),
+
+  ccue(234, 'preLevel', null, 'The PLAYER makes a poor read at the end of a level. THE OPTIMIST reacts before anyone else.'),
+  ccue(234, 'preLevel', 'the_optimist', 'Whoa. Yeah, that was really bad.'),
+  ccue(234, 'preLevel', null, 'The PLAYER glares.'),
+  ccue(234, 'preLevel', 'the_optimist', "And now you know what to fix. Next time, wait one trick. You'll be fine."),
+  ccue(234, 'preLevel', 'player', 'Do you always hit people first and bandage them second?'),
+  ccue(234, 'preLevel', 'the_optimist', 'People waste too much time dressing up bad news. Bad is bad. Then we fix what we can.'),
+
+  ccue(235, 'preLevel', null, 'A carved panel on the chamber wall lists eight words in old brass letters: PRECISION. MEMORY. INSTINCT. RESILIENCE. PERSPECTIVE. CONNECTION. RESOLVE. CHOICE.'),
+  ccue(235, 'preLevel', 'the_optimist', 'Resilience. Obviously me.'),
+  ccue(235, 'preLevel', 'player', 'Nobody put names beside them.'),
+  ccue(235, 'preLevel', 'the_optimist', "They didn't need to."),
+  ccue(235, 'preLevel', 'the_scholar', "That's an assumption."),
+  ccue(235, 'preLevel', 'the_optimist', "And you're Memory."),
+  ccue(235, 'preLevel', 'the_scholar', "That's... statistically plausible."),
+  ccue(235, 'preLevel', 'the_jester', 'I want Choice.'),
+  ccue(235, 'preLevel', null, 'EVERYONE: "No."'),
+
+  ccue(236, 'preLevel', null, 'The eight stand around the role panel.'),
+  ccue(236, 'preLevel', 'the_sharp', 'Precision.'),
+  ccue(236, 'preLevel', 'the_scholar', 'Memory.'),
+  ccue(236, 'preLevel', 'the_wildcard', 'Instinct. Apparently.'),
+  ccue(236, 'preLevel', 'the_optimist', 'Resilience.'),
+  ccue(236, 'preLevel', 'the_jester', 'Perspective sounds more dignified than nonsense. I accept.'),
+  ccue(236, 'preLevel', 'the_charmer', 'Connection.'),
+  ccue(236, 'preLevel', 'the_closer', 'Resolve.'),
+  ccue(236, 'preLevel', null, 'Seven faces turn toward the PLAYER.'),
+  ccue(236, 'preLevel', 'player', 'Choice?'),
+  ccue(236, 'preLevel', 'the_wildcard', 'Congratulations. Your special power is making decisions.'),
+  ccue(236, 'preLevel', 'the_closer', 'More important than it sounds.'),
+
+  ccue(237, 'preLevel', null, 'THE OPTIMIST attempts to invite THE MEDIATOR for a drink after the next level.'),
+  ccue(237, 'preLevel', 'the_optimist', "I respect how directly you reject people. We've that in common."),
+  ccue(237, 'preLevel', 'the_mediator', 'No.'),
+  ccue(237, 'preLevel', 'the_optimist', 'See? Chemistry.'),
+  ccue(237, 'preLevel', 'player', 'I think you and reality have a complicated relationship.'),
+  ccue(237, 'preLevel', 'the_optimist', 'Reality keeps showing up. I stay optimistic.'),
+
+  ccue(238, 'preLevel', null, 'THE SCHOLAR returns with a rubbing from the panel frame. The installation date is decades old.'),
+  ccue(238, 'preLevel', 'player', 'So those roles were not written for us.'),
+  ccue(238, 'preLevel', 'the_optimist', 'Good. I was starting to think the Queen had a personality spreadsheet.'),
+  ccue(238, 'preLevel', 'the_mediator', 'The House does not build around people.'),
+  ccue(238, 'preLevel', 'player', 'It builds around functions.'),
+  ccue(238, 'preLevel', 'the_mediator', "Now you're listening."),
+
+  ccue(239, 'preLevel', null, 'THE MEDIATOR watches the PLAYER and THE OPTIMIST argue through an entire break without either becoming angry.'),
+  ccue(239, 'preLevel', 'the_mediator', 'You disagree efficiently.'),
+  ccue(239, 'preLevel', 'player', 'He insults first. Advises second.'),
+  ccue(239, 'preLevel', 'the_optimist', 'Works.'),
+  ccue(239, 'preLevel', 'the_mediator', 'Difference is only useful when nobody needs to win the difference.'),
+  ccue(239, 'preLevel', 'player', 'Is that what the eight roles are for?'),
+  ccue(239, 'preLevel', 'the_mediator', 'Sit tomorrow.'),
+
+  ccue(240, 'bossIntro', null, 'INT. COMMON CHAMBER FEATURE TABLE - NIGHT'),
+  ccue(240, 'bossIntro', null, 'THE MEDIATOR sits opposite the PLAYER. THE OPTIMIST takes the seat beside the PLAYER. A debate regular fills the fourth chair.'),
+  ccue(240, 'bossIntro', 'the_mediator', 'Eight similar players would be simpler.'),
+  ccue(240, 'bossIntro', 'the_optimist', 'And unbearable.'),
+  ccue(240, 'bossIntro', 'the_mediator', 'Eight identical strengths create eight identical blind spots.'),
+  ccue(240, 'bossIntro', 'player', 'So the roles are a design.'),
+  ccue(240, 'bossIntro', 'the_mediator', 'An old one.'),
+  ccue(240, 'bossIntro', null, 'The boss match begins. THE MEDIATOR repeatedly changes pace, forcing the PLAYER and THE OPTIMIST to recover after imperfect reads.'),
+  ccue(240, 'bossIntro', 'the_optimist', 'That was bad.'),
+  ccue(240, 'bossIntro', 'player', 'I know.'),
+  ccue(240, 'bossIntro', 'the_optimist', 'Great. Saves time. Fix it.'),
+  ccue(240, 'bossIntro', null, 'The PLAYER does.'),
+  ccue(240, 'bossDefeat', null, 'THE MEDIATOR places eight old wooden markers on the table, each engraved with one of the role words.'),
+  ccue(240, 'bossDefeat', 'the_mediator', "The Queen didn't choose copies."),
+  ccue(240, 'bossDefeat', 'player', 'She chose differences.'),
+  ccue(240, 'bossDefeat', 'the_mediator', 'Or recognized them.'),
+  ccue(240, 'bossDefeat', 'the_optimist', 'So being annoying is strategic.'),
+  ccue(240, 'bossDefeat', 'player', 'In your case, apparently.'),
+  ccue(240, 'bossDefeat', 'the_optimist', "That's the nicest thing you've said to me."),
+
+  // ═══ House of Clubs, Chapter 5: The Root Gallery (levels 241-250) ═══
+  // Same "nothing after ON CLEAR -> no postClear" rule — none of Levels
+  // 241-249 have content after their marker. Level 250 (the boss) is a
+  // genuine 12-hand fight (see CAMPAIGN_LEVELS's own note); its ending
+  // sits entirely in bossDefeat, same as every earlier chapter's boss.
+  ccue(241, 'preLevel', null, 'A gallery of polished wood, preserved leaves, animal studies, fossils, old tournament photographs and living roots visible behind glass. The Club symbol appears everywhere as branch, leaf and clover. THE JESTER treats the room like a playground, but his strange facts keep turning into the clearest metaphors in the House.'),
+  ccue(241, 'preLevel', null, 'THE JESTER stops in front of a small display about wombats.'),
+  ccue(241, 'preLevel', 'the_jester', 'Wombats make cube-shaped droppings.'),
+  ccue(241, 'preLevel', 'player', "We're looking for a Queen."),
+  ccue(241, 'preLevel', 'the_jester', 'And we found geometry in a mammal. Stay curious.'),
+  ccue(241, 'preLevel', 'the_naturalist', 'He is correct.'),
+  ccue(241, 'preLevel', null, 'A grey-haired man tending a living root display does not look up.'),
+  ccue(241, 'preLevel', 'player', "Please don't encourage him."),
+
+  ccue(242, 'preLevel', null, 'THE NATURALIST moves between displays with dirt under his fingernails despite the formal clothes.'),
+  ccue(242, 'preLevel', 'the_jester', 'I like him.'),
+  ccue(242, 'preLevel', 'player', 'Because he confirmed the wombat fact?'),
+  ccue(242, 'preLevel', 'the_jester', 'Credibility matters.'),
+  ccue(242, 'preLevel', null, 'At the table, THE JESTER plays quietly for almost an entire hand, then points to a branching pattern carved into the rail.'),
+  ccue(242, 'preLevel', 'the_jester', 'Same pattern as the Map Room routes.'),
+  ccue(242, 'preLevel', 'player', 'You noticed that now?'),
+  ccue(242, 'preLevel', 'the_jester', 'No. I told you about wombats first.'),
+
+  ccue(243, 'preLevel', null, 'An old photograph shows eight formally dressed card players in front of the same House. Their names have been removed from the frame.'),
+  ccue(243, 'preLevel', 'player', 'Another group of eight.'),
+  ccue(243, 'preLevel', 'the_jester', 'Look at the tables behind them.'),
+  ccue(243, 'preLevel', null, 'Two four-seat tables stand side by side.'),
+  ccue(243, 'preLevel', 'player', 'Like the plan.'),
+  ccue(243, 'preLevel', 'the_jester', 'Unlike the faces. Someone scratched those out.'),
+
+  ccue(244, 'preLevel', null, 'THE NATURALIST explains a display of tree roots connected by fungal threads beneath the soil.'),
+  ccue(244, 'preLevel', 'the_naturalist', 'A forest is less individual than it appears from above.'),
+  ccue(244, 'preLevel', 'the_jester', 'See? Trees gossip underground.'),
+  ccue(244, 'preLevel', 'the_naturalist', 'They exchange resources and signals.'),
+  ccue(244, 'preLevel', 'the_jester', 'Scientific gossip.'),
+  ccue(244, 'preLevel', 'player', 'And the point?'),
+  ccue(244, 'preLevel', 'the_naturalist', 'A single tree can be impressive. A network survives.'),
+
+  ccue(245, 'preLevel', null, 'The gallery quiets after the next hand. THE PLAYER and THE JESTER sit beneath the old photograph.'),
+  ccue(245, 'preLevel', 'player', 'You make a joke whenever the room gets uncomfortable.'),
+  ccue(245, 'preLevel', 'the_jester', 'Not whenever.'),
+  ccue(245, 'preLevel', 'player', 'Most times.'),
+  ccue(245, 'preLevel', 'the_jester', 'People tell the truth when they think the serious part is over. Laughter opens the door.'),
+  ccue(245, 'preLevel', 'player', 'And then you listen.'),
+  ccue(245, 'preLevel', 'the_jester', 'Sometimes I even remember.'),
+  ccue(245, 'preLevel', 'the_scholar', "Don't make claims you can't support."),
+  ccue(245, 'preLevel', 'the_jester', 'Woof.'),
+  ccue(245, 'preLevel', 'the_scholar', "That's mine."),
+
+  ccue(246, 'preLevel', null, 'A brass caption beneath the old photograph reads: FINAL TABLE - NOT FORMED.'),
+  ccue(246, 'preLevel', 'player', 'They reached Clubs.'),
+  ccue(246, 'preLevel', 'the_jester', 'But not whatever came after.'),
+  ccue(246, 'preLevel', 'player', 'Why?'),
+  ccue(246, 'preLevel', 'the_jester', 'Maybe one of them hated breakfast.'),
+  ccue(246, 'preLevel', 'player', 'Serious answer.'),
+  ccue(246, 'preLevel', null, 'THE JESTER looks at the scratched-out faces.'),
+  ccue(246, 'preLevel', 'the_jester', 'Maybe they stayed eight players.'),
+
+  ccue(247, 'preLevel', null, 'The Naturalist trims two plants growing too close together.'),
+  ccue(247, 'preLevel', 'the_naturalist', 'Strong specimens can kill each other by reaching for the same light.'),
+  ccue(247, 'preLevel', 'player', "You're talking about the old group."),
+  ccue(247, 'preLevel', 'the_naturalist', "I'm talking about plants."),
+  ccue(247, 'preLevel', 'the_jester', "He's absolutely talking about the old group."),
+
+  ccue(248, 'preLevel', null, 'THE SCHOLAR finds two more photographs in a drawer. Six players in one. Eight in another. All with the same note: NOT FORMED.'),
+  ccue(248, 'preLevel', 'player', 'How many times have they tried this?'),
+  ccue(248, 'preLevel', 'the_jester', 'Enough to stop calling it luck.'),
+  ccue(248, 'preLevel', 'player', 'And enough to keep trying.'),
+  ccue(248, 'preLevel', 'the_jester', "That's either inspiring or terrifying. I'm voting both."),
+
+  ccue(249, 'preLevel', null, 'THE NATURALIST watches the eight gather around one display, each noticing something different.'),
+  ccue(249, 'preLevel', 'the_naturalist', 'What happens when eight roots touch?'),
+  ccue(249, 'preLevel', 'the_sharp', 'Competition.'),
+  ccue(249, 'preLevel', 'the_scholar', 'Exchange.'),
+  ccue(249, 'preLevel', 'the_wildcard', 'Mud.'),
+  ccue(249, 'preLevel', 'the_optimist', 'Growth.'),
+  ccue(249, 'preLevel', 'the_jester', 'Worms.'),
+  ccue(249, 'preLevel', 'the_charmer', 'Connection.'),
+  ccue(249, 'preLevel', 'the_closer', 'Dependence.'),
+  ccue(249, 'preLevel', 'player', 'A system.'),
+  ccue(249, 'preLevel', null, 'THE NATURALIST nods toward the feature table.'),
+
+  ccue(250, 'bossIntro', null, 'INT. ROOT GALLERY FEATURE TABLE - NIGHT'),
+  ccue(250, 'bossIntro', null, 'THE NATURALIST takes the seat opposite the PLAYER. THE JESTER sits beside the PLAYER. A gallery curator takes the fourth chair.'),
+  ccue(250, 'bossIntro', 'the_naturalist', 'The Houses have seen brilliant players before.'),
+  ccue(250, 'bossIntro', 'the_jester', 'Were any of them fun?'),
+  ccue(250, 'bossIntro', 'the_naturalist', 'Several were unbearable.'),
+  ccue(250, 'bossIntro', 'player', 'Why did they fail?'),
+  ccue(250, 'bossIntro', 'the_naturalist', 'Play first.'),
+  ccue(250, 'bossIntro', null, 'The boss match begins.'),
+  ccue(250, 'bossIntro', 'the_naturalist', 'A strong player protects a line.'),
+  ccue(250, 'bossIntro', 'the_jester', 'A stronger one knows when the line is nonsense.'),
+  ccue(250, 'bossIntro', 'the_naturalist', 'Sometimes.'),
+  ccue(250, 'bossIntro', null, 'Late in the match, THE JESTER abandons a clever idea without ego when the PLAYER sees a better one.'),
+  ccue(250, 'bossIntro', 'the_jester', 'Look at me. Growth.'),
+  ccue(250, 'bossDefeat', null, 'THE NATURALIST places the old photographs side by side.'),
+  ccue(250, 'bossDefeat', 'the_naturalist', 'They were champions. They remained champions. That was the problem.'),
+  ccue(250, 'bossDefeat', 'player', 'They never became a group.'),
+  ccue(250, 'bossDefeat', 'the_naturalist', 'The Houses stopped looking for eight winners.'),
+  ccue(250, 'bossDefeat', 'the_jester', 'And started looking for a forest.'),
+  ccue(250, 'bossDefeat', 'the_naturalist', 'A system.'),
+  ccue(250, 'bossDefeat', null, 'From the doorway, THE WILDCARD raises his beer.'),
+  ccue(250, 'bossDefeat', 'the_wildcard', 'A system with excellent hydration.'),
+  ccue(250, 'bossDefeat', 'the_jester', 'See? Biodiversity.'),
+
+  // ═══ House of Clubs, Chapter 6: The Lantern Salon (levels 251-260) ═══
+  // Same "nothing after ON CLEAR -> no postClear" rule — none of Levels
+  // 251-259 have content after their marker. Level 260's ending sits
+  // entirely in bossDefeat, same as every earlier chapter's boss.
+  ccue(251, 'preLevel', null, 'A low, warm salon of green glass lamps, small tables and private booths. People talk here more than they play. Nothing is recorded openly. THE CHARMER moves through the room with effortless warmth, and the PLAYER begins to see the difference between manipulation and genuine attention.'),
+  ccue(251, 'preLevel', null, 'THE CHARMER greets three staff members by name before the PLAYER reaches the table.'),
+  ccue(251, 'preLevel', 'player', 'Do you memorize everyone?'),
+  ccue(251, 'preLevel', 'the_charmer', 'No.'),
+  ccue(251, 'preLevel', 'player', "That answer would work better if you had not just remembered the bartender's sister's surgery."),
+  ccue(251, 'preLevel', 'the_charmer', 'She told me because it mattered to her.'),
+
+  ccue(252, 'preLevel', null, 'After the hand, THE PLAYER and THE CHARMER sit in a booth away from the others.'),
+  ccue(252, 'preLevel', 'player', 'Do you ever turn it off?'),
+  ccue(252, 'preLevel', 'the_charmer', 'What?'),
+  ccue(252, 'preLevel', 'player', 'Making people feel seen.'),
+  ccue(252, 'preLevel', null, 'THE CHARMER takes the question seriously.'),
+  ccue(252, 'preLevel', 'the_charmer', "I'm not performing every conversation."),
+  ccue(252, 'preLevel', 'player', "People assume you're, though."),
+  ccue(252, 'preLevel', 'the_charmer', 'Yes. Charm is suspicious when someone is good at it.'),
+
+  ccue(253, 'preLevel', null, 'A woman in an emerald jacket sits alone in the corner. People come to her, speak quietly and leave looking lighter. She never takes notes.'),
+  ccue(253, 'preLevel', 'the_charmer', 'The Confidant.'),
+  ccue(253, 'preLevel', 'player', 'You know her?'),
+  ccue(253, 'preLevel', 'the_charmer', 'No. But six people have told me they trust her without saying her name.'),
+  ccue(253, 'preLevel', 'player', 'That sounds like knowing her.'),
+  ccue(253, 'preLevel', 'the_charmer', 'It sounds like knowing them.'),
+
+  ccue(254, 'preLevel', null, 'A Club guest tells THE CHARMER about a lost dog, a difficult father and a terrible card decision in under four minutes.'),
+  ccue(254, 'preLevel', 'player', 'How do you do that?'),
+  ccue(254, 'preLevel', 'the_charmer', 'I asked about the dog.'),
+  ccue(254, 'preLevel', 'player', "That can't be the whole method."),
+  ccue(254, 'preLevel', 'the_charmer', 'It helps if you actually care about the answer.'),
+  ccue(254, 'preLevel', null, 'The PLAYER studies him, realizing that the most dangerous thing about THE CHARMER may be that the warmth is real.'),
+
+  ccue(255, 'preLevel', null, 'THE CHARMER quietly points out a server the PLAYER remembers from Hearts and a doorman THE SHARP recognizes from Spades.'),
+  ccue(255, 'preLevel', 'player', 'They move between Houses.'),
+  ccue(255, 'preLevel', 'the_charmer', 'Some do.'),
+  ccue(255, 'preLevel', 'player', 'So the Houses share staff.'),
+  ccue(255, 'preLevel', 'the_charmer', 'Training, at least. Maybe more.'),
+  ccue(255, 'preLevel', 'the_confidant', "You're learning to ask people instead of interrogating walls."),
+  ccue(255, 'preLevel', null, 'She has appeared beside the table without either noticing.'),
+
+  ccue(256, 'preLevel', null, 'A server laughs when the PLAYER describes the Queens as competing rulers.'),
+  ccue(256, 'preLevel', 'lantern_server', 'Competing?'),
+  ccue(256, 'preLevel', 'player', 'Spades. Hearts. Clubs. Separate Houses.'),
+  ccue(256, 'preLevel', 'lantern_server', 'Separate doors.'),
+  ccue(256, 'preLevel', 'the_charmer', 'Not separate purpose.'),
+  ccue(256, 'preLevel', null, 'The server realizes she has said too much and leaves.'),
+  ccue(256, 'preLevel', 'player', 'You got that from one laugh.'),
+  ccue(256, 'preLevel', 'the_charmer', 'I got it from what she stopped saying afterward.'),
+
+  ccue(257, 'preLevel', null, 'THE CHARMER returns from a conversation with an older Club member.'),
+  ccue(257, 'preLevel', 'the_charmer', 'He called Diamonds "the next table."'),
+  ccue(257, 'preLevel', 'player', 'He said Diamonds?'),
+  ccue(257, 'preLevel', 'the_charmer', 'No. He stopped himself before the name.'),
+  ccue(257, 'preLevel', 'player', 'Then why assume Diamonds?'),
+  ccue(257, 'preLevel', 'the_charmer', 'Because his cufflink is a diamond and he covered it when I asked.'),
+  ccue(257, 'preLevel', 'player', "You're terrifying, you know that?"),
+  ccue(257, 'preLevel', 'the_charmer', 'Thank you.'),
+
+  ccue(258, 'preLevel', null, 'THE CONFIDANT sits near the PLAYER but does not join the hand.'),
+  ccue(258, 'preLevel', 'the_confidant', 'What did Hearts change?'),
+  ccue(258, 'preLevel', 'player', 'I stopped assuming everyone was an enemy.'),
+  ccue(258, 'preLevel', 'the_confidant', 'Too simple.'),
+  ccue(258, 'preLevel', 'the_charmer', 'He returned with seven people he had already beaten.'),
+  ccue(258, 'preLevel', 'the_confidant', 'Better.'),
+  ccue(258, 'preLevel', 'player', 'You knew that was the point?'),
+  ccue(258, 'preLevel', 'the_confidant', 'I knew it was a point.'),
+
+  ccue(259, 'preLevel', null, 'THE CONFIDANT asks the PLAYER to name which of the seven they trust most.'),
+  ccue(259, 'preLevel', 'player', 'No.'),
+  ccue(259, 'preLevel', 'the_confidant', "You don't trust them?"),
+  ccue(259, 'preLevel', 'player', 'Wrong question.'),
+  ccue(259, 'preLevel', 'the_charmer', 'Good answer.'),
+  ccue(259, 'preLevel', 'the_confidant', 'Why?'),
+  ccue(259, 'preLevel', 'player', 'Because I trust them for different things.'),
+  ccue(259, 'preLevel', null, 'THE CONFIDANT smiles and finally approaches the feature table.'),
+
+  ccue(260, 'bossIntro', null, 'INT. LANTERN SALON FEATURE TABLE - NIGHT'),
+  ccue(260, 'bossIntro', null, 'THE CONFIDANT sits opposite the PLAYER. THE CHARMER sits beside the PLAYER. A quiet Club regular takes the last chair.'),
+  ccue(260, 'bossIntro', 'the_confidant', 'You came into Hearts looking for the woman above the House.'),
+  ccue(260, 'bossIntro', 'player', 'I found her.'),
+  ccue(260, 'bossIntro', 'the_confidant', 'And left with people beside you.'),
+  ccue(260, 'bossIntro', 'player', 'What are the Queens doing?'),
+  ccue(260, 'bossIntro', 'the_confidant', 'Play.'),
+  ccue(260, 'bossIntro', null, 'The boss match begins. THE CONFIDANT says little, but every question lands exactly when the PLAYER would rather not answer it.'),
+  ccue(260, 'bossIntro', 'the_confidant', 'Do you trust his read?'),
+  ccue(260, 'bossIntro', 'player', 'Yes.'),
+  ccue(260, 'bossIntro', 'the_confidant', "Because he's charming?"),
+  ccue(260, 'bossIntro', 'player', 'Because he listens.'),
+  ccue(260, 'bossIntro', null, 'THE CHARMER gives the smallest nod.'),
+  ccue(260, 'bossDefeat', null, 'THE CONFIDANT turns one green lantern down until the room is almost dark.'),
+  ccue(260, 'bossDefeat', 'the_confidant', "The Queens aren't rival rulers fighting over four kingdoms."),
+  ccue(260, 'bossDefeat', 'player', 'Then what are they?'),
+  ccue(260, 'bossDefeat', 'the_confidant', 'Gatekeepers with different doors.'),
+  ccue(260, 'bossDefeat', 'the_charmer', 'Guarding what?'),
+  ccue(260, 'bossDefeat', 'the_confidant', 'The same thing.'),
+  ccue(260, 'bossDefeat', 'player', 'The game?'),
+  ccue(260, 'bossDefeat', 'the_confidant', 'Closer.'),
+  ccue(260, 'bossDefeat', null, 'She gestures toward a door marked with an old ledger symbol.'),
+  ccue(260, 'bossDefeat', 'the_charmer', "You noticed she didn't say who they answer to."),
+  ccue(260, 'bossDefeat', 'player', 'I noticed.'),
+  ccue(260, 'bossDefeat', 'the_charmer', 'Good. I was worried I was rubbing off on you.'),
+
+  // ═══ House of Clubs, Chapter 7: The Ledger Room (levels 261-270) ═══
+  // The script's own boss is named "The Broker" too — see
+  // CAMPAIGN_CHARACTERS's own note on why he's stored as `ledger_broker`
+  // rather than colliding with House of Hearts' existing `the_broker`.
+  // Same "nothing after ON CLEAR -> no postClear" rule — none of Levels
+  // 261-269 have content after their marker. Level 270's ending sits
+  // entirely in bossDefeat.
+  ccue(261, 'preLevel', null, 'A precise chamber of ledgers, sealed contracts, old club tokens and decision logs. THE CLOSER immediately stops caring about titles and starts tracing who had the power to approve, refuse and commit. The PLAYER learns that his cold economy is less about money than knowing where effort actually changes an outcome.'),
+  ccue(261, 'preLevel', null, 'THE PLAYER studies a hierarchy chart. THE CLOSER ignores it.'),
+  ccue(261, 'preLevel', 'player', 'Queen at the top. Steward below. Broker below that.'),
+  ccue(261, 'preLevel', 'the_closer', 'Irrelevant.'),
+  ccue(261, 'preLevel', 'player', "You didn't even look."),
+  ccue(261, 'preLevel', 'the_closer', 'Stop asking who outranks whom. Ask who could have said no.'),
+  ccue(261, 'preLevel', null, 'He opens a ledger to a page full of approvals and refusals.'),
+  ccue(261, 'preLevel', 'the_closer', 'Authority is clearest at the point where a decision could have died.'),
+
+  ccue(262, 'preLevel', null, 'A silver-haired man closes a ledger as soon as the PLAYER approaches. He does not hide the page. He simply waits.'),
+  ccue(262, 'preLevel', 'the_closer', 'The Broker.'),
+  ccue(262, 'preLevel', 'player', 'Former colleague?'),
+  ccue(262, 'preLevel', 'the_closer', 'Different profession. Same smell.'),
+  ccue(262, 'preLevel', 'ledger_broker', 'You used to close deals.'),
+  ccue(262, 'preLevel', 'the_closer', 'You still do.'),
+  ccue(262, 'preLevel', 'ledger_broker', 'Good. Saves introductions.'),
+
+  ccue(263, 'preLevel', null, 'A transit ledger shows three authorization columns. One bears a spade seal. One a heart seal. One a club seal. A fourth column is blank but framed by a faceted shape.'),
+  ccue(263, 'preLevel', 'player', 'Three Queens signed something.'),
+  ccue(263, 'preLevel', 'the_closer', 'Not something. Passage.'),
+  ccue(263, 'preLevel', 'player', 'For whom?'),
+  ccue(263, 'preLevel', null, 'He points to a coded line: EIGHT PERSONS - CONDITIONAL.'),
+  ccue(263, 'preLevel', 'the_closer', 'Us.'),
+
+  ccue(264, 'preLevel', null, 'THE CLOSER watches a Club member hesitate before signing a routine form.'),
+  ccue(264, 'preLevel', 'the_closer', 'He will sign.'),
+  ccue(264, 'preLevel', 'player', 'How do you know?'),
+  ccue(264, 'preLevel', 'the_closer', 'He moved the pen closer before asking the last question.'),
+  ccue(264, 'preLevel', 'player', 'You used that in business?'),
+  ccue(264, 'preLevel', 'the_closer', "The useful part of closing was never persuasion. It was knowing when someone had already decided - and not wasting time on the ones who hadn't."),
+
+  ccue(265, 'preLevel', null, 'A second ledger page contains a condition beneath the eight-person line: VALID ONLY ON FULL ARRIVAL.'),
+  ccue(265, 'preLevel', 'player', 'All eight or nobody.'),
+  ccue(265, 'preLevel', 'the_closer', "That's what it says."),
+  ccue(265, 'preLevel', 'player', 'Before we chose to come together.'),
+  ccue(265, 'preLevel', 'the_closer', "They prepared for a choice they couldn't guarantee."),
+
+  ccue(266, 'preLevel', null, 'THE BROKER joins them for a drink but still refuses to explain the fourth column.'),
+  ccue(266, 'preLevel', 'ledger_broker', 'A deal is not real because two people agree.'),
+  ccue(266, 'preLevel', 'player', 'What makes it real?'),
+  ccue(266, 'preLevel', 'ledger_broker', 'Something becomes expensive to walk away from.'),
+  ccue(266, 'preLevel', 'the_closer', 'Risk.'),
+  ccue(266, 'preLevel', 'ledger_broker', 'Commitment.'),
+
+  ccue(267, 'preLevel', null, 'THE CLOSER revisits his theory from Hearts.'),
+  ccue(267, 'preLevel', 'the_closer', 'I was wrong about the Queen of Hearts.'),
+  ccue(267, 'preLevel', 'player', 'I need a story box for this historic event.'),
+  ccue(267, 'preLevel', 'the_closer', "Don't ruin it."),
+  ccue(267, 'preLevel', 'player', 'Go on.'),
+  ccue(267, 'preLevel', 'the_closer', "I thought she controlled the route. She didn't. She committed to it."),
+  ccue(267, 'preLevel', 'player', 'With Spades and Clubs.'),
+  ccue(267, 'preLevel', 'the_closer', 'Joint decision. Different roles.'),
+
+  ccue(268, 'preLevel', null, 'The fourth authorization frame contains no signature. Under magnification, the paper is pressed with a diamond-shaped watermark.'),
+  ccue(268, 'preLevel', 'player', "There it's."),
+  ccue(268, 'preLevel', 'the_closer', 'Probably.'),
+  ccue(268, 'preLevel', 'player', "You've become cautious."),
+  ccue(268, 'preLevel', 'the_closer', "I've been around the Scholar too much."),
+  ccue(268, 'preLevel', 'the_scholar', 'Good.'),
+  ccue(268, 'preLevel', 'the_scholar', 'Woof.'),
+
+  ccue(269, 'preLevel', null, 'THE BROKER asks the PLAYER one question before allowing access to the feature table.'),
+  ccue(269, 'preLevel', 'ledger_broker', 'If one of the seven refuses the next House, do you continue?'),
+  ccue(269, 'preLevel', null, 'THE PLAYER looks around the room. The seven are all there.'),
+  ccue(269, 'preLevel', 'player', 'No.'),
+  ccue(269, 'preLevel', null, 'THE CLOSER studies the answer, then nods once.'),
+  ccue(269, 'preLevel', 'the_closer', 'Correct.'),
+  ccue(269, 'preLevel', 'ledger_broker', 'Interesting. Months ago, the answer would have been different.'),
+
+  ccue(270, 'bossIntro', null, 'INT. LEDGER ROOM FEATURE TABLE - NIGHT'),
+  ccue(270, 'bossIntro', null, 'THE BROKER takes the seat opposite the PLAYER. THE CLOSER sits beside the PLAYER. A ledger clerk takes the fourth chair.'),
+  ccue(270, 'bossIntro', 'ledger_broker', "You've spent this whole House collecting evidence that someone planned for eight."),
+  ccue(270, 'bossIntro', 'player', 'Because someone did.'),
+  ccue(270, 'bossIntro', 'ledger_broker', 'Planning is not control.'),
+  ccue(270, 'bossIntro', 'the_closer', "It's preparation for commitment."),
+  ccue(270, 'bossIntro', null, 'The boss match begins.'),
+  ccue(270, 'bossIntro', 'ledger_broker', 'Mr. Closer, do you know when he has decided?'),
+  ccue(270, 'bossIntro', 'the_closer', 'Usually.'),
+  ccue(270, 'bossIntro', 'player', 'Comforting.'),
+  ccue(270, 'bossIntro', 'the_closer', "You're deciding now."),
+  ccue(270, 'bossIntro', null, 'The PLAYER chooses a difficult line and commits without hesitation.'),
+  ccue(270, 'bossDefeat', null, 'THE BROKER stamps the transit document and turns it around. Three seals are already present: Spade, Heart, Club. A blank diamond-shaped space waits at the bottom.'),
+  ccue(270, 'bossDefeat', 'ledger_broker', 'Passage was pre-authorized for eight persons.'),
+  ccue(270, 'bossDefeat', 'player', 'Before we agreed.'),
+  ccue(270, 'bossDefeat', 'the_closer', 'They were betting on us.'),
+  ccue(270, 'bossDefeat', 'ledger_broker', 'No.'),
+  ccue(270, 'bossDefeat', null, 'THE BROKER closes the ledger.'),
+  ccue(270, 'bossDefeat', 'ledger_broker', "They were betting that you'd choose."),
+  ccue(270, 'bossDefeat', null, 'THE CLOSER looks at the PLAYER.'),
+  ccue(270, 'bossDefeat', 'the_closer', 'Choice.'),
+  ccue(270, 'bossDefeat', 'player', 'I remember the list.'),
+  ccue(270, 'bossDefeat', 'the_closer', 'Good. Now stop acting like the list was about one person.'),
+
+  // ═══ House of Clubs, Chapter 8: The Council Gallery (levels 271-280) ═══
+  // "Full group phase" — the three AI seats rotate through the seven
+  // returning House of Spades characters via chapter28Companions (see
+  // CAMPAIGN_CHAPTER_ROSTER's own note). Same "nothing after ON CLEAR ->
+  // no postClear" rule except Level 277, whose one line of real content
+  // after the marker becomes its own postClear. Level 280's ending sits
+  // entirely in bossDefeat.
+  ccue(271, 'preLevel', null, 'For the first time in Clubs, the eight are kept in the same chamber. Two tables sit close enough for conversation between hands. The House begins changing seating deliberately. Each level asks the group to carry information across different combinations rather than rely on the same partner.'),
+  ccue(271, 'preLevel', null, 'The eight occupy a long green table before the playable tables open. Maps, letters, role tokens, photographs and transit ledgers cover the surface.'),
+  ccue(271, 'preLevel', 'player', 'No more separate theories. Everything.'),
+  ccue(271, 'preLevel', 'the_sharp', 'The routes were constrained.'),
+  ccue(271, 'preLevel', 'the_scholar', 'The records predate us.'),
+  ccue(271, 'preLevel', 'the_wildcard', 'The messages call us candidates.'),
+  ccue(271, 'preLevel', 'the_optimist', "The roles explain why we're different."),
+  ccue(271, 'preLevel', 'the_jester', 'Dead groups were bad at friendship.'),
+  ccue(271, 'preLevel', 'the_charmer', 'The Houses share purpose.'),
+  ccue(271, 'preLevel', 'the_closer', 'And three of them committed to eight-person passage.'),
+  ccue(271, 'preLevel', 'player', 'So what are we missing?'),
+  ccue(271, 'preLevel', 'the_jester', 'Snacks.'),
+
+  ccue(272, 'preLevel', null, 'A uniformed Club officer rearranges the name cards at both tables.'),
+  ccue(272, 'preLevel', 'the_captain', 'New rule. No repeated seating pattern.'),
+  ccue(272, 'preLevel', 'the_sharp', 'Why?'),
+  ccue(272, 'preLevel', 'the_captain', 'Because a team that only works in one formation is a trick, not a team.'),
+  ccue(272, 'preLevel', 'the_wildcard', 'I like him less already.'),
+  ccue(272, 'preLevel', null, 'The PLAYER sits with THE SCHOLAR and THE JESTER against one House regular. The other four occupy the nearby table.'),
+
+  ccue(273, 'preLevel', null, 'Between tables, the eight argue over how to share discoveries quickly.'),
+  ccue(273, 'preLevel', 'the_sharp', 'One leader. Fewer collisions.'),
+  ccue(273, 'preLevel', 'the_wildcard', 'Terrible. One leader means one person gets blamed for my ideas.'),
+  ccue(273, 'preLevel', 'the_optimist', "That's the first sensible thing you've said."),
+  ccue(273, 'preLevel', 'the_closer', 'Leadership should follow the decision.'),
+  ccue(273, 'preLevel', 'the_charmer', 'Meaning?'),
+  ccue(273, 'preLevel', 'the_closer', 'Whoever is best placed to make it.'),
+  ccue(273, 'preLevel', 'player', 'Then nobody leads all the time.'),
+  ccue(273, 'preLevel', 'the_captain', 'Better.'),
+  ccue(273, 'preLevel', null, 'He has been listening from the rail.'),
+
+  ccue(274, 'preLevel', null, 'THE PLAYER catches THE SHARP asking THE WILDCARD for an instinctive read before checking his own count.'),
+  ccue(274, 'preLevel', 'player', 'Did you just ask him for intuition?'),
+  ccue(274, 'preLevel', 'the_sharp', "Don't make this emotional."),
+  ccue(274, 'preLevel', 'the_wildcard', 'He is growing.'),
+  ccue(274, 'preLevel', 'the_sharp', "I'll stop."),
+  ccue(274, 'preLevel', 'the_wildcard', "Too late. I'm proud."),
+
+  ccue(275, 'preLevel', null, 'THE SCHOLAR begins to correct THE OPTIMIST, then stops and lets him finish.'),
+  ccue(275, 'preLevel', 'the_optimist', 'That was almost respectful.'),
+  ccue(275, 'preLevel', 'the_scholar', 'Your conclusion was unsupported.'),
+  ccue(275, 'preLevel', 'the_optimist', 'There he is.'),
+  ccue(275, 'preLevel', 'the_scholar', 'But useful.'),
+  ccue(275, 'preLevel', 'the_optimist', "I'm writing this date down."),
+  ccue(275, 'preLevel', 'the_scholar', 'I already did.'),
+
+  ccue(276, 'preLevel', null, "THE CHARMER and THE SHARP share a table with the PLAYER. Their methods appear incompatible until THE CHARMER quietly notices an opponent's anxiety and THE SHARP notices the timing change that follows."),
+  ccue(276, 'preLevel', 'the_sharp', 'He changed pace when you asked about his family.'),
+  ccue(276, 'preLevel', 'the_charmer', 'He relaxed when I asked about his family.'),
+  ccue(276, 'preLevel', 'the_sharp', 'Same result.'),
+  ccue(276, 'preLevel', 'the_charmer', 'Different reason.'),
+  ccue(276, 'preLevel', 'player', 'Both useful.'),
+  ccue(276, 'preLevel', null, 'Neither argues.'),
+
+  ccue(277, 'preLevel', null, 'THE CLOSER sits opposite THE JESTER before the next rotation and looks visibly tired.'),
+  ccue(277, 'preLevel', 'the_jester', "Sea otters hold hands while sleeping so they don't drift apart."),
+  ccue(277, 'preLevel', 'the_closer', 'Why are you telling me this?'),
+  ccue(277, 'preLevel', 'the_jester', 'Team strategy.'),
+  ccue(277, 'preLevel', 'the_closer', "We're not holding hands."),
+  ccue(277, 'preLevel', 'the_jester', 'You said no before I asked. Classic Closer.'),
+  ccue(277, 'postClear', null, "Later, THE CLOSER uses one of THE JESTER's ridiculous observations to spot a pattern. He refuses to acknowledge this publicly."),
+
+  ccue(278, 'preLevel', null, 'THE CAPTAIN watches the eight debrief.'),
+  ccue(278, 'preLevel', 'the_captain', 'Who is the strongest player here?'),
+  ccue(278, 'preLevel', 'the_optimist', 'Me emotionally.'),
+  ccue(278, 'preLevel', 'the_sharp', 'No.'),
+  ccue(278, 'preLevel', 'the_jester', 'The table. Very sturdy.'),
+  ccue(278, 'preLevel', 'player', 'Wrong question.'),
+  ccue(278, 'preLevel', 'the_captain', 'Why?'),
+  ccue(278, 'preLevel', 'player', 'Because the answer changes with the hand.'),
+  ccue(278, 'preLevel', null, 'THE CAPTAIN smiles for the first time.'),
+
+  ccue(279, 'preLevel', null, 'Dinner appears between the two tables. Nobody ordered it.'),
+  ccue(279, 'preLevel', 'the_wildcard', 'We need a group name.'),
+  ccue(279, 'preLevel', 'the_sharp', 'No.'),
+  ccue(279, 'preLevel', 'the_jester', 'Seven Former Problems and One Administrative Error.'),
+  ccue(279, 'preLevel', 'the_optimist', 'Which one is the administrative error?'),
+  ccue(279, 'preLevel', 'the_jester', 'Rotating position.'),
+  ccue(279, 'preLevel', 'the_charmer', "That's terrible."),
+  ccue(279, 'preLevel', 'the_jester', 'Memorable.'),
+  ccue(279, 'preLevel', 'the_closer', 'Not usable.'),
+  ccue(279, 'preLevel', 'player', 'Then we remain unnamed.'),
+  ccue(279, 'preLevel', 'the_wildcard', 'Cowardice.'),
+
+  ccue(280, 'bossIntro', null, 'INT. COUNCIL GALLERY - FEATURE TABLE - NIGHT'),
+  ccue(280, 'bossIntro', null, 'THE CAPTAIN takes one seat. The PLAYER takes another. Instead of naming the remaining two seats, he points to the seven.'),
+  ccue(280, 'bossIntro', 'the_captain', 'Choose two.'),
+  ccue(280, 'bossIntro', null, 'The PLAYER looks at the seven, then at the two nearby tables.'),
+  ccue(280, 'bossIntro', 'player', 'Why only two?'),
+  ccue(280, 'bossIntro', 'the_captain', 'Because a table has four chairs.'),
+  ccue(280, 'bossIntro', 'player', 'Then rotate them between hands.'),
+  ccue(280, 'bossIntro', null, 'THE CAPTAIN studies the PLAYER.'),
+  ccue(280, 'bossIntro', 'the_captain', "That wasn't the instruction."),
+  ccue(280, 'bossIntro', 'player', "You said choose two. You didn't say forever."),
+  ccue(280, 'bossIntro', 'the_wildcard', 'Choice is getting cocky.'),
+  ccue(280, 'bossIntro', null, 'THE CAPTAIN allows it. Across the boss match, different allies rotate through the two companion seats between hands. No one gives direct play instructions; each simply brings a different presence to the table.'),
+  ccue(280, 'bossIntro', 'the_captain', "You've stopped relying on fixed pairings."),
+  ccue(280, 'bossIntro', 'player', 'That was the point of the room.'),
+  ccue(280, 'bossIntro', 'the_captain', 'The point was whether you\'d notice.'),
+  ccue(280, 'bossDefeat', null, 'The far wall opens. Beyond it are two identical four-seat tables beneath a high green-glass ceiling.'),
+  ccue(280, 'bossDefeat', 'the_captain', 'The House no longer cares whether you can work with one person.'),
+  ccue(280, 'bossDefeat', 'the_captain', 'Now it wants to know whether eight people can stay connected while separated.'),
+  ccue(280, 'bossDefeat', 'the_jester', 'So... two administrative errors?'),
+  ccue(280, 'bossDefeat', 'the_sharp', 'No.'),
+
+  // ═══ House of Clubs, Chapter 9: The Twin Table Hall (levels 281-290) ═══
+  // "Two-table preview" — same rotation mechanism as Chapter 8, via
+  // chapter29Companions. Same "nothing after ON CLEAR -> no postClear"
+  // rule except Level 282, whose one line of real content after the
+  // marker becomes its own postClear. Level 290's ending sits entirely
+  // in bossDefeat.
+  ccue(281, 'preLevel', null, "Two four-seat tables sit side by side with a narrow aisle between them. For now, only the PLAYER's active table determines campaign progress; the second table functions as story and rotation space. But every level reshuffles the eight. Information, mood and trust must survive the split. This is the first direct preview of how the House of Diamonds may work."),
+  ccue(281, 'preLevel', null, 'The eight stop at the entrance. Two tables. Eight chairs. Exactly like the old plans and photographs.'),
+  ccue(281, 'preLevel', 'the_scholar', "There it's."),
+  ccue(281, 'preLevel', 'the_jester', 'Our furniture prophecy fulfilled.'),
+  ccue(281, 'preLevel', 'the_steward', 'Four and four.'),
+  ccue(281, 'preLevel', null, 'A severe man in a green tailcoat waits between the tables.'),
+  ccue(281, 'preLevel', 'player', 'The Steward?'),
+  ccue(281, 'preLevel', 'the_steward', 'For this room.'),
+  ccue(281, 'preLevel', 'the_wildcard', 'Comforting qualifier.'),
+
+  ccue(282, 'preLevel', null, 'The Steward assigns the first split: PLAYER, SHARP, JESTER and CHARMER at Table One. SCHOLAR, WILDCARD, OPTIMIST and CLOSER at Table Two.'),
+  ccue(282, 'preLevel', 'the_steward', 'You may speak before the hand and after it. Not during.'),
+  ccue(282, 'preLevel', 'the_sharp', 'Reasonable.'),
+  ccue(282, 'preLevel', 'the_wildcard', 'Oppressive.'),
+  ccue(282, 'preLevel', 'the_steward', 'Good. Begin.'),
+  ccue(282, 'postClear', null, 'Afterward, both tables immediately compare what they noticed without being prompted.'),
+
+  ccue(283, 'preLevel', null, 'The Steward swaps THE SHARP and THE OPTIMIST between tables.'),
+  ccue(283, 'preLevel', 'the_optimist', 'Your table made two bad assumptions.'),
+  ccue(283, 'preLevel', 'the_sharp', 'Hello to you too.'),
+  ccue(283, 'preLevel', 'the_optimist', "First one was thinking the other table had no useful information. Second was thinking I'd make that sound nicer."),
+  ccue(283, 'preLevel', 'player', 'What did they see?'),
+  ccue(283, 'preLevel', null, 'He tells them. The next level begins with better information.'),
+
+  ccue(284, 'preLevel', null, 'THE CHARMER asks the Steward whether the House is trying to discover the best combination of four.'),
+  ccue(284, 'preLevel', 'the_steward', 'No.'),
+  ccue(284, 'preLevel', 'the_charmer', 'Why not?'),
+  ccue(284, 'preLevel', 'the_steward', "Because the last House won't promise you the combination you prefer."),
+  ccue(284, 'preLevel', null, 'The word last hangs in the room.'),
+  ccue(284, 'preLevel', 'player', 'Diamonds.'),
+  ccue(284, 'preLevel', 'the_steward', 'Play.'),
+
+  ccue(285, 'preLevel', null, "THE STEWARD removes THE SCHOLAR's notebook before the hand."),
+  ccue(285, 'preLevel', 'the_scholar', 'No.'),
+  ccue(285, 'preLevel', 'the_steward', 'Yes.'),
+  ccue(285, 'preLevel', 'the_scholar', 'This is vandalism.'),
+  ccue(285, 'preLevel', 'the_jester', "It's temporary kidnapping."),
+  ccue(285, 'preLevel', 'the_scholar', 'Woof.'),
+  ccue(285, 'preLevel', null, 'The team must debrief from memory. THE OPTIMIST fills one gap, THE SHARP another, and THE WILDCARD remembers the detail everyone expected him to forget.'),
+
+  ccue(286, 'preLevel', null, 'THE CLOSER and THE JESTER are assigned to different tables. THE JESTER shouts a joke before the no-talking signal, and THE CLOSER unexpectedly finishes it.'),
+  ccue(286, 'preLevel', 'player', 'You two are becoming friends.'),
+  ccue(286, 'preLevel', 'the_closer', 'No.'),
+  ccue(286, 'preLevel', 'the_jester', 'Yes.'),
+  ccue(286, 'preLevel', 'the_closer', 'Trust is not the same as liking someone.'),
+  ccue(286, 'preLevel', 'the_jester', "That's exactly what a friend would say."),
+
+  ccue(287, 'preLevel', null, 'A Diamond-marked observer appears briefly on the balcony. THE OPTIMIST notices her.'),
+  ccue(287, 'preLevel', 'the_optimist', "You're mysterious, intimidating, and probably unavailable. Dinner?"),
+  ccue(287, 'preLevel', 'diamond_observer', 'No.'),
+  ccue(287, 'preLevel', 'the_optimist', 'Excellent. Consistency across Houses.'),
+  ccue(287, 'preLevel', 'the_sharp', "You're impossible."),
+  ccue(287, 'preLevel', 'the_optimist', "And yet 'Resilience' is literally on the wall."),
+
+  ccue(288, 'preLevel', null, 'The Steward bans notes, diagrams and tokens for one full rotation. The eight may only talk to one another.'),
+  ccue(288, 'preLevel', 'the_steward', 'If the system exists only on paper, it does not exist.'),
+  ccue(288, 'preLevel', 'the_scholar', 'I object to the premise.'),
+  ccue(288, 'preLevel', 'the_wildcard', 'Noted nowhere.'),
+  ccue(288, 'preLevel', null, 'The resulting conversation is messy, overlapping and surprisingly effective.'),
+
+  ccue(289, 'preLevel', null, 'For the first time, the Steward does not assign seating.'),
+  ccue(289, 'preLevel', 'the_steward', 'Choose.'),
+  ccue(289, 'preLevel', null, 'The eight do not pick friends. They balance each table: observation, memory, instinct, resilience, perspective, connection, resolve and choice spread across both sides.'),
+  ccue(289, 'preLevel', 'the_charmer', 'Nobody even argued.'),
+  ccue(289, 'preLevel', 'the_sharp', 'We argued internally.'),
+  ccue(289, 'preLevel', 'the_jester', 'Growth.'),
+  ccue(289, 'preLevel', 'player', 'Ready?'),
+  ccue(289, 'preLevel', null, 'ALL SEVEN: "Ready."'),
+
+  ccue(290, 'bossIntro', null, 'INT. TWIN TABLE HALL - NIGHT'),
+  ccue(290, 'bossIntro', null, "THE STEWARD takes a seat at the PLAYER's table, displacing one ally. The second table remains active beside them. The other seven cannot advise the PLAYER during the boss match."),
+  ccue(290, 'bossIntro', 'the_steward', "You've spent ten levels learning that being separated isn't the same as being alone."),
+  ccue(290, 'bossIntro', 'player', 'And this is the exam?'),
+  ccue(290, 'bossIntro', 'the_steward', 'This is the door.'),
+  ccue(290, 'bossIntro', null, 'The boss match begins. THE STEWARD watches every glance the PLAYER sends toward the second table.'),
+  ccue(290, 'bossIntro', 'the_steward', "They can't help you now."),
+  ccue(290, 'bossIntro', 'player', 'They already did.'),
+  ccue(290, 'bossIntro', null, 'The PLAYER settles and plays without looking over again.'),
+  ccue(290, 'bossDefeat', null, 'THE STEWARD stands. The second table finishes almost simultaneously. The seven rejoin the PLAYER.'),
+  ccue(290, 'bossDefeat', 'the_steward', 'Good.'),
+  ccue(290, 'bossDefeat', 'player', 'What exactly did we pass?'),
+  ccue(290, 'bossDefeat', 'the_steward', 'You stopped confusing being watched with being alone.'),
+  ccue(290, 'bossDefeat', null, 'A door of carved black-green wood opens at the far end.'),
+  ccue(290, 'bossDefeat', 'the_steward', 'The Queen has been listening since the eight of you entered.'),
+  ccue(290, 'bossDefeat', 'the_wildcard', 'That feels rude.'),
+  ccue(290, 'bossDefeat', 'the_charmer', 'You listened to half the House.'),
+  ccue(290, 'bossDefeat', 'the_wildcard', 'Professionally different.'),
+
+  // ═══ House of Clubs, Chapter 10: The Root Crown Chamber (291-300) ═══
+  // House of Clubs' own finale — same rotation mechanism as Chapters
+  // 8-9 for Levels 291-299 (chapter30Companions), dropping to two
+  // generic Club Champions plus QUEEN OF CLUBS for Level 300 (see that
+  // function's own note). Same "nothing after ON CLEAR -> no postClear"
+  // rule for 291-299. Level 300's bossDefeat is the immediate table-side
+  // reaction (still at the table); chapterExit is the envelope reveal
+  // through the whole epilogue and post-credit stinger, same split
+  // House of Hearts' own Level 200 used for its finale. The screenplay's
+  // own "CHARACTER CONTINUITY GUIDE" and "HOUSE OF DIAMONDS HANDOFF"
+  // sections after "FADE OUT." are production notes, not narration or
+  // dialogue — skipped entirely, same treatment "SYSTEM / NOT SHOWN"
+  // lines already get everywhere else. No "CAMPAIGN COMPLETE" banner
+  // here, unlike the original House of Spades finale — Clubs isn't the
+  // last house (Diamonds isn't built yet), matching how Hearts' own
+  // Level 200 ending also skipped that banner.
+  ccue(291, 'preLevel', null, 'A vast chamber grown around an ancient-looking central structure of dark carved wood, brass and green glass. There is a throne, but it is low and almost hidden behind the table rather than raised above it. THE QUEEN OF CLUBS is already present. She is less theatrical than Spades and less socially warm than Hearts. She feels grounded, patient and difficult to move - a woman who has spent a long time watching what survives.'),
+  ccue(291, 'preLevel', null, 'Eight chairs stand in a wide circle before the final table. THE QUEEN OF CLUBS sits in the ninth, not above them but among them.'),
+  ccue(291, 'preLevel', 'queen_of_clubs', 'You took your time.'),
+  ccue(291, 'preLevel', 'player', 'You knew we were coming.'),
+  ccue(291, 'preLevel', 'queen_of_clubs', 'I knew eight places were prepared.'),
+  ccue(291, 'preLevel', 'the_sharp', 'Not names.'),
+  ccue(291, 'preLevel', 'queen_of_clubs', 'You learn quickly when you stop learning alone.'),
+  ccue(291, 'preLevel', null, 'She gestures toward the tables.'),
+  ccue(291, 'preLevel', 'queen_of_clubs', "I didn't ask for eight champions."),
+  ccue(291, 'preLevel', 'the_jester', 'Good. Several of us are exhausting.'),
+
+  ccue(292, 'preLevel', null, 'The Queen changes the seating herself, placing the PLAYER with three different allies.'),
+  ccue(292, 'preLevel', 'queen_of_clubs', 'Who leads you?'),
+  ccue(292, 'preLevel', 'the_sharp', 'Depends.'),
+  ccue(292, 'preLevel', 'the_closer', 'On the decision.'),
+  ccue(292, 'preLevel', 'the_charmer', 'On who sees it first.'),
+  ccue(292, 'preLevel', 'the_optimist', "Sometimes nobody. It's messy."),
+  ccue(292, 'preLevel', 'queen_of_clubs', 'PLAYER?'),
+  ccue(292, 'preLevel', 'player', 'Depends on the hand.'),
+  ccue(292, 'preLevel', null, 'The Queen nods as if that was the only acceptable answer.'),
+
+  ccue(293, 'preLevel', null, 'The Queen places the eight old role tokens in front of them: Precision, Memory, Instinct, Resilience, Perspective, Connection, Resolve, Choice.'),
+  ccue(293, 'preLevel', 'queen_of_clubs', 'Useful labels.'),
+  ccue(293, 'preLevel', 'the_scholar', 'Accurate labels.'),
+  ccue(293, 'preLevel', 'queen_of_clubs', 'Temporary labels.'),
+  ccue(293, 'preLevel', null, 'She pushes Precision toward THE WILDCARD and Instinct toward THE SHARP.'),
+  ccue(293, 'preLevel', 'the_wildcard', "Now we're cooking."),
+  ccue(293, 'preLevel', 'the_sharp', 'No.'),
+  ccue(293, 'preLevel', 'queen_of_clubs', 'If you leave this House still trapped inside the skill that brought you here, Clubs failed.'),
+
+  ccue(294, 'preLevel', null, 'The Queen watches a level where THE SHARP takes an intuitive risk, THE WILDCARD waits patiently, THE OPTIMIST softens a first reaction, and THE CHARMER says nothing until asked.'),
+  ccue(294, 'preLevel', 'queen_of_clubs', 'Better.'),
+  ccue(294, 'preLevel', 'the_sharp', "I don't like that he influenced me."),
+  ccue(294, 'preLevel', 'the_wildcard', "I'll treasure this forever."),
+  ccue(294, 'preLevel', 'the_scholar', 'You also barked yesterday.'),
+  ccue(294, 'preLevel', 'the_sharp', "I didn't."),
+  ccue(294, 'preLevel', 'the_jester', 'We all heard it.'),
+  ccue(294, 'preLevel', 'the_scholar', 'That one was him.'),
+  ccue(294, 'preLevel', 'player', "I'm not investigating this."),
+
+  ccue(295, 'preLevel', null, 'The Queen asks each of the seven for one lesson worth carrying into the final House.'),
+  ccue(295, 'preLevel', 'the_sharp', "Don't confuse control with certainty."),
+  ccue(295, 'preLevel', 'the_scholar', "Records are strongest when they admit what they don't know."),
+  ccue(295, 'preLevel', 'the_wildcard', 'Locked doors are often just doors with confidence problems.'),
+  ccue(295, 'preLevel', 'the_optimist', 'Bad news works better straight. Then you fix what you can.'),
+  ccue(295, 'preLevel', 'the_jester', 'Patterns become visible when you stop insisting they look serious.'),
+  ccue(295, 'preLevel', 'the_charmer', 'People tell you what matters when you care enough to actually hear them.'),
+  ccue(295, 'preLevel', 'the_closer', 'You can usually see commitment before someone says yes.'),
+  ccue(295, 'preLevel', null, 'The Queen looks at the PLAYER.'),
+  ccue(295, 'preLevel', 'queen_of_clubs', 'And Choice?'),
+  ccue(295, 'preLevel', 'player', 'None of those lessons works on its own.'),
+
+  ccue(296, 'preLevel', null, 'The Queen walks beside a wall carved with four suit symbols around a single old card table.'),
+  ccue(296, 'preLevel', 'player', 'The Confidant called you gatekeepers.'),
+  ccue(296, 'preLevel', 'queen_of_clubs', 'Good word.'),
+  ccue(296, 'preLevel', 'player', 'Gatekeeping what?'),
+  ccue(296, 'preLevel', 'queen_of_clubs', 'A game can survive bad luck. Bad rules. Even bad players.'),
+  ccue(296, 'preLevel', 'the_scholar', 'But?'),
+  ccue(296, 'preLevel', 'queen_of_clubs', "It doesn't survive when people forget why it's worth sitting down together."),
+  ccue(296, 'preLevel', 'player', 'So this is about Dame de Pique.'),
+  ccue(296, 'preLevel', 'queen_of_clubs', "It's about more than winning it."),
+
+  ccue(297, 'preLevel', null, 'A panel opens. Behind glass is a diagram of a bright room with two four-seat tables facing one another.'),
+  ccue(297, 'preLevel', 'the_jester', 'Furniture prophecy, part two.'),
+  ccue(297, 'preLevel', 'queen_of_clubs', 'The House of Diamonds has two tables at its heart.'),
+  ccue(297, 'preLevel', 'player', 'Eight seats.'),
+  ccue(297, 'preLevel', 'queen_of_clubs', 'Exactly.'),
+  ccue(297, 'preLevel', 'the_closer', 'And passage requires all eight.'),
+  ccue(297, 'preLevel', 'queen_of_clubs', 'Now you understand the paperwork.'),
+
+  ccue(298, 'preLevel', null, 'A faceted white light appears beneath the table, the first clear visual hint of Diamonds.'),
+  ccue(298, 'preLevel', 'queen_of_clubs', 'Clubs asks whether roots connect.'),
+  ccue(298, 'preLevel', 'player', 'And Diamonds?'),
+  ccue(298, 'preLevel', 'queen_of_clubs', 'Pressure.'),
+  ccue(298, 'preLevel', 'the_optimist', 'Well, that sounds cheerful.'),
+  ccue(298, 'preLevel', 'queen_of_clubs', 'There, helping someone else may cost you something you wanted for yourself.'),
+  ccue(298, 'preLevel', 'the_sharp', 'Actual cooperative decisions.'),
+  ccue(298, 'preLevel', 'queen_of_clubs', "Now you're asking the right question."),
+
+  ccue(299, 'preLevel', null, 'The Queen places a single sealed diamond envelope in the middle of the circle.'),
+  ccue(299, 'preLevel', 'queen_of_clubs', 'One passage. One name. Choose who continues.'),
+  ccue(299, 'preLevel', null, 'Silence.'),
+  ccue(299, 'preLevel', 'the_wildcard', 'No.'),
+  ccue(299, 'preLevel', 'the_sharp', 'No.'),
+  ccue(299, 'preLevel', 'the_optimist', 'Terrible offer.'),
+  ccue(299, 'preLevel', 'the_scholar', 'Logically inconsistent with the evidence.'),
+  ccue(299, 'preLevel', 'the_jester', 'Also rude.'),
+  ccue(299, 'preLevel', 'the_charmer', 'Nobody takes it.'),
+  ccue(299, 'preLevel', 'the_closer', 'Deal rejected.'),
+  ccue(299, 'preLevel', null, 'The Queen looks at the PLAYER.'),
+  ccue(299, 'preLevel', 'player', 'Nobody goes alone.'),
+  ccue(299, 'preLevel', null, 'The Queen picks up the envelope. There is no name on it.'),
+  ccue(299, 'preLevel', 'queen_of_clubs', 'Good.'),
+  ccue(299, 'preLevel', 'player', 'It was never a real offer.'),
+  ccue(299, 'preLevel', 'queen_of_clubs', 'It became real the second you had to answer.'),
+  ccue(299, 'preLevel', null, 'She walks to the final table.'),
+  ccue(299, 'preLevel', 'queen_of_clubs', 'Now we can play.'),
+
+  ccue(300, 'bossIntro', null, 'INT. ROOT CROWN FINAL TABLE - NIGHT'),
+  ccue(300, 'bossIntro', null, 'THE QUEEN OF CLUBS takes the seat opposite the PLAYER. Two Club Champions take the remaining chairs. The seven stand in the surrounding circle. They are close enough to be seen, but the Queen raises one hand before anyone speaks.'),
+  ccue(300, 'bossIntro', 'queen_of_clubs', 'They may stay. They may not advise you.'),
+  ccue(300, 'bossIntro', 'player', "They don't need to."),
+  ccue(300, 'bossIntro', 'queen_of_clubs', "That's the answer I hoped Clubs would teach you."),
+  ccue(300, 'bossIntro', null, 'The final boss match begins.'),
+  ccue(300, 'bossIntro', 'queen_of_clubs', 'Spades taught you to survive a room alone.'),
+  ccue(300, 'bossIntro', 'player', 'It definitely tried.'),
+  ccue(300, 'bossIntro', 'queen_of_clubs', 'Hearts taught you that information without trust is only suspicion.'),
+  ccue(300, 'bossIntro', null, 'A later hand begins.'),
+  ccue(300, 'bossIntro', 'queen_of_clubs', 'What did Clubs teach you?'),
+  ccue(300, 'bossIntro', 'player', 'That trust has to actually do something.'),
+  ccue(300, 'bossIntro', 'queen_of_clubs', 'Better.'),
+  ccue(300, 'bossIntro', null, 'The match tightens. The PLAYER glances once around the circle: THE SHARP still as a blade; THE SCHOLAR pushing his glasses up; THE WILDCARD holding his beer and, for once, not joking; THE OPTIMIST smiling; THE JESTER making a silent face; THE CHARMER calm; THE CLOSER unreadable.'),
+  ccue(300, 'bossIntro', null, 'The PLAYER turns back to the cards.'),
+  ccue(300, 'bossIntro', 'queen_of_clubs', 'There. Eight people. One decision.'),
+  ccue(300, 'bossIntro', null, 'The last hand ends.'),
+  ccue(300, 'bossDefeat', null, 'The QUEEN OF CLUBS looks down at the table, then at the seven around it.'),
+  ccue(300, 'bossDefeat', 'queen_of_clubs', 'You beat me.'),
+  ccue(300, 'bossDefeat', 'player', 'We did.'),
+  ccue(300, 'bossDefeat', null, 'The Queen smiles. Not warmly like Hearts. Not dangerously like Spades. Simply with recognition.'),
+  ccue(300, 'bossDefeat', 'queen_of_clubs', 'Exactly.'),
+  ccue(300, 'chapterExit', null, 'She places the sealed diamond envelope back on the table and breaks it open herself. Inside is a black card marked by a faceted white-gold diamond.'),
+  ccue(300, 'chapterExit', 'queen_of_clubs', 'Spades tested whether you could stand alone.'),
+  ccue(300, 'chapterExit', 'queen_of_clubs', "Hearts tested whether you'd return to others."),
+  ccue(300, 'chapterExit', 'queen_of_clubs', 'Clubs tested whether trust could become a table.'),
+  ccue(300, 'chapterExit', 'player', 'And Diamonds?'),
+  ccue(300, 'chapterExit', 'queen_of_clubs', 'Diamonds will decide whether the table holds when pressure gives each of you a reason to break it.'),
+  ccue(300, 'chapterExit', 'the_sharp', 'Why eight?'),
+  ccue(300, 'chapterExit', 'queen_of_clubs', 'That answer belongs to the last House.'),
+  ccue(300, 'chapterExit', 'the_scholar', 'You could just answer it now.'),
+  ccue(300, 'chapterExit', 'queen_of_clubs', 'I could.'),
+  ccue(300, 'chapterExit', 'the_scholar', 'Woof.'),
+  ccue(300, 'chapterExit', 'the_jester', "He's furious."),
+  ccue(300, 'chapterExit', 'player', 'Were all four Queens part of this?'),
+  ccue(300, 'chapterExit', 'queen_of_clubs', 'You already know three were.'),
+  ccue(300, 'chapterExit', 'player', 'And the fourth?'),
+  ccue(300, 'chapterExit', 'queen_of_clubs', 'Go ask her.'),
+  ccue(300, 'chapterExit', null, 'The Queen pushes the diamond card toward the PLAYER.'),
+  ccue(300, 'chapterExit', 'queen_of_clubs', 'You think this was our plan.'),
+  ccue(300, 'chapterExit', 'player', "Wasn't it?"),
+  ccue(300, 'chapterExit', 'queen_of_clubs', 'It began as ours.'),
+  ccue(300, 'chapterExit', null, 'She looks around the circle of eight.'),
+  ccue(300, 'chapterExit', 'queen_of_clubs', "It's becoming yours."),
+  ccue(300, 'chapterExit', null, 'The doors of the House of Clubs open onto early morning. Unlike the first journey, nobody trails behind the PLAYER. All eight step outside together, spreading naturally across the stone street.'),
+  ccue(300, 'chapterExit', null, 'The green House remains behind them. Ahead, somewhere beyond the rooftops, a hard white light catches the edge of the diamond card.'),
+  ccue(300, 'chapterExit', 'the_wildcard', 'Breakfast?'),
+  ccue(300, 'chapterExit', 'the_sharp', 'We already did breakfast after Hearts.'),
+  ccue(300, 'chapterExit', 'the_wildcard', 'That\'s how traditions work. You repeat them.'),
+  ccue(300, 'chapterExit', 'the_optimist', 'I support breakfast.'),
+  ccue(300, 'chapterExit', null, 'THE OPTIMIST notices the same green-coated attendant from the prologue.'),
+  ccue(300, 'chapterExit', 'the_optimist', 'Last chance. Breakfast with eight highly suspicious card players?'),
+  ccue(300, 'chapterExit', null, 'GREEN ATTENDANT: "No."'),
+  ccue(300, 'chapterExit', 'the_optimist', 'Consistency. I admire that in a person.'),
+  ccue(300, 'chapterExit', 'the_jester', "Sea otters hold hands while sleeping so they don't drift apart."),
+  ccue(300, 'chapterExit', 'the_closer', "We're still not holding hands."),
+  ccue(300, 'chapterExit', 'the_jester', 'You remembered the fact. Friendship confirmed.'),
+  ccue(300, 'chapterExit', 'the_scholar', "That's not how confirmation works."),
+  ccue(300, 'chapterExit', 'the_scholar', 'Woof.'),
+  ccue(300, 'chapterExit', 'the_charmer', "He's right about one thing."),
+  ccue(300, 'chapterExit', 'player', 'The otters?'),
+  ccue(300, 'chapterExit', 'the_charmer', 'The name.'),
+  ccue(300, 'chapterExit', 'the_sharp', 'What name?'),
+  ccue(300, 'chapterExit', 'the_wildcard', 'The Great Eight.'),
+  ccue(300, 'chapterExit', 'the_sharp', 'No.'),
+  ccue(300, 'chapterExit', 'the_optimist', 'I like it.'),
+  ccue(300, 'chapterExit', 'the_jester', 'The Magnificent Seven and our elected paperwork.'),
+  ccue(300, 'chapterExit', 'player', 'Nobody elected me.'),
+  ccue(300, 'chapterExit', 'the_closer', 'Too long. Great Eight closes.'),
+  ccue(300, 'chapterExit', 'the_scholar', "It's mathematically accurate."),
+  ccue(300, 'chapterExit', 'the_charmer', 'And it has rhythm.'),
+  ccue(300, 'chapterExit', null, 'THE SHARP looks around at seven people waiting for his objection.'),
+  ccue(300, 'chapterExit', 'the_sharp', 'Still no.'),
+  ccue(300, 'chapterExit', 'the_wildcard', 'Great. Close enough to unanimous.'),
+  ccue(300, 'chapterExit', null, 'They laugh. Even THE SHARP almost does.'),
+  ccue(300, 'chapterExit', null, 'The PLAYER looks at the diamond card.'),
+  ccue(300, 'chapterExit', 'player', 'One more House.'),
+  ccue(300, 'chapterExit', 'the_closer', 'Last one.'),
+  ccue(300, 'chapterExit', 'the_scholar', 'Assuming the records are honest, yes.'),
+  ccue(300, 'chapterExit', 'the_jester', "Please don't ruin sunrise by inventing a fifth House."),
+  ccue(300, 'chapterExit', 'the_optimist', "If there's a fifth House, we'll beat that one too."),
+  ccue(300, 'chapterExit', 'the_charmer', 'After breakfast.'),
+  ccue(300, 'chapterExit', 'player', 'After breakfast.'),
+  ccue(300, 'chapterExit', null, 'The eight start walking together.'),
+  ccue(300, 'chapterExit', null, 'Far ahead, reflected in the glass of a high building, a diamond-shaped light appears for only a moment.'),
+  ccue(300, 'chapterExit', null, 'CUT TO BLACK.'),
+  ccue(300, 'chapterExit', null, 'Inside the now-quiet Root Crown Chamber, THE STEWARD stands beside the QUEEN OF CLUBS. The eight are gone.'),
+  ccue(300, 'chapterExit', 'the_steward', 'Are they ready?'),
+  ccue(300, 'chapterExit', 'queen_of_clubs', 'No.'),
+  ccue(300, 'chapterExit', 'the_steward', 'Then why send them?'),
+  ccue(300, 'chapterExit', null, 'The Queen looks at the empty circle of eight chairs.'),
+  ccue(300, 'chapterExit', 'queen_of_clubs', 'Because the plan is finally starting to come together.'),
+  ccue(300, 'chapterExit', null, 'On the table sit three broken wax seals: a spade, a heart and a club. Beside them is one untouched diamond seal.'),
+  ccue(300, 'chapterExit', null, 'FADE OUT.'),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);
@@ -6190,11 +8084,13 @@ async function createCampaignRoom(name, avatar, accountId, socketId, levelId) {
 // generation seed byte-for-byte.
 function buildCampaignDeck(G) {
   const level = campaignLevelById(G.campaignLevelId);
-  // hands4/hands8: which fixed-hand array a multi-hand (boss) level uses,
-  // named after its own hands count like every level before it. Only one
-  // boss so far (Level 150) needs the 8-hand array; every other boss
-  // still uses hands4.
-  const multiHands = level.hands4 || level.hands8;
+  // hands4/hands8/hands12: which fixed-hand array a multi-hand (boss)
+  // level uses, named after its own hands count like every level before
+  // it. Levels 150 and 200 need the 8-hand array; Levels 250 and 300
+  // (House of Clubs) are the first to need 12 — their own sheet data
+  // specifies 'x12 (L/R/A/K)', three full cycles of the pass rotation
+  // rather than the usual one; every other boss still uses hands4.
+  const multiHands = level.hands4 || level.hands8 || level.hands12;
   const playerHand = multiHands ? multiHands[G.round - 1] : level.hand;
   const rest = makeDeck().filter(c => !playerHand.some(h => h.rank === c.rank && h.suit === c.suit));
   return [...playerHand, ...seededShuffle(rest, level.seed + '-r' + G.round)];

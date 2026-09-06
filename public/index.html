@@ -5477,6 +5477,17 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
     linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.16) 55%, rgba(0,0,0,.34) 100%),
     url('/campaign/hub/clubs.webp') center/cover;
 }
+/* No envelope photo supplied yet for House of Diamonds — same "not
+   dropped in yet" fallback every other missing-art case in this file
+   uses, the plain felt tile underneath the gradient layers. Drop
+   /campaign/hub/diamonds.webp in whenever it's ready; no code change
+   needed beyond that, same as spades/hearts/clubs above. */
+.camp-hub-chapters .tile.hub-tile-diamonds{
+  background:
+    radial-gradient(120% 140% at 50% -10%, rgba(var(--ddp-brass-rgb),.16), transparent 60%),
+    linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.16) 55%, rgba(0,0,0,.34) 100%),
+    url('/campaign/hub/diamonds.webp') center/cover;
+}
 
 /* ── Level-detail popup ──
    Centred modal, opened on a map node tap, before any dialogue or the
@@ -5799,15 +5810,19 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 [data-theme="clair"] .hub-tile-spades .tile-title,
 [data-theme="clair"] .hub-tile-hearts .tile-title,
 [data-theme="clair"] .hub-tile-clubs .tile-title,
+[data-theme="clair"] .hub-tile-diamonds .tile-title,
 [data-theme="sable"] .hub-tile-spades .tile-title,
 [data-theme="sable"] .hub-tile-hearts .tile-title,
-[data-theme="sable"] .hub-tile-clubs .tile-title{color:#EDE1CC}
+[data-theme="sable"] .hub-tile-clubs .tile-title,
+[data-theme="sable"] .hub-tile-diamonds .tile-title{color:#EDE1CC}
 [data-theme="clair"] .hub-tile-spades .tile-sub,
 [data-theme="clair"] .hub-tile-hearts .tile-sub,
 [data-theme="clair"] .hub-tile-clubs .tile-sub,
+[data-theme="clair"] .hub-tile-diamonds .tile-sub,
 [data-theme="sable"] .hub-tile-spades .tile-sub,
 [data-theme="sable"] .hub-tile-hearts .tile-sub,
-[data-theme="sable"] .hub-tile-clubs .tile-sub{color:#C9B8A8}
+[data-theme="sable"] .hub-tile-clubs .tile-sub,
+[data-theme="sable"] .hub-tile-diamonds .tile-sub{color:#C9B8A8}
 </style>
 </head>
 <body>
@@ -6406,6 +6421,12 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
             <div class="tile-body">
               <div class="tile-title">Chapter 3</div>
               <div class="tile-sub">House of Clubs</div>
+            </div>
+          </button>
+          <button class="tile hub-tile-diamonds" id="hub-tile-diamonds-btn" onclick="hubEnterChapter4()">
+            <div class="tile-body">
+              <div class="tile-title">Chapter 4</div>
+              <div class="tile-sub">House of Diamonds</div>
             </div>
           </button>
         </div>
@@ -8644,6 +8665,38 @@ const CAMPAIGN_CHARACTERS={
   champion2:{name:'Club Champion',initial:'2'},
   champion3:{name:'Club Champion',initial:'3'},
   queen_of_clubs:{name:'Queen of Clubs',initial:'Q'},
+  // House of Diamonds — mirrors server.js's own CAMPAIGN_CHARACTERS
+  // additions for Chapters 1-10 (internal chapter ids 31-40). Keep the
+  // two in step. the_sharp..the_closer/player/queen_of_hearts/
+  // queen_of_clubs/dame_de_pique are all already defined above and
+  // reused as-is — see server.js's own note on why.
+  the_assessor:{name:'The Assessor',initial:'As'},
+  exchange_broker:{name:'The Broker',initial:'B'},
+  the_doubter:{name:'The Doubter',initial:'Do'},
+  the_divider:{name:'The Divider',initial:'Di'},
+  the_rival:{name:'The Rival',initial:'R'},
+  the_collector:{name:'The Collector',initial:'Co'},
+  the_judge:{name:'The Judge',initial:'J'},
+  the_anchor:{name:'The Anchor',initial:'An'},
+  hall_keeper:{name:'The Keeper',initial:'K'},
+  queen_of_diamonds:{name:'Queen of Diamonds',initial:'Q'},
+  diamond_attendant:{name:'Diamond Attendant',initial:'DA'},
+  diamond_hostess:{name:'Diamond Hostess',initial:'DH'},
+  diamond_engineer:{name:'Diamond Engineer',initial:'DE'},
+  diamond_messenger:{name:'Diamond Messenger',initial:'DM'},
+  diamond_player1:{name:'Diamond Player #1',initial:'D1'},
+  diamond_regular1:{name:'Regular #1',initial:'1'},
+  diamond_regular2:{name:'Regular #2',initial:'2'},
+  diamond_regular3:{name:'Regular #3',initial:'3'},
+  diamond_regular4:{name:'Regular #4',initial:'4'},
+  diamond_regular5:{name:'Regular #5',initial:'5'},
+  diamond_regular6:{name:'Regular #6',initial:'6'},
+  new_player:{name:'New Player',initial:'N'},
+  beginner1:{name:'Beginner',initial:'B'},
+  beginner2:{name:'Beginner #2',initial:'2'},
+  beginner3:{name:'Beginner #3',initial:'3'},
+  hall_regular:{name:'A Regular',initial:'R'},
+  diamond_champion:{name:'Diamond Champion',initial:'DC'},
 };
 // Mirrors chapter9Regulars in server.js — Chapter 9 has no chapter-
 // specific regulars, the seven returning bosses rotate through the
@@ -8671,6 +8724,47 @@ function chapter30Companions(levelId){
   if(levelId===300) return ['champion1','champion2','champion3'];
   const offset=((levelId-291)*3)%7;
   return [CHAPTER9_SEVEN[offset],CHAPTER9_SEVEN[(offset+1)%7],CHAPTER9_SEVEN[(offset+2)%7]];
+}
+// House of Diamonds — mirrors server.js's own diamondsCompanions/
+// chapter39Companions/chapter40Companions. Keep the two in step.
+const DIAMONDS_SEVEN=CHAPTER9_SEVEN;
+function diamondsCompanions(chapterLevelStart){
+  return function(levelId){
+    const offset=((levelId-chapterLevelStart)*3)%7;
+    return [DIAMONDS_SEVEN[offset],DIAMONDS_SEVEN[(offset+1)%7],DIAMONDS_SEVEN[(offset+2)%7]];
+  };
+}
+const chapter31Companions=diamondsCompanions(301);
+const chapter32Companions=diamondsCompanions(311);
+const chapter33Companions=diamondsCompanions(321);
+const chapter34Companions=diamondsCompanions(331);
+const chapter35Companions=diamondsCompanions(341);
+const chapter36Companions=diamondsCompanions(351);
+const chapter37Companions=diamondsCompanions(361);
+const chapter38Companions=diamondsCompanions(371);
+const CHAPTER39_ROSTER={
+  381:['the_scholar','hall_regular','hall_regular'],
+  382:['the_charmer','hall_regular','hall_regular'],
+  383:['the_closer','hall_regular','hall_regular'],
+  384:['the_optimist','hall_regular','hall_regular'],
+  385:['the_wildcard','new_player','hall_regular'],
+  386:['the_sharp','beginner1','hall_regular'],
+  387:['the_optimist','beginner2','hall_regular'],
+  388:['the_closer','beginner3','hall_regular'],
+  389:['the_wildcard','hall_regular','hall_regular'],
+  390:['the_jester','new_player','the_jester'],
+};
+function chapter39Companions(levelId){
+  return CHAPTER39_ROSTER[levelId]||['the_scholar','hall_regular','hall_regular'];
+}
+function chapter40Companions(levelId){
+  // Ignored server-side at the actual table (dealRound overwrites via
+  // applyCampaignRoundRoster/roundRoster) — used here only for the
+  // pre-game level-detail popup, so the first rotation pair is the
+  // representative answer, not an arbitrary placeholder.
+  if(levelId===400) return ['the_sharp','the_scholar','the_sharp'];
+  const offset=(levelId-391)%7;
+  return [DIAMONDS_SEVEN[offset],'diamond_champion','diamond_champion'];
 }
 // Which three characters sit at an ordinary (non-boss) table per chapter,
 // and who the boss replaces — used by campaignOpponentsHTML so the
@@ -8717,6 +8811,17 @@ const CAMPAIGN_CHAPTER_ROSTER={
   28:{regulars:chapter28Companions,bossSeat:2},
   29:{regulars:chapter29Companions,bossSeat:2},
   30:{regulars:chapter30Companions,bossSeat:2},
+  // House of Diamonds.
+  31:{regulars:chapter31Companions,bossSeat:2},
+  32:{regulars:chapter32Companions,bossSeat:2},
+  33:{regulars:chapter33Companions,bossSeat:2},
+  34:{regulars:chapter34Companions,bossSeat:2},
+  35:{regulars:chapter35Companions,bossSeat:2},
+  36:{regulars:chapter36Companions,bossSeat:2},
+  37:{regulars:chapter37Companions,bossSeat:2},
+  38:{regulars:chapter38Companions,bossSeat:2},
+  39:{regulars:chapter39Companions,bossSeat:2},
+  40:{regulars:chapter40Companions,bossSeat:2},
 };
 
 /* Exact mirror of sceneArtImg/rankArtImg's art-loading contract: a CSS/
@@ -9059,6 +9164,11 @@ const CAMPAIGN_PROLOGUE2_BG={1:'/campaign/prologue2/1.webp',2:'/campaign/prologu
 // the script's Level 0 is one continuous scene at the green door (no
 // location change), so every cue shares the same bg.
 const CAMPAIGN_PROLOGUE3_BG={1:'/campaign/prologue3/1.webp'};
+// House of Diamonds prologue (server.js, levelId 301 / trigger
+// 'prologue') — the Clubs-to-Diamonds "reunion" cinematic. Only 1 still,
+// same reasoning as CAMPAIGN_PROLOGUE3_BG: Level 0's whole scene is one
+// continuous beat outside the twin doors, no location change.
+const CAMPAIGN_PROLOGUE4_BG={1:'/campaign/prologue4/1.webp'};
 let campProlQueue=[];
 let campProlOnDone=null;
 let campProlBgNum=null;
@@ -9133,6 +9243,27 @@ function hubEnterChapter3(){
     campaignRunPrologue(cues,CAMPAIGN_PROLOGUE3_BG,()=>{});
   }
 }
+// Same fix as hubEnterChapter2/3, for the fourth and final house — pins
+// to the last House of Diamonds chapter only once Diamonds is actually
+// fully finished (frontier past Level 400), not unconditionally. Same
+// "live today, not just future-proofing" reasoning: an account partway
+// through Diamonds would hit the identical "jumped to the finale" bug
+// without this, well before any House of Clubs' own successor exists to
+// push the frontier further.
+function hubEnterChapter4(){
+  $('camp-scene').classList.remove('hub-mode');
+  renderCampaignMap(campaignData);
+  const diamondsChapters=campaignData.chapters.filter(c=>c.levelStart>=301&&c.levelEnd<=400);
+  const lastDiamonds=diamondsChapters[diamondsChapters.length-1];
+  if(lastDiamonds&&campaignData.highestUnlockedLevel>lastDiamonds.levelEnd){
+    campaignViewChapterId=lastDiamonds.id;
+    campaignRenderChapterView();
+  }
+  const cues=campaignCuesFor(301,'prologue');
+  if(cues.length&&!cues.every(c=>campaignSeenCues.has(c.id))){
+    campaignRunPrologue(cues,CAMPAIGN_PROLOGUE4_BG,()=>{});
+  }
+}
 // The hub's first tile — bypasses the hub for the rest of this visit
 // (see campaignStateOk's own campaignReturnLevelId check) and drops
 // straight into the ordinary per-chapter map, using the campaignData
@@ -9177,6 +9308,10 @@ function renderCampaignHub(d){
   // (campaignHomeClick included), so a mid-session Hearts clear reveals
   // the tile immediately without a page reload.
   $('hub-tile-clubs-btn').style.display = d.highestUnlockedLevel>200 ? '' : 'none';
+  // Same gate, one house further: House of Diamonds' own tile stays
+  // hidden until the account has finished the whole House of Clubs
+  // campaign (clearing Level 300 advances highestUnlockedLevel to 301).
+  $('hub-tile-diamonds-btn').style.display = d.highestUnlockedLevel>300 ? '' : 'none';
 }
 // The top-left ‹ on the campaign screen — .camp-home's one onclick,
 // shared by the hub and every chapter's table overview alike. Once an
@@ -9470,7 +9605,14 @@ function campaignObjectiveParts(level){
     gold=`Gold: avoid her <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`;
   }else if(o.type==='cleanHand'){
     main=`Finish with <b>zero</b> penalty points — no hearts, no Q♠.`;
-    gold=`Gold: clean <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`;
+    // goldScoreBar is optional here for the first time (House of
+    // Diamonds' Level 396 has no score floor at all — see
+    // evaluateCampaignObjective's own note in server.js) — checked
+    // against `!= null`, same reason as there: a bar of exactly 0 is a
+    // real floor, not an absent one.
+    gold=o.goldScoreBar!=null
+      ? `Gold: clean <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`
+      : `Gold: clean.`;
   }else if(o.type==='trickCount'){
     main=`Win at least <b>${o.minTricks}</b> tricks.`;
     gold=o.goldMoon

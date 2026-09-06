@@ -3799,6 +3799,203 @@ before pushing.
 - **The hub tile envelope art is done** (Chapter 1's tile only — a house
   gets exactly one hub tile regardless of how many chapters it has).
 
+## House of Diamonds (levels 301-400) — the whole house, data only, art not yet supplied
+- **Built from two source documents, same "two files, no art yet" pattern
+  every earlier house started from**:
+  `House_of_Diamonds_Levels_1-100_Movie_Script_Human_Dialogue_16_Hand_Finale`
+  (dialogue, ~2400 paragraphs) and `Dame-de-Pique-Campaign-Levels_4.xlsx`'s
+  "Levels 301-400" sheet (mechanics — Type/Direction/Hands/Min-Gold-
+  Target/fixed hands, exactly the same columns every earlier sheet used).
+  Internal chapter ids continue at 31 (Facet Hall through Diamond Crown =
+  31-40), same flat-id-space/displayed-numbers-restart-at-1 convention
+  every house since Hearts has used. **No art was supplied for this
+  house at all** — chapter backgrounds, character portraits, gold
+  medallions, hub tile envelope, all of it is a later pass; every art
+  reference (`public/campaign/chapters/*`, `public/campaign/characters/
+  *`, `public/campaign/hub/diamonds.webp`, `public/campaign/prologue4/
+  1.webp`) degrades to the existing CSS/SVG placeholder or 404-once
+  fallback, exactly like every "not dropped in yet" case elsewhere in
+  this file.
+- **The ten chapters and bosses**: 31 The Facet Hall/The Assessor (301-
+  310), 32 The Exchange/The Broker (311-320), 33 The Echo Gallery/The
+  Doubter (321-330), 34 The Split Chamber/The Divider (331-340), 35 The
+  Mirror Vault/The Rival (341-350), 36 The Gilded Auction/The Collector
+  (351-360), 37 The Tribunal of Play/The Judge (361-370), 38 The
+  Pressure Engine/The Anchor (371-380), 39 The Hall of Keepers/The
+  Keeper (381-390), 40 The Diamond Crown/Queen of Diamonds (391-400).
+  **Two boss names collide with existing House of Hearts characters,
+  same collision class this file already documents for ledger_broker vs
+  the_broker**: Chapter 32's boss is stored as `exchange_broker` (not
+  `the_broker`, Hearts' own Gilded Exchange boss) and Chapter 39's as
+  `hall_keeper` (not `the_keeper`, Hearts' own Menagerie Salon boss) —
+  caught before either could silently overwrite an already-shipped
+  character.
+- **"Mission" is a new sheet Type value this house's sheet uses that no
+  earlier house's did**: it marks a level's non-score objective shape
+  (Clean Hand / Avoid the Queen / Trick Count / Suit Void) directly in
+  the Type column, rather than requiring the kind of manual "swap this
+  level onto a mini-ladder" decision Chapters 1-2 of House of Spades
+  needed. Every objective in CAMPAIGN_LEVELS[301..400] is read straight
+  off the sheet's own Goal/Min/Gold columns, nothing chosen.
+- **Two blank-gold-target cases in the sheet needed a real decision, not
+  a lookup — and they don't resolve the same way.** Levels 367/387/394
+  have Ceiling == Min, the same "no room above min" case Levels 224/285
+  already established (gold set equal to min). Level 312 doesn't: its
+  ceiling (40) sits one point ABOVE its min (39), so setting gold to min
+  would make it exactly as easy as clearing — contradicting the sheet's
+  own "gold is always harder than clearing" rule the other three cases
+  don't violate. 312 uses the ceiling itself (40) instead, the only
+  value that's both reachable and still strictly above min.
+- **Level 396's Gold Target is the literal string "n/a", not blank** —
+  read as "no score floor at all" (clearing a Clean Hand at all is
+  already the hard part there; the sheet's own Measured P(clear) was
+  0%), not "unreachable". This needed a real, small engine change:
+  `evaluateCampaignObjective`'s `cleanHand` case previously required a
+  numeric `goldScoreBar` unconditionally — extended to make it optional
+  (checked against `== null`, not a falsy check, since several Clean
+  Hand levels — three of this house's own included — set the bar to
+  exactly 0, a real floor, not an absent one), matching the optional-bar
+  pattern `suitVoid`/`trickCount` already used. The client's own
+  `campaignObjectiveParts` (level-detail popup) got the same fix, or
+  Level 396's card would have rendered "Gold: clean and score undefined
+  or higher."
+- **`hands16` is a new multi-hand array name, extending
+  `buildCampaignDeck`'s `multiHands` line a fourth time** (hands4 →
+  hands8 → hands12 → hands16, each addition made only when a house's own
+  sheet actually specified that cycle length — `hands4/hands8/hands12`
+  already existed for Hearts/Clubs). Four of this house's ten boss
+  levels (370/380/390/400) specify `'x16 (L/R/A/K)'` — four full cycles
+  of the pass rotation — matching the source file's own name
+  ("16_Hand_Finale").
+- **The companion roster is genuinely different from every earlier
+  house, and needed three distinct designs, not one.** The screenplay's
+  own framing is stronger than any earlier house's: "the Great Eight
+  enter as a real group for the first time... every playable level keeps
+  at least one of the seven beside the PLAYER," and the implementation
+  note at the script's end confirms it mechanically: "the active hand
+  remains a four-player table. At least one member of the Great Eight is
+  always seated beside the PLAYER; selected boss levels use two Great
+  Eight allies plus the boss."
+  - **Chapters 31-38 reuse the exact `chapter9Regulars`/
+    `chapter29Companions` 3-of-7 cycle** (3 seats advancing 3 places each
+    level) via a small factory, `diamondsCompanions(chapterLevelStart)`,
+    bound once per chapter into `chapter31Companions`..`chapter38Companions`.
+    Confirmed against every one of those chapters' own x0 boss levels
+    independently — each names exactly TWO Great Eight allies seated
+    with the boss (Level 10: Sharp+Scholar; Level 70: Scholar+Closer;
+    Level 80: Sharp+Closer) — exactly what this cycle plus the standard
+    `bossSeat: 2` substitution produces on its own, with no per-chapter
+    tuning. Individual ordinary levels' own flavor text is looser than
+    that (a specific companion "taking a seat" mid-chapter, unnamed
+    "Diamond Regular" strangers speaking without ever really holding a
+    seat) and isn't chased line-by-line — the same "mechanical cycle
+    over literal mapping" reasoning `chapter28Companions`/
+    `chapter29Companions` already established for Clubs' own full-group
+    chapters, just applied across a whole house instead of two chapters.
+  - **Chapter 39 (The Hall of Keepers) breaks the cycle — its own script
+    is far more explicit than any other chapter about who's actually
+    seated.** Four levels (386-388, 390) each pair one specific companion
+    with one specific one-line student (`beginner1/2/3`, `new_player`);
+    three (381-384, 389) read as loose ensemble scenes with no seat claim
+    at all; Level 390 (the boss) seats exactly ONE companion (THE JESTER)
+    beside a real newcomer, not two companions. Written as an explicit
+    per-level table (`CHAPTER39_ROSTER`/`chapter39Companions`) rather than
+    a formula for exactly that reason — nothing a generic rotation could
+    produce. `hall_regular` fills whichever seat the text leaves
+    genuinely unnamed, same "no line, no name, just a seat" role Clubs'
+    `council1` already fills.
+  - **Chapter 40 (The Diamond Crown, this house's own finale) breaks the
+    cycle a second, different way.** Level 91's text is explicit that
+    only ONE of the seven sits beside the PLAYER, "beside two Diamond
+    champions" — generic table regulars, not real Great Eight members —
+    and every level from 92 rotates that one seat through the remaining
+    companions one at a time ("THE PLAYER rotates beside THE SCHOLAR"),
+    continuing the cycle rather than resetting each level.
+    `chapter40Companions` rotates `ids[0]` alone through the seven and
+    fills `ids[1]`/`ids[2]` with the reusable `diamond_champion` id.
+- **Level 400 (Queen of Diamonds) is the one level in the whole 400-level
+  campaign whose seat roster isn't fixed for its own run, and that
+  needed a real, scoped engine feature, not just data.** The screenplay
+  is explicit and structural, not flavor: "THE QUEEN OF DIAMONDS stays in
+  the boss seat... Every four hands, the people beside the PLAYER
+  rotate" — Hands 1-4 Sharp+Scholar, 5-8 Wildcard+Optimist, 9-12
+  Jester+Charmer, 13-16 Closer+"a DIAMOND CHAMPION" (the one seat no real
+  companion is left for, by design — all seven have played beside the
+  PLAYER by the end). Every seat-assignment call before this one assumed
+  one roster per level for its whole run (`campaignSeatCharacters`,
+  called once at room creation) — extended via a new `level.roundRoster`
+  field (an array of 4 pairs) and `applyCampaignRoundRoster(G, level)`,
+  called from `dealRound` (which already runs at the start of every
+  round, including round 1) whenever `level.roundRoster` exists. It
+  reassigns seats 1-3's `name`/`avatar`/`campaignCharId` for whichever
+  pair `Math.floor((G.round-1)/4)` selects, explicitly skipping
+  `roster.bossSeat` — her own chair never moves. Purely cosmetic (which
+  NPC identity/portrait a seat displays); the actual AI opponents are
+  unaffected regardless of which pair is "seated". `campaignSeatCharacters(level)`'s
+  own return value for level 400 is functionally irrelevant server-side
+  (immediately overwritten) but is still read by the CLIENT's
+  `campaignOpponentsHTML` for the pre-game level-detail popup's "who's
+  at this table" preview — so it deliberately returns the FIRST rotation
+  pair (Sharp+Scholar), the representative answer, rather than an
+  arbitrary placeholder.
+- **The reunion cinematic (Level 0) plays through the same full-bleed
+  narrator overlay as every earlier house's prologue** (`campaignRunPrologue`,
+  keyed on levelId 301 so it can never collide with `(1,'prologue')`/
+  `(101,'prologue')`/`(201,'prologue')`). One still for the whole scene
+  (`CAMPAIGN_PROLOGUE4_BG = {1:'/campaign/prologue4/1.webp'}`, not yet
+  supplied) — Level 0's whole scene is one continuous beat outside the
+  twin doors, no location change, same reasoning as Clubs' own single-
+  still prologue. Every speaking line is folded into the narration text
+  (`SPEAKER: "line"`, consecutive same-speaker lines joined with `...`),
+  the same convention every earlier prologue uses since
+  `campaignPrologueStep` never reads `cue.speakerId` at all.
+- **A fourth hub tile** (`hub-tile-diamonds`/`hubEnterChapter4`) was
+  added alongside Spades/Hearts/Clubs, gated exactly like Clubs' own tile
+  was: hidden until House of Clubs is actually finished
+  (`highestUnlockedLevel>300`), toggled in `renderCampaignHub` so a
+  mid-session Clubs clear reveals it without a reload. `hubEnterChapter4`
+  carries the SAME fix `hubEnterChapter2`/`hubEnterChapter3` already
+  needed — it only pins the map to the last Diamonds chapter when
+  Diamonds is actually fully finished (`highestUnlockedLevel` past
+  Chapter 40's own `levelEnd`), not unconditionally; built correctly the
+  first time by copying the fixed version, not the original buggy
+  pattern. No envelope photo yet — `.hub-tile-diamonds` falls back to the
+  plain felt tile under its gradient layers, same as every other
+  not-dropped-in-yet background.
+- **No Node runtime was available in the environment that built this**,
+  same caveat every earlier campaign chapter's own build note carries —
+  but a real JS AST parser (Python's `esprima`) was, which is a step up
+  from every earlier house's own brace-balance-only scanner. Every
+  touched/added block parses as syntactically valid JavaScript on its
+  own: `CAMPAIGN_CHARACTERS`, `CAMPAIGN_CHAPTER_ROSTER`, `CAMPAIGN_CHAPTERS`,
+  `CAMPAIGN_LEVELS` and the entire `CAMPAIGN_STORY_CUES` array (all 4148
+  `ccue()` calls in the file, 1088 of them new) each parse cleanly in
+  isolation; so do the new rotation functions, `applyCampaignRoundRoster`,
+  and the edited `buildCampaignDeck`/`evaluateCampaignObjective`/
+  `campaignSeatCharacters`/`dealRound`. **The client's entire inline
+  `<script>` parses end-to-end as one valid program** — a stronger check
+  than any earlier house got, since the client has no equivalent of
+  server.js's `?.`-related whole-file parse blocker (the one thing that
+  kept the server-side check to per-block rather than whole-file: an
+  unrelated pre-existing `?.` optional-chaining use elsewhere in
+  server.js, outside anything touched here, that this esprima version
+  doesn't support). On top of the parse checks: every one of the 4148
+  `ccue()` calls has its speakerId cross-checked against
+  `CAMPAIGN_CHARACTERS` with zero unresolved ids (both the server copy
+  and the client's own mirror); all 400 `CAMPAIGN_LEVELS` entries are
+  keyed consistently (key == id == correct chapter for its 10-level
+  block, zero duplicates); and all 202 `parseHand()` strings for this
+  house (90 single-hand levels + the four 4/8/12/16-hand bosses' own hand
+  arrays) check out as exactly 13 valid, non-duplicated cards each,
+  independently verified against the source spreadsheet before ever
+  being transcribed into server.js. **Still genuinely unexecuted**, same
+  as every earlier house at this stage: no hand has actually been dealt,
+  no dialogue cue has actually rendered, and `applyCampaignRoundRoster`'s
+  own round-boundary math has never run against a live `G.round`. Run it
+  for real before trusting Level 400's rotation or the schema-adjacent
+  bits (`evaluateCampaignObjective`'s new optional-goldScoreBar branch)
+  under actual play.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

@@ -4446,6 +4446,16 @@ html.landscape-mode .screen.active .stats-grid{
 }
 html.landscape-mode .screen.active .stat-card{padding:9px 8px}
 html.landscape-mode .screen.active .stat-value{font-size:1.15rem}
+/* Statistics only: a narrower rail (the header chrome here is just the
+   backlink/title/tagline — none of it needs the shared 178-238px budget
+   the other rail screens' extra chrome does) hands the body column enough
+   width for a fourth column of stat cards instead of a longer scroll.
+   #s-stats beats the shared rule on specificity alone (an id vs. two
+   classes), so this works regardless of source order. */
+html.landscape-mode #s-stats.screen.active>.center-wrap{
+  grid-template-columns:minmax(132px,168px) 1fr;
+}
+html.landscape-mode #s-stats .stats-grid{grid-template-columns:repeat(4,1fr)}
 /* #rank-you-bar is position:fixed to the viewport bottom, so the
    leaderboard has to reserve room or its last rows sit under it */
 html.landscape-mode #s-rank #rank-content{padding-bottom:52px}
@@ -6927,6 +6937,7 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
       <div class="acct-tabs">
         <button class="acct-tab" id="stats-tab-casual" onclick="switchStatsTab('casual')">Casual</button>
         <button class="acct-tab" id="stats-tab-ranked" onclick="switchStatsTab('ranked')">Ranked</button>
+        <button class="acct-tab" id="stats-tab-campaign" onclick="switchStatsTab('campaign')">Campaign</button>
       </div>
 
       <div id="stats-casual">
@@ -7106,6 +7117,43 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
           <div class="stat-card">
             <div class="stat-value neg" id="rst-mmr-lowest">—</div>
             <div class="stat-label">Lowest MMR</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="stats-campaign" style="display:none">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="cst-attempts">0</div>
+            <div class="stat-label">Attempts used</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="cst-levels-won">0</div>
+            <div class="stat-label">Levels won</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="cst-gold-levels">0</div>
+            <div class="stat-label">Gold levels</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="cst-total-points">0</div>
+            <div class="stat-label">Lifetime total (campaign)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value pos" id="cst-best-hand">—</div>
+            <div class="stat-label">Best hand</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value neg" id="cst-worst-hand">—</div>
+            <div class="stat-label">Worst hand</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="cst-moons-total">0</div>
+            <div class="stat-label">Moons shot, total</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="cst-queens-taken">0</div>
+            <div class="stat-label">Queen of Spades taken</div>
           </div>
         </div>
       </div>
@@ -11257,8 +11305,10 @@ function fmtStat(n){
 function switchStatsTab(mode){
   $('stats-tab-casual').classList.toggle('active',mode==='casual');
   $('stats-tab-ranked').classList.toggle('active',mode==='ranked');
+  $('stats-tab-campaign').classList.toggle('active',mode==='campaign');
   $('stats-casual').style.display=mode==='casual'?'block':'none';
   $('stats-ranked').style.display=mode==='ranked'?'block':'none';
+  $('stats-campaign').style.display=mode==='campaign'?'block':'none';
 }
 function goStats(){
   show('stats');
@@ -11274,6 +11324,7 @@ function goStats(){
   $('stats-loading').style.display='block';
   socket.emit('getStats',{token:accountToken});
   socket.emit('getRankedStats',{token:accountToken});
+  socket.emit('getCampaignStats',{token:accountToken});
 }
 socket.on('statsOk',d=>{
   const s=d.stats;
@@ -11332,6 +11383,19 @@ socket.on('rankedStatsOk',d=>{
   $('rst-mmr-lowest').textContent=s.mmrLowest===null?'—':s.mmrLowest;
 });
 socket.on('rankedStatsError',()=>{ /* non-blocking — casual tab already loaded fine, ranked cards just stay at their zero/dash defaults */ });
+socket.on('campaignStatsOk',d=>{
+  if(!$('s-stats').classList.contains('active')) return;
+  const s=d.stats;
+  $('cst-attempts').textContent=s.attemptsUsed;
+  $('cst-levels-won').textContent=s.levelsWon;
+  $('cst-gold-levels').textContent=s.goldLevels;
+  $('cst-total-points').textContent=fmtStat(s.totalScore);
+  $('cst-best-hand').textContent=fmtStat(s.bestHand);
+  $('cst-worst-hand').textContent=fmtStat(s.worstHand);
+  $('cst-moons-total').textContent=s.moonsTotal;
+  $('cst-queens-taken').textContent=s.queenSpadesTaken;
+});
+socket.on('campaignStatsError',()=>{ /* non-blocking — casual/ranked tabs already loaded fine, campaign cards just stay at their zero/dash defaults */ });
 
 socket.on('joined',d=>{
   room=d.code; me=d.playerIndex; host=d.isHost; token=d.token;

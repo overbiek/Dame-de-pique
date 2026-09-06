@@ -435,6 +435,19 @@ async function ensureSchema() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+  // Account-wide campaign totals, mirroring the shared achievement_stats
+  // pattern (best_hand/worst_hand are GREATEST/LEAST records, moons_total/
+  // queen_spades_taken are plain counters) but scoped to campaign play
+  // only — achievement_stats' own moon/queen counters are deliberately
+  // mode-agnostic (see its own note), so they can't answer "how many of
+  // these happened IN campaign" on their own. Written from
+  // recordCampaignHandStats, called once per level from
+  // submitCampaignLevelResult under that function's existing one-shot
+  // guard — same safe-under-retry reasoning as times_played above.
+  await pool.query(`ALTER TABLE campaign_progress ADD COLUMN IF NOT EXISTS moons_total INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE campaign_progress ADD COLUMN IF NOT EXISTS queen_spades_taken INTEGER NOT NULL DEFAULT 0;`);
+  await pool.query(`ALTER TABLE campaign_progress ADD COLUMN IF NOT EXISTS best_hand INTEGER;`);
+  await pool.query(`ALTER TABLE campaign_progress ADD COLUMN IF NOT EXISTS worst_hand INTEGER;`);
   // Per-level best result. times_played is a plain additive counter safe
   // under trackStat's retries because the CALLER (submitCampaignLevelResult
   // in server.js) guards with an in-memory one-shot flag before ever
@@ -1567,6 +1580,63 @@ async function upsertCampaignLevelResult(accountId, levelId, score, cleared, gol
   return rows[0];
 }
 
+// Account-wide campaign totals — moons/queens are plain +N counters (safe
+// under retry for the same one-shot-guarded-caller reason as times_played
+// above), best_hand/worst_hand are GREATEST/LEAST records (Postgres's
+// GREATEST/LEAST ignore NULL arguments, so these work correctly against a
+// brand-new account's still-NULL columns with no COALESCE needed). Called
+// once per level, alongside upsertCampaignLevelResult, from
+// submitCampaignLevelResult — bestHand/worstHand are that level's own
+// best/worst individual HAND (not the level's total, which can span up to
+// 4 hands on a boss table), so a boss level contributes up to 4 candidate
+// hands in one call via moons/queens already being level-wide sums.
+async function recordCampaignHandStats(accountId, { moons, queens, bestHand, worstHand }) {
+  await ensureCampaignProgressRow(accountId);
+  await pool.query(
+    `UPDATE campaign_progress SET
+       moons_total = moons_total + $2,
+       queen_spades_taken = queen_spades_taken + $3,
+       best_hand = GREATEST(best_hand, $4),
+       worst_hand = LEAST(worst_hand, $5),
+       updated_at = now()
+     WHERE account_id = $1`,
+    [accountId, moons, queens, bestHand, worstHand]
+  );
+}
+
+// Same composition style as getAchievementStats/buildCampaignMapPayload —
+// one row per table, defaulted in JS. attempts/levelsWon/goldLevels/
+// totalScore are derived straight from campaign_level_results (no need to
+// track them separately in campaign_progress); moons/queens/best/worst
+// hand live in campaign_progress since they're not level-scoped.
+async function getCampaignStats(accountId) {
+  const { rows: prog } = await pool.query(
+    `SELECT moons_total, queen_spades_taken, best_hand, worst_hand
+     FROM campaign_progress WHERE account_id = $1`,
+    [accountId]
+  );
+  const { rows: agg } = await pool.query(
+    `SELECT COALESCE(SUM(times_played), 0) AS attempts,
+            COUNT(*) FILTER (WHERE cleared) AS levels_won,
+            COUNT(*) FILTER (WHERE gold) AS gold_levels,
+            COALESCE(SUM(best_score), 0) AS total_score
+     FROM campaign_level_results WHERE account_id = $1`,
+    [accountId]
+  );
+  const p = prog[0];
+  const a = agg[0];
+  return {
+    attemptsUsed: Number(a.attempts),
+    levelsWon: Number(a.levels_won),
+    goldLevels: Number(a.gold_levels),
+    totalScore: Number(a.total_score),
+    bestHand: p ? p.best_hand : null,
+    worstHand: p ? p.worst_hand : null,
+    moonsTotal: p ? p.moons_total : 0,
+    queenSpadesTaken: p ? p.queen_spades_taken : 0,
+  };
+}
+
 // Never moves the frontier backward — a replay of an already-cleared
 // earlier level can't un-unlock anything past it. Reports whether this
 // call actually moved the frontier (not just GREATEST's post-update
@@ -1670,4 +1740,5 @@ module.exports = {
   grantCredits, getCredits, claimCasualCreditDay, purchaseItem, getPurchases,
   getCampaignState, consumeCampaignAttempt, upsertCampaignLevelResult,
   advanceCampaignUnlock, markCampaignCuesSeen, getCampaignFriendsResults,
+  recordCampaignHandStats, getCampaignStats,
 };

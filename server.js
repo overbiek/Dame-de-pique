@@ -6308,8 +6308,24 @@ function submitCampaignLevelResult(G) {
     return;
   }
 
+  // This level's own hand-by-hand extremes/moons/queen — G.history has one
+  // entry per hand actually played THIS level (a fresh room per attempt,
+  // so it never carries rounds from a different level), which is what
+  // lets a hands:4 boss table contribute up to 4 distinct hand scores
+  // rather than just its 4-hand total. G.moonCounts/G.ach are both
+  // populated by endRound's own recordRoundAchievements call, which always
+  // runs at least once by the time a level's result is being submitted.
+  const handDeltas = G.history.map(h => h.deltas[0]);
+  const bestHand = handDeltas.length ? Math.max(...handDeltas) : null;
+  const worstHand = handDeltas.length ? Math.min(...handDeltas) : null;
+  const moonsThisLevel = (G.moonCounts && G.moonCounts[0]) || 0;
+  const queensThisLevel = (G.ach && G.ach.queens[0]) || 0;
+
   trackStat(async () => {
     await db.upsertCampaignLevelResult(p.accountId, level.id, p.score, cleared, gold);
+    await db.recordCampaignHandStats(p.accountId, {
+      moons: moonsThisLevel, queens: queensThisLevel, bestHand, worstHand,
+    });
     let creditsAwarded = 0;
     if (cleared) {
       const amount = campaignLevelCredits(level, gold);
@@ -7726,6 +7742,19 @@ io.on('connection', (socket) => {
     } catch (e) {
       console.error('getRankedStats error:', e.message);
       socket.emit('rankedStatsError', { msg: 'Could not load your ranked stats. Try again.' });
+    }
+  });
+
+  socket.on('getCampaignStats', async ({ token }) => {
+    if (!DB_ENABLED || !token) return socket.emit('campaignStatsError', { msg: 'Accounts aren\'t set up on this server yet.' });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('campaignStatsError', { msg: 'Your session expired — log in again.' });
+      const stats = await db.getCampaignStats(account.id);
+      socket.emit('campaignStatsOk', { stats });
+    } catch (e) {
+      console.error('getCampaignStats error:', e.message);
+      socket.emit('campaignStatsError', { msg: 'Could not load your campaign stats. Try again.' });
     }
   });
 

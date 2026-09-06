@@ -3591,9 +3591,20 @@ const CAMPAIGN_LEVELS = {
   164: { id: 164, chapter: 17, type: 'Harder', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch2-L164-score-c8', hand: parseHand('4♦ J♣ 10♦ 10♠ 10♣ 5♦ 10♥ Q♦ K♦ A♦ 7♥ 3♥ 8♣'),
          objective: { type: 'score', min: 15, gold: 24 } },
+  // Original min/gold (40/45) were retuned after real play against this
+  // exact seed: aiChoose/heuristicChoose/applyHardRules/sampleWorld/
+  // aiSelectPass extracted verbatim and run for real in a browser JS
+  // engine (no Node available), 147 trials across full-strength and a
+  // speed-reduced Monte Carlo budget. Observed ceiling was 40 — the old
+  // gold (45) was never once reached, and the old min (40) landed on
+  // that same ceiling only ~2% of the time, not a normal clear bar. New
+  // values sit inside the actually-observed range (min 20 hit 15.6% of
+  // trials, min 35 hit 4/147) and back in scale with this chapter's
+  // other Normal levels (161-169: min 4-34, gold 15-60) — 40/45 was a
+  // real outlier against its own siblings.
   165: { id: 165, chapter: 17, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch2-L165-score-c379', hand: parseHand('9♠ 8♠ 6♠ 9♣ K♥ J♣ Q♣ 6♥ 5♥ 2♦ A♦ J♠ 10♥'),
-         objective: { type: 'score', min: 40, gold: 45 } },
+         objective: { type: 'score', min: 20, gold: 35 } },
   166: { id: 166, chapter: 17, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch2-L166-void-c107', hand: parseHand('7♥ 4♦ 3♥ K♥ 8♣ 5♥ K♣ 9♣ 9♥ J♦ 4♥ Q♥ A♦'),
          objective: { type: 'suitVoid', suit: '♦', voidByTrick: 3, goldByTrick: 2 } },

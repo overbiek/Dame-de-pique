@@ -8840,6 +8840,17 @@ let campaignPendingLevel=null; // level id waiting behind the current dialogue q
 // goes back to showing frontier progress rather than getting stuck
 // re-centering on whatever level was last replayed.
 let campaignReturnLevelId=null;
+// Set only by the campaignResult handler below, from that event's own
+// `newUnlock` field — which the server only ever sends non-null when
+// clearing this exact level just genuinely advanced highestUnlockedLevel
+// (db.js's advanceCampaignUnlock: target>prev). That's precisely "first
+// time clearing this level", never a replay of an already-cleared one —
+// so this is the single source of truth for "did this clear just unlock
+// something new" that goCampaignFromTable needs. Deliberately a separate
+// variable from `lastCampaignResult`, not read off it directly: that one
+// gets nulled the moment the post-clear dialogue queue finishes, which
+// can easily happen before the player actually taps "Back to the Map".
+let campaignLastNewUnlock=null;
 function goCampaign(){
   const id=identity();
   if(!id.name){ goPersonal(); return; }
@@ -8856,8 +8867,25 @@ function goCampaign(){
 // S.campaign is true) before goCampaign()'s own socket round trip can
 // touch anything, so it captures whichever level was actually just
 // played even on a replay of an already-cleared one.
+// campaignLastNewUnlock takes priority when set: finishing a level for
+// the first time (any level, not just a boss — clearing a chapter's
+// last level/boss is simply the case where the newly unlocked id lands
+// in a different, not-yet-visible chapter) should land the player on
+// what they just unlocked, not back on the level they came from. A
+// replay never sets campaignLastNewUnlock, so this is naturally a
+// one-time thing per genuine advance, never on a repeat clear.
+// Deliberately NOT applied when the unlock crosses into a brand-new
+// HOUSE (Level 100->101, 200->201, ...): that transition has its own
+// hub-tile-and-prologue ceremony (campaignStateOk's own hub check right
+// below, and hubEnterChapter2/3's prologue trigger), and jumping
+// straight into the new house's map here would silently skip both —
+// the player would never see the reunion cinematic. Houses are exactly
+// 100 levels each, so "same house" is just "same //100 block".
 function goCampaignFromTable(){
-  campaignReturnLevelId=(S&&S.campaign&&S.campaignLevel)||null;
+  const played=(S&&S.campaign&&S.campaignLevel)||null;
+  const sameHouse=played&&campaignLastNewUnlock&&Math.floor((played-1)/100)===Math.floor((campaignLastNewUnlock-1)/100);
+  campaignReturnLevelId=(sameHouse?campaignLastNewUnlock:played)||null;
+  campaignLastNewUnlock=null;
   goCampaign();
 }
 
@@ -9565,6 +9593,10 @@ let lastCampaignResult=null;
 socket.on('campaignResult',d=>{
   if(d.creditsAwarded) requestCredits();
   lastCampaignResult=d;
+  // See campaignLastNewUnlock's own declaration (near goCampaignFromTable)
+  // for why this lives in its own variable rather than being read off
+  // lastCampaignResult at "Back to the Map" time.
+  campaignLastNewUnlock=d.newUnlock||null;
   // NOT nulling campaignData here — renderCampaignResult (below) needs
   // it to look up postClear/postFail/bossDefeat story cues, and this
   // fired before that lookup ran, so the post-level dialogue silently

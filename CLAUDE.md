@@ -3497,6 +3497,26 @@ before pushing.
   `highestUnlockedLevel`, so an account partway through Hearts could
   never have arrowed forward into Chapter 21 either way — the hub tile
   was the only place the next house was being advertised early.
+- **Clearing a chapter's last level for the first time now jumps
+  straight to the newly unlocked next one**, not back to the level you
+  came from — e.g. clearing Table 50 for the first time lands the map on
+  Table 51 (a new chapter) instead of back on 50. Driven by
+  `campaignResult`'s own `newUnlock` field (server.js already sent
+  this — `null` unless this exact clear genuinely advanced
+  `highestUnlockedLevel`, i.e. never on a replay of an already-cleared
+  level), captured into its own `campaignLastNewUnlock` variable rather
+  than read off `lastCampaignResult` at click time, since that one gets
+  nulled the moment the post-clear dialogue queue finishes — which can
+  easily happen before the player actually taps "Back to the Map".
+  `goCampaignFromTable` prefers it over the level just played, but ONLY
+  within the same house (`Math.floor((id-1)/100)` matching) — crossing
+  into a brand-new house (Level 100→101, 200→201) is deliberately
+  excluded, since that boundary has its own hub-tile-and-prologue
+  ceremony (the reunion cinematic) that auto-jumping straight into the
+  new house's map would silently skip. Applies to any level's first
+  clear, not just bosses — an ordinary mid-chapter level's "next node"
+  is already visible in the same view either way, so there was no
+  reason to special-case it.
 - **Internal chapter id continues at 21** (`CAMPAIGN_CHAPTERS`), same
   "flat id space, displayed numbers restart at 1" convention Hearts
   already established starting at 11. Chapter 21: **The Green

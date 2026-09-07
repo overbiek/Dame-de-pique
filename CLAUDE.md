@@ -3810,14 +3810,12 @@ before pushing.
   31-40), same flat-id-space/displayed-numbers-restart-at-1 convention
   every house since Hearts has used. **No art was supplied for this
   house at first** — chapter backgrounds, character portraits, gold
-  medallions and the hub tile envelope were all a later pass; the hub
-  envelope, all 10 chapter backgrounds and all 10 boss portraits have
-  since arrived (own notes below) — only the gold medallions and the
-  prologue still are left. Every still-missing art reference
-  (`public/campaign/gold/301-400.webp`, `public/campaign/prologue4/
-  1.webp`) degrades to the existing CSS/SVG placeholder or 404-once
-  fallback, exactly like every "not dropped in yet" case elsewhere in
-  this file.
+  medallions, the hub tile envelope and the prologue still were all a
+  later pass; all of them have since arrived except the gold medallions
+  (own notes below and in the Brand splash/prologue sections). Every
+  still-missing art reference (`public/campaign/gold/301-400.webp`)
+  degrades to the existing CSS/SVG placeholder or 404-once fallback,
+  exactly like every "not dropped in yet" case elsewhere in this file.
 - **The ten chapters and bosses**: 31 The Facet Hall/The Assessor (301-
   310), 32 The Exchange/The Broker (311-320), 33 The Echo Gallery/The
   Doubter (321-330), 34 The Split Chamber/The Divider (331-340), 35 The
@@ -4006,6 +4004,26 @@ before pushing.
   width/2, 4× supersampled for a smooth anti-aliased edge before
   downsampling to the existing 480×480 RGBA convention, same pipeline
   as every other medallion-sourced character portrait in this file.
+- **The prologue still arrived in a later pass and is in** —
+  `public/campaign/prologue4/1.webp`, from `house of diamonds
+  prologue.png` (1672×941, the same source resolution the chapter
+  backgrounds and Clubs' own single-still prologue used), resized
+  straight to 1600×900 with no crop needed. Depicts the arrival beat the
+  cue text describes almost exactly — the Great Eight standing together
+  outside the twin doors at dusk. **A second scene from the same
+  screenplay — the epilogue's "FINAL SCENE - SOME WEEKS LATER, INT.
+  PUBLIC CARD CLUB - AFTERNOON" — is NOT this file and has no art of its
+  own.** That beat is Level 400's own `chapterExit` content (see the
+  "boss's own seat never moves" note above) and, like every earlier
+  house's own ending, renders through the ordinary small dialogue card
+  rather than a full-bleed cinematic — there is no "ending cinematic"
+  mechanism anywhere in this codebase to hang a second background off
+  of, only the arrival-scene `campaignRunPrologue` overlay this file
+  uses. If a background for that scene is ever supplied, it would need
+  its own new plumbing (comparable to `campaignRunPrologue` but reading
+  from `chapterExit` instead of `prologue`), not just a second entry in
+  `CAMPAIGN_PROLOGUE4_BG` — a decision worth confirming before building
+  it, not assuming.
 - **No Node runtime was available in the environment that built this**,
   same caveat every earlier campaign chapter's own build note carries —
   but a real JS AST parser (Python's `esprima`) was, which is a step up

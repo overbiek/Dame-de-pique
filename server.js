@@ -11411,8 +11411,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  // The friend-card popup: rank, equipped cosmetics, casual + ranked
-  // stats for someone ELSE's account. `getFriendProfile` is gated on
+  // The friend-card popup: rank, equipped cosmetics, casual + ranked +
+  // campaign stats for someone ELSE's account. `getFriendProfile` is gated on
   // friendship; `getPlayerProfile` below is the same card opened from a
   // lobby seat or the daily leaderboard, where a playerId is discovered
   // without any friendship at all, so it's gated on login instead. Both
@@ -11430,10 +11430,11 @@ io.on('connection', (socket) => {
     if (!Number.isInteger(fid)) return sock.emit('friendProfileError', { msg: 'Unknown player.' });
     const targetAccount = await db.findAccountById(fid);
     if (!targetAccount) return sock.emit('friendProfileError', { msg: 'That player no longer exists.' });
-    const [rankedProfile, stats, rankedStats, cos, friendStatus] = await Promise.all([
+    const [rankedProfile, stats, rankedStats, campaignStats, cos, friendStatus] = await Promise.all([
       db.getOrCreateRankedProfile(fid),
       db.getStats(fid),
       db.getRankedStats(fid),
+      db.getCampaignStats(fid),
       loadPlayerCosmetics(fid),
       db.getFriendRequestStatus(viewerId, fid),
     ]);
@@ -11446,7 +11447,7 @@ io.on('connection', (socket) => {
       rank: isPlacement ? null : rankForMmr(rankedProfile.mmr),
       isPlacement,
       placementGamesPlayed: rankedProfile.placementGamesPlayed,
-      stats, rankedStats,
+      stats, rankedStats, campaignStats,
       equipped: cos.equipped,
       titleName: titleNameFor(cos.equipped.title),
       // Unlocked achievements only — an unearned secret's name/desc is

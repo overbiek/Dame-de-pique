@@ -7422,9 +7422,11 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
           <div class="acct-tabs">
             <button class="acct-tab active" id="fp-stats-tab-casual" onclick="switchFriendStatsTab('casual')">Casual</button>
             <button class="acct-tab" id="fp-stats-tab-ranked" onclick="switchFriendStatsTab('ranked')">Ranked</button>
+            <button class="acct-tab" id="fp-stats-tab-campaign" onclick="switchFriendStatsTab('campaign')">Campaign</button>
           </div>
           <div class="stats-grid" id="fp-stats-casual"></div>
           <div class="stats-grid" id="fp-stats-ranked" style="display:none"></div>
+          <div class="stats-grid" id="fp-stats-campaign" style="display:none"></div>
         </div>
       </div>
     </div>
@@ -11461,8 +11463,10 @@ function switchFriendProfileTab(tab){
 function switchFriendStatsTab(mode){
   $('fp-stats-tab-casual').classList.toggle('active',mode==='casual');
   $('fp-stats-tab-ranked').classList.toggle('active',mode==='ranked');
+  $('fp-stats-tab-campaign').classList.toggle('active',mode==='campaign');
   $('fp-stats-casual').style.display=mode==='casual'?'grid':'none';
   $('fp-stats-ranked').style.display=mode==='ranked'?'grid':'none';
+  $('fp-stats-campaign').style.display=mode==='campaign'?'grid':'none';
 }
 // Compact on purpose — this is "how much has my friend played", not the
 // full ~20-card personal breakdown #s-stats shows for your own account.
@@ -11513,6 +11517,18 @@ function friendRankedStatsHTML(s){
     ['Worst hand',fmtStat(s.worstRound),'neg'],
     ['Moons shot',s.moonsTotal,''],
     ['Peak MMR',s.mmrHighest===null?'—':s.mmrHighest,''],
+  ]);
+}
+function friendCampaignStatsHTML(s){
+  return fpStatCardsHTML([
+    ['Attempts used',s.attemptsUsed,''],
+    ['Levels won',s.levelsWon,''],
+    ['Gold levels',s.goldLevels,''],
+    ['Lifetime total',fmtStat(s.totalScore),''],
+    ['Best hand',fmtStat(s.bestHand),'pos'],
+    ['Worst hand',fmtStat(s.worstHand),'neg'],
+    ['Moons shot',s.moonsTotal,''],
+    ['Queen of Spades taken',s.queenSpadesTaken,''],
   ]);
 }
 // friendStatus is only present on getPlayerProfile's response shape (see
@@ -11606,6 +11622,7 @@ socket.on('friendProfileOk',d=>{
 
   $('fp-stats-casual').innerHTML=friendCasualStatsHTML(d.stats);
   $('fp-stats-ranked').innerHTML=friendRankedStatsHTML(d.rankedStats);
+  $('fp-stats-campaign').innerHTML=friendCampaignStatsHTML(d.campaignStats);
 });
 socket.on('friendProfileError',d=>{
   if(!$('friend-profile').classList.contains('on')) return;

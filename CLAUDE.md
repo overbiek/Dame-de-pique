@@ -3809,12 +3809,13 @@ before pushing.
   Internal chapter ids continue at 31 (Facet Hall through Diamond Crown =
   31-40), same flat-id-space/displayed-numbers-restart-at-1 convention
   every house since Hearts has used. **No art was supplied for this
-  house at all** — chapter backgrounds, character portraits, gold
-  medallions, hub tile envelope, all of it is a later pass; every art
-  reference (`public/campaign/chapters/*`, `public/campaign/characters/
-  *`, `public/campaign/hub/diamonds.webp`, `public/campaign/prologue4/
-  1.webp`) degrades to the existing CSS/SVG placeholder or 404-once
-  fallback, exactly like every "not dropped in yet" case elsewhere in
+  house at first** — chapter backgrounds, character portraits, gold
+  medallions and the hub tile envelope were all a later pass; the hub
+  envelope has since arrived (see its own note below), the rest hasn't
+  yet. Every still-missing art reference (`public/campaign/chapters/*`,
+  `public/campaign/characters/*`, `public/campaign/prologue4/1.webp`)
+  degrades to the existing CSS/SVG placeholder or 404-once fallback,
+  exactly like every "not dropped in yet" case elsewhere in
   this file.
 - **The ten chapters and bosses**: 31 The Facet Hall/The Assessor (301-
   310), 32 The Exchange/The Broker (311-320), 33 The Echo Gallery/The
@@ -3959,9 +3960,13 @@ before pushing.
   Diamonds is actually fully finished (`highestUnlockedLevel` past
   Chapter 40's own `levelEnd`), not unconditionally; built correctly the
   first time by copying the fixed version, not the original buggy
-  pattern. No envelope photo yet — `.hub-tile-diamonds` falls back to the
-  plain felt tile under its gradient layers, same as every other
-  not-dropped-in-yet background.
+  pattern. **The envelope photo arrived in a later pass and is in** —
+  `public/campaign/hub/diamonds.webp`, from `diamond enveloppe.png`
+  (1254×1254, the same source convention as spades/hearts/clubs' own
+  envelope art), resized straight to 700×700 with no crop needed, same
+  as the other three. Same Clair/Sable dark-envelope text correction
+  `.hub-tile-diamonds` already needed adding to (done at the same time
+  the tile itself was built, not as a follow-up).
 - **No Node runtime was available in the environment that built this**,
   same caveat every earlier campaign chapter's own build note carries —
   but a real JS AST parser (Python's `esprima`) was, which is a step up

@@ -3897,21 +3897,43 @@ const CAMPAIGN_LEVELS = {
   183: { id: 183, chapter: 19, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch2-L183-clean-c498', hand: parseHand('4♠ 4♣ J♦ A♥ 9♠ J♠ 6♦ 6♠ A♠ 7♦ 5♣ 8♣ 10♣'),
          objective: { type: 'cleanHand', goldScoreBar: 0 } },
+  // min was 36 (gold 45) — verified against this exact seed the same way
+  // as Table 65: aiChoose/heuristicChoose/applyHardRules/sampleWorld/
+  // aiSelectPass extracted verbatim and run for real in a browser JS
+  // engine, ~65 combined trials. Ordinary controlled play caps out
+  // around 9-10; the only route past that is shooting the moon (+60),
+  // which landed in roughly 4-8% of trials. min=20 sits above the
+  // ordinary ceiling on purpose — clearing this one is meant to mean
+  // "shot the moon," not "played a clean hand," matching the request to
+  // land clear around ~10% via that path specifically. gold (45) still
+  // needs its own pass — untouched here.
   184: { id: 184, chapter: 19, type: 'Harder', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch2-L184-score-c973', hand: parseHand('10♣ 8♣ 2♥ 2♣ 4♥ 8♦ Q♣ A♠ K♣ 9♥ 4♣ J♥ 6♦'),
-         objective: { type: 'score', min: 36, gold: 45 } },
+         objective: { type: 'score', min: 20, gold: 45 } },
+  // min was 38 (gold 40) — same verification. Full-strength play
+  // converged to exactly 14 in 16/16 trials; a wider search (55 trials
+  // combined) never exceeded 32. min=30 sits just inside that observed
+  // ceiling (~15% clear across the combined sample, the closest round
+  // number to the requested ~10% — there's a gap in the data between 30
+  // and the max of 32). gold (40) still needs its own pass — untouched.
   185: { id: 185, chapter: 19, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch2-L185-score-c1143', hand: parseHand('A♦ Q♦ 6♣ 6♥ 10♥ J♥ Q♠ J♠ 4♥ J♦ 6♦ 3♦ Q♥'),
-         objective: { type: 'score', min: 38, gold: 40 } },
+         objective: { type: 'score', min: 30, gold: 40 } },
   186: { id: 186, chapter: 19, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch2-L186-queen-c247', hand: parseHand('Q♥ 5♠ 8♠ 3♠ 3♣ 5♦ A♣ J♠ 10♣ 8♦ Q♣ 8♥ Q♦'),
          objective: { type: 'avoidQueen', goldScoreBar: 2 } },
   187: { id: 187, chapter: 19, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch2-L187-score-c295', hand: parseHand('A♠ 10♥ 5♦ 7♠ 8♣ 7♦ Q♠ K♠ 4♣ 4♠ Q♥ 7♥ J♥'),
          objective: { type: 'score', min: 3, gold: 14 } },
+  // min was 20 (gold 24) — same verification. This hand is six-hearts-
+  // heavy (including the Ace) with no offsetting spade control: 0/16
+  // full-strength trials reached even 0, and a wider search (35 trials
+  // combined) hit the old min of 20 exactly once. min=16 sits just
+  // inside that ceiling (~11% clear across the combined sample). gold
+  // (24) still needs its own pass — untouched here.
   188: { id: 188, chapter: 19, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch2-L188-score-c297', hand: parseHand('7♥ 3♣ 9♦ 9♠ J♠ 10♥ 8♦ K♠ Q♣ J♥ A♥ 4♥ 9♥'),
-         objective: { type: 'score', min: 20, gold: 24 } },
+         objective: { type: 'score', min: 16, gold: 24 } },
   189: { id: 189, chapter: 19, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch2-L189-tricks-c947', hand: parseHand('5♣ 8♠ Q♠ A♣ 7♠ 8♣ J♣ 10♣ 7♦ 7♣ A♦ Q♥ K♦'),
          objective: { type: 'trickCount', minTricks: 9, goldTricks: 10 } },

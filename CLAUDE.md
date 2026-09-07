@@ -3811,11 +3811,12 @@ before pushing.
   every house since Hearts has used. **No art was supplied for this
   house at first** — chapter backgrounds, character portraits, gold
   medallions and the hub tile envelope were all a later pass; the hub
-  envelope has since arrived (see its own note below), the rest hasn't
-  yet. Every still-missing art reference (`public/campaign/chapters/*`,
-  `public/campaign/characters/*`, `public/campaign/prologue4/1.webp`)
-  degrades to the existing CSS/SVG placeholder or 404-once fallback,
-  exactly like every "not dropped in yet" case elsewhere in
+  envelope and all 10 chapter backgrounds have since arrived (own notes
+  below), character portraits and gold medallions haven't yet. Every
+  still-missing art reference (`public/campaign/characters/*`,
+  `public/campaign/gold/301-400.webp`, `public/campaign/prologue4/
+  1.webp`) degrades to the existing CSS/SVG placeholder or 404-once
+  fallback, exactly like every "not dropped in yet" case elsewhere in
   this file.
 - **The ten chapters and bosses**: 31 The Facet Hall/The Assessor (301-
   310), 32 The Exchange/The Broker (311-320), 33 The Echo Gallery/The
@@ -3967,6 +3968,27 @@ before pushing.
   as the other three. Same Clair/Sable dark-envelope text correction
   `.hub-tile-diamonds` already needed adding to (done at the same time
   the tile itself was built, not as a follow-up).
+- **All 10 chapter backgrounds arrived in a later pass and are in** —
+  `public/campaign/chapters/{facet_hall,the_exchange,echo_gallery,
+  split_chamber,mirror_vault,gilded_auction,tribunal_of_play,
+  pressure_engine,hall_of_keepers,diamond_crown}.webp`, from ten
+  1672×941 source PNGs (`the facet hall.png`, `the exchange.png`, etc.),
+  the same source resolution every chapter background since Cabaret
+  (House of Clubs) has used — resized straight to the same 1400×788/
+  quality-85 convention with no crop needed. **Two of the ten source
+  filenames needed care, not blind trust** — `the exchange.png` (this
+  house's own Chapter 32) sits in the same Downloads folder as `The
+  gilded exchange.png` (a DIFFERENT, already-shipped House of Hearts
+  chapter, Ch18), and `the mirror vault.png` (this house's Chapter 35)
+  beside `The mirror galery.png` [sic] (House of Hearts' own Chapter 12,
+  "The Mirror Gallery") — four genuinely similar-sounding names in one
+  folder, two per collision. Resolved by content (this house's own
+  filenames are consistently lowercase "the X.png"; the older houses'
+  are capitalized) and cross-checked against file modification time —
+  all ten of this batch land within the same two-minute window,
+  visibly separate from the older files' own timestamps, the same
+  "check the file's own date against the rest of the batch" filter this
+  file already documents using for exactly this kind of near-miss.
 - **No Node runtime was available in the environment that built this**,
   same caveat every earlier campaign chapter's own build note carries —
   but a real JS AST parser (Python's `esprima`) was, which is a step up

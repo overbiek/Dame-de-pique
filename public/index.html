@@ -9169,6 +9169,27 @@ const CAMPAIGN_PROLOGUE3_BG={1:'/campaign/prologue3/1.webp'};
 // same reasoning as CAMPAIGN_PROLOGUE3_BG: Level 0's whole scene is one
 // continuous beat outside the twin doors, no location change.
 const CAMPAIGN_PROLOGUE4_BG={1:'/campaign/prologue4/1.webp'};
+// House of Diamonds' own ending (server.js, levelId 400 / trigger
+// 'finalScene') — "some weeks later" epilogue coda, requested as a real
+// second cinematic beat rather than folding into the ordinary
+// #camp-dialogue card the way every earlier house's own ending did (see
+// CLAUDE.md's note on that original, deliberate "no new UI" scope call
+// for the House of Spades finale — this is the one campaign ending that
+// departs from it). Reuses campaignRunPrologue/campaignPrologueStep
+// completely unchanged: that overlay only ever needed a cue list plus a
+// bg map, nothing arrival-scene-specific baked in, so the ending needed
+// no new rendering code at all, only a second bg map and a trigger point
+// that fires after the ordinary post-boss dialogue queue finishes (see
+// renderCampaignResult). Keyed by levelId rather than hardcoded to 400
+// alone so a later house's own ending can opt into the same treatment by
+// adding one more entry, without duplicating this function.
+const CAMPAIGN_FINALSCENE_BG_BY_LEVEL={400:{1:'/campaign/final4/1.webp'}};
+function campaignMaybeShowFinalScene(levelId,done){
+  const bgMap=CAMPAIGN_FINALSCENE_BG_BY_LEVEL[levelId];
+  const cues=bgMap?campaignCuesFor(levelId,'finalScene'):[];
+  if(!cues.length||cues.every(c=>campaignSeenCues.has(c.id))){ done(); return; }
+  campaignRunPrologue(cues,bgMap,done);
+}
 let campProlQueue=[];
 let campProlOnDone=null;
 let campProlBgNum=null;
@@ -9774,7 +9795,15 @@ function renderCampaignResult(){
   const queue=d.cleared?['postClear']:['postFail'];
   if(d.cleared&&isBoss) queue.push('bossDefeat','chapterExit');
   const runNext=()=>{
-    if(!queue.length){ lastCampaignResult=null; return; }
+    if(!queue.length){
+      // After the ordinary post-boss dialogue finishes, House of
+      // Diamonds' own ending (Level 400) still has its "some weeks
+      // later" cinematic to show — see campaignMaybeShowFinalScene's
+      // own note for why this is a second overlay rather than more
+      // chapterExit cues. A no-op for every other level.
+      campaignMaybeShowFinalScene(d.levelId,()=>{ lastCampaignResult=null; });
+      return;
+    }
     campaignMaybeShow(d.levelId,queue.shift(),runNext);
   };
   runNext();

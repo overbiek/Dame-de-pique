@@ -9827,21 +9827,34 @@ const CAMPAIGN_STORY_CUES = [
   ccue(400, 'chapterExit', 'the_scholar', 'Technically, it is a history.'),
   ccue(400, 'chapterExit', 'the_scholar', 'Woof.'),
   ccue(400, 'chapterExit', null, 'They walk away from the House of Diamonds together. No clue glows ahead. No fifth symbol waits in the distance.'),
-  ccue(400, 'chapterExit', null, 'A bright public room. No secret doors. No thrones. No attendants in House colors. Just ordinary tables, coffee, laughter and cards.'),
-  ccue(400, 'chapterExit', null, 'There are more than eight chairs now.'),
-  ccue(400, 'chapterExit', null, 'THE SHARP is showing a young player how to count what has already been played without rushing. THE SCHOLAR has produced a handout nobody asked for. THE WILDCARD is teaching three nervous beginners and making the losing hand sound survivable. THE OPTIMIST gives brutally direct advice, catches himself, and starts again better. THE JESTER has somehow turned a rule explanation into a story about crows. THE CHARMER remembers every newcomer\'s name. THE CLOSER is helping an older player decide whether to try one more hand.'),
-  ccue(400, 'chapterExit', null, 'At the central table, the PLAYER sits across from three first-timers. One of them looks at the cards as if they might explode.'),
-  ccue(400, 'chapterExit', 'new_player', 'I\'ve never played Dame de Pique before.'),
-  ccue(400, 'chapterExit', 'player', 'That\'s fine.'),
-  ccue(400, 'chapterExit', 'new_player', 'Is it obvious?'),
-  ccue(400, 'chapterExit', 'player', 'Only to people who remember their first time.'),
-  ccue(400, 'chapterExit', null, 'The PLAYER glances across the room. Seven familiar faces. Two tables have become four. Four are becoming more.'),
-  ccue(400, 'chapterExit', 'player', 'Your seat is ready.'),
-  ccue(400, 'chapterExit', 'the_wildcard', 'And if you lose, breakfast!'),
-  ccue(400, 'chapterExit', 'the_sharp', 'It\'s three in the afternoon.'),
-  ccue(400, 'chapterExit', 'the_wildcard', 'Tradition doesn\'t own a clock.'),
-  ccue(400, 'chapterExit', null, 'The room laughs. The PLAYER deals.'),
-  ccue(400, 'chapterExit', null, 'FADE OUT.'),
+
+  // The epilogue's own second scene ("FINAL SCENE - SOME WEEKS LATER,
+  // INT. PUBLIC CARD CLUB - AFTERNOON") gets its own trigger rather than
+  // staying folded into chapterExit above -- requested as a genuine
+  // second cinematic beat (full-bleed background, not the small dialogue
+  // card), the one campaign ending built that way; see
+  // campaignMaybeShowFinalScene's own note in index.html for the client
+  // half and why this departs from every earlier house's own "fold the
+  // ending into one plain cue" scope call. 'Some weeks later…' is a new
+  // line, not in the screenplay, carrying no `bg` so it shows on the
+  // overlay's plain black backdrop before the still fades in on the next
+  // cue -- exactly the beat requested.
+  ccue(400, 'finalScene', null, 'Some weeks later…'),
+  ccue(400, 'finalScene', null, 'A bright public room. No secret doors. No thrones. No attendants in House colors. Just ordinary tables, coffee, laughter and cards.', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'There are more than eight chairs now.', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'THE SHARP is showing a young player how to count what has already been played without rushing. THE SCHOLAR has produced a handout nobody asked for. THE WILDCARD is teaching three nervous beginners and making the losing hand sound survivable. THE OPTIMIST gives brutally direct advice, catches himself, and starts again better. THE JESTER has somehow turned a rule explanation into a story about crows. THE CHARMER remembers every newcomer\'s name. THE CLOSER is helping an older player decide whether to try one more hand.', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'At the central table, the PLAYER sits across from three first-timers. One of them looks at the cards as if they might explode.', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'NEW PLAYER: "I\'ve never played Dame de Pique before."', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'PLAYER: "That\'s fine."', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'NEW PLAYER: "Is it obvious?"', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'PLAYER: "Only to people who remember their first time."', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'The PLAYER glances across the room. Seven familiar faces. Two tables have become four. Four are becoming more.', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'PLAYER: "Your seat is ready."', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'THE WILDCARD: "And if you lose, breakfast!"', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'THE SHARP: "It\'s three in the afternoon."', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'THE WILDCARD: "Tradition doesn\'t own a clock."', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'The room laughs. The PLAYER deals.', { bg: 1 }),
+  ccue(400, 'finalScene', null, 'FADE OUT.', { bg: 1 }),
 ];
 function campaignCuesFor(levelId, trigger) {
   return CAMPAIGN_STORY_CUES.filter(c => c.levelId === levelId && c.trigger === trigger);

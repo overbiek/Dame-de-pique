@@ -4010,20 +4010,56 @@ before pushing.
   backgrounds and Clubs' own single-still prologue used), resized
   straight to 1600×900 with no crop needed. Depicts the arrival beat the
   cue text describes almost exactly — the Great Eight standing together
-  outside the twin doors at dusk. **A second scene from the same
-  screenplay — the epilogue's "FINAL SCENE - SOME WEEKS LATER, INT.
-  PUBLIC CARD CLUB - AFTERNOON" — is NOT this file and has no art of its
-  own.** That beat is Level 400's own `chapterExit` content (see the
-  "boss's own seat never moves" note above) and, like every earlier
-  house's own ending, renders through the ordinary small dialogue card
-  rather than a full-bleed cinematic — there is no "ending cinematic"
-  mechanism anywhere in this codebase to hang a second background off
-  of, only the arrival-scene `campaignRunPrologue` overlay this file
-  uses. If a background for that scene is ever supplied, it would need
-  its own new plumbing (comparable to `campaignRunPrologue` but reading
-  from `chapterExit` instead of `prologue`), not just a second entry in
-  `CAMPAIGN_PROLOGUE4_BG` — a decision worth confirming before building
-  it, not assuming.
+  outside the twin doors at dusk.
+- **The epilogue's second scene — "FINAL SCENE - SOME WEEKS LATER, INT.
+  PUBLIC CARD CLUB - AFTERNOON" — got its OWN cinematic, on request, the
+  one campaign ending built as a real second full-bleed scene rather
+  than folding into the ordinary chapterExit dialogue card the way every
+  earlier house's own ending does.** `public/campaign/final4/1.webp`
+  (from `final scene.png`, same 1672×941→1600×900 pipeline as the
+  prologue stills) is the background; the beat is Level 400's own new
+  `finalScene` trigger (server.js), split off `chapterExit` right after
+  "They walk away from the House of Diamonds together..." — everything
+  from "A bright public room..." through "FADE OUT." moved there, with
+  one new line prepended that isn't in the screenplay: `ccue(400,
+  'finalScene', null, 'Some weeks later…')`, carrying no `bg` so it
+  shows on the overlay's plain black backdrop before the still fades in
+  on the very next cue — exactly the two-beat handoff requested.
+  **No new rendering code was needed for the cinematic itself** —
+  `campaignRunPrologue`/`campaignPrologueStep` (the same overlay the
+  house's own arrival scene uses) were already fully generic, taking any
+  cue list plus any bg map with nothing arrival-specific baked in, so
+  reusing them was a data problem, not a UI one. What genuinely is new:
+  `campaignMaybeShowFinalScene(levelId, done)` (index.html), which checks
+  a small `CAMPAIGN_FINALSCENE_BG_BY_LEVEL` lookup (keyed by levelId, so
+  a later house's own ending can opt in by adding one entry rather than
+  duplicating the function) and, if there's an unseen `finalScene`
+  bucket, launches `campaignRunPrologue` with it — called from
+  `renderCampaignResult`'s own post-boss dialogue queue, once it empties,
+  right where `lastCampaignResult` used to be nulled directly. A no-op
+  for every level except 400.
+  **Verified live, not just statically — the only piece of this whole
+  house that was, since it's genuinely new plumbing rather than a
+  data-only extension of an existing mechanism.** A bundled Node binary
+  turned out to be reachable after all (`.claude/launch.json`'s own
+  `runtimeExecutable`, `.../pythoncore-3.14-64/Lib/site-packages/nodejs/
+  node.exe` — not on PATH, easy to miss, worth checking for on any future
+  session that assumes "no Node available" from habit rather than a
+  fresh check), so the real `server.js` was run via `preview_start` and
+  driven live in the Browser pane. Campaign mode itself needs a real
+  account (`DB_ENABLED`) which this sandbox has no Postgres for, so
+  full server-driven progression to Level 400 wasn't reachable — worked
+  around by injecting a synthetic `campaignData.storyCues` (the real
+  `finalScene` cue text, transcribed verbatim) directly into the live
+  page's own module-scope `campaignData` binding (plain reassignment,
+  not `window.campaignData` — the page's `let` declarations don't alias
+  onto `window`) and calling `campaignMaybeShowFinalScene(400, done)`
+  directly. Confirmed: the black-backdrop "Some weeks later…" beat, the
+  fade-in to the real `final4/1.webp` file on the next cue, all 9 cues
+  displaying correct text and folded speaker attribution in order,
+  `done()` firing exactly once at the end, and a second call afterward
+  short-circuiting to `done()` immediately (the seen-gating working) —
+  screenshotted at each stage, not just asserted from state.
 - **No Node runtime was available in the environment that built this**,
   same caveat every earlier campaign chapter's own build note carries —
   but a real JS AST parser (Python's `esprima`) was, which is a step up

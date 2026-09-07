@@ -3811,10 +3811,10 @@ before pushing.
   every house since Hearts has used. **No art was supplied for this
   house at first** — chapter backgrounds, character portraits, gold
   medallions and the hub tile envelope were all a later pass; the hub
-  envelope and all 10 chapter backgrounds have since arrived (own notes
-  below), character portraits and gold medallions haven't yet. Every
-  still-missing art reference (`public/campaign/characters/*`,
-  `public/campaign/gold/301-400.webp`, `public/campaign/prologue4/
+  envelope, all 10 chapter backgrounds and all 10 boss portraits have
+  since arrived (own notes below) — only the gold medallions and the
+  prologue still are left. Every still-missing art reference
+  (`public/campaign/gold/301-400.webp`, `public/campaign/prologue4/
   1.webp`) degrades to the existing CSS/SVG placeholder or 404-once
   fallback, exactly like every "not dropped in yet" case elsewhere in
   this file.
@@ -3989,6 +3989,23 @@ before pushing.
   visibly separate from the older files' own timestamps, the same
   "check the file's own date against the rest of the batch" filter this
   file already documents using for exactly this kind of near-miss.
+- **All 10 boss portraits arrived in a later pass and are in** —
+  `public/campaign/characters/{the_assessor,exchange_broker,the_doubter,
+  the_divider,the_rival,the_collector,the_judge,the_anchor,hall_keeper,
+  queen_of_diamonds}.webp`, from ten 1254×1254 medallion sources (`the
+  assessor.png`, `queen of diamonds.png`, etc. — the two disambiguated
+  boss ids have their own disambiguating source names too: `the broker
+  diamonds.png`, `The keeper diamond.png`). **Needed the Cabaret/
+  Ballroom-era circular-mask method, not the Countess-era flood-fill
+  one, and this was measured, not assumed**: every one of the ten shows
+  ornate diagonal corner scrollwork reaching ~750px from center against
+  a 627px ring radius (the same ~123px excess on all ten, confirming
+  one consistent source template across the whole set) — a flood-fill
+  background removal would keep that scrollwork as opaque content,
+  exactly the trap the Cabaret regulars hit. Circular mask at radius =
+  width/2, 4× supersampled for a smooth anti-aliased edge before
+  downsampling to the existing 480×480 RGBA convention, same pipeline
+  as every other medallion-sourced character portrait in this file.
 - **No Node runtime was available in the environment that built this**,
   same caveat every earlier campaign chapter's own build note carries —
   but a real JS AST parser (Python's `esprima`) was, which is a step up

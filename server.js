@@ -3965,9 +3965,21 @@ const CAMPAIGN_LEVELS = {
   195: { id: 195, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch2-L195-score-c597', hand: parseHand('K♠ J♦ 6♦ 10♥ 3♠ 4♦ 8♦ J♥ K♦ A♦ 2♥ 10♦ 4♣'),
          objective: { type: 'score', min: 16, gold: 60 } },
+  // Was a cleanHand objective (goldScoreBar 10) — the fixed hand already
+  // holds Q♥+4♥ from the deal and forcePassDir is 'keep' (no pass phase
+  // to shed them), so a clean hand was only reachable by ducking both
+  // under higher hearts for all 13 tricks. Measured via the real AI
+  // (aiChoose/heuristicChoose/applyHardRules/sampleWorld/aiSelectPass,
+  // all four seats, this level's own exact seed) at just 2.0-2.7% across
+  // 500 combined trials — effectively unreachable, not just hard.
+  // Converted to a plain score objective instead: min 6 measured at 8.7%
+  // clear (26/300, the closest integer threshold to a genuine "rare but
+  // real" ~8% target), gold kept at the old goldScoreBar value (10,
+  // measured 6.0%) since that number was already a deliberate choice and
+  // keeps gold meaningfully harder than min.
   196: { id: 196, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch2-L196-clean-c5', hand: parseHand('10♣ 9♦ A♦ Q♥ 10♠ 4♥ 8♣ J♦ 4♣ 7♠ 4♦ 6♦ 5♠'),
-         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+         objective: { type: 'score', min: 6, gold: 10 } },
   197: { id: 197, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch2-L197-score-c83', hand: parseHand('J♠ 6♣ K♠ A♥ A♦ Q♣ K♦ 9♠ Q♥ 8♦ 4♠ Q♠ K♥'),
          objective: { type: 'score', min: 4, gold: 18 } },

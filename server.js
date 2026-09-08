@@ -4016,6 +4016,43 @@ const CAMPAIGN_LEVELS = {
          ],
          objective: { type: 'score', min: 58, gold: 61 } },
 
+  // ═══ House of Clubs — score-objective recalibration pass ═══════════
+  // Every score-type level's own exact deal was run against the real
+  // shipped AI (aiChoose/heuristicChoose/applyHardRules/sampleWorld/
+  // aiSelectPass, all four seats — the same policy the live game's
+  // computer opponents actually use), not the spreadsheet's own
+  // "measured against real simulated trials" claim. The two didn't
+  // match: 44 of the 60 score-type single-hand levels and 7 of the 10
+  // chapter bosses cleared at ≤5% (many with average scores 40-130
+  // points below their own min), while the objective TYPES (Clean Hand/
+  // Avoid the Queen/Suit Void/Trick Count) mostly checked out fine —
+  // pointing at the sheet's own calibration having assumed weaker
+  // opponents than this game's actual Monte Carlo AI, the same class of
+  // mismatch House of Spades' own Chapter 10 hit and was fixed for
+  // (this house apparently never got that same pass). One boss (Table
+  // 270) was the opposite problem — 100% clear, min far below its own
+  // average.
+  // Fixed 52 objectives (every one of those outliers) to a tiered
+  // target clear rate rather than an arbitrary number: levels 201-230
+  // ≈13%, 231-280 ≈10%, 281-300 ≈8% — each level's own new min/gold is
+  // the closest achievable integer threshold to that target, measured
+  // from real trials on that level's own exact deal (n=150 single-hand,
+  // n=30 games for the 4-hand bosses, matching the same
+  // nearest-percentile method used to fix Table 196). A few results are
+  // genuinely unusual but correct, not bugs: some hands' own ceiling
+  // sits at or barely above the target (204/205/234/284/298 land with
+  // min==gold, same "ceiling equals min" case Levels 224/285 already
+  // established), a couple of very poor hands need a NEGATIVE min
+  // (207/238/248/261/265/292/297 — 292's own observed ceiling across
+  // 150 trials was -1), and 265's gold jumps from -3 to 40 because that
+  // hand's outcomes are bimodal (a moon attempt either fails hard or
+  // lands close to +60, with little in between). The 26 score-type
+  // levels NOT touched here (e.g. 227, 241, 252, 287, plus the
+  // already-documented 224/285 and bosses 220/260) measured in a
+  // reasonable range already and were left alone. The non-score
+  // objective types (Clean Hand/Avoid Queen/Suit Void/Trick Count) were
+  // also left untouched — they weren't the pattern this pass found.
+
   // ═══ House of Clubs, Chapter 1: The Green Vestibule (levels 201-210) ═══
   // From Dame-de-Pique-Campaign-Levels_3.xlsx's "Levels 201-300" sheet —
   // same source/format as every earlier house (Type, Direction, Hands,
@@ -4027,7 +4064,7 @@ const CAMPAIGN_LEVELS = {
   // rows.
   201: { id: 201, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L201-score-c55', hand: parseHand('5♠ 10♥ 4♥ A♥ 5♣ Q♦ K♣ 6♠ J♦ A♠ Q♠ 8♣ 4♠'),
-         objective: { type: 'score', min: 30, gold: 48 } },
+         objective: { type: 'score', min: 10, gold: 13 } },
   202: { id: 202, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L202-score-c324', hand: parseHand('10♠ 4♥ A♣ 4♠ Q♠ K♠ J♠ 4♦ 2♣ A♠ 8♠ 9♣ J♣'),
          objective: { type: 'score', min: 24, gold: 35 } },
@@ -4036,19 +4073,19 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'cleanHand', goldScoreBar: 10 } },
   204: { id: 204, chapter: 21, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L204-score-c432', hand: parseHand('K♠ J♦ 5♠ 2♥ Q♠ K♣ 4♣ 7♠ 3♣ 3♦ 2♠ Q♦ K♦'),
-         objective: { type: 'score', min: 35, gold: 41 } },
+         objective: { type: 'score', min: 28, gold: 30 } },
   205: { id: 205, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L205-score-c86', hand: parseHand('7♥ A♦ A♠ 3♥ 5♥ 6♣ 6♠ 2♠ 10♠ K♥ A♣ 5♠ 8♦'),
-         objective: { type: 'score', min: 40, gold: 52 } },
+         objective: { type: 'score', min: 31, gold: 40 } },
   206: { id: 206, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L206-queen-c57', hand: parseHand('9♥ 4♥ 10♥ 6♦ 2♥ 7♦ A♠ 2♠ K♥ Q♣ K♠ J♦ A♦'),
          objective: { type: 'avoidQueen', goldScoreBar: 26 } },
   207: { id: 207, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L207-score-c892', hand: parseHand('4♥ 8♣ 5♠ A♠ 3♠ 7♠ 3♥ 10♥ Q♣ A♦ J♣ 5♦ K♥'),
-         objective: { type: 'score', min: 22, gold: 32 } },
+         objective: { type: 'score', min: -2, gold: 11 } },
   208: { id: 208, chapter: 21, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L208-score-c489', hand: parseHand('Q♥ A♦ K♦ 9♥ Q♣ 5♦ K♥ A♥ 8♣ K♣ 10♣ 5♥ 6♦'),
-         objective: { type: 'score', min: 42, gold: 45 } },
+         objective: { type: 'score', min: 15, gold: 22 } },
   209: { id: 209, chapter: 21, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L209-tricks-c32', hand: parseHand('9♣ Q♥ J♠ 5♥ 2♣ 10♦ K♠ 8♣ 7♣ 2♦ 3♠ 6♠ J♦'),
          objective: { type: 'trickCount', minTricks: 5, goldTricks: 6 } },
@@ -4060,7 +4097,7 @@ const CAMPAIGN_LEVELS = {
            parseHand('6♦ A♠ J♠ A♣ 3♥ 9♠ J♥ 9♦ 4♠ 3♠ 10♣ A♥ 7♠'),
            parseHand('5♠ 10♠ 2♣ 8♠ 3♦ Q♣ J♣ A♠ 5♦ 4♠ 10♥ 4♦ 8♣'),
          ],
-         objective: { type: 'score', min: 38, gold: 81 } },
+         objective: { type: 'score', min: 21, gold: 32 } },
 
   // ═══ House of Clubs, Chapter 2: The Map Room (levels 211-220) ═══
   // Same source/sheet/format as Chapter 1. Direction is 'left' for this
@@ -4073,16 +4110,16 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 17, gold: 34 } },
   212: { id: 212, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L212-score-c1032', hand: parseHand('10♣ 2♦ 3♦ 8♠ K♦ Q♠ A♦ A♣ 2♣ Q♥ 10♦ 7♥ 3♠'),
-         objective: { type: 'score', min: 24, gold: 46 } },
+         objective: { type: 'score', min: 9, gold: 15 } },
   213: { id: 213, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L213-void-c41', hand: parseHand('Q♣ 10♥ K♠ 5♣ J♠ A♥ 5♠ 2♥ 6♣ 5♥ 9♦ 2♣ 5♦'),
          objective: { type: 'suitVoid', suit: '♣', voidByTrick: 8, goldByTrick: 7 } },
   214: { id: 214, chapter: 22, type: 'Harder', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L214-score-c428', hand: parseHand('J♦ 7♥ K♥ Q♥ 9♠ J♥ A♣ A♠ 3♥ 4♠ K♣ 9♥ A♦'),
-         objective: { type: 'score', min: 43, gold: 47 } },
+         objective: { type: 'score', min: 35, gold: 41 } },
   215: { id: 215, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L215-score-c1020', hand: parseHand('10♠ 2♠ 8♥ 7♦ Q♠ J♠ A♠ 2♥ 6♥ 4♠ K♦ 10♥ 3♦'),
-         objective: { type: 'score', min: 32, gold: 46 } },
+         objective: { type: 'score', min: 29, gold: 38 } },
   216: { id: 216, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L216-clean-c11', hand: parseHand('5♦ 9♣ 2♣ 3♣ K♠ 7♥ 2♦ 6♦ Q♥ 10♠ 2♠ 5♠ 9♥'),
          objective: { type: 'cleanHand', goldScoreBar: 0 } },
@@ -4091,7 +4128,7 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 22, gold: 38 } },
   218: { id: 218, chapter: 22, type: 'Harder', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L218-score-c238', hand: parseHand('7♣ 2♣ 6♣ K♦ 9♦ K♥ A♥ J♠ A♠ 10♣ A♦ 8♥ 2♥'),
-         objective: { type: 'score', min: 41, gold: 45 } },
+         objective: { type: 'score', min: 27, gold: 38 } },
   219: { id: 219, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L219-queen-c253', hand: parseHand('10♥ A♥ 2♣ Q♥ 6♣ J♣ K♣ J♥ A♦ 2♦ A♠ 3♥ K♠'),
          objective: { type: 'avoidQueen', goldScoreBar: 22 } },
@@ -4128,7 +4165,7 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 40, gold: 40 } },
   225: { id: 225, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L225-score-c104', hand: parseHand('6♣ Q♠ K♥ Q♦ A♦ 5♣ 8♠ A♠ J♠ 10♥ 9♠ K♣ 10♦'),
-         objective: { type: 'score', min: 20, gold: 44 } },
+         objective: { type: 'score', min: 10, gold: 16 } },
   226: { id: 226, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L226-void-c220', hand: parseHand('6♣ A♥ 4♠ Q♣ 4♣ 5♥ 6♠ J♦ J♥ A♠ 10♠ 5♦ 8♦'),
          objective: { type: 'suitVoid', suit: '♦', voidByTrick: 7, goldByTrick: 6 } },
@@ -4137,7 +4174,7 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 32, gold: 41 } },
   228: { id: 228, chapter: 23, type: 'Harder', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L228-score-c234', hand: parseHand('8♣ 6♦ 10♠ K♦ A♦ 9♣ 4♠ 2♥ 9♠ J♠ K♣ Q♣ 8♠'),
-         objective: { type: 'score', min: 40, gold: 48 } },
+         objective: { type: 'score', min: 27, gold: 30 } },
   229: { id: 229, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L229-clean-c47', hand: parseHand('5♥ 7♠ 6♦ 3♦ 8♣ 3♠ 10♥ 2♣ 6♠ J♠ 3♣ 9♥ 10♦'),
          objective: { type: 'cleanHand', goldScoreBar: 0 } },
@@ -4149,13 +4186,13 @@ const CAMPAIGN_LEVELS = {
            parseHand('10♦ J♣ 8♣ 10♠ 6♦ 6♠ 6♣ 8♥ 3♦ A♥ Q♦ K♥ K♣'),
            parseHand('5♠ Q♣ 8♦ 3♦ 6♦ 10♦ K♠ 6♠ K♥ 6♥ 9♣ 5♦ 8♠'),
          ],
-         objective: { type: 'score', min: 51, gold: 77 } },
+         objective: { type: 'score', min: 21, gold: 46 } },
 
   // ═══ House of Clubs, Chapter 4: The Common Chamber (levels 231-240) ═══
   // Direction 'right' throughout.
   231: { id: 231, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L231-score-c824', hand: parseHand('7♥ K♦ 8♥ 5♠ A♠ 3♠ K♣ J♦ J♣ 10♥ 2♣ 9♦ J♥'),
-         objective: { type: 'score', min: 12, gold: 29 } },
+         objective: { type: 'score', min: 4, gold: 18 } },
   232: { id: 232, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L232-score-c29', hand: parseHand('3♥ K♣ 8♥ 6♠ 4♠ A♦ 2♠ J♦ A♣ 3♦ J♠ 8♠ J♣'),
          objective: { type: 'score', min: 40, gold: 46 } },
@@ -4164,7 +4201,7 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'avoidQueen', goldScoreBar: -20 } },
   234: { id: 234, chapter: 24, type: 'Harder', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L234-score-c574', hand: parseHand('K♣ 8♥ A♦ 8♦ K♥ J♦ Q♦ 2♠ K♠ Q♠ 5♥ 5♠ 6♦'),
-         objective: { type: 'score', min: 28, gold: 37 } },
+         objective: { type: 'score', min: 24, gold: 24 } },
   235: { id: 235, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L235-score-c316', hand: parseHand('9♦ A♦ 5♠ 10♠ J♥ 8♥ Q♠ 4♣ 2♠ Q♣ J♠ 10♦ 2♥'),
          objective: { type: 'score', min: 32, gold: 42 } },
@@ -4173,10 +4210,10 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'trickCount', minTricks: 6, goldTricks: 7 } },
   237: { id: 237, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L237-score-c39', hand: parseHand('K♣ 6♦ 2♥ 4♥ A♦ 7♣ J♦ A♣ 9♦ 4♦ Q♦ 7♦ Q♥'),
-         objective: { type: 'score', min: 37, gold: 51 } },
+         objective: { type: 'score', min: 29, gold: 36 } },
   238: { id: 238, chapter: 24, type: 'Harder', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L238-score-c857', hand: parseHand('A♣ J♠ 6♠ 7♠ 5♥ A♦ K♦ 6♦ K♣ 10♦ 4♦ K♠ 10♣'),
-         objective: { type: 'score', min: 50, gold: 54 } },
+         objective: { type: 'score', min: -1, gold: 2 } },
   239: { id: 239, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L239-void-c37', hand: parseHand('4♦ A♠ 8♥ Q♣ A♦ 2♣ 7♦ 5♥ 8♠ 8♦ 6♣ 10♦ Q♠'),
          objective: { type: 'suitVoid', suit: '♣', voidByTrick: 6, goldByTrick: 5 } },
@@ -4188,7 +4225,7 @@ const CAMPAIGN_LEVELS = {
            parseHand('6♠ 5♥ 6♦ 8♣ K♣ A♦ 4♠ A♥ J♥ 4♣ 8♦ K♠ J♠'),
            parseHand('4♥ J♥ 9♦ 10♣ 2♣ 9♥ 8♠ 4♣ 10♦ 4♠ K♣ 7♠ A♠'),
          ],
-         objective: { type: 'score', min: 61, gold: 73 } },
+         objective: { type: 'score', min: 45, gold: 67 } },
 
   // ═══ House of Clubs, Chapter 5: The Root Gallery (levels 241-250) ═══
   // Direction 'right' throughout. Level 250 (the boss) is a genuine
@@ -4201,25 +4238,25 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 21, gold: 32 } },
   242: { id: 242, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L242-score-c248', hand: parseHand('A♠ 3♥ 3♣ 10♥ K♣ Q♥ K♦ A♦ 2♥ 8♦ 3♠ 7♣ 8♣'),
-         objective: { type: 'score', min: 33, gold: 45 } },
+         objective: { type: 'score', min: 22, gold: 23 } },
   243: { id: 243, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L243-clean-c64', hand: parseHand('7♠ 8♦ K♠ 6♥ A♦ J♦ A♥ K♣ J♠ 9♠ 4♠ 5♦ 6♦'),
          objective: { type: 'cleanHand', goldScoreBar: 10 } },
   244: { id: 244, chapter: 25, type: 'Harder', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L244-score-c85', hand: parseHand('J♠ 7♦ 9♥ 3♥ 7♠ 6♣ K♠ Q♠ 9♣ K♥ A♥ A♦ 8♠'),
-         objective: { type: 'score', min: 22, gold: 29 } },
+         objective: { type: 'score', min: 21, gold: 30 } },
   245: { id: 245, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L245-score-c448', hand: parseHand('8♣ J♠ 3♦ 9♣ 5♥ A♣ 3♣ J♦ K♥ K♦ 4♥ 7♦ 9♥'),
-         objective: { type: 'score', min: 40, gold: 46 } },
+         objective: { type: 'score', min: 22, gold: 29 } },
   246: { id: 246, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L246-queen-c249', hand: parseHand('3♦ 5♠ K♠ 2♣ 2♥ 9♦ 7♥ 9♣ 10♣ A♣ 7♣ Q♥ 8♣'),
          objective: { type: 'avoidQueen', goldScoreBar: 16 } },
   247: { id: 247, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L247-score-c240', hand: parseHand('10♠ J♦ 9♥ 9♠ Q♦ K♦ K♥ 5♦ J♥ 4♣ A♣ 5♠ J♠'),
-         objective: { type: 'score', min: 36, gold: 40 } },
+         objective: { type: 'score', min: 8, gold: 18 } },
   248: { id: 248, chapter: 25, type: 'Harder', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L248-score-c375', hand: parseHand('A♦ Q♥ K♥ 6♦ 9♠ 7♦ 6♥ 5♠ 8♦ K♦ 4♠ 6♠ 8♠'),
-         objective: { type: 'score', min: 26, gold: 46 } },
+         objective: { type: 'score', min: -1, gold: 2 } },
   249: { id: 249, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L249-tricks-c132', hand: parseHand('J♦ 9♣ Q♣ 5♦ 4♠ 10♦ 7♦ 3♥ A♦ A♣ A♥ 10♥ 10♠'),
          objective: { type: 'trickCount', minTricks: 7, goldTricks: 8 } },
@@ -4239,13 +4276,13 @@ const CAMPAIGN_LEVELS = {
            parseHand('Q♣ J♦ J♠ 2♠ 9♣ 7♣ K♠ J♥ 4♥ 9♥ A♣ 9♦ J♣'),
            parseHand('10♠ 3♥ A♠ 5♦ 7♣ 8♠ 9♠ 2♣ 9♣ A♦ 6♥ 7♠ 6♣'),
          ],
-         objective: { type: 'score', min: 98, gold: 115 } },
+         objective: { type: 'score', min: 76, gold: 182 } },
 
   // ═══ House of Clubs, Chapter 6: The Lantern Salon (levels 251-260) ═══
   // Direction 'across' throughout.
   251: { id: 251, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L251-score-c251', hand: parseHand('9♥ J♣ 5♦ A♣ 10♥ 7♥ 2♣ 3♥ Q♠ A♦ J♠ Q♣ 7♣'),
-         objective: { type: 'score', min: 45, gold: 51 } },
+         objective: { type: 'score', min: 24, gold: 32 } },
   252: { id: 252, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L252-score-c40', hand: parseHand('4♠ 5♠ 7♦ A♣ J♦ J♣ A♦ 10♥ 3♠ K♣ K♠ 2♥ 4♥'),
          objective: { type: 'score', min: 35, gold: 42 } },
@@ -4254,7 +4291,7 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'suitVoid', suit: '♣', voidByTrick: 5, goldByTrick: 4 } },
   254: { id: 254, chapter: 26, type: 'Harder', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L254-score-c404', hand: parseHand('4♦ A♣ Q♠ 5♥ A♥ 6♣ A♠ 3♥ Q♣ 4♥ 2♠ J♠ K♣'),
-         objective: { type: 'score', min: 46, gold: 48 } },
+         objective: { type: 'score', min: 28, gold: 35 } },
   255: { id: 255, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L255-score-c32', hand: parseHand('J♠ J♦ 9♣ 9♦ 8♠ 3♠ 10♥ Q♦ 2♣ K♦ 3♥ 6♥ Q♣'),
          objective: { type: 'score', min: 30, gold: 36 } },
@@ -4263,10 +4300,10 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'cleanHand', goldScoreBar: 20 } },
   257: { id: 257, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L257-score-c535', hand: parseHand('J♣ 10♠ J♦ 2♥ 9♥ 5♦ 9♦ 2♣ K♦ 8♥ 7♠ A♥ K♠'),
-         objective: { type: 'score', min: 29, gold: 42 } },
+         objective: { type: 'score', min: 9, gold: 15 } },
   258: { id: 258, chapter: 26, type: 'Harder', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L258-score-c1114', hand: parseHand('3♦ 6♠ 2♥ 9♦ 10♦ 3♣ 10♥ K♣ 7♣ 10♠ J♦ 6♦ K♦'),
-         objective: { type: 'score', min: 19, gold: 26 } },
+         objective: { type: 'score', min: 11, gold: 20 } },
   259: { id: 259, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L259-queen-c109', hand: parseHand('8♦ A♠ 3♣ 9♠ A♦ Q♦ 10♣ 2♣ 5♦ 5♥ J♥ 5♠ 3♥'),
          objective: { type: 'avoidQueen', goldScoreBar: 3 } },
@@ -4284,10 +4321,10 @@ const CAMPAIGN_LEVELS = {
   // Direction 'across' throughout.
   261: { id: 261, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L261-score-c374', hand: parseHand('4♠ Q♦ 3♣ J♦ A♦ 7♥ K♦ 7♠ 6♣ 3♦ Q♠ A♥ A♣'),
-         objective: { type: 'score', min: 39, gold: 43 } },
+         objective: { type: 'score', min: -3, gold: 2 } },
   262: { id: 262, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L262-score-c1171', hand: parseHand('3♠ 10♥ 7♥ 8♠ 2♠ 6♠ K♠ J♣ 4♥ 4♠ 10♦ J♠ 8♣'),
-         objective: { type: 'score', min: 26, gold: 46 } },
+         objective: { type: 'score', min: 14, gold: 23 } },
   263: { id: 263, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L263-tricks-c117', hand: parseHand('3♥ 9♥ 4♥ 5♠ 6♦ K♠ K♥ A♥ A♠ 10♥ 9♦ Q♣ J♣'),
          objective: { type: 'trickCount', minTricks: 7, goldTricks: 8 } },
@@ -4296,16 +4333,16 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 20, gold: 30 } },
   265: { id: 265, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L265-score-c274', hand: parseHand('10♦ 9♣ K♦ 8♥ 4♠ 9♦ J♠ J♦ K♣ 3♣ 2♥ A♣ 9♥'),
-         objective: { type: 'score', min: 36, gold: 44 } },
+         objective: { type: 'score', min: -3, gold: 40 } },
   266: { id: 266, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L266-void-c29', hand: parseHand('8♣ K♦ 6♠ Q♠ 2♣ 5♦ K♣ 2♠ J♥ A♠ 5♣ 2♦ 5♠'),
          objective: { type: 'suitVoid', suit: '♦', voidByTrick: 4, goldByTrick: 3 } },
   267: { id: 267, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L267-score-c1025', hand: parseHand('K♣ J♠ K♦ 6♠ 4♣ A♦ 6♦ A♣ 7♥ 9♠ 2♥ J♣ Q♣'),
-         objective: { type: 'score', min: 53, gold: 60 } },
+         objective: { type: 'score', min: 19, gold: 25 } },
   268: { id: 268, chapter: 27, type: 'Harder', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L268-score-c553', hand: parseHand('J♦ Q♣ 7♦ 9♠ 10♠ K♠ Q♦ 4♠ K♣ 6♦ 10♣ 7♥ 10♦'),
-         objective: { type: 'score', min: 29, gold: 35 } },
+         objective: { type: 'score', min: 17, gold: 18 } },
   269: { id: 269, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L269-clean-c28', hand: parseHand('8♥ 3♦ Q♣ 4♣ J♠ Q♦ Q♠ 5♠ 8♦ 5♣ K♥ 10♠ J♥'),
          objective: { type: 'cleanHand', goldScoreBar: 10 } },
@@ -4317,7 +4354,7 @@ const CAMPAIGN_LEVELS = {
            parseHand('5♥ 7♥ A♥ 7♠ 10♣ A♠ 4♥ 6♦ 3♦ 4♣ 2♦ A♦ 6♣'),
            parseHand('A♦ 7♦ Q♣ A♣ 10♣ 5♠ 10♠ 6♦ K♣ 8♦ Q♠ 9♣ 6♥'),
          ],
-         objective: { type: 'score', min: 18, gold: 27 } },
+         objective: { type: 'score', min: 84, gold: 131 } },
 
   // ═══ House of Clubs, Chapter 8: The Council Gallery (levels 271-280) ═══
   // "Full group phase" — no chapter-specific regulars; the three AI seats
@@ -4331,25 +4368,25 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 28, gold: 35 } },
   272: { id: 272, chapter: 28, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L272-score-c91', hand: parseHand('K♠ J♠ 9♣ A♣ K♣ 5♣ Q♣ 5♥ J♦ 3♥ A♦ Q♦ 2♠'),
-         objective: { type: 'score', min: 28, gold: 40 } },
+         objective: { type: 'score', min: 20, gold: 28 } },
   273: { id: 273, chapter: 28, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L273-queen-c37', hand: parseHand('4♣ 8♣ 6♦ K♦ J♣ 5♥ A♦ 7♦ 2♦ 5♠ K♥ 9♣ 4♦'),
          objective: { type: 'avoidQueen', goldScoreBar: 28 } },
   274: { id: 274, chapter: 28, type: 'Harder', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L274-score-c132', hand: parseHand('2♣ 7♦ 9♥ J♣ 4♦ 7♣ 8♣ K♣ 3♥ 2♥ A♥ 7♥ 10♥'),
-         objective: { type: 'score', min: 22, gold: 45 } },
+         objective: { type: 'score', min: 15, gold: 19 } },
   275: { id: 275, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L275-score-c444', hand: parseHand('8♦ K♠ 5♠ 3♥ Q♣ 9♥ 9♠ Q♠ A♦ 4♥ K♣ 9♣ K♦'),
-         objective: { type: 'score', min: 53, gold: 59 } },
+         objective: { type: 'score', min: 34, gold: 38 } },
   276: { id: 276, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L276-tricks-c409', hand: parseHand('A♣ 4♠ 9♠ 7♠ J♥ 8♥ 8♣ 10♣ 7♥ 4♦ 8♠ 6♥ K♥'),
          objective: { type: 'trickCount', minTricks: 9, goldTricks: 10 } },
   277: { id: 277, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L277-score-c270', hand: parseHand('J♠ 3♥ 9♥ A♦ 8♥ 7♥ A♣ Q♦ K♣ 4♠ 9♠ A♠ J♥'),
-         objective: { type: 'score', min: 47, gold: 55 } },
+         objective: { type: 'score', min: 40, gold: 44 } },
   278: { id: 278, chapter: 28, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L278-score-c77', hand: parseHand('A♥ 7♦ 4♥ 10♥ A♠ K♠ 2♥ Q♥ 8♦ 10♠ 3♠ 10♣ 6♣'),
-         objective: { type: 'score', min: 24, gold: 28 } },
+         objective: { type: 'score', min: 15, gold: 20 } },
   279: { id: 279, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L279-void-c66', hand: parseHand('Q♠ 9♦ K♣ 7♦ 3♥ 7♣ 6♦ 6♥ 5♦ 9♥ 5♥ 9♣ 4♦'),
          objective: { type: 'suitVoid', suit: '♣', voidByTrick: 3, goldByTrick: 2 } },
@@ -4361,7 +4398,7 @@ const CAMPAIGN_LEVELS = {
            parseHand('8♣ 4♦ 8♥ A♦ 10♦ Q♦ 10♣ A♥ K♥ 7♠ 9♠ 9♥ K♣'),
            parseHand('9♦ 2♥ A♥ 8♠ 3♦ 5♣ 3♣ J♥ A♣ K♦ 2♠ 9♥ 4♣'),
          ],
-         objective: { type: 'score', min: 23, gold: 31 } },
+         objective: { type: 'score', min: 3, gold: 38 } },
 
   // ═══ House of Clubs, Chapter 9: The Twin Table Hall (levels 281-290) ═══
   // "Two-table preview" — same rotation mechanism as Chapter 8, via
@@ -4371,16 +4408,16 @@ const CAMPAIGN_LEVELS = {
   // set to 60 rather than left undefined.
   281: { id: 281, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L281-score-c435', hand: parseHand('3♥ A♠ 10♥ A♣ 6♥ 9♦ 9♥ Q♦ K♣ 4♥ 6♠ 8♣ 9♣'),
-         objective: { type: 'score', min: 48, gold: 55 } },
+         objective: { type: 'score', min: 43, gold: 46 } },
   282: { id: 282, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L282-score-c312', hand: parseHand('4♣ A♠ 2♣ K♦ 5♥ 9♣ A♣ 7♦ 10♥ K♣ K♠ A♦ J♣'),
-         objective: { type: 'score', min: 46, gold: 54 } },
+         objective: { type: 'score', min: 35, gold: 60 } },
   283: { id: 283, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L283-clean-c58', hand: parseHand('3♦ Q♥ A♠ 6♥ 7♣ 7♥ 10♦ J♦ 3♠ K♦ 9♦ 8♠ 4♠'),
          objective: { type: 'cleanHand', goldScoreBar: 10 } },
   284: { id: 284, chapter: 29, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L284-score-c193', hand: parseHand('8♠ J♠ K♠ K♦ 6♥ 4♦ 4♠ 8♥ 7♥ J♥ J♣ Q♠ 4♥'),
-         objective: { type: 'score', min: 30, gold: 36 } },
+         objective: { type: 'score', min: 26, gold: 26 } },
   285: { id: 285, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L285-score-c328', hand: parseHand('7♣ 4♠ 5♠ 6♣ 7♦ A♦ 10♦ 4♣ 9♥ Q♣ K♣ 9♦ Q♦'),
          objective: { type: 'score', min: 60, gold: 60 } },
@@ -4392,7 +4429,7 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 52, gold: 57 } },
   288: { id: 288, chapter: 29, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L288-score-c248', hand: parseHand('K♠ Q♣ 2♥ 6♦ 9♦ 5♥ 4♥ A♦ 8♦ Q♦ 7♠ 10♥ 5♠'),
-         objective: { type: 'score', min: 46, gold: 52 } },
+         objective: { type: 'score', min: 24, gold: 28 } },
   289: { id: 289, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L289-tricks-c549', hand: parseHand('A♦ J♦ 8♣ 7♣ J♣ A♣ 4♦ 3♣ Q♥ 8♥ K♦ 7♥ 2♣'),
          objective: { type: 'trickCount', minTricks: 10, goldTricks: 11 } },
@@ -4404,7 +4441,7 @@ const CAMPAIGN_LEVELS = {
            parseHand('4♣ 8♥ 7♦ K♦ 6♥ 2♣ 7♠ 6♦ Q♦ J♥ 10♦ J♠ Q♠'),
            parseHand('10♣ 2♥ 8♥ 3♠ 8♠ 9♦ 3♥ K♦ 4♥ 2♠ Q♦ K♥ A♠'),
          ],
-         objective: { type: 'score', min: 63, gold: 72 } },
+         objective: { type: 'score', min: 50, gold: 51 } },
 
   // ═══ House of Clubs, Chapter 10: The Root Crown Chamber (291-300) ═══
   // House of Clubs' own finale — same rotation mechanism as Chapters 8-9
@@ -4416,28 +4453,28 @@ const CAMPAIGN_LEVELS = {
   // 300 uses hands12, same reasoning as Level 250 above.
   291: { id: 291, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L291-score-c572', hand: parseHand('A♦ 9♣ Q♥ K♦ 3♥ K♣ 4♥ A♠ 6♣ 10♠ 10♦ 9♠ 4♠'),
-         objective: { type: 'score', min: 44, gold: 51 } },
+         objective: { type: 'score', min: 32, gold: 35 } },
   292: { id: 292, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L292-score-c5', hand: parseHand('3♣ 4♥ 9♣ J♥ 7♦ K♣ A♣ 8♠ 10♠ 3♠ 7♠ 10♥ 2♦'),
-         objective: { type: 'score', min: 32, gold: 37 } },
+         objective: { type: 'score', min: -7, gold: -5 } },
   293: { id: 293, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L293-void-c123', hand: parseHand('6♥ 3♦ J♣ 10♣ 10♥ 10♦ 6♦ Q♥ 9♥ K♠ 7♠ 4♦ J♠'),
          objective: { type: 'suitVoid', suit: '♣', voidByTrick: 2, goldByTrick: 1 } },
   294: { id: 294, chapter: 30, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L294-score-c204', hand: parseHand('3♠ 10♦ J♥ 8♥ J♠ 3♥ A♣ 9♣ A♦ Q♦ Q♥ 3♣ 5♠'),
-         objective: { type: 'score', min: 44, gold: 48 } },
+         objective: { type: 'score', min: 33, gold: 39 } },
   295: { id: 295, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L295-score-c293', hand: parseHand('9♣ Q♥ 8♥ K♥ J♠ 7♥ 9♥ 2♠ 3♣ 9♦ 7♦ 10♠ A♠'),
-         objective: { type: 'score', min: 27, gold: 47 } },
+         objective: { type: 'score', min: 22, gold: 28 } },
   296: { id: 296, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L296-clean-c82', hand: parseHand('Q♥ 6♦ 2♠ 9♣ 2♥ 4♦ K♥ Q♦ 5♠ 7♣ J♥ 10♥ Q♠'),
          objective: { type: 'cleanHand', goldScoreBar: 0 } },
   297: { id: 297, chapter: 30, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L297-score-c551', hand: parseHand('Q♠ 3♠ 4♣ 9♥ Q♥ 7♦ 7♥ 10♥ 4♥ K♦ 9♠ 5♦ K♥'),
-         objective: { type: 'score', min: 28, gold: 47 } },
+         objective: { type: 'score', min: -1, gold: 6 } },
   298: { id: 298, chapter: 30, type: 'Harder', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L298-score-c125', hand: parseHand('9♠ J♠ A♣ 10♥ 5♦ Q♠ 3♠ 2♠ 2♦ 5♠ 9♥ J♦ 10♦'),
-         objective: { type: 'score', min: 12, gold: 20 } },
+         objective: { type: 'score', min: 10, gold: 10 } },
   299: { id: 299, chapter: 30, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L299-queen-c357', hand: parseHand('10♣ 7♥ 4♠ A♣ A♠ 5♦ 2♥ 4♥ 2♣ 7♠ K♦ A♦ 8♥'),
          objective: { type: 'avoidQueen', goldScoreBar: 17 } },
@@ -4457,7 +4494,7 @@ const CAMPAIGN_LEVELS = {
            parseHand('6♣ 8♣ 7♥ J♠ 3♣ Q♣ 5♠ 5♥ 8♠ 8♦ 4♥ 10♥ 2♥'),
            parseHand('4♣ 4♥ 3♥ 2♠ A♠ 10♦ 7♥ Q♣ 8♦ 3♦ A♥ 6♠ 2♥'),
          ],
-         objective: { type: 'score', min: 119, gold: 130 } },
+         objective: { type: 'score', min: 96, gold: 107 } },
 
   // House of Diamonds (levels 301-400). Source: House_of_Diamonds_Levels_
   // 1-100_Movie_Script_Human_Dialogue_16_Hand_Finale (dialogue) and

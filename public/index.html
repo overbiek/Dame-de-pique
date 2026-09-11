@@ -604,6 +604,23 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
   100%{transform:translate(-50%,-50%) translate(0,0) rotate(0deg) scale(1);opacity:1}
 }
 
+/* ══ Played-card landing ══
+   renderPlay() rebuilds #g-table's innerHTML wholesale on every gameState,
+   so a played card otherwise just pops into its .mid slot instantly — the
+   "flash" swiping/double-tapping to play a card produced before this. My
+   own play is FLIPped in from its real screen position by flipOwnPlayedCard()
+   (JS), but an opponent's card has no known start position on my screen, so
+   it gets this quick pop-in instead via landOpponentCard() (JS).
+   Targets .card-turn when present (landscape left/right slots, see that
+   class above) rather than .card itself, so this scale composes with the
+   wrapper's own rotate transform instead of overriding it — .card-turn has
+   no transform of its own, only its child does. */
+.mid .card-land{animation:card-land .3s cubic-bezier(.22,.85,.25,1) both}
+@keyframes card-land{
+  0%{opacity:0;transform:scale(.55)}
+  100%{opacity:1;transform:scale(1)}
+}
+
 /* ══ Moon shot — moon rises, a rocket flies up and hits it ══ */
 .moonfx-layer{position:fixed;inset:0;pointer-events:none;z-index:150;overflow:hidden}
 .moonfx-moon{
@@ -12865,11 +12882,15 @@ function renderPlay(G){
   hideLastTrick();
 
   const ctLen=G.currentTrick.length;
+  // Captured here (not inline below) so landOpponentCard() can run once the
+  // table's new .mid slots actually exist — this block runs before that
+  // innerHTML rebuild, the card element doesn't yet.
+  let newlyPlayedByOpponent=null;
   if(lastCurrentTrickLen===null){
     lastCurrentTrickLen=ctLen;
   }else if(ctLen>lastCurrentTrickLen){
     const newest=G.currentTrick[ctLen-1];
-    if(newest.player!==me) SFX.play('cardPlace');
+    if(newest.player!==me){ SFX.play('cardPlace'); newlyPlayedByOpponent=newest; }
   }
   lastCurrentTrickLen=ctLen;
 
@@ -12910,6 +12931,59 @@ function renderPlay(G){
   myStrip(G,'g-me',myTurn);
   $('g-hand').innerHTML=handHTML(G.myHand,myTurn?'play':null,legal,justReceived);
   syncLandscapeNote('g-table','g-prompt','g-banner');
+
+  // Smooth the card that just landed in .mid instead of leaving it to pop
+  // in with the rest of this innerHTML rebuild — see the "Played-card
+  // landing" CSS block for why both exist.
+  flipOwnPlayedCard();
+  if(newlyPlayedByOpponent) landOpponentCard(newlyPlayedByOpponent);
+}
+// Armed with the played card's on-screen rect the instant a play commits
+// (see the three callers below), then consumed by the very next
+// renderPlay() once .mid actually contains the card — FLIPping it in from
+// wherever it really was (hand, mid-drag, or lifted .sel) instead of
+// letting the table's innerHTML rebuild pop it into its slot instantly.
+// null between plays so a stray render never animates the wrong card.
+let pendingOwnPlay=null;
+function armOwnPlayFlip(el){
+  pendingOwnPlay={key:el.dataset.r+'|'+el.dataset.s,rect:el.getBoundingClientRect()};
+}
+function flipOwnPlayedCard(){
+  if(!pendingOwnPlay)return;
+  const{key,rect}=pendingOwnPlay;
+  pendingOwnPlay=null;
+  const el=document.querySelector('#g-table .slot-b .card');
+  // Guards a race where the card that actually landed isn't the one we
+  // armed (e.g. a stale render slipping in) — silently skip rather than
+  // FLIPping the wrong card.
+  if(!el||el.dataset.r+'|'+el.dataset.s!==key)return;
+  const to=el.getBoundingClientRect();
+  const dx=(rect.left+rect.width/2)-(to.left+to.width/2);
+  const dy=(rect.top+rect.height/2)-(to.top+to.height/2);
+  const scale=rect.width/to.width;
+  el.style.transition='none';
+  el.style.transform=`translate(${dx}px,${dy}px) scale(${scale})`;
+  void el.offsetWidth; // force the jump above to paint before animating back
+  el.style.transition='transform .32s cubic-bezier(.22,.85,.25,1)';
+  el.style.transform='';
+  el.addEventListener('transitionend',function done(){
+    el.removeEventListener('transitionend',done);
+    el.style.transition='';
+  });
+}
+// position 0 is always "me" (see seatOf) — landOpponentCard only ever
+// gets called for 1-3, but the array stays 0-indexed for that mapping.
+const SLOT_BY_POS=['slot-b','slot-l','slot-t','slot-r'];
+function landOpponentCard(played){
+  const slot=document.querySelector('#g-table .'+SLOT_BY_POS[seatOf(played.player)]);
+  if(!slot)return;
+  // .card-turn when present (landscape left/right), else the .card itself
+  // (portrait, or landscape top/bottom) — see the CSS block's own note.
+  const mount=slot.querySelector('.card-turn')||slot.querySelector('.card');
+  if(!mount)return;
+  mount.classList.remove('card-land');
+  void mount.offsetWidth; // restart the animation if it's somehow still armed
+  mount.classList.add('card-land');
 }
 // Press a card to preview it, then — without lifting your finger/mouse —
 // slide across the fan to change your pick; release to play whichever
@@ -13001,6 +13075,10 @@ function endCardDrag(e){
   if(dropped){
     disarmTap();
     SFX.play('cardPlace');
+    // Captures the card mid-drag, near wherever the drop happened — the
+    // FLIP in flipOwnPlayedCard() then finishes that same motion into the
+    // slot instead of restarting it from the hand.
+    armOwnPlayFlip(el);
     // See confirmPass() for why tutorial mode detours the network call
     // specifically — everything upstream of this point (the drag itself,
     // the drop-zone hit test) is unmodified real code.
@@ -13019,6 +13097,9 @@ function endCardDrag(e){
     disarmTap();
     resetDragStyles(el);
     SFX.play('cardPlace');
+    // resetDragStyles already dropped el back to its plain hand position,
+    // so this captures that — the double-tap never dragged anywhere.
+    armOwnPlayFlip(el);
     if(tutorialActive){ tutorialCommitPlay(el.dataset.r,el.dataset.s); return; }
     socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
     return;
@@ -13080,6 +13161,10 @@ function releasePlayPick(e){
   setPlayPick(null);
   if(el){
     SFX.play('cardPlace');
+    // setPlayPick(null) just started the .sel transition off, but at this
+    // exact tick (0ms elapsed) the rect is still the lifted position —
+    // that's the FLIP "from".
+    armOwnPlayFlip(el);
     if(tutorialActive){ tutorialCommitPlay(el.dataset.r,el.dataset.s); return; }
     socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
   }

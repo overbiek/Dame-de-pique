@@ -2139,6 +2139,35 @@ function submitDailyResult(G) {
   });
 }
 
+// Scored worse than any real finish is mathematically possible (the true
+// floor for a single hand is about -88 — the queen plus twelve hearts
+// over the minimum four tricks, see CLAUDE.md's ruleset section) — on
+// purpose, so abandoning a bad hand can never be the SMART move over
+// just playing it out.
+const DAILY_FORFEIT_SCORE = -130;
+
+// Called from closeRoom whenever a Daily Challenge room is torn down
+// before the hand ever finished — an explicit Leave, or the idle/empty
+// timers reaping one nobody came back to (see the exemption comment
+// where those timers skip solo-vs-AI casual/campaign rooms but
+// deliberately NOT daily ones). Previously this path recorded nothing at
+// all, which meant quitting a bad hand and starting over was a free
+// do-over on a puzzle you'd already seen. Banks the punishment score
+// through the exact same `daily_challenge_scores` row submitDailyResult
+// writes, via the same ON CONFLICT DO NOTHING insert — so it's that row,
+// not any new flag, that makes startDailyChallenge's "already played
+// today" refusal (and the UNIQUE constraint behind it) apply here too.
+function forfeitDailyChallenge(G) {
+  if (G.dailySubmitted) return;   // already finished for real — don't overwrite a real score
+  G.dailySubmitted = true;
+  const p = G.players[0];
+  if (!DB_ENABLED || !p.accountId) return;   // guests bank nothing either way, win or lose
+  trackStat(async () => {
+    await db.recordDailyScore(p.accountId, G.dailyDate, DAILY_FORFEIT_SCORE, 0, false);
+    await db.bumpDailyStreak(p.accountId, G.dailyDate);
+  });
+}
+
 // ── Campaign Mode ("The Hundred Tables") ────────────────────────────
 // A single-player story mode: the human plays the SAME card engine every
 // other mode runs, against 3 AI seats, through a fixed sequence of
@@ -10272,12 +10301,20 @@ function armAuto(G, fn, ms) {
   G.autoTimer = setTimeout(() => { G.autoTimer = null; G.autoAt = 0; fn(); }, ms);
 }
 function closeRoom(G, reason) {
+  // See forfeitDailyChallenge's own comment — this is what turns "walked
+  // away mid-hand" into a banked punishment score instead of a silently
+  // discarded attempt. No-ops instantly if the hand already finished for
+  // real (dailySubmitted) or isn't a daily room at all.
+  // Read before forfeitDailyChallenge flips dailySubmitted, so this still
+  // reports "this was a forfeit" for the very call that just caused it.
+  const wasUnfinishedDaily = !!G.daily && !G.dailySubmitted;
+  if (G.daily) forfeitDailyChallenge(G);
   clearAuto(G);
   clearVote(G);
   for (let i = 0; i < 4; i++) clearRankedTakeover(G, i);
-  // campaign flag for the same reason leaveRoom sends one — it decides
-  // where the client lands (chapter map vs casual landing screen).
-  io.to(G.code).emit('roomClosed', { reason, campaign: !!G.campaign });
+  // campaign/daily flags for the same reason leaveRoom sends them — they
+  // decide where the client lands and what it tells the player.
+  io.to(G.code).emit('roomClosed', { reason, campaign: !!G.campaign, daily: wasUnfinishedDaily });
   delete rooms[G.code];
 }
 
@@ -12145,11 +12182,15 @@ io.on('connection', (socket) => {
 
     const wasHost = !!(G.hostToken && G.players[idx].token === G.hostToken);
     socket.leave(G.code);
-    // The flag routes the client home correctly: a campaign player goes
-    // back to the chapter map, not the casual landing screen. Read off G
-    // here rather than client-side, since the room may be closed (and the
-    // client's own state cleared) by the time this is handled.
-    socket.emit('leftRoom', { campaign: !!G.campaign });
+    // The campaign flag routes the client home correctly (chapter map,
+    // not the casual landing screen); the daily flag is what lets the
+    // landing message tell the player they just forfeited today's
+    // attempt rather than saying the generic "You left the game" —
+    // false once the hand already finished for real (dailySubmitted),
+    // since leaving from the final screen isn't a forfeit. Read both off
+    // G here rather than client-side, since the room may be closed (and
+    // the client's own state cleared) by the time this is handled.
+    socket.emit('leftRoom', { campaign: !!G.campaign, daily: !!G.daily && !G.dailySubmitted });
 
     if (G.phase === 'lobby' || G.phase === 'final') {
       // Free the seat entirely

@@ -1689,10 +1689,48 @@ before pushing.
 - **Daily rooms are excluded from the "solo-vs-AI never expires"
   exemption** in the cleanup `setInterval`. The result is banked in
   Postgres the moment the hand ends and there's nothing to come back to,
-  so it closes on the normal timers. `endGame` (the end-early vote) is
+  so it closes on the normal timers (`EMPTY_CLOSE_MS`/`IDLE_CLOSE_MS`),
+  which gives a real disconnect a couple of minutes' grace to reconnect
+  and resume before anything is lost. `endGame` (the end-early vote) is
   also hard-rejected for daily rooms — otherwise a player could bank a
-  partial score. Leaving mid-hand closes the room and records nothing,
-  so the attempt is simply forfeited and can be retried.
+  partial score.
+- **Quitting mid-hand is now a forfeit, not a free retry — this was a
+  real reported exploit, not a hypothetical.** Leaving used to just close
+  the room and record nothing, which meant a bad hand could be abandoned
+  and immediately restarted: since the deal/pass-direction/dealer are all
+  seeded from the date (see above), a "retry" was really a practice run
+  on the exact same puzzle you'd already seen, not a fresh attempt.
+  `forfeitDailyChallenge(G)` closes that loophole by banking a fixed
+  **-130** punishment score (`DAILY_FORFEIT_SCORE`) — below the true
+  worst-case floor for a real hand (~-88, the queen plus twelve hearts
+  over the minimum four tricks), on purpose, so abandoning a bad hand can
+  never be the smart move over just playing it out. It writes through the
+  exact same `daily_challenge_scores` row `submitDailyResult` writes (same
+  `ON CONFLICT DO NOTHING` insert), so it's that row — not a new flag —
+  that makes `startDailyChallenge`'s "already played today" refusal (and
+  the UNIQUE constraint behind it) apply to a forfeit exactly like a real
+  finish. Guarded by the same `G.dailySubmitted` flag `submitDailyResult`
+  already used, so a forfeit can never overwrite a real completed score,
+  and guests bank nothing either way (no `accountId` to key against —
+  consistent with "guests earn nothing anywhere" elsewhere in this file).
+  **Called from ONE place, `closeRoom`, not scattered across every path
+  that can end a daily room** — explicit Leave, the empty-room timer and
+  the idle timer all funnel through `closeRoom` already (confirmed by
+  checking every call site before wiring this in), so hooking it there
+  once covers "walked away and hit Leave" and "disconnected and never
+  came back" identically, with no risk of double-forfeiting a room that
+  already finished normally.
+  **Client: Daily gets the same kind of in-hand leave warning Campaign
+  already has** (`#daily-leave-modal`, reusing the campaign modal's
+  generic `.camp-modal-*` chrome — nothing in it is actually
+  campaign-specific), since a casual two-tap "leave" confirm undersells
+  what's now a real, permanent-for-the-day consequence. `askLeave`
+  branches on `S.daily` the same way it already branches on `S.campaign`.
+  The post-leave landing message (`leftRoom`/`roomClosed` handlers) also
+  says so explicitly instead of the generic "You left the game" — both
+  socket events now carry a `daily` flag computed server-side
+  (`!!G.daily && !G.dailySubmitted`), since leaving from the *final*
+  screen after a real finish is not a forfeit and shouldn't claim to be.
 - **Client: `#s-daily` is a front door and leaderboard, not a game
   screen.** The hand plays on the ordinary pass/play table screens and
   the result lands on the ordinary final screen in a `#f-daily` block,

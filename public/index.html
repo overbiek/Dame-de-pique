@@ -10996,15 +10996,26 @@ function renderCrestBadge(el,crestId,level){
 function renderHeroCosmetics(){
   const t=$('pv-title'),c=$('pv-crest');
   if(!t||!c) return;
+  // goPersonal() calls this synchronously right after requestCosmetics(),
+  // before that request's reply can possibly have landed — so cosState is
+  // reliably still null on a screen's first render this session (every
+  // sibling render call goPersonal also makes — renderCosmeticPanels,
+  // renderAchievements — already guards exactly this the same way).
+  // Without it, `cosState.catalog` below threw straight through both
+  // call sites since they're plain arguments, evaluated eagerly
+  // regardless of what catalogCrestLevel does with a null one — this
+  // was the real cause of the crash on My Account's very first paint,
+  // reached via startDaily()'s no-nickname-yet redirect into goPersonal().
   const eq=cosState?cosState.equipped:null;
+  const catalog=cosState?cosState.catalog:null;
   const titleName=eq&&eq.title
-    ? ((cosState.catalog.titles.find(x=>x.id===eq.title)||{}).name||'')
+    ? ((catalog.titles.find(x=>x.id===eq.title)||{}).name||'')
     : '';
   t.textContent=account?titleName:'';
   const crestId=account&&eq?eq.crest:null;
   const crest2Id=account&&eq?eq.crest2:null;
-  renderCrestBadge(c,crestId,catalogCrestLevel(cosState.catalog,crestId));
-  renderCrestBadge($('pv-crest-left'),crest2Id,catalogCrestLevel(cosState.catalog,crest2Id));
+  renderCrestBadge(c,crestId,catalogCrestLevel(catalog,crestId));
+  renderCrestBadge($('pv-crest-left'),crest2Id,catalogCrestLevel(catalog,crest2Id));
 
   // Rank set: the frame is applied to the EXISTING avatar well (border +
   // glow only, no geometry), and the nameplate is the plaque BEHIND the

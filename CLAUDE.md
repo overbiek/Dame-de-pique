@@ -2146,6 +2146,27 @@ before pushing.
   `renderHeroCosmetics` rewrites `#pv-plate-art`, never `#pv-plate`, so
   re-dressing the plaque can't clear the name field or drop focus out of
   it mid-edit (verified: typed value and focus both survive an equip).
+- **`renderHeroCosmetics` used to crash on My Account's very first paint
+  of a session — a real reported bug, not a hypothetical.** `goPersonal()`
+  calls it synchronously right after `requestCosmetics()`, before that
+  request's reply can possibly have landed, so `cosState` is reliably
+  still `null` at that exact point. Its sibling calls in the same
+  function — `renderCosmeticPanels`, `renderAchievements` — already
+  guard this (`if(!cosState){...;return}`), but `renderHeroCosmetics`
+  read `cosState.catalog` directly as a plain function argument at two
+  call sites (`catalogCrestLevel(cosState.catalog,...)`), which is
+  evaluated eagerly regardless of what the callee does with a null
+  catalog — so it threw before `catalogCrestLevel`'s own `if(!crestId)
+  return 1` guard ever got a chance to matter. Fixed by extracting
+  `const catalog=cosState?cosState.catalog:null;` once, same pattern
+  every other `cosState.catalog` access in this file already uses. Hit
+  reliably via `startDaily()`'s own "no nickname yet" redirect into
+  `goPersonal()` — a brand-new guest hitting "Play today's hand" before
+  ever opening My Account got a hard crash instead of the name-entry
+  screen it was redirecting them to. Verified live: cleared
+  `localStorage` for a genuinely fresh guest and drove the exact
+  `startDaily → goPersonal` path through the real UI — renders clean,
+  zero uncaught errors, lands on the profile screen as intended.
 - The picker thumbnail plates are a **fixed 100×34 with the tier text
   hidden**. Sized to content the eight came out 68px ("Ace") to 111px
   ("Grand Master") wide and looked like eight different objects; the tier

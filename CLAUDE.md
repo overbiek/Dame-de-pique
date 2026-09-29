@@ -4235,6 +4235,24 @@ before pushing.
   restart/redeploy — which happens on every push to `main`, since this
   auto-deploys — wipes even a solo-vs-AI game in progress. "Never expires"
   only holds within one server process's uptime, not across deploys
+- **`IDLE_CLOSE_MS` (10 min) used to apply to EVERY room, not just
+  solo-vs-AI ones — a real reported bug, not a hypothetical.** A multi-
+  human casual game got the whole table closed with "Closed after 10
+  minutes with nothing happening" while people were actively at it,
+  read by the reporting player as being personally called out for being
+  idle when they'd been sitting there the whole time waiting on someone
+  else's turn. Root cause: `G.lastActivity` is bumped in exactly one
+  place, `broadcastRoom`, and `play` is the one phase with genuinely no
+  timeout on a human's turn — `draw`/`drawDone`/`pass`/`roundSummary`
+  all re-arm an `armAuto`/`rearmAuto` timer well under 10 minutes (see
+  those functions), and every one of those timers firing calls
+  `broadcastRoom` too, so those phases can never actually sit stale for
+  10 real minutes. Only `play` (unbounded think time, no auto-play) and
+  `lobby` (no timer of any kind while waiting for others to join) can.
+  Fixed by scoping the idle check to `G.phase === 'lobby'` only — the
+  one case it was actually ever meant to catch, an abandoned invite room
+  nobody starts, not a real hand in progress. `EMPTY_CLOSE_MS` (nobody
+  connected at all) is untouched and still applies to every phase.
 
 ## Testing convention
 - Copy `server.js` → `server.test.js`, sed the AI/round `setTimeout`

@@ -150,7 +150,7 @@ function sanitizeRoundsTotal(n) {
 // "Blitz" is just a casual room that isn't the full 16 rounds.
 function isBlitz(G) { return !G.ranked && !G.daily && G.roundsTotal !== DEFAULT_ROUNDS; }
 const AUTO_ADVANCE_MS = 60 * 1000;      // host has a minute, then it moves on by itself
-const IDLE_CLOSE_MS   = 10 * 60 * 1000; // nothing happening at all
+const IDLE_CLOSE_MS   = 10 * 60 * 1000; // an abandoned LOBBY sitting unstarted — see the cleanup interval's own note for why this is lobby-only
 const EMPTY_CLOSE_MS   = 2 * 60 * 1000; // nobody connected
 const END_VOTE_MS      = 60 * 1000;     // how long an "end early" request stays open
 const ROUND_CONFIRM_MS = 20 * 1000;     // everyone has 20s to confirm "next round" before it carries on
@@ -12258,6 +12258,8 @@ io.on('connection', (socket) => {
 // except a solo player against AI opponents (casual only; ranked never has
 // AI seats to begin with). That game is theirs to sit on for as long as
 // they like — it only ends when they hit "Leave", never on a timer.
+// "Gone quiet" (the idle check below) only ever applies to an unstarted
+// LOBBY, not an in-progress hand — see that check's own comment.
 setInterval(() => {
   const now = Date.now();
   for (const code in rooms) {
@@ -12289,7 +12291,23 @@ setInterval(() => {
       if (now - G.emptySince > EMPTY_CLOSE_MS) { closeRoom(G, 'Everyone left.'); continue; }
     }
 
-    if (now - G.lastActivity > IDLE_CLOSE_MS) {
+    // Scoped to the LOBBY only — real reported bug, not hypothetical: a
+    // room in 'draw'/'drawDone'/'pass'/'roundSummary' already re-arms an
+    // auto-advance timer well under 10 minutes (see armAuto/rearmAuto),
+    // and every one of those fires an action that calls broadcastRoom,
+    // which is the only thing that ever bumps `lastActivity` — so those
+    // phases can never actually go 10 real minutes idle. 'play' can: a
+    // human's turn to play a card has no timeout at all, and a slow (or
+    // just thoughtful) decision used to get the WHOLE table closed out
+    // from under everyone with "Closed after 10 minutes with nothing
+    // happening" — read by the player who reported it as being told
+    // THEY were idle, when they'd been sitting there the whole time
+    // waiting on someone else's turn. A lobby genuinely can sit forever
+    // with no timer of its own (nobody's joined to start the game
+    // engine's own auto-advances yet), which is the one case this was
+    // ever meant to catch — an abandoned invite room nobody ever
+    // started, not a real hand in progress.
+    if (G.phase === 'lobby' && now - G.lastActivity > IDLE_CLOSE_MS) {
       closeRoom(G, 'Closed after 10 minutes with nothing happening.');
     }
   }

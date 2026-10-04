@@ -4371,7 +4371,7 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 19, gold: 25 } },
   268: { id: 268, chapter: 27, type: 'Harder', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L268-score-c553', hand: parseHand('J♦ Q♣ 7♦ 9♠ 10♠ K♠ Q♦ 4♠ K♣ 6♦ 10♣ 7♥ 10♦'),
-         objective: { type: 'score', min: 17, gold: 18 } },
+         objective: { type: 'score', min: 15, gold: 18 } },
   269: { id: 269, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L269-clean-c28', hand: parseHand('8♥ 3♦ Q♣ 4♣ J♠ Q♦ Q♠ 5♠ 8♦ 5♣ K♥ 10♠ J♥'),
          objective: { type: 'cleanHand', goldScoreBar: 10 } },

@@ -5157,14 +5157,21 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 .camp-corner-tl{
   position:absolute;left:54px;top:6px;z-index:15;
   display:flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border-radius:999px;
-  max-width:44vw;
+  /* Stops short of the chapter title box (z-index ties and the box comes
+     later in the DOM, so it wins) — a long name used to run on underneath
+     it and get clipped mid-letter. Past this width the name ellipsizes
+     instead. 160px is half of .camp-corner-tc's widest case plus a gap. */
+  max-width:max(150px,calc(50vw - 54px - 160px));
 }
 .camp-profile-name{font-family:'Playfair Display',serif;font-weight:600;font-size:12px;
   color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 .camp-corner-tc{
   position:absolute;left:50%;top:6px;transform:translateX(-50%);
-  z-index:15;padding:6px 18px;border-radius:12px;text-align:center;min-width:180px;
+  /* 32px side padding clears the 22px nav arrows (absolutely placed at the
+     box edges, 2px in) — at 18px a long title like "The Countess's
+     Antechamber" ran underneath both of them. */
+  z-index:15;padding:6px 32px;border-radius:12px;text-align:center;min-width:200px;max-width:320px;
 }
 .camp-chapter-nav{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;
   padding:0 2px;pointer-events:none}
@@ -5199,7 +5206,9 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
   color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 
 .camp-attempts{
-  position:absolute;left:8px;top:48px;z-index:15;
+  /* top:64px clears the profile pill above it (which ends at ~57px) — at
+     48px the two boxes overlapped by a few px. */
+  position:absolute;left:8px;top:64px;z-index:15;
   display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;
 }
 .camp-attempts-num{

@@ -4459,6 +4459,15 @@ html.landscape-mode .screen.active>.center-wrap>.exit-row{
 }
 html.landscape-mode .screen.active>.center-wrap>.exit-row .btn{text-align:left}
 
+/* The Shop's rail only carries "‹ Menu", the title and the balance line, so
+   the shared 238px rail is mostly empty — and its body holds five category
+   tabs that want the room. Narrower rail + tighter gutter moves the divider
+   left (id in the selector so it beats the shared rule's grid-template). */
+html.landscape-mode #s-shop.screen.active>.center-wrap{
+  grid-template-columns:156px 1fr;column-gap:10px;
+}
+html.landscape-mode #s-shop.screen.active>.center-wrap>#shop-content{padding-left:14px}
+
 /* body-panel tuning: portrait assumes a tall narrow column, landscape a
    short wide one */
 html.landscape-mode .screen.active .empty-state{padding:6px 6px 4px}

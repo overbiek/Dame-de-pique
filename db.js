@@ -426,9 +426,9 @@ async function ensureSchema() {
       -- Starts full. Must track CAMPAIGN_MAX_ATTEMPTS in server.js — this
       -- is only the DEFAULT for a brand-new row, not read elsewhere as
       -- the cap; getCampaignState/consumeCampaignAttempt both take the
-      -- real max as a parameter from server.js every call. (A row created
-      -- under an older, higher default is clamped down on read, so
-      -- lowering the cap needs no migration.)
+      -- real max as a parameter from server.js every call. (The pool may
+      -- legitimately sit ABOVE the cap after a Shop purchase, so reads do
+      -- not clamp it down — see attemptsNow.)
       attempts_current INTEGER NOT NULL DEFAULT 15,
       attempts_last_refill_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       story_cues_seen TEXT,
@@ -448,6 +448,27 @@ async function ensureSchema() {
   await pool.query(`ALTER TABLE campaign_progress ADD COLUMN IF NOT EXISTS queen_spades_taken INTEGER NOT NULL DEFAULT 0;`);
   await pool.query(`ALTER TABLE campaign_progress ADD COLUMN IF NOT EXISTS best_hand INTEGER;`);
   await pool.query(`ALTER TABLE campaign_progress ADD COLUMN IF NOT EXISTS worst_hand INTEGER;`);
+  // Daily Challenge podium payouts. One row per (account, day) that
+  // placed 1st-3rd; `notified` is the "show them the message" flag, flipped
+  // once the client has displayed it. daily_rewards_settled records which
+  // days have been paid at all, so the settle job is cheap to re-run.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS daily_rewards (
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      challenge_date DATE NOT NULL,
+      place INTEGER NOT NULL,
+      credits INTEGER NOT NULL,
+      notified BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (account_id, challenge_date)
+    );
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS daily_rewards_settled (
+      challenge_date DATE PRIMARY KEY,
+      settled_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
   // Per-level best result. times_played is a plain additive counter safe
   // under trackStat's retries because the CALLER (submitCampaignLevelResult
   // in server.js) guards with an in-memory one-shot flag before ever
@@ -1486,6 +1507,18 @@ async function ensureCampaignProgressRow(accountId) {
   );
 }
 
+// How many attempts an account holds right now. Below the cap the clock
+// refills one per interval (never past the cap). AT OR ABOVE the cap
+// nothing refills and nothing is clipped: Shop purchases are allowed to
+// carry the pool past the cap (e.g. 24/15), and that surplus has to survive
+// every read. Returns the whole intervals that elapsed too, since the
+// callers advance the stored refill timestamp by exactly that many.
+function attemptsNow(current, lastRefillMs, nowMs, maxAttempts, refillMs) {
+  if (current >= maxAttempts) return { available: current, elapsed: 0 };
+  const elapsed = Math.max(0, Math.floor((nowMs - lastRefillMs) / refillMs));
+  return { available: Math.min(maxAttempts, current + elapsed), elapsed };
+}
+
 // Assembles everything the map screen needs in one round trip, same
 // composition style as getAchievementStats: one row per table, defaulted
 // in JS rather than requiring a prior row to exist (ensureCampaignProgressRow
@@ -1510,8 +1543,7 @@ async function getCampaignState(accountId, maxAttempts, refillMs) {
   );
   const now = Date.now();
   const lastRefill = new Date(p.attempts_last_refill_at).getTime();
-  const elapsedRefills = Math.max(0, Math.floor((now - lastRefill) / refillMs));
-  const available = Math.min(maxAttempts, p.attempts_current + elapsedRefills);
+  const { available, elapsed: elapsedRefills } = attemptsNow(p.attempts_current, lastRefill, now, maxAttempts, refillMs);
   return {
     highestUnlockedLevel: p.highest_unlocked_level,
     attempts: {
@@ -1542,17 +1574,69 @@ async function consumeCampaignAttempt(accountId, maxAttempts, refillMs) {
     const row = rows[0];
     const now = Date.now();
     const lastRefill = new Date(row.attempts_last_refill_at).getTime();
-    const elapsedRefills = Math.max(0, Math.floor((now - lastRefill) / refillMs));
-    const available = Math.min(maxAttempts, row.attempts_current + elapsedRefills);
+    const { available, elapsed: elapsedRefills } = attemptsNow(row.attempts_current, lastRefill, now, maxAttempts, refillMs);
     if (available < 1) { await client.query('ROLLBACK'); return { ok: false, available: 0 }; }
     const newAttempts = available - 1;
-    const newRefillAt = elapsedRefills > 0 ? new Date(lastRefill + elapsedRefills * refillMs) : row.attempts_last_refill_at;
+    // Dropping down from the cap (or from above it) starts the refill clock
+    // NOW — the stored timestamp is stale from however long the pool sat
+    // full, and keeping it would hand back a free attempt almost at once.
+    const newRefillAt = row.attempts_current >= maxAttempts
+      ? new Date(now)
+      : elapsedRefills > 0 ? new Date(lastRefill + elapsedRefills * refillMs) : row.attempts_last_refill_at;
     await client.query(
       `UPDATE campaign_progress SET attempts_current = $2, attempts_last_refill_at = $3, updated_at = now() WHERE account_id = $1`,
       [accountId, newAttempts, newRefillAt]
     );
     await client.query('COMMIT');
     return { ok: true, available: newAttempts };
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    throw e;
+  } finally { client.release(); }
+}
+
+// Buys a pack of campaign attempts, straight into the same pool the free
+// refill uses — it may end up past the cap (14/15 + 10 = 24/15). The one
+// rule is that you can only buy while BELOW the cap, so a full pool can't
+// be topped up and stockpiled; a purchase at 14/15 is the way to end up
+// over it, and nothing more can be bought until play drops you back under.
+// Payment and delivery are one transaction, and the row lock makes the
+// below-the-cap check and the add atomic (two rapid taps can't both pass
+// it). The balance guard lives in the WHERE, as in purchaseItem. This is
+// REPEATABLE, so the ledger reference is unique per purchase rather than
+// the item id.
+async function purchaseAttempts(accountId, packId, amount, price, maxAttempts, refillMs) {
+  await ensureCampaignProgressRow(accountId);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT attempts_current, attempts_last_refill_at FROM campaign_progress WHERE account_id = $1 FOR UPDATE`,
+      [accountId]
+    );
+    const row = rows[0];
+    const now = Date.now();
+    const lastRefill = new Date(row.attempts_last_refill_at).getTime();
+    const { available, elapsed } = attemptsNow(row.attempts_current, lastRefill, now, maxAttempts, refillMs);
+    if (available >= maxAttempts) { await client.query('ROLLBACK'); return { ok: false, reason: 'full' }; }
+    const paid = await client.query(
+      `UPDATE accounts SET credit_balance = credit_balance - $2
+       WHERE id = $1 AND credit_balance >= $2 RETURNING credit_balance`,
+      [accountId, price]
+    );
+    if (!paid.rows.length) { await client.query('ROLLBACK'); return { ok: false, reason: 'funds' }; }
+    const newRefillAt = elapsed > 0 ? new Date(lastRefill + elapsed * refillMs) : row.attempts_last_refill_at;
+    await client.query(
+      `UPDATE campaign_progress SET attempts_current = $2, attempts_last_refill_at = $3, updated_at = now() WHERE account_id = $1`,
+      [accountId, available + amount, newRefillAt]
+    );
+    await client.query(
+      `INSERT INTO credit_transactions (account_id, amount, type, reference_id)
+       VALUES ($1,$2,'spend_attempts',$3)`,
+      [accountId, -price, packId + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)]
+    );
+    await client.query('COMMIT');
+    return { ok: true, balance: paid.rows[0].credit_balance, available: available + amount };
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch (_) {}
     throw e;
@@ -1741,4 +1825,5 @@ module.exports = {
   getCampaignState, consumeCampaignAttempt, upsertCampaignLevelResult,
   advanceCampaignUnlock, markCampaignCuesSeen, getCampaignFriendsResults,
   recordCampaignHandStats, getCampaignStats,
+  purchaseAttempts, isDailySettled, settleDailyRewards, getPendingDailyRewards, ackDailyRewards,
 };

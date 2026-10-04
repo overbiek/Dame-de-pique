@@ -2168,6 +2168,53 @@ function forfeitDailyChallenge(G) {
   });
 }
 
+// ── Daily Challenge podium payouts ──────────────────────────────────
+// The top three finishers of each UTC day get credits once that day is
+// over: 1st +100, 2nd +50, 3rd +25. Ties share a placement (same rule as
+// everywhere else in the game — it has no tiebreak). A forfeit
+// (DAILY_FORFEIT_SCORE) never places, so abandoning a hand can't buy a
+// podium spot on a quiet day.
+// There's no cron: settleRecentDailyRewards is called on a timer and again
+// whenever a player asks for their pending rewards, and it is safe to run
+// as often as you like (see db.settleDailyRewards).
+const DAILY_PODIUM_CREDITS = { 1: 100, 2: 50, 3: 25 };
+// A hand started just before midnight UTC can finish just after it, and
+// that score still belongs to the day it was dealt for. Waiting this long
+// past the reset before paying a day means those late finishes are on the
+// board first.
+const DAILY_SETTLE_GRACE_MS = 30 * 60 * 1000;
+// How many past days a settle pass looks at. Bounds what a server that was
+// down for a while — or this feature's first deploy — can pay out.
+const DAILY_SETTLE_LOOKBACK_DAYS = 2;
+
+function dailyDateKeyOffset(dateKey, days) {
+  const d = new Date(dateKey + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return dailyDateKey(d);
+}
+
+let dailySettleRunning = false;
+async function settleRecentDailyRewards() {
+  if (!DB_ENABLED || dailySettleRunning) return;
+  dailySettleRunning = true;
+  try {
+    const today = dailyDateKey();
+    const sinceReset = Date.now() - new Date(today + 'T00:00:00Z').getTime();
+    for (let back = 1; back <= DAILY_SETTLE_LOOKBACK_DAYS; back++) {
+      // Yesterday only becomes payable DAILY_SETTLE_GRACE_MS after today began.
+      if (back === 1 && sinceReset < DAILY_SETTLE_GRACE_MS) continue;
+      const date = dailyDateKeyOffset(today, -back);
+      if (await db.isDailySettled(date)) continue;
+      const paid = await db.settleDailyRewards(date, DAILY_PODIUM_CREDITS, DAILY_FORFEIT_SCORE);
+      if (paid.length) console.log(`Daily podium ${date}: paid ${paid.length} player(s)`);
+    }
+  } catch (e) {
+    console.error('settleRecentDailyRewards error:', e.message);
+  } finally {
+    dailySettleRunning = false;
+  }
+}
+
 // ── Campaign Mode ("The Hundred Tables") ────────────────────────────
 // A single-player story mode: the human plays the SAME card engine every
 // other mode runs, against 3 AI seats, through a fixed sequence of
@@ -2189,9 +2236,23 @@ function forfeitDailyChallenge(G) {
 // reports the pool as unlimited (the client renders ∞ instead of
 // "n/15"). The stored attempts_current is left completely untouched,
 // so whatever players had before this is exactly what they get back.
-const CAMPAIGN_UNLIMITED_ATTEMPTS = true;
+// Switched back OFF (the cap is live again) alongside the Shop's "Boosts"
+// tab, which is how a player now buys extra attempts.
+const CAMPAIGN_UNLIMITED_ATTEMPTS = false;
 const CAMPAIGN_MAX_ATTEMPTS = 15;
 const CAMPAIGN_ATTEMPT_REFILL_MS = 60 * 60 * 1000; // 1 attempt back per hour, once restored
+// What the Shop's Boosts tab sells. A pack is `amount` attempts for `price`
+// credits, added straight to the same pool the hourly refill fills (see
+// db.purchaseAttempts) — it can take the pool above the cap, e.g. 14/15
+// becomes 24/15. The rule that stops hoarding is that a pack can only be
+// bought while the pool is BELOW the cap. The CLIENT only ever sends an
+// item id; amount and price live here. 50 credits is roughly one finished
+// game's payout, which is the intended pace. New kinds of boost (the
+// planned Joker, say) are new entries with a different `kind`, plus a
+// branch in buyCampaignItem.
+const CAMPAIGN_SHOP_ITEMS = [
+  { id: 'attempts_10', kind: 'attempts', name: '+10 Attempts', amount: 10, price: 50 },
+];
 const CAMPAIGN_CREDITS_BY_TYPE = { Normal: 15, Harder: 22, BOSS: 60 }; // placeholder, same reason
 
 function parseCardStr(s) { return { rank: s.slice(0, -1), suit: s.slice(-1) }; }
@@ -11727,6 +11788,83 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── Shop: campaign items (the "Boosts" tab) ──
+  // Separate from buyCosmetic on purpose: a cosmetic is bought once and
+  // owned forever (player_purchases), these are repeatable consumables that
+  // land in campaign_progress. Price and amount come from
+  // CAMPAIGN_SHOP_ITEMS, never from the client.
+  async function campaignShopPayload(accountId, extra) {
+    const state = await db.getCampaignState(accountId, CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
+    const credits = await db.getCredits(accountId);
+    return {
+      items: CAMPAIGN_SHOP_ITEMS.map(i => ({ id: i.id, kind: i.kind, name: i.name, amount: i.amount, price: i.price })),
+      attempts: state.attempts, balance: credits.balance, ...extra,
+    };
+  }
+
+  socket.on('getCampaignShop', async ({ token }) => {
+    if (!DB_ENABLED || !token) return socket.emit('shopError', { msg: "Accounts aren't set up on this server yet." });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('shopError', { msg: 'Your session expired — log in again.' });
+      socket.emit('campaignShopOk', await campaignShopPayload(account.id));
+    } catch (e) {
+      console.error('getCampaignShop error:', e.message);
+      socket.emit('shopError', { msg: "Couldn't load the shop. Try again." });
+    }
+  });
+
+  socket.on('buyCampaignItem', async ({ token, itemId }) => {
+    if (!DB_ENABLED || !token) return socket.emit('shopError', { msg: "Accounts aren't set up on this server yet." });
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('shopError', { msg: 'Your session expired — log in again.' });
+      const item = CAMPAIGN_SHOP_ITEMS.find(i => i.id === itemId);
+      if (!item) return socket.emit('shopError', { msg: "That item isn't for sale." });
+      // Only kind 'attempts' exists so far; a future kind gets its own branch here.
+      const res = await db.purchaseAttempts(account.id, item.id, item.amount, item.price,
+                                            CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
+      if (!res.ok) {
+        return socket.emit('shopError', {
+          msg: res.reason === 'full' ? "Your attempts are already full — you can buy more once you're below the limit."
+                                     : 'Not enough credits yet.',
+        });
+      }
+      socket.emit('shopOk', { itemId: item.id, name: item.name, price: item.price, balance: res.balance });
+      socket.emit('campaignShopOk', await campaignShopPayload(account.id, { bought: item.id }));
+    } catch (e) {
+      console.error('buyCampaignItem error:', e.message);
+      socket.emit('shopError', { msg: 'Could not complete that purchase. Try again.' });
+    }
+  });
+
+  // ── Daily Challenge podium message ──
+  // Asked for once per login/app open. Settles first (cheap when there's
+  // nothing to do) so someone opening the app right after the reset isn't
+  // told nothing while a timer tick is still pending.
+  socket.on('getDailyRewards', async ({ token }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return;
+      await settleRecentDailyRewards();
+      const rewards = await db.getPendingDailyRewards(account.id);
+      if (rewards.length) socket.emit('dailyRewardsOk', { rewards });
+    } catch (e) {
+      console.error('getDailyRewards error:', e.message);
+    }
+  });
+
+  socket.on('ackDailyRewards', async ({ token, dates }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (account) await db.ackDailyRewards(account.id, (Array.isArray(dates) ? dates : []).map(String).slice(0, 10));
+    } catch (e) {
+      console.error('ackDailyRewards error:', e.message);
+    }
+  });
+
   // Fire-and-forget: the client calls this once it has shown the unlock
   // celebration for a set of achievements, so they're not celebrated
   // again on the next visit.
@@ -11973,7 +12111,7 @@ io.on('connection', (socket) => {
       }
       if (!CAMPAIGN_UNLIMITED_ATTEMPTS) {
         const spend = await db.consumeCampaignAttempt(acct.id, CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
-        if (!spend.ok) return socket.emit('campaignError', { msg: 'Out of attempts — wait for a refill.' });
+        if (!spend.ok) return socket.emit('campaignError', { msg: 'Out of attempts — buy more in the Shop, or wait for a refill.' });
       }
       const clean = String(name || '').trim().slice(0, 16) || acct.nickname || 'Player';
       const { G, token } = await createCampaignRoom(clean, sanitizeAvatar(avatar), acct.id, socket.id, level.id);
@@ -12331,6 +12469,14 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (err) => {
   console.error('unhandledRejection (process kept alive):', err && err.stack || err);
 });
+
+// Pays out yesterday's Daily Challenge podium. Runs shortly after start (the
+// DB schema is ready by then) and then on a timer, so credits land after the
+// reset even if nobody is online; getDailyRewards also settles on demand.
+if (DB_ENABLED) {
+  setTimeout(settleRecentDailyRewards, 15 * 1000);
+  setInterval(settleRecentDailyRewards, 10 * 60 * 1000);
+}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Dame de Pique running on port ${PORT}`));

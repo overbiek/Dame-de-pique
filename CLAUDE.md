@@ -4153,6 +4153,55 @@ before pushing.
   bits (`evaluateCampaignObjective`'s new optional-goldScoreBar branch)
   under actual play.
 
+## Shop "Boosts" tab and Daily podium payouts — NEVER RUN AGAINST POSTGRES
+- **Campaign attempts are limited again** (`CAMPAIGN_UNLIMITED_ATTEMPTS`
+  flipped to `false`; cap 15, +1/hour). The Shop's fifth tab, **Boosts**,
+  sells `CAMPAIGN_SHOP_ITEMS` (`attempts_10`: +10 attempts for 50 credits —
+  about one finished game's payout). The client sends only an item id;
+  amount and price live in `server.js`. A future Joker is a new entry with a
+  different `kind` plus a branch in `buyCampaignItem`. The card is just the
+  credit-chip picture with "+10" — it deliberately does NOT show your
+  current attempt count.
+- **Bought attempts go into the SAME pool as the free refill
+  (`attempts_current`) and may push it past the cap** — 14/15 + 10 = 24/15.
+  The anti-hoarding rule is that a pack can only be bought while the pool
+  is BELOW the cap (`purchaseAttempts` refuses with reason `'full'`; the
+  client also disables Buy as "Attempts full"). The check and the add run
+  under a row lock, so two quick taps can't both pass it.
+- **That means reads must NOT clamp the pool to the cap any more** — they
+  used to, which would silently eat a purchase. `attemptsNow` (db.js) is
+  the one place that decides: at or above the cap nothing refills and
+  nothing is clipped; below it the clock refills toward the cap. Lowering
+  `CAMPAIGN_MAX_ATTEMPTS` therefore no longer trims anyone already above
+  it. When play drops the pool from the cap (or above), the refill clock
+  restarts at that moment rather than reusing the stale timestamp from
+  however long the pool sat full (that would have handed back a free
+  attempt almost immediately). The map counter reads e.g. `24/15`.
+  `db.purchaseAttempts` charges and delivers in one transaction; the
+  ledger reference is unique per purchase (it's repeatable, unlike a
+  cosmetic).
+- Five Shop tabs needed a smaller font at ≤420px (`Backgrounds` ellipsized
+  at 68px a tab).
+- **Daily podium: 1st +100, 2nd +50, 3rd +25**, paid once a UTC day is over.
+  There is no cron: `settleRecentDailyRewards` runs on a 10-minute timer,
+  15s after boot, and whenever a client asks for its pending rewards. It
+  waits `DAILY_SETTLE_GRACE_MS` (30 min) past the reset so a hand started
+  just before midnight and finished just after is on the board first, and
+  looks back `DAILY_SETTLE_LOOKBACK_DAYS` (2) days only, which bounds what a
+  long outage or this feature's first deploy can pay. Ties share a
+  placement (RANK()); forfeit rows (≤ `DAILY_FORFEIT_SCORE`) never place.
+  Safe to re-run: grants are idempotent on (account, `daily_podium`, date),
+  `daily_rewards` is ON CONFLICT DO NOTHING, and a day is marked in
+  `daily_rewards_settled` only after every payout succeeded.
+- **The message** is `daily_rewards.notified`: the client emits
+  `getDailyRewards` from `authOk` (every app open, including silent
+  resume), the modal waits for the menu screen (so it can't land on a hand
+  being rejoined), and `ackDailyRewards` on dismiss means it shows once.
+- **Verified only on the client** (shop tab rendering at 915×412 and 375px,
+  the reward modal, no console errors) and by `node --check`. No Postgres
+  was available, so none of the new SQL has run — try a purchase and a
+  settle on a throwaway DB before trusting it.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

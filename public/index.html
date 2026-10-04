@@ -1713,6 +1713,17 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
   color:var(--gold-lo);margin-top:4px;display:block;
 }
 .cos-item.equipped .cos-status{color:var(--gold-hi)}
+/* Five Shop tabs share the row now (was four); at 375px each is 68px and
+   "Backgrounds" at the default size ellipsized. */
+@media (max-width:420px){ #shop-tabs .cos-tab{font-size:.62rem} }
+/* Shop > Boosts: the credit-chip picture with the pack size beside it, in
+   place of artwork. */
+.cos-thumb.att-thumb{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  background:radial-gradient(70% 90% at 50% 40%,rgba(var(--ddp-brass-rgb),.16),transparent 75%);
+}
+.cos-thumb.att-thumb b{font-family:'Playfair Display',serif;font-weight:700;font-size:1.3rem;color:var(--gold-hi)}
+.cos-sub{display:block;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
 .cos-empty{
   font-size:.75rem;color:var(--faint);text-align:center;
   padding:14px 10px;line-height:1.5;
@@ -6594,6 +6605,16 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
   </div>
 </div>
 
+<!-- Shown once on the menu after a Daily Challenge podium finish has been
+     paid out (1st +100, 2nd +50, 3rd +25). Filled by renderDailyRewards. -->
+<div id="daily-reward-modal" class="camp-modal-scrim" aria-hidden="true">
+  <div class="camp-modal-card" style="max-width:360px">
+    <div class="camp-modal-title">Daily Challenge rewards</div>
+    <div id="daily-reward-body" class="note gold"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:18px" onclick="dismissDailyRewards()">Collect</button>
+  </div>
+</div>
+
 <!-- ═══ RANKED MULTIPLAYER ═══ -->
 <section id="s-ranked" class="screen">
   <div class="center-wrap" style="max-width:440px">
@@ -6969,6 +6990,7 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
         <button class="cos-tab" type="button" data-shop-cat="scene" onclick="switchShopCat('scene')">Backgrounds</button>
         <button class="cos-tab" type="button" data-shop-cat="avatar" onclick="switchShopCat('avatar')">Avatars</button>
         <button class="cos-tab" type="button" data-shop-cat="cardFront" onclick="switchShopCat('cardFront')">Cards</button>
+        <button class="cos-tab" type="button" data-shop-cat="boosts" onclick="switchShopCat('boosts')">Boosts</button>
       </div>
       <div id="shop-loading" class="cos-empty" style="display:none">Loading the shop…</div>
       <div id="shop-panels"></div>
@@ -7948,6 +7970,7 @@ function show(id){
   applyOrientationLock(id);
   updateLandscapeMode();
   updateSceneLayer();
+  if(id==='menu') maybeShowDailyRewards();
 }
 // The game is landscape-only: every screen has a landscape layout, so
 // every screen asks to be locked there. Kept as a set (rather than
@@ -10520,6 +10543,9 @@ const SHOP_CATS={
   scene:{label:'background',kind:'scene',catalogKey:'scenes'},
   avatar:{label:'avatar',kind:'avatar',catalogKey:'avatars'},
   cardFront:{label:'card design',kind:'cardFront',catalogKey:'cardFronts'},
+  // Not a cosmetic: no catalogKey, rendered by renderBoostsShop from its
+  // own server payload (campaignShopOk) instead of cosState.catalog.
+  boosts:{label:'boost',kind:'boosts'},
 };
 
 function goShop(){
@@ -10535,7 +10561,49 @@ function switchShopCat(cat){
   shopCat=cat;
   document.querySelectorAll('#shop-tabs .cos-tab').forEach(b=>
     b.classList.toggle('active',b.dataset.shopCat===cat));
+  if(cat==='boosts'&&account&&accountToken) socket.emit('getCampaignShop',{token:accountToken});
   renderShop();
+}
+
+// The Boosts tab. Pack size, price and whether you can buy right now all
+// come from the server's campaignShopOk — the same "client renders, server
+// decides" contract as the cosmetics. null until the first reply lands.
+// Deliberately does NOT show your current attempt count: the card is just
+// the item. The count only decides whether Buy is enabled (a pack can only
+// be bought while you're below the cap — see db.purchaseAttempts).
+let campaignShop=null;
+socket.on('campaignShopOk',d=>{
+  campaignShop=d;
+  setCreditBalance(d.balance);
+  if(shopCat==='boosts'&&$('s-shop').classList.contains('active')) renderShop();
+  // Keep the campaign map's counter honest if it's what's behind this screen.
+  if(campaignData&&d.attempts){ campaignData.attempts=d.attempts; }
+});
+function renderBoostsShop(){
+  const wrap=$('shop-panels');
+  if(!campaignShop){ wrap.innerHTML=`<div class="cos-empty">Loading…</div>`; return; }
+  const a=campaignShop.attempts||{available:0,max:0};
+  const full=a.available>=a.max;
+  wrap.innerHTML=`<div class="cos-grid">`+campaignShop.items.map(i=>campaignShopItemHTML(i,full)).join('')+`</div>`
+    +`<p class="pick-hint">${full?'Your attempts are full &mdash; you can buy more once you drop below the limit.'
+                                  :'Attempts are added on top of your current ones, and can go past the limit.'}</p>`;
+}
+function campaignShopItemHTML(item,full){
+  const afford=creditBalance>=item.price;
+  const can=afford&&!full;
+  return `<div class="cos-item deco-box">
+    <span class="cos-thumb att-thumb">${creditChipHTML(30)}<b>+${item.amount}</b></span>
+    <span class="cos-body"><span class="cos-name">${esc(item.name)}</span>
+      <span class="cos-sub">Campaign</span>
+      <span class="cos-price${afford?'':' short'}">${creditChipHTML(13)}${fmtCredits(item.price)}</span>
+      <button class="cos-buy"${can?'':' disabled'} onclick="buyCampaignItem('${item.id}')">${full?'Attempts full':afford?'Buy':'Not enough'}</button>
+    </span>
+  </div>`;
+}
+function buyCampaignItem(itemId){
+  if(!account||!accountToken) return;
+  SFX.play('click');
+  socket.emit('buyCampaignItem',{token:accountToken,itemId});
 }
 
 // Renders ONE category at a time (see .cos-tabs in the Shop markup) — the
@@ -10549,6 +10617,7 @@ function renderShop(){
   const ready=account&&cosState;
   if(tabs) tabs.style.display=ready?'flex':'none';
   if(!ready){ wrap.innerHTML=''; return; }
+  if(shopCat==='boosts'){ renderBoostsShop(); return; }
 
   const {label,kind,catalogKey}=SHOP_CATS[shopCat];
   const forSale=cosState.catalog[catalogKey].filter(c=>c.price&&!c.unlocked);
@@ -11982,6 +12051,9 @@ socket.on('authOk',d=>{
   // Now that an account is attached, re-ask: the connect-time request went
   // out as a guest and so couldn't tell us whether TODAY is already played.
   socket.emit('getDailyStatus',{accountToken});
+  // Podium payout from a finished Daily Challenge day, if there is one to
+  // announce — fires on silent resume too, i.e. every app open.
+  socket.emit('getDailyRewards',{token:accountToken});
   // Same reasoning for the collection, plus one more: this is what makes
   // the equipped scene and card front follow the account onto a new
   // device, where the localStorage cache initCosmeticLook() paints from
@@ -12089,6 +12161,34 @@ function askLeave(btn){
   const daily=!!(S&&S.daily);
   if(daily){ openDailyLeaveModal(); return; }
   armConfirm(btn,'Tap again to leave',()=>socket.emit('leaveRoom',{code:room}));
+}
+// Daily Challenge podium payouts. The server has ALREADY credited these
+// (when the day closed); this is only the message. It waits for the menu so
+// it can never land on top of a hand someone is rejoining mid-play, and is
+// acknowledged on dismiss so it shows exactly once.
+let dailyRewardsPending=[];
+socket.on('dailyRewardsOk',d=>{
+  dailyRewardsPending=(d&&d.rewards)||[];
+  maybeShowDailyRewards();
+});
+function maybeShowDailyRewards(){
+  if(!dailyRewardsPending.length||currentScreenId!=='menu') return;
+  const place=['','1st','2nd','3rd'];
+  const total=dailyRewardsPending.reduce((s,r)=>s+r.credits,0);
+  $('daily-reward-body').innerHTML=dailyRewardsPending.map(r=>{
+    const day=new Date(r.date+'T00:00:00Z').toLocaleDateString(undefined,{day:'numeric',month:'long',timeZone:'UTC'});
+    return `You finished <b>${place[r.place]||r.place+'th'}</b> in the Daily Challenge of ${esc(day)} &mdash; <b>+${r.credits}</b> credits.`;
+  }).join('<br>')
+    +(dailyRewardsPending.length>1?`<br><br>Total: <b>+${total}</b> credits`:'');
+  $('daily-reward-modal').classList.add('show');
+}
+function dismissDailyRewards(){
+  $('daily-reward-modal').classList.remove('show');
+  if(accountToken&&dailyRewardsPending.length){
+    socket.emit('ackDailyRewards',{token:accountToken,dates:dailyRewardsPending.map(r=>r.date)});
+  }
+  dailyRewardsPending=[];
+  requestCredits();   // the balance moved when the day closed
 }
 function openDailyLeaveModal(){ $('daily-leave-modal').classList.add('show'); }
 function closeDailyLeaveModal(){ $('daily-leave-modal').classList.remove('show'); }

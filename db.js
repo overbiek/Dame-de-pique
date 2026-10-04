@@ -1643,6 +1643,68 @@ async function purchaseAttempts(accountId, packId, amount, price, maxAttempts, r
   } finally { client.release(); }
 }
 
+// ── Daily Challenge podium payouts ──────────────────────────────
+async function isDailySettled(date) {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM daily_rewards_settled WHERE challenge_date = $1::date`, [date]);
+  return rows.length > 0;
+}
+
+// Pays the top three of a FINISHED day. `payouts` maps placement -> credits
+// ({1:100, 2:50, 3:25}); placement is standard competition ranking, so a tie
+// shares it (same generosity rule the rest of the game uses). Rows at or
+// below `floorScore` are the forfeit punishment, not a real result, and
+// never place. Safe to re-run: every grant is idempotent on
+// (account, 'daily_podium', date), the daily_rewards row is ON CONFLICT DO
+// NOTHING, and the day is only marked settled after everything succeeded —
+// a crash midway just retries the rest next time.
+async function settleDailyRewards(date, payouts, floorScore) {
+  const { rows } = await pool.query(
+    `SELECT account_id, score, rnk FROM (
+       SELECT account_id, score, RANK() OVER (ORDER BY score DESC) AS rnk
+       FROM daily_challenge_scores
+       WHERE challenge_date = $1::date AND score > $2
+     ) t WHERE rnk <= 3`,
+    [date, floorScore]
+  );
+  const paid = [];
+  for (const r of rows) {
+    const place = Number(r.rnk);
+    const credits = payouts[place];
+    if (!credits) continue;
+    await grantCredits(r.account_id, credits, 'daily_podium', date);
+    await pool.query(
+      `INSERT INTO daily_rewards (account_id, challenge_date, place, credits)
+       VALUES ($1, $2::date, $3, $4) ON CONFLICT (account_id, challenge_date) DO NOTHING`,
+      [r.account_id, date, place, credits]
+    );
+    paid.push({ accountId: r.account_id, place, credits });
+  }
+  await pool.query(
+    `INSERT INTO daily_rewards_settled (challenge_date) VALUES ($1::date) ON CONFLICT DO NOTHING`, [date]);
+  return paid;
+}
+
+// Podium results the player hasn't been shown yet, oldest first.
+async function getPendingDailyRewards(accountId) {
+  const { rows } = await pool.query(
+    `SELECT to_char(challenge_date, 'YYYY-MM-DD') AS date, place, credits
+     FROM daily_rewards WHERE account_id = $1 AND NOT notified
+     ORDER BY challenge_date ASC`,
+    [accountId]
+  );
+  return rows.map(r => ({ date: r.date, place: r.place, credits: r.credits }));
+}
+
+async function ackDailyRewards(accountId, dates) {
+  if (!Array.isArray(dates) || !dates.length) return;
+  await pool.query(
+    `UPDATE daily_rewards SET notified = TRUE
+     WHERE account_id = $1 AND challenge_date = ANY($2::date[])`,
+    [accountId, dates]
+  );
+}
+
 // best_score/cleared/gold are records (GREATEST / OR), safe to re-apply.
 // times_played is a plain +1 — safe under trackStat's retries only because
 // the CALLER guards with an in-memory one-shot flag before ever invoking

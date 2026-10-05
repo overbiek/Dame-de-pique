@@ -4328,9 +4328,14 @@ before pushing.
   Diamonds). Like every achievement it is re-derived on read, so accounts
   that already finished a House get the rung the first time they open My
   Account (and the unlock celebration with it).
-- Rung names ("Master of Spades/Hearts/Clubs/Diamonds") and the title
-  ("House Master", granted at rung 1) are placeholders — display strings
-  only, change freely. The crest `crest_four_houses` has an inline-SVG
+- Rung names ("Master of Spades/Hearts/Clubs/Diamonds") are placeholders —
+  display strings only, change freely. **The "House Master" title is
+  granted only at the TOP rung (all four Houses finished)**, unlike every
+  other title (rung 1): titles take an optional `unlockLevel`, checked in
+  `cosmeticsFor` (`earned`), and the locked-title requirement text reads the
+  name of that rung ("Master of Diamonds"). Anyone who equipped it while it
+  was briefly a rung-1 title loses it until they finish all four, via
+  `filterEquipped` as usual. The crest `crest_four_houses` has an inline-SVG
   placeholder (an arched doorway with a spade); **the real art goes in
   `public/crests/four_houses/1.webp`..`4.webp`** and layers over it with no
   code change (same contract as every other crest). Not run against Postgres.
@@ -4338,6 +4343,28 @@ before pushing.
   (was `.72rem` / `-3px`): with the exported plate art loaded, the title's
   bottom edge touched the plate's baked-in tier lozenge. Checked with the art
   loaded at 915×412.
+
+## House of Clubs Tables 76-98 recalibrated (+ Table 69)
+- **Benchmark (all four seats on the game's own AI, 150-300 runs per level)
+  found five effectively unwinnable levels and two impossible golds.** Fixed
+  by simulation, not by feel; each level carries a one-line note above its
+  `objective` with the old and new rate. Method: copy `server.js`, patch the
+  `doAIPlay` call so seat 0 can be a bot, cap `setTimeout`s at 5ms, export
+  `rooms`/`dealRound`/`createCampaignRoom`/`evaluateCampaignObjective`, and
+  play each fixed hand repeatedly (temp files, deleted afterwards).
+- **cleanHand on a fixed hand that holds the queen and several hearts is
+  unwinnable** (Tables 69, 83, 96: 0-2% even for a bot that only ducks
+  penalty cards) — they are now plain score lines, like 69.
+- **A mission's gold must be reachable on the hand itself.** Tables 79 and 93
+  asked for a club void one trick sooner than the hand's club count allows
+  (3 clubs / 2 clubs, no passing, one card per trick) — gold is now "void by
+  the same trick AND a score floor" (`goldScoreBar`, which suitVoid already
+  supported; negative bars work, 0 would not — it is a falsy check there).
+- **Scores on a fixed hand are lumpy**: the AI lands on the same few totals,
+  so no line may exist at a given target rate (Table 84 jumps from 37% at
+  +20 to 2% at +21; Table 89's tricks from 22% at 9 to 5% at 10). The nearer
+  value was chosen, leaning easy.
+- Not run against Postgres; only the objective evaluation was unit-tested.
 
 ## Not implemented
 - Password reset (no email service configured)

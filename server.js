@@ -1715,7 +1715,9 @@ const COSMETICS = {
     { id: 'title_steady_hand',       name: 'Steady Hand',         unlock: 'ach_steady_hand' },
     { id: 'title_abyss',             name: 'Out of the Abyss',    unlock: 'ach_abyss' },
     { id: 'title_rock_bottom',       name: 'Rock Bottom',         unlock: 'ach_rock_bottom' },
-    { id: 'title_house_master',      name: 'House Master',        unlock: 'ach_four_houses' },
+    // Unlike every other title (granted at rung 1), House Master is only
+    // granted at the TOP rung of its ladder: all four Houses finished.
+    { id: 'title_house_master',      name: 'House Master',        unlock: 'ach_four_houses', unlockLevel: 4 },
     // rankTier is a SLUG, not a display name — tierReached compares
     // against RANK_TABLE's slug, so a capitalised tier name here would
     // silently never match and lock every rank title forever.
@@ -1931,6 +1933,10 @@ function evaluateAchievements(stats) {
 
 function cosmeticsFor(achievements, stats, purchases, cleared) {
   const done = new Set(achievements.filter(a => a.unlocked).map(a => a.id));
+  // The rung an achievement's ladder has reached, for items that need more
+  // than its first rung (`unlockLevel`, e.g. the House Master title).
+  const rungOf = id => ((achievements.find(a => a.id === id) || {}).level || 0);
+  const earned = c => c.unlockLevel ? rungOf(c.unlock) >= c.unlockLevel : done.has(c.unlock);
   const bought = new Set(purchases || []);
   // Campaign rewards (gateLevel) exist for a player only once they have
   // cleared that table, or already own the item. Everything else has no
@@ -1942,7 +1948,9 @@ function cosmeticsFor(achievements, stats, purchases, cleared) {
   const tierName = slug => (RANK_COSMETICS.find(r => r.slug === slug) || {}).tier || slug;
   const mark = list => list.filter(visible).map(c => ({
     id: c.id, name: c.name, unlock: c.unlock || null,
-    unlockName: c.unlock ? ((ACHIEVEMENTS.find(a => a.id === c.unlock) || {}).names || [])[0] || null : null,
+    // Names the rung that actually unlocks it (the first, unless unlockLevel
+    // says otherwise), so a locked title reads "Master of Diamonds".
+    unlockName: c.unlock ? ((ACHIEVEMENTS.find(a => a.id === c.unlock) || {}).names || [])[(c.unlockLevel || 1) - 1] || null : null,
     rankTier: c.rankTier || null,
     rankTierName: c.rankTier ? tierName(c.rankTier) : null,
     material: c.material || null,
@@ -1968,7 +1976,7 @@ function cosmeticsFor(achievements, stats, purchases, cleared) {
     // Noir Casino falls through to `bought.has(c.id)` only, same as
     // everything else purchasable.
     unlocked: c.rankTier ? tierReached(stats.mmrPeak, c.rankTier)
-            : ((!c.unlock && !c.price) || done.has(c.unlock) || bought.has(c.id)),
+            : ((!c.unlock && !c.price) || earned(c) || bought.has(c.id)),
   }));
   return {
     scenes: mark(COSMETICS.scenes),
@@ -4591,7 +4599,8 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 34, gold: 38 } },
   276: { id: 276, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L276-tricks-c409', hand: parseHand('A♣ 4♠ 9♠ 7♠ J♥ 8♥ 8♣ 10♣ 7♥ 4♦ 8♠ 6♥ K♥'),
-         objective: { type: 'trickCount', minTricks: 9, goldTricks: 10 } },
+         // Retuned (simulation, 300 runs): Retuned from 9/10 won tricks (3% clear; the fixed hand is weak): 7/9 is ~11%/6% for the same AI.
+         objective: { type: 'trickCount', minTricks: 7, goldTricks: 9 } },
   277: { id: 277, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L277-score-c270', hand: parseHand('J♠ 3♥ 9♥ A♦ 8♥ 7♥ A♣ Q♦ K♣ 4♠ 9♠ A♠ J♥'),
          objective: { type: 'score', min: 40, gold: 44 } },
@@ -4600,7 +4609,8 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 15, gold: 20 } },
   279: { id: 279, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L279-void-c66', hand: parseHand('Q♠ 9♦ K♣ 7♦ 3♥ 7♣ 6♦ 6♥ 5♦ 9♥ 5♥ 9♣ 4♦'),
-         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 3, goldByTrick: 2 } },
+         // Retuned (simulation, 300 runs): Gold used to be 'void by trick 2', impossible with 3 clubs and no pass (one card a trick). Now void by trick 3 AND score >= +4 (~7% for a void-seeking bot).
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 3, goldByTrick: 3, goldScoreBar: 4 } },
   280: { id: 280, chapter: 28, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_captain',
          seed: 'ddp-ch3-L280-boss-c450',
          hands4: [
@@ -4619,16 +4629,19 @@ const CAMPAIGN_LEVELS = {
   // set to 60 rather than left undefined.
   281: { id: 281, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L281-score-c435', hand: parseHand('3♥ A♠ 10♥ A♣ 6♥ 9♦ 9♥ Q♦ K♣ 4♥ 6♠ 8♣ 9♣'),
-         objective: { type: 'score', min: 43, gold: 46 } },
+         // Retuned (simulation, 300 runs): Was 43/46 (~2%); 40/42 is ~16%/4% for the same AI.
+         objective: { type: 'score', min: 40, gold: 42 } },
   282: { id: 282, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L282-score-c312', hand: parseHand('4♣ A♠ 2♣ K♦ 5♥ 9♣ A♣ 7♦ 10♥ K♣ K♠ A♦ J♣'),
          objective: { type: 'score', min: 35, gold: 60 } },
   283: { id: 283, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L283-clean-c58', hand: parseHand('3♦ Q♥ A♠ 6♥ 7♣ 7♥ 10♦ J♦ 3♠ K♦ 9♦ 8♠ 4♠'),
-         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+         // Retuned (simulation, 300 runs): Was a cleanHand objective (2% clear, effectively unwinnable). Now a score line: 15/19 is ~13%/5%.
+         objective: { type: 'score', min: 15, gold: 19 } },
   284: { id: 284, chapter: 29, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L284-score-c193', hand: parseHand('8♠ J♠ K♠ K♦ 6♥ 4♦ 4♠ 8♥ 7♥ J♥ J♣ Q♠ 4♥'),
-         objective: { type: 'score', min: 26, gold: 26 } },
+         // Retuned (simulation, 300 runs): Was 26/26 (~1%). The hand's outcomes jump from 20 to 21+, so 20/21 is ~37%/2%.
+         objective: { type: 'score', min: 20, gold: 21 } },
   285: { id: 285, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L285-score-c328', hand: parseHand('7♣ 4♠ 5♠ 6♣ 7♦ A♦ 10♦ 4♣ 9♥ Q♣ K♣ 9♦ Q♦'),
          objective: { type: 'score', min: 60, gold: 60 } },
@@ -4643,7 +4656,8 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 24, gold: 28 } },
   289: { id: 289, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L289-tricks-c549', hand: parseHand('A♦ J♦ 8♣ 7♣ J♣ A♣ 4♦ 3♣ Q♥ 8♥ K♦ 7♥ 2♣'),
-         objective: { type: 'trickCount', minTricks: 10, goldTricks: 11 } },
+         // Retuned (simulation, 300 runs): Was 10/11 won tricks (~5%/2%); 9/10 is ~22%/5% (the distribution is lumpy, no value lands on 12%).
+         objective: { type: 'trickCount', minTricks: 9, goldTricks: 10 } },
   290: { id: 290, chapter: 29, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_steward',
          seed: 'ddp-ch3-L290-boss-c634',
          hands4: [
@@ -4664,28 +4678,33 @@ const CAMPAIGN_LEVELS = {
   // 300 uses hands12, same reasoning as Level 250 above.
   291: { id: 291, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L291-score-c572', hand: parseHand('A♦ 9♣ Q♥ K♦ 3♥ K♣ 4♥ A♠ 6♣ 10♠ 10♦ 9♠ 4♠'),
-         objective: { type: 'score', min: 32, gold: 35 } },
+         // Retuned (simulation, 300 runs): Was 32/35 (~4%); 29/33 is ~9%/4%.
+         objective: { type: 'score', min: 29, gold: 33 } },
   292: { id: 292, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L292-score-c5', hand: parseHand('3♣ 4♥ 9♣ J♥ 7♦ K♣ A♣ 8♠ 10♠ 3♠ 7♠ 10♥ 2♦'),
          objective: { type: 'score', min: -7, gold: -5 } },
   293: { id: 293, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L293-void-c123', hand: parseHand('6♥ 3♦ J♣ 10♣ 10♥ 10♦ 6♦ Q♥ 9♥ K♠ 7♠ 4♦ J♠'),
-         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 2, goldByTrick: 1 } },
+         // Retuned (simulation, 300 runs): Gold used to be 'void by trick 1', impossible with 2 clubs. Now void by trick 2 AND score >= -17 (~5% for a void-seeking bot).
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 2, goldByTrick: 2, goldScoreBar: -17 } },
   294: { id: 294, chapter: 30, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L294-score-c204', hand: parseHand('3♠ 10♦ J♥ 8♥ J♠ 3♥ A♣ 9♣ A♦ Q♦ Q♥ 3♣ 5♠'),
-         objective: { type: 'score', min: 33, gold: 39 } },
+         // Retuned (simulation, 300 runs): Was 33/39 (~5%); 30/33 is ~14%/5%.
+         objective: { type: 'score', min: 30, gold: 33 } },
   295: { id: 295, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L295-score-c293', hand: parseHand('9♣ Q♥ 8♥ K♥ J♠ 7♥ 9♥ 2♠ 3♣ 9♦ 7♦ 10♠ A♠'),
          objective: { type: 'score', min: 22, gold: 28 } },
   296: { id: 296, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L296-clean-c82', hand: parseHand('Q♥ 6♦ 2♠ 9♣ 2♥ 4♦ K♥ Q♦ 5♠ 7♣ J♥ 10♥ Q♠'),
-         objective: { type: 'cleanHand', goldScoreBar: 0 } },
+         // Retuned (simulation, 300 runs): Was a cleanHand objective (0% clear, unwinnable). Now a score line: -7/0 is ~12%/5%.
+         objective: { type: 'score', min: -7, gold: 0 } },
   297: { id: 297, chapter: 30, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L297-score-c551', hand: parseHand('Q♠ 3♠ 4♣ 9♥ Q♥ 7♦ 7♥ 10♥ 4♥ K♦ 9♠ 5♦ K♥'),
          objective: { type: 'score', min: -1, gold: 6 } },
   298: { id: 298, chapter: 30, type: 'Harder', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L298-score-c125', hand: parseHand('9♠ J♠ A♣ 10♥ 5♦ Q♠ 3♠ 2♠ 2♦ 5♠ 9♥ J♦ 10♦'),
-         objective: { type: 'score', min: 10, gold: 10 } },
+         // Retuned (simulation, 300 runs): Was 10/10 (moon-only, ~5%). 2/10 is ~9%/6%.
+         objective: { type: 'score', min: 2, gold: 10 } },
   299: { id: 299, chapter: 30, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L299-queen-c357', hand: parseHand('10♣ 7♥ 4♠ A♣ A♠ 5♦ 2♥ 4♥ 2♣ 7♠ K♦ A♦ 8♥'),
          objective: { type: 'avoidQueen', goldScoreBar: 17 } },

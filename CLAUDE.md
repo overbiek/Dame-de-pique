@@ -4279,6 +4279,25 @@ before pushing.
   itself can't be reproduced here — confirm on the phone. Same family as the
   campaign-portrait lazy-load bug above: **never re-create a lazy image on a
   per-render path.**
+- **Second half of the same bug — the roster rail (scores and rank
+  nameplates).** `renderPlay` rebuilds `#g-table` with innerHTML every
+  render, and the `.roster` is full of images (avatars, plate art). On iOS
+  the scores and banners still flashed after the background fix. Two things
+  flashed: the freshly created images painting blank, and the plate's
+  `has-art` class (added at runtime by the art's `onload`, it hides the CSS
+  fallback plaque) starting over each time, so the CSS plaque showed until
+  the image reloaded. **`renderPlay` now grabs the old `.roster` before the
+  rebuild and `adoptRoster()` morphs it in place to match the new markup,
+  then puts that same element back** (`morphNode`: attributes, text,
+  children by position; an `<img>` with an unchanged `src` is never touched;
+  `has-art` is preserved). Plate art on the roster is also `eager` +
+  `decoding="sync"` (`rankArtImg(...,eager)`); the pickers stay lazy.
+  Tested in Chrome: image nodes identical across renders, `has-art` kept,
+  and the morphed DOM equals the fresh markup after structure changes
+  (title removed, rank set removed/changed, disconnected seat, long name,
+  new scores). **NOT covered**: the portrait-mode seat blocks (`seatHTML`)
+  and the trick-slot captions still rebuild their images each render —
+  same fix applies if they flash on a portrait iPhone.
 
 ## Not implemented
 - Password reset (no email service configured)

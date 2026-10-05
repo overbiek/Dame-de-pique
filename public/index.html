@@ -8290,7 +8290,7 @@ function rosterRowHTML(G,i,active){
     +`</span>`
     +`<span class="rank-plate xs ros-plate"`
       +`${set?` data-material="${set.material}" data-emblem="${set.emblem}"`:''}>`
-      +(set?rankPlateDressHTML(set.id):'')
+      +(set?rankPlateDressHTML(set.id,true):'')
       +`<span class="ros-txt">`
         +`<span class="ros-nm">${esc(p.name)}</span>`
         +(title?`<span class="ros-ti">${esc(title)}</span>`:'')
@@ -8307,6 +8307,52 @@ function rosterHTML(G){
   return `<div class="roster">`
     +ROSTER_ORDER.map(pos=>rosterRowHTML(G,byPos[pos],active)).join('')
     +`</div>`;
+}
+
+/* The roster must survive a re-render as the SAME DOM nodes.
+   renderPlay rebuilds the whole table with innerHTML on every gameState, and
+   the roster is full of images — avatars, and each rank nameplate's art. A
+   freshly created image paints blank for a frame or two on iOS, and the
+   plate's own `has-art` class (added by the image's onload, which hides the
+   CSS fallback plaque) starts off again every time — so on an iPhone the
+   scores and banners flashed on every card played.
+   Fix: keep the old .roster element, bring it up to date with the new
+   markup in place (text, classes, attributes), and put THAT back in the
+   table. Images whose src hasn't changed are never touched. */
+function morphNode(old,fresh){
+  // attributes
+  for(const a of Array.from(old.attributes)){
+    if(!fresh.hasAttribute(a.name)) old.removeAttribute(a.name);
+  }
+  for(const a of Array.from(fresh.attributes)){
+    let v=a.value;
+    // `has-art` is added at runtime by the plate image's onload and is not
+    // in the markup; dropping it would flash the CSS plaque back in.
+    if(a.name==='class'&&old.classList&&old.classList.contains('has-art')&&!/(^|\s)has-art(\s|$)/.test(v)) v+=' has-art';
+    if(old.getAttribute(a.name)!==v) old.setAttribute(a.name,v);
+  }
+  // children, by position — the roster's structure is fixed, and anything
+  // that doesn't line up is simply replaced
+  const nc=Array.from(fresh.childNodes);
+  for(let i=0;i<nc.length;i++){
+    const o=old.childNodes[i], n=nc[i];
+    if(!o){ old.appendChild(n); continue; }
+    if(o.nodeType!==n.nodeType||(o.nodeType===1&&o.nodeName!==n.nodeName)){ old.replaceChild(n,o); continue; }
+    if(o.nodeType===3){ if(o.nodeValue!==n.nodeValue) o.nodeValue=n.nodeValue; continue; }
+    if(o.nodeType!==1) continue;
+    if(o.nodeName==='IMG'){ if(o.getAttribute('src')!==n.getAttribute('src')) old.replaceChild(n,o); continue; }
+    morphNode(o,n);
+  }
+  while(old.childNodes.length>nc.length) old.removeChild(old.lastChild);
+}
+// Call right AFTER `#g-table.innerHTML` was rebuilt, with the .roster element
+// that was in the table before it (grab it BEFORE the rebuild).
+function adoptRoster(oldRoster){
+  if(!oldRoster) return;
+  const fresh=document.querySelector('#g-table .roster');
+  if(!fresh) return;
+  morphNode(oldRoster,fresh);
+  fresh.replaceWith(oldRoster);
 }
 
 function tableHTML(G,opts){
@@ -10465,10 +10511,10 @@ function rankOrnSVG(material){
    appears. Kept separate from rankNameplateHTML because the account hero
    needs the DRESSING ONLY — its text content is a live <input> and a
    title line that must survive being re-dressed (see #pv-plate-art). */
-function rankPlateDressHTML(setId){
+function rankPlateDressHTML(setId,eager){
   const s=RANK_SET_BY_ID[setId];
   if(!s) return '';
-  return rankArtImg(s.slug,'plate','plate')
+  return rankArtImg(s.slug,'plate','plate',eager)
     +`<span class="rp-grain"></span><span class="rp-frame"></span>`
     +`<span class="rp-side l">${rankOrnSVG(s.material)}</span>`
     +`<span class="rp-side r">${rankOrnSVG(s.material)}</span>`
@@ -10480,11 +10526,15 @@ const rankArtMissing={};
 function rankArtSrc(slug,piece){ return `/ranks/${slug}/${piece}.webp`; }
 // Renders nothing once a piece is known missing, so the fallback CSS
 // underneath is what shows. onerror fires once and records it.
-function rankArtImg(slug,piece,cls){
+// `eager` is for art that is on screen for certain and re-rendered often (the
+// play screen's roster); the pickers keep lazy so opening My Account doesn't
+// fetch every plate up front.
+function rankArtImg(slug,piece,cls,eager){
   const key=slug+'/'+piece;
   if(rankArtMissing[key]) return '';
   return `<img class="rank-art ${cls||''}" src="${rankArtSrc(slug,piece)}" alt="" aria-hidden="true"`+
-         ` loading="lazy" onload="rankArtLoaded(this)" onerror="rankArtFailed('${slug}','${piece}',this)"/>`;
+         ` loading="${eager?'eager':'lazy'}"${eager?' decoding="sync"':''}`+
+         ` onload="rankArtLoaded(this)" onerror="rankArtFailed('${slug}','${piece}',this)"/>`;
 }
 function rankArtFailed(slug,piece,el){
   rankArtMissing[slug+'/'+piece]=true;
@@ -13146,8 +13196,10 @@ function renderPlay(G){
   // run on device, so silently moving its geometry is the last thing it
   // needs. Reads the same ambient `tutorialActive` the six other
   // interaction guards do.
+  const oldRoster=document.querySelector('#g-table .roster');
   $('g-table').innerHTML=tableHTML(G,{fan:true,roster:!tutorialActive,
     actions:cornerActions(playInfo,trickBtn)});
+  adoptRoster(oldRoster);
   bindLastTrickButton($('g-lt-btn'));
   $('g-banner').textContent=bannerText;
 

@@ -4533,8 +4533,16 @@ const CAMPAIGN_LEVELS = {
          seed: 'ddp-ch3-L268-score-c553', hand: parseHand('J♦ Q♣ 7♦ 9♠ 10♠ K♠ Q♦ 4♠ K♣ 6♦ 10♣ 7♥ 10♦'),
          objective: { type: 'score', min: 15, gold: 18 } },
   269: { id: 269, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
+         // Was a cleanHand objective (goldScoreBar 10). This fixed hand holds
+         // the Q♠ and three hearts, and 150 simulated runs — the normal AI,
+         // and a bot built only to dodge penalty cards — produced 0 and 1
+         // clean hands, i.e. effectively unwinnable. Now a plain score line:
+         // the same AI clears +15 about 10% of the time (the rate this
+         // chapter's levels were tuned to). The seed string keeps its old
+         // "clean" name on purpose — it seeds the deal, so renaming it would
+         // change the hand.
          seed: 'ddp-ch3-L269-clean-c28', hand: parseHand('8♥ 3♦ Q♣ 4♣ J♠ Q♦ Q♠ 5♠ 8♦ 5♣ K♥ 10♠ J♥'),
-         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+         objective: { type: 'score', min: 15, gold: 22 } },
   270: { id: 270, chapter: 27, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'ledger_broker',
          seed: 'ddp-ch3-L270-boss-c68',
          hands4: [

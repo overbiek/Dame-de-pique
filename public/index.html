@@ -9136,7 +9136,9 @@ socket.on('campaignStateErr',d=>{
   $('camp-loading').style.display='none';
   toast('err-campaign',d.msg);
 });
-socket.on('campaignError',d=>{ campaignStartPending=false; toast('err-campaign',d.msg); });
+// outOfAttempts: the server sends this alongside campaignOutOfAttempts for the
+// benefit of older cached copies of the app; the popup already covers it here.
+socket.on('campaignError',d=>{ campaignStartPending=false; if(d&&d.outOfAttempts) return; toast('err-campaign',d.msg); });
 
 function campaignCuesFor(levelId,trigger){
   if(!campaignData) return [];

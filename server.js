@@ -12230,7 +12230,16 @@ io.on('connection', (socket) => {
         const spend = await db.consumeCampaignAttempt(acct.id, CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
         // Its own event rather than a campaignError string: the client
         // answers with an "Out of attempts" popup that links to the Shop.
-        if (!spend.ok) return socket.emit('campaignOutOfAttempts', {});
+        if (!spend.ok) {
+          socket.emit('campaignOutOfAttempts', {});
+          // A copy of the app that was already open when the popup shipped
+          // doesn't know that event and would show nothing at all (and stay
+          // stuck on "starting"). It does know campaignError, so send that
+          // too; `outOfAttempts` tells a current client not to also toast it.
+          return socket.emit('campaignError', {
+            msg: 'Out of attempts — buy more in the Shop, or wait for a refill.', outOfAttempts: true,
+          });
+        }
       }
       const clean = String(name || '').trim().slice(0, 16) || acct.nickname || 'Player';
       const { G, token } = await createCampaignRoom(clean, sanitizeAvatar(avatar), acct.id, socket.id, level.id);

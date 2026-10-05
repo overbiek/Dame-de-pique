@@ -4360,6 +4360,11 @@ before pushing.
   (3 clubs / 2 clubs, no passing, one card per trick) — gold is now "void by
   the same trick AND a score floor" (`goldScoreBar`, which suitVoid already
   supported; negative bars work, 0 would not — it is a falsy check there).
+  Table 79 was then moved again, to void by trick **5** (gold: by trick 4
+  and +4): clearing it by trick 3 needed a club led on each of the first
+  three tricks — luck, not play (normal AI 1%, a club-shedding bot 27%) —
+  and trick 4 was still too much to ask of opponents who don't lead clubs on
+  request. Void by 5 is AI 37% / bot 85%.
 - **Scores on a fixed hand are lumpy**: the AI lands on the same few totals,
   so no line may exist at a given target rate (Table 84 jumps from 37% at
   +20 to 2% at +21; Table 89's tricks from 22% at 9 to 5% at 10). The nearer

@@ -4609,8 +4609,15 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 15, gold: 20 } },
   279: { id: 279, chapter: 28, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L279-void-c66', hand: parseHand('Q♠ 9♦ K♣ 7♦ 3♥ 7♣ 6♦ 6♥ 5♦ 9♥ 5♥ 9♣ 4♦'),
-         // Retuned (simulation, 300 runs): Gold used to be 'void by trick 2', impossible with 3 clubs and no pass (one card a trick). Now void by trick 3 AND score >= +4 (~7% for a void-seeking bot).
-         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 3, goldByTrick: 3, goldScoreBar: 4 } },
+         // Retuned twice (simulation, 300 runs each). Originally 'void by trick
+         // 3' / gold 'by trick 2' — gold was impossible (3 clubs, no pass, one
+         // card a trick) and clearing it needed a club led on EACH of the first
+         // three tricks, which is luck, not play (normal AI 1%, a bot that
+         // actively sheds clubs 27%). Moved to trick 4, then — on the owner's
+         // call (the opponents don't lead clubs on request) — to trick 5:
+         // void by trick 5 is AI 37%, bot 85%. Gold stays tighter on BOTH
+         // axes: void by trick 4 AND score >= +4 (AI 7%, bot 13%).
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 5, goldByTrick: 4, goldScoreBar: 4 } },
   280: { id: 280, chapter: 28, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_captain',
          seed: 'ddp-ch3-L280-boss-c450',
          hands4: [

@@ -4193,6 +4193,24 @@ before pushing.
   Safe to re-run: grants are idempotent on (account, `daily_podium`, date),
   `daily_rewards` is ON CONFLICT DO NOTHING, and a day is marked in
   `daily_rewards_settled` only after every payout succeeded.
+- **Prizes are shown on the Daily screen's leaderboard** — a 1st/2nd/3rd
+  strip with the credit chip under the board heading (shown even while the
+  board is still locked, so the incentive is visible before playing), and a
+  chip + amount at the end of each row that placed. The amounts are NOT
+  hard-coded client-side: every `dailyLeaderboardOk` carries `prizes`
+  (`DAILY_PODIUM_CREDITS`) and `prizeFloor` (`DAILY_FORFEIT_SCORE`), and the
+  client uses them (`dailyPrizeFor`) — so a forfeit row, or a tie, shows
+  exactly what the payout will do. The pinned "you" row shows the prize too.
+- **Two more stat cards under day streak / best streak: "Dailies won" and
+  "Top 3 finishes"** (`.daily-streaks` is now a 2×2 grid). Counted by
+  `db.getDailyPodiumCounts` straight from `daily_challenge_scores` with
+  `RANK() OVER (PARTITION BY challenge_date ...)` — not from
+  `daily_rewards`, so history from before payouts existed counts too. Same
+  rules as the payout (ties share a place, forfeits never place) and TODAY
+  is excluded because it isn't over. The `account_id` filter is outside the
+  subquery on purpose: ranks must be worked out against everyone that day.
+  Fits one screen at 915×412 and 667×375 and in portrait. Not run against
+  Postgres.
 - **The message** is `daily_rewards.notified`: the client emits
   `getDailyRewards` from `authOk` (every app open, including silent
   resume), the modal waits for the menu screen (so it can't land on a hand
@@ -4298,6 +4316,28 @@ before pushing.
   new scores). **NOT covered**: the portrait-mode seat blocks (`seatHTML`)
   and the trick-slot captions still rebuild their images each render —
   same fix applies if they flash on a portrait iPhone.
+
+## Four Houses achievement (campaign) and the My Account title size
+- **`ach_four_houses`: a 4-rung ladder, one rung per House finished** —
+  Spades, Hearts, Clubs, Diamonds, in that order. "Finished" = the House's
+  final boss table cleared: Tables 100 / 200 / 300 / 400.
+  `db.getAchievementStats` returns `housesCompleted`, a COUNT of
+  `campaign_level_results` rows with `cleared` and `level_id IN
+  (100,200,300,400)` folded into the existing stats query as a subselect
+  (internal ids: 1-100 Spades, 101-200 Hearts, 201-300 Clubs, 301-400
+  Diamonds). Like every achievement it is re-derived on read, so accounts
+  that already finished a House get the rung the first time they open My
+  Account (and the unlock celebration with it).
+- Rung names ("Master of Spades/Hearts/Clubs/Diamonds") and the title
+  ("House Master", granted at rung 1) are placeholders — display strings
+  only, change freely. The crest `crest_four_houses` has an inline-SVG
+  placeholder (an arched doorway with a spade); **the real art goes in
+  `public/crests/four_houses/1.webp`..`4.webp`** and layers over it with no
+  code change (same contract as every other crest). Not run against Postgres.
+- **My Account hero title** (`.hero-title`) is `.66rem` with `margin-top:-4px`
+  (was `.72rem` / `-3px`): with the exported plate art loaded, the title's
+  bottom edge touched the plate's baked-in tier lozenge. Checked with the art
+  loaded at 915×412.
 
 ## Not implemented
 - Password reset (no email service configured)

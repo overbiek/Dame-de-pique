@@ -1440,6 +1440,19 @@ const ACHIEVEMENTS = [
     desc: 'Finish a game at each match length (4, 8, 12 and 16 rounds) without a single hand going negative.',
     crest: 'crest_quartet',         title: 'title_steady_hand' },
 
+  // -- campaign --
+  // One rung per HOUSE finished, in the order the houses unlock: Spades,
+  // then Hearts, then Clubs, then Diamonds. "Finished" means the house's
+  // final boss table is cleared (Tables 100/200/300/400 — see
+  // db.getAchievementStats's housesCompleted). The campaign is strictly
+  // sequential, so the count can only ever grow in that order.
+  // Names are placeholders the owner can change freely (they are display
+  // strings only); the art goes in public/crests/four_houses/1-4.webp.
+  { id: 'ach_four_houses',    stat: 'housesCompleted',    tiers: [1, 2, 3, 4],
+    names: ['Master of Spades', 'Master of Hearts', 'Master of Clubs', 'Master of Diamonds'],
+    desc: 'Finish a House of the campaign: Spades, Hearts, Clubs, then Diamonds.',
+    crest: 'crest_four_houses',     title: 'title_house_master' },
+
   // -- secret --
   // Hidden until earned, and both read a stat that moves DOWNWARD, hence
   // cmp:'lte'. A hand's floor is about -88 (the queen plus twelve hearts
@@ -1702,6 +1715,7 @@ const COSMETICS = {
     { id: 'title_steady_hand',       name: 'Steady Hand',         unlock: 'ach_steady_hand' },
     { id: 'title_abyss',             name: 'Out of the Abyss',    unlock: 'ach_abyss' },
     { id: 'title_rock_bottom',       name: 'Rock Bottom',         unlock: 'ach_rock_bottom' },
+    { id: 'title_house_master',      name: 'House Master',        unlock: 'ach_four_houses' },
     // rankTier is a SLUG, not a display name — tierReached compares
     // against RANK_TABLE's slug, so a capitalised tier name here would
     // silently never match and lock every rank title forever.
@@ -12085,12 +12099,13 @@ io.on('connection', (socket) => {
     if (!DB_ENABLED || !acct) {
       return socket.emit('dailyStatus', {
         date, passDir, guest: true, playedToday: false, score: null,
-        streak: 0, bestStreak: 0, position: null, entries: null,
+        streak: 0, bestStreak: 0, wins: 0, top3: 0, position: null, entries: null,
       });
     }
     try {
       const mine = await db.getDailyScore(acct.id, date);
       const streak = await db.getDailyStreak(acct.id, date);
+      const podium = await db.getDailyPodiumCounts(acct.id, date, DAILY_FORFEIT_SCORE);
       const standing = mine ? await db.getDailyStanding(acct.id, date) : null;
       socket.emit('dailyStatus', {
         date, passDir, guest: false,
@@ -12099,6 +12114,7 @@ io.on('connection', (socket) => {
         tricksWon: mine ? mine.tricksWon : null,
         shotMoon: mine ? mine.shotMoon : false,
         streak: streak.streak, bestStreak: streak.bestStreak,
+        wins: podium.wins, top3: podium.top3,
         position: standing ? standing.position : null,
         entries: standing ? standing.entries : null,
       });
@@ -12117,14 +12133,18 @@ io.on('connection', (socket) => {
   // the client to hide it" reasoning as getCampaignFriendsResults.
   socket.on('getDailyLeaderboard', async ({ accountToken }) => {
     const date = dailyDateKey();
-    if (!DB_ENABLED) return socket.emit('dailyLeaderboardOk', { date, rows: [], you: null, locked: false });
+    // The prize table travels with every board reply so the client shows what
+    // the server actually pays (DAILY_PODIUM_CREDITS) instead of its own copy;
+    // rows at or below prizeFloor are forfeits and never place.
+    const prizeInfo = { prizes: DAILY_PODIUM_CREDITS, prizeFloor: DAILY_FORFEIT_SCORE };
+    if (!DB_ENABLED) return socket.emit('dailyLeaderboardOk', { date, rows: [], you: null, locked: false, ...prizeInfo });
     try {
       const acct = await lookupAccountByToken(accountToken);
       // Guests can play but nothing is banked for them (see the Daily
       // Challenge section of CLAUDE.md), so there's never a finished-today
       // score to unlock the board with — always locked for a guest.
       const mine = acct ? await db.getDailyScore(acct.id, date) : null;
-      if (!mine) return socket.emit('dailyLeaderboardOk', { date, rows: [], you: null, locked: true });
+      if (!mine) return socket.emit('dailyLeaderboardOk', { date, rows: [], you: null, locked: true, ...prizeInfo });
       const rows = await db.getDailyLeaderboard(date, 100);
       // Sent whenever the player has a score today, even if they're
       // already visible in the top 100 — the client pins it to the bottom
@@ -12135,7 +12155,7 @@ io.on('connection', (socket) => {
         accountId: acct.id, position: standing.position, entries: standing.entries,
         nickname: acct.nickname, avatar: acct.avatar, score: standing.score,
       } : null;
-      socket.emit('dailyLeaderboardOk', { date, rows, you, locked: false });
+      socket.emit('dailyLeaderboardOk', { date, rows, you, locked: false, ...prizeInfo });
     } catch (e) {
       console.error('getDailyLeaderboard error:', e.message);
       socket.emit('dailyError', { msg: "Couldn't load the leaderboard. Try again." });

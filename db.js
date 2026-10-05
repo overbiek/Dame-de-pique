@@ -1347,7 +1347,13 @@ async function recordCleanLengthGame(accountId, roundsTotal) {
 // achievement_stats — see the table comment in ensureSchema.
 async function getAchievementStats(accountId) {
   const { rows } = await pool.query(
-    `SELECT a.*, r.mmr_highest
+    `SELECT a.*, r.mmr_highest,
+            -- Houses finished = house-final boss tables cleared. The campaign's
+            -- internal level ids are 1-100 Spades, 101-200 Hearts, 201-300
+            -- Clubs, 301-400 Diamonds, so the finals are 100/200/300/400.
+            (SELECT COUNT(*) FROM campaign_level_results c
+              WHERE c.account_id = k.account_id AND c.cleared
+                AND c.level_id IN (100, 200, 300, 400)) AS houses_completed
      FROM (SELECT $1::int AS account_id) k
      LEFT JOIN achievement_stats a ON a.account_id = k.account_id
      LEFT JOIN ranked_stats r ON r.account_id = k.account_id`,
@@ -1372,6 +1378,7 @@ async function getAchievementStats(accountId) {
     bestGame: s.best_game || 0,
     worstGame: s.worst_game || 0,
     mmrPeak: s.mmr_highest || 0,
+    housesCompleted: Number(s.houses_completed) || 0,
     // Steady Hand — how many of the 4 match lengths have ever been
     // finished naturally with no round going negative. Summed here
     // rather than stored as its own counter so the 4 flags stay the
@@ -1744,6 +1751,29 @@ async function settleDailyRewards(date, payouts, floorScore) {
   return paid;
 }
 
+// How many FINISHED days this account won, and how many it placed top-3 on.
+// Computed from the scores themselves rather than from daily_rewards, so it
+// covers history from before podium payouts existed. Same rules as the
+// payout: ties share a placement, a forfeit (score <= floorScore) never
+// places, and today is excluded because it isn't over yet. The filter on
+// account_id sits OUTSIDE the subquery on purpose — the ranks must be worked
+// out against everybody who played that day.
+async function getDailyPodiumCounts(accountId, today, floorScore) {
+  const { rows } = await pool.query(
+    `SELECT COUNT(*) FILTER (WHERE rnk = 1) AS wins,
+            COUNT(*) FILTER (WHERE rnk <= 3) AS top3
+     FROM (
+       SELECT account_id,
+              RANK() OVER (PARTITION BY challenge_date ORDER BY score DESC) AS rnk
+       FROM daily_challenge_scores
+       WHERE challenge_date < $2::date AND score > $3
+     ) t
+     WHERE account_id = $1`,
+    [accountId, today, floorScore]
+  );
+  return { wins: Number(rows[0].wins) || 0, top3: Number(rows[0].top3) || 0 };
+}
+
 // Podium results the player hasn't been shown yet, oldest first.
 async function getPendingDailyRewards(accountId) {
   const { rows } = await pool.query(
@@ -1946,5 +1976,5 @@ module.exports = {
   getCampaignState, consumeCampaignAttempt, upsertCampaignLevelResult,
   advanceCampaignUnlock, markCampaignCuesSeen, getCampaignFriendsResults,
   recordCampaignHandStats, getCampaignStats,
-  getClearedLevelIds, purchaseAttempts, isDailySettled, settleDailyRewards, getPendingDailyRewards, ackDailyRewards,
+  getDailyPodiumCounts, getClearedLevelIds, purchaseAttempts, isDailySettled, settleDailyRewards, getPendingDailyRewards, ackDailyRewards,
 };

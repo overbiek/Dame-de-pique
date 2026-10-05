@@ -1084,8 +1084,8 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
   font-size:2.4rem;font-weight:700;line-height:1.1;color:var(--gold-hi);margin:4px 0 2px;
 }
 .daily-sub{font-size:.82rem;color:var(--muted)}
-.daily-streaks{display:flex;gap:9px;margin-top:12px}
-.daily-streaks .stat-card{flex:1}
+/* Two rows of two: day streak | best streak, then dailies won | top-3 finishes */
+.daily-streaks{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
 /* The leaderboard is a self-contained box: fixed heading, scrolling rows,
    and the player's own standing pinned to the bottom EDGE OF THE BOX.
    Deliberately not position:fixed like #rank-you-bar — that one spans the
@@ -1123,6 +1123,23 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
   font-family:var(--font-num);font-variant-numeric:tabular-nums;
   flex:0 0 auto;font-weight:700;
 }
+/* Prize strip (1st / 2nd / 3rd with the credit chip) and the per-row prize */
+.daily-prizes{
+  flex:0 0 auto;display:flex;gap:6px;padding:7px 10px;
+  border-bottom:1px solid var(--line);background:rgba(var(--ddp-brass-rgb),.07);
+}
+.daily-prizes .dp{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:5px;
+  padding:4px 4px;border-radius:9px;border:1px solid rgba(var(--ddp-brass-rgb),.28);
+  background:rgba(var(--ddp-scrim-rgb),.22);white-space:nowrap;
+}
+.daily-prizes .dp i{font-style:normal;font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.daily-prizes .dp b,.daily-rows td.prize-col b,.daily-you .prz b{
+  font-family:var(--font-num);font-variant-numeric:tabular-nums;color:var(--gold-hi);font-size:.82rem;
+}
+.daily-rows td.prize-col{width:1%;white-space:nowrap;text-align:right;padding-left:2px}
+.daily-rows td.prize-col .credit-chip,.daily-you .prz .credit-chip,.daily-prizes .credit-chip{vertical-align:-3px;margin-right:3px}
+.daily-you .prz{flex:0 0 auto;margin-left:6px;white-space:nowrap}
 .daily-rows{width:100%;border-collapse:collapse;font-size:.85rem}
 .daily-rows th,.daily-rows td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
 .daily-rows td.pos-col,.daily-rows td.score-col{
@@ -1816,9 +1833,12 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 .rank-plate[data-material] .hero-name-input{color:var(--rm-ink)}
 .rank-plate[data-material] .hero-name-input::placeholder{color:var(--rm-ink);opacity:.5}
 .rank-plate[data-material] .hero-name-input:focus{border-bottom-color:var(--rm-orn)}
+/* Smaller (.72rem -> .66rem) and 1px higher (-3px -> -4px): with the exported
+   plate art loaded, the title's bottom edge touched the banner's baked-in
+   tier lozenge underneath it. */
 .hero-title{
-  margin-top:-3px;min-height:1.05rem;
-  font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  margin-top:-4px;min-height:.97rem;
+  font-size:.66rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
   color:var(--gold-lo);
 }
 /* On a plaque the title is the plate's own ink, dropped back so the name
@@ -6378,6 +6398,14 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
           <div class="stat-value" id="daily-best-streak">0</div>
           <div class="stat-label">Best streak</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-value" id="daily-wins">0</div>
+          <div class="stat-label">Dailies won</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="daily-top3">0</div>
+          <div class="stat-label">Top 3 finishes</div>
+        </div>
       </div>
 
       <button class="btn btn-primary btn-block" id="daily-play" style="margin-top:14px"
@@ -6395,6 +6423,8 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
          heading and the pinned "you" row stay put while the rows move. -->
     <div id="daily-board-wrap" style="display:none">
       <div class="daily-board-head">Today's leaderboard</div>
+      <!-- What the top three win, shown whether or not the board is unlocked -->
+      <div class="daily-prizes" id="daily-prizes" style="display:none"></div>
       <div class="daily-board-scroll">
         <div id="daily-board-empty" class="note" style="display:none">Nobody has finished today's hand yet. Be first.</div>
         <table class="daily-rows" id="daily-board" style="display:none"><tbody id="daily-board-rows"></tbody></table>
@@ -8576,6 +8606,8 @@ socket.on('dailyStatus',d=>{
   $('daily-streaks').style.display=d.guest?'none':'flex';
   $('daily-streak').textContent=d.streak||0;
   $('daily-best-streak').textContent=d.bestStreak||0;
+  $('daily-wins').textContent=d.wins||0;
+  $('daily-top3').textContent=d.top3||0;
 
   if(d.playedToday){
     $('daily-score').textContent=(d.score>0?'+':'')+d.score;
@@ -8594,8 +8626,25 @@ function ordinal(n){
   const s=['th','st','nd','rd'],v=n%100;
   return n+(s[(v-20)%10]||s[v]||s[0]);
 }
+// The prize for a placement, from the table the server sent with the board
+// (so what's shown is what's paid). A forfeit never places, so a row at or
+// below the floor gets nothing however high it ranks on a quiet day.
+let dailyPrizes={}, dailyPrizeFloor=-Infinity;
+function dailyPrizeFor(pos,score){
+  const c=dailyPrizes[pos];
+  return (c&&score>dailyPrizeFloor)?c:0;
+}
+function dailyPrizeHTML(credits){
+  return credits?`${creditChipHTML(13)}<b>${credits}</b>`:'';
+}
 socket.on('dailyLeaderboardOk',d=>{
   if(!$('s-daily').classList.contains('active')) return;
+  dailyPrizes=d.prizes||{};
+  dailyPrizeFloor=typeof d.prizeFloor==='number'?d.prizeFloor:-Infinity;
+  const strip=$('daily-prizes');
+  const places=[1,2,3].filter(n=>dailyPrizes[n]);
+  strip.innerHTML=places.map(n=>`<span class="dp"><i>${ordinal(n)}</i>${dailyPrizeHTML(dailyPrizes[n])}</span>`).join('');
+  strip.style.display=places.length?'flex':'none';
   const rows=d.rows||[];
   const has=rows.length>0;
   $('daily-board-wrap').style.display='flex';
@@ -8621,6 +8670,7 @@ socket.on('dailyLeaderboardOk',d=>{
       <td class="pos-col">${pos}</td>
       <td>${who}</td>
       <td class="score-col">${r.score>0?'+':''}${r.score}</td>
+      <td class="prize-col">${dailyPrizeHTML(dailyPrizeFor(pos,r.score))}</td>
     </tr>`;
   }).join('');
 
@@ -8630,7 +8680,8 @@ socket.on('dailyLeaderboardOk',d=>{
   if(d.you){
     you.innerHTML=`<span class="pos">${ordinal(d.you.position)}</span>`
       +`<span class="who"><span class="lb-av">${avatarHTML(d.you.avatar,d.you.nickname)}</span> ${esc(d.you.nickname)} (you)</span>`
-      +`<span class="sc">${d.you.score>0?'+':''}${d.you.score}</span>`;
+      +`<span class="sc">${d.you.score>0?'+':''}${d.you.score}</span>`
+      +(dailyPrizeFor(d.you.position,d.you.score)?`<span class="prz">${dailyPrizeHTML(dailyPrizeFor(d.you.position,d.you.score))}</span>`:'');
     you.style.display='flex';
   }else{
     you.style.display='none';
@@ -10321,6 +10372,15 @@ const CREST_ART={
     `<circle cx="37" cy="24" r="1.6" fill="var(--gold-hi)"/>`+
     `<circle cx="24" cy="37" r="1.6" fill="var(--gold-hi)"/>`+
     `<circle cx="11" cy="24" r="1.6" fill="var(--gold-hi)"/>`,
+  // Four Houses (ach_four_houses) — an arched doorway with a spade in it:
+  // one door per House of the campaign, opened in turn. Placeholder until the
+  // real per-rung art (public/crests/four_houses/1-4.webp) is dropped in.
+  crest_four_houses:
+    `<circle cx="24" cy="24" r="18" fill="#12100D"/>`+
+    `<path d="M15 36V22a9 9 0 0118 0v14z" fill="none" stroke="var(--gold)" stroke-width="1.6"/>`+
+    `<path d="M18.5 36V22.4a5.5 5.5 0 0111 0V36" fill="none" stroke="var(--gold-lo)" stroke-width="1"/>`+
+    crestGlyph('&#9824;',10,'var(--gold-hi)',27)+
+    `<path d="M12 36h24" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round"/>`,
   // The two SECRET achievements (ach_abyss, ach_rock_bottom — see
   // secret:true server-side) — same missing-entry gap as the four
   // above, now with real per-tier art on disk. Both are single-tier, so

@@ -1499,6 +1499,74 @@ const THEME_PRICE = 500;
 // them. See the NAMING/pricing note on COSMETICS.scenes below.
 const SCENE_PRICE_1 = 500;
 const SCENE_PRICE_2 = 1000;
+// ── Campaign rewards in the Shop ────────────────────────────────
+// Every chapter's background, and every boss's portrait as an avatar, can
+// be bought — but only after the player has CLEARED that chapter's boss
+// table (the chapter's last level, `gateLevel`). Until then the item does
+// not exist for them at all: cosmeticsFor leaves it out of the catalog, so
+// it isn't merely hidden in the UI, and buyCosmetic / updateProfile refuse
+// it server-side too. Once bought it can never be revoked (purchases are
+// stored), exactly like every other shop item.
+//
+// The seven bosses who share a face with an original House Regular avatar
+// (The Sharp, Scholar, Wildcard, Optimist, Jester, Charmer, Closer — they
+// carry a `seatAvatar`) don't get a second `boss_` item: the regular avatar
+// itself becomes the reward (gated on the boss, bought for AVATAR_PRICE).
+// Accounts that existed when that rule shipped were given them outright by
+// db.js's one-time migration.
+// Chapter 5's background is the shop's old "The Conservatory" scene — it
+// keeps its id (so anyone who already bought it keeps it) but is now sold
+// only once Chapter 5 is cleared, like every other chapter background.
+const CAMPAIGN_BACKGROUND_PRICE = 1000;
+const CAMPAIGN_BOSS_AVATAR_PRICE = 1500;
+let _campaignCosmetics = null;
+function campaignCosmetics() {
+  if (_campaignCosmetics) return _campaignCosmetics;
+  const scenes = [], avatars = [], gatedAvatars = {};
+  const shopSceneNames = new Set(COSMETICS._baseScenes.map(sc => sc.name));
+  const bossNameCount = {};
+  for (const ch of CAMPAIGN_CHAPTERS) {
+    const b = CAMPAIGN_CHARACTERS[ch.bossId];
+    if (b) bossNameCount[b.name] = (bossNameCount[b.name] || 0) + 1;
+  }
+  for (const ch of CAMPAIGN_CHAPTERS) {
+    scenes.push({
+      // Chapter 5 reuses the pre-existing scene id (and its art at
+      // /scenes/conservatory.webp); every other chapter gets its own.
+      id: ch.slug === 'conservatory' ? 'scene_conservatory' : 'scene_camp_' + ch.slug,
+      // A chapter title can collide with a shop scene's name; keep the two
+      // tellable apart.
+      name: shopSceneNames.has(ch.title) ? ch.title + ' (Campaign)' : ch.title,
+      unlock: null, price: CAMPAIGN_BACKGROUND_PRICE, gateLevel: ch.levelEnd,
+    });
+    const boss = CAMPAIGN_CHARACTERS[ch.bossId];
+    if (!boss) continue;
+    if (boss.seatAvatar) {
+      gatedAvatars[boss.seatAvatar] = ch.levelEnd;
+    } else {
+      avatars.push({
+        id: 'boss_' + ch.bossId,
+        // Three chapters have a boss called "The Broker" and two "The
+        // Keeper" — the chapter is what tells them apart.
+        name: bossNameCount[boss.name] > 1 ? `${boss.name} (${ch.title})` : boss.name,
+        unlock: null, price: CAMPAIGN_BOSS_AVATAR_PRICE, gateLevel: ch.levelEnd,
+      });
+    }
+  }
+  _campaignCosmetics = {
+    scenes, avatars, gatedAvatars,
+    bossAvatarIds: new Set(avatars.map(a => a.id)),
+  };
+  return _campaignCosmetics;
+}
+function isBossAvatarId(id) { return campaignCosmetics().bossAvatarIds.has(id); }
+// Any avatar id that is earned through the campaign: a boss_ portrait OR a
+// House Regular that is now gated on its boss.
+function isCampaignAvatarId(id) {
+  const c = campaignCosmetics();
+  return c.bossAvatarIds.has(id) || Object.prototype.hasOwnProperty.call(c.gatedAvatars, id);
+}
+
 const COSMETICS = {
   // Obsidienne and Émeraude are the two free/default themes (see
   // filterEquipped's fallback and applyTableTheme's client-side default);
@@ -1551,13 +1619,12 @@ const COSMETICS = {
   // Tolkien landmark in it — but "Mordor" is a Middle-earth Enterprises
   // trademark, so the scene ships under a descriptive name instead. Only
   // the display string and the id differ; the artwork is untouched.
-  scenes: [
+  _baseScenes: [
     { id: 'scene_moulin_rouge',   name: 'The Moulin Rouge',   unlock: null },
     { id: 'scene_holiday',        name: 'Holiday',            unlock: null, price: SCENE_PRICE_1 },
     { id: 'scene_victorian_room', name: 'The Victorian Room', unlock: null, price: SCENE_PRICE_1 },
     { id: 'scene_noir_casino',    name: 'The Noir Casino',    unlock: null, price: SCENE_PRICE_1 },
     { id: 'scene_moon_balcony',   name: 'The Moon Balcony',   unlock: null, price: SCENE_PRICE_1 },
-    { id: 'scene_conservatory',   name: 'The Conservatory',   unlock: null, price: SCENE_PRICE_1 },
     { id: 'scene_theater',        name: 'The Theater',        unlock: null, price: SCENE_PRICE_1 },
     { id: 'scene_observatory',    name: 'The Observatory',    unlock: null, price: SCENE_PRICE_1 },
     { id: 'scene_skyline',        name: 'The Skyline',        unlock: null, price: SCENE_PRICE_2 },
@@ -1568,6 +1635,11 @@ const COSMETICS = {
     { id: 'scene_arabian_nights', name: 'Arabian Nights',     unlock: null, price: SCENE_PRICE_2 },
     { id: 'scene_magic_forest',   name: 'The Magic Forest',   unlock: null, price: SCENE_PRICE_2 },
   ],
+  // The shop scenes above plus one background per campaign chapter. The
+  // campaign ones only exist for a player once they've cleared that
+  // chapter's boss table (see campaignCosmetics / cosmeticsFor) — a getter
+  // because CAMPAIGN_CHAPTERS is defined much further down this file.
+  get scenes() { return [...this._baseScenes, ...campaignCosmetics().scenes]; },
   cardFronts: [
     { id: 'cardfront_standard',    name: 'Classic',      unlock: null },
     // Royal Court is achievement-only, no price — Nocturne Deck, which
@@ -1646,10 +1718,17 @@ const COSMETICS = {
   // AVATAR_COLLECTIONS/PRICED_AVATAR_IDS are defined further down the
   // file; deferred until first read, same as those two.
   get avatars() {
-    return AVATAR_COLLECTIONS.flatMap(c => c.avatars.map(([id, name]) => ({
-      id, name, unlock: null,
-      price: PRICED_AVATAR_IDS.has(id) ? AVATAR_PRICE : undefined,
-    })));
+    const gated = campaignCosmetics().gatedAvatars;
+    return AVATAR_COLLECTIONS.flatMap(c => c.avatars.map(([id, name]) => {
+      const gateLevel = gated[id];
+      return {
+        id, name, unlock: null,
+        // A boss-gated House Regular is sold at the normal avatar price once
+        // its boss has been beaten.
+        price: gateLevel ? AVATAR_PRICE : (PRICED_AVATAR_IDS.has(id) ? AVATAR_PRICE : undefined),
+        gateLevel,
+      };
+    })).concat(campaignCosmetics().avatars);
   },
 };
 
@@ -1742,9 +1821,13 @@ const AVATAR_IDS = new Set(
 // established, just cheaper since there are nine of them rather than one.
 const AVATAR_PRICE = 500;
 const PRICED_AVATAR_IDS = new Set([
-  'regular_belle', 'regular_countess', 'regular_envoy', 'regular_baron', 'regular_castaway',
-  'regular_rookie', 'regular_sheikh', 'regular_duke', 'regular_reveler',
+  'regular_countess', 'regular_castaway', 'regular_reveler',
 ]);
+// The starting (free) avatars are the ones NOT priced above and NOT earned
+// through a campaign boss: belle, envoy, baron, rookie, sheikh, duke. The
+// seven original House Regulars are earned by beating their boss (see
+// campaignCosmetics); accounts that existed when that rule shipped keep
+// them via db.js's one-time grandfathering migration.
 
 // The single evaluation point. Everything downstream — the Achievements
 // tab, every cosmetic picker, and save-time validation — reads this one
@@ -1832,14 +1915,18 @@ function evaluateAchievements(stats) {
   });
 }
 
-function cosmeticsFor(achievements, stats, purchases) {
+function cosmeticsFor(achievements, stats, purchases, cleared) {
   const done = new Set(achievements.filter(a => a.unlocked).map(a => a.id));
   const bought = new Set(purchases || []);
+  // Campaign rewards (gateLevel) exist for a player only once they have
+  // cleared that table, or already own the item. Everything else has no
+  // gate and is always listed.
+  const visible = c => !c.gateLevel || bought.has(c.id) || !!(cleared && cleared.has(c.gateLevel));
   // rankTierName is sent alongside the slug so the client can say
   // "Reach Gambler" without carrying its own copy of RANK_TABLE — the
   // rule that visible rank is server-derived applies here too.
   const tierName = slug => (RANK_COSMETICS.find(r => r.slug === slug) || {}).tier || slug;
-  const mark = list => list.map(c => ({
+  const mark = list => list.filter(visible).map(c => ({
     id: c.id, name: c.name, unlock: c.unlock || null,
     unlockName: c.unlock ? ((ACHIEVEMENTS.find(a => a.id === c.unlock) || {}).names || [])[0] || null : null,
     rankTier: c.rankTier || null,
@@ -1918,7 +2005,8 @@ async function loadPlayerCosmetics(accountId) {
   const stats = await db.getAchievementStats(accountId);
   const achievements = evaluateAchievements(stats);
   const purchases = await db.getPurchases(accountId);
-  const catalog = cosmeticsFor(achievements, stats, purchases);
+  const cleared = new Set(await db.getClearedLevelIds(accountId));
+  const catalog = cosmeticsFor(achievements, stats, purchases, cleared);
   const stored = await db.getCosmetics(accountId);
   const equipped = filterEquipped(stored, catalog);
   const seen = new Set(stored.seen);
@@ -1976,7 +2064,7 @@ function sanitizeAvatar(a) {
   // whole. The 8-char slice below exists to bound arbitrary emoji input
   // and would mangle these ("regular_charmer" -> "regular_"), which is
   // why the allow-list check has to come first.
-  if (AVATAR_IDS.has(s)) return s;
+  if (AVATAR_IDS.has(s) || isBossAvatarId(s)) return s;
   // A snake_case value that ISN'T a currently-known id is a STALE
   // portrait id (from a since-removed collection — see AVATAR_COLLECTIONS'
   // own note above), not emoji/text input: real emoji are never plain
@@ -1986,6 +2074,17 @@ function sanitizeAvatar(a) {
   // sitting in the account forever.
   if (/^[a-z_]+$/.test(s)) return null;
   return s.slice(0, 8) || null;
+}
+
+// What a brand-new account may start with: an emoji, or a portrait that is
+// free. A priced or boss-gated portrait has to be earned/bought first, and
+// signup has no ownership to check against — so a crafted request naming one
+// gets no avatar instead.
+function startingAvatar(a) {
+  const s = sanitizeAvatar(a);
+  if (!s) return s;
+  const item = COSMETICS.avatars.find(x => x.id === s);
+  return item && (item.price || item.gateLevel) ? null : s;
 }
 
 // `opts` is optional and every field defaults to the classic game, so
@@ -11188,7 +11287,7 @@ io.on('connection', (socket) => {
       const existing = await db.findAccountByUsername(u);
       if (existing) return socket.emit('authError', { msg: 'That username is already taken.' });
       const passwordHash = await bcrypt.hash(p, 10);
-      const account = await db.createAccount({ username: u, passwordHash, nickname: nick, avatar: sanitizeAvatar(avatar) });
+      const account = await db.createAccount({ username: u, passwordHash, nickname: nick, avatar: startingAvatar(avatar) });
       const token = makeToken();
       await db.createSession(account.id, token);
       attachAccountSocket(socket, account.id);
@@ -11258,7 +11357,10 @@ io.on('connection', (socket) => {
       if (finalAvatar) {
         const { catalog } = await loadPlayerCosmetics(account.id);
         const found = catalog.avatars.find(a => a.id === finalAvatar);
-        if (found && !found.unlocked) finalAvatar = account.avatar;
+        // A boss avatar the player hasn't cleared isn't in their catalog at
+        // all (found is undefined) — that must count as locked, not as
+        // "not a catalog item, so fine".
+        if (found ? !found.unlocked : isCampaignAvatarId(finalAvatar)) finalAvatar = account.avatar;
       }
       const updated = await db.updateProfile(account.id, { nickname: nick, avatar: finalAvatar });
       socket.emit('authOk', { token, account: db.toPublic(updated) });
@@ -11770,6 +11872,13 @@ io.on('connection', (socket) => {
       // from any other category simply isn't found.
       const item = [...COSMETICS.scenes, ...COSMETICS.cardFronts, ...COSMETICS.tableThemes, ...COSMETICS.avatars].find(c => c.id === itemId);
       if (!item || !item.price) return socket.emit('shopError', { msg: "That item isn't for sale." });
+      // A campaign reward can only be bought once its boss table is cleared.
+      // Checked here, not just by leaving it out of the catalog, so a
+      // crafted message naming the id can't skip the gate.
+      if (item.gateLevel) {
+        const cleared = new Set(await db.getClearedLevelIds(account.id));
+        if (!cleared.has(item.gateLevel)) return socket.emit('shopError', { msg: 'Clear that campaign table first.' });
+      }
       const res = await db.purchaseItem(account.id, item.id, item.price);
       if (!res.ok) {
         return socket.emit('shopError', {
@@ -12111,7 +12220,9 @@ io.on('connection', (socket) => {
       }
       if (!CAMPAIGN_UNLIMITED_ATTEMPTS) {
         const spend = await db.consumeCampaignAttempt(acct.id, CAMPAIGN_MAX_ATTEMPTS, CAMPAIGN_ATTEMPT_REFILL_MS);
-        if (!spend.ok) return socket.emit('campaignError', { msg: 'Out of attempts — buy more in the Shop, or wait for a refill.' });
+        // Its own event rather than a campaignError string: the client
+        // answers with an "Out of attempts" popup that links to the Shop.
+        if (!spend.ok) return socket.emit('campaignOutOfAttempts', {});
       }
       const clean = String(name || '').trim().slice(0, 16) || acct.nickname || 'Player';
       const { G, token } = await createCampaignRoom(clean, sanitizeAvatar(avatar), acct.id, socket.id, level.id);

@@ -6587,6 +6587,18 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
      being the only thing on offer. Deliberately no "at this table"/
      "best scores" sections here — this is a quick reminder mid-hand,
      not the pre-game popup. -->
+<!-- Shown when a table is started with no attempts left — either caught
+     client-side before the intro dialogue plays, or sent by the server
+     (campaignOutOfAttempts) if the local count was stale. -->
+<div id="camp-noattempts-modal" class="camp-modal-scrim" aria-hidden="true" onclick="if(event.target===this)closeNoAttemptsModal()">
+  <div class="camp-modal-card" style="max-width:380px;text-align:center">
+    <button class="camp-modal-close" onclick="closeNoAttemptsModal()" aria-label="Close">&#10005;</button>
+    <div class="camp-modal-title">Out of attempts</div>
+    <div class="note gold" style="margin-top:10px">You're out of attempts. You can buy some in the Shop to continue!</div>
+    <button class="btn btn-primary btn-block" style="margin-top:18px" onclick="goShopBoosts()">Go to Shop</button>
+  </div>
+</div>
+
 <div id="camp-leave-modal" class="camp-modal-scrim" aria-hidden="true" onclick="if(event.target===this)closeCampaignLeaveModal()">
   <div class="camp-modal-card" style="max-width:400px">
     <button class="camp-modal-close" onclick="closeCampaignLeaveModal()" aria-label="Close">&#10005;</button>
@@ -7694,7 +7706,14 @@ const CARDFRONT_ART_SETS={cardfront_noir:'noir',cardfront_bold:'bold',cardfront_
    first use rather than pulled into the install-time cache. */
 const sceneArtMissing={};
 function sceneArtSlug(id){ return id.replace(/^scene_/,''); }
-function sceneArtSrc(id){ return `/scenes/${sceneArtSlug(id)}.webp`; }
+// Campaign chapter backgrounds (scene_camp_<chapter slug>) are the same
+// photos the campaign map already shows, so they're read from there rather
+// than copied into /scenes.
+function sceneArtSrc(id){
+  return /^scene_camp_/.test(id)
+    ? `/campaign/chapters/${id.replace(/^scene_camp_/,'')}.webp`
+    : `/scenes/${sceneArtSlug(id)}.webp`;
+}
 function sceneArtImg(id){
   if(sceneArtMissing[id]) return '';
   return `<img class="scene-art-img" src="${sceneArtSrc(id)}" alt="" aria-hidden="true"`+
@@ -7774,7 +7793,10 @@ function preloadCardFrontArt(slug){
 let equippedScene=DEFAULT_SCENE, equippedCardFront=DEFAULT_CARDFRONT;
 
 function applyScene(id,persist){
-  equippedScene=SCENE_IDS.includes(id)?id:DEFAULT_SCENE;
+  // scene_camp_* are the campaign-chapter backgrounds the Shop sells after a
+  // chapter is cleared. They aren't enumerated in SCENE_IDS (there are 39);
+  // the server decides whether you own one.
+  equippedScene=(SCENE_IDS.includes(id)||/^scene_camp_[a-z_]+$/.test(id))?id:DEFAULT_SCENE;
   const el=$('scene-layer');
   if(el){
     el.setAttribute('data-scene',equippedScene);
@@ -7920,7 +7942,14 @@ for(const c of AVATAR_COLLECTIONS)
    constantly — deferring them re-runs the intersection check on each
    rebuild and risks the avatar visibly popping mid-trick, to save
    nothing, since a seat avatar is on screen by definition. */
+// A campaign boss's portrait as an avatar (boss_<character id>), unlocked in
+// the Shop after beating that boss. The art is the campaign character file
+// itself, so every client can draw any player's boss avatar without a table.
+function bossAvatarSrc(v){ return `/campaign/characters/${v.slice(5)}.webp`; }
+const isBossAvatar=v=>/^boss_[a-z_]+$/.test(v||'');
 function avatarHTML(v,name,lazy){
+  if(isBossAvatar(v)) return `<img class="av-img" src="${bossAvatarSrc(v)}" alt="${esc(name||'')}"`+
+                ` loading="${lazy?'lazy':'eager'}" draggable="false"/>`;
   const a=AVATAR_ART[v];
   if(a) return `<img class="av-img" src="${a.src}" alt="${esc(a.name)}"`+
                 ` loading="${lazy?'lazy':'eager'}" draggable="false"/>`;
@@ -9809,10 +9838,23 @@ function campaignModalPlay(){
   const levelId=campaignModalLevelId;
   if(levelId==null) return;
   campaignCloseLevelModal();
+  // No point playing the intro dialogue just to be refused at the end. The
+  // server re-checks (and is the authority) — this only saves the detour.
+  const att=campaignData&&campaignData.attempts;
+  if(att&&!att.unlimited&&att.available<1){ openNoAttemptsModal(); return; }
   const level=(campaignData&&campaignData.levels||[]).find(l=>l.id===levelId);
   const trigger=level&&level.type==='BOSS'?'bossIntro':'preLevel';
   campaignMaybeShow(levelId,trigger,()=>campaignStartLevel(levelId));
 }
+function openNoAttemptsModal(){ $('camp-noattempts-modal').classList.add('show'); }
+function closeNoAttemptsModal(){ $('camp-noattempts-modal').classList.remove('show'); }
+// Straight to the Shop's Boosts tab, where the attempt packs are.
+function goShopBoosts(){
+  closeNoAttemptsModal();
+  goShop();
+  switchShopCat('boosts');
+}
+socket.on('campaignOutOfAttempts',()=>{ campaignStartPending=false; openNoAttemptsModal(); });
 // Guards against a double-tap firing two startCampaignLevel requests
 // (which would burn two attempts for one level, or worse, race two room
 // creations for the same account) — reset on either a successful join
@@ -9927,7 +9969,7 @@ function updateMenuProfileUI(){
   // without it the img would inherit .tile-icon's font sizing and
   // text-shadow and render at the wrong scale.
   const mi=$('menu-avatar-icon');
-  mi.classList.toggle('has-portrait',!!AVATAR_ART[id.avatar]);
+  mi.classList.toggle('has-portrait',!!AVATAR_ART[id.avatar]||isBossAvatar(id.avatar));
   mi.innerHTML=id.avatar?avatarHTML(id.avatar,id.name):'☺︎';
   $('menu-personal-sub').textContent=id.name
     ? `Playing as ${id.name}`
@@ -9964,9 +10006,24 @@ function renderAvatarGrid(){
       (locked?`<span class="avatar-opt-lock">🔒</span>`:'')+`</div>`;
   };
   let h='';
+  // The server leaves a campaign-gated avatar (a House Regular whose boss
+  // isn't beaten yet) OUT of the catalog, so once the catalog is here an
+  // avatar that isn't in it isn't shown — same rule as the boss row below.
+  // Before the catalog has loaded, show everything rather than an empty grid.
+  const catAv=cosState&&cosState.catalog&&cosState.catalog.avatars;
+  const have=id=>!catAv||catAv.some(a=>a.id===id);
   for(const c of AVATAR_COLLECTIONS){
     h+=`<div class="sec-label av-sec">${esc(c.name)}</div><div class="av-row">`
-      +c.avatars.map(([id,name])=>opt(id,name,avatarHTML(id,name,true))).join('')
+      +c.avatars.filter(([id])=>have(id)).map(([id,name])=>opt(id,name,avatarHTML(id,name,true))).join('')
+      +`</div>`;
+  }
+  // Boss portraits: only the ones the server put in this player's catalog
+  // (boss beaten, or already bought) — a boss not yet beaten must not show
+  // up here either, or it would give the surprise away.
+  const bosses=((cosState&&cosState.catalog&&cosState.catalog.avatars)||[]).filter(a=>isBossAvatar(a.id));
+  if(bosses.length){
+    h+=`<div class="sec-label av-sec">Campaign bosses</div><div class="av-row">`
+      +bosses.map(a=>opt(a.id,a.name,avatarHTML(a.id,a.name,true))).join('')
       +`</div>`;
   }
   el.innerHTML=h;
@@ -10563,7 +10620,10 @@ function goShop(){
   $('shop-loading').style.display=(account&&!cosState)?'block':'none';
   $('err-shop').style.display='none';
   switchShopCat('tableTheme');
-  if(account&&!cosState) requestCosmetics();
+  // Always refetched, not just the first time: clearing a campaign boss adds
+  // items to this catalog (the chapter's background, the boss's avatar), so
+  // a copy loaded earlier in the session would hide them.
+  if(account) requestCosmetics();
 }
 
 function switchShopCat(cat){

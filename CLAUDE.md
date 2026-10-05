@@ -4202,6 +4202,61 @@ before pushing.
   was available, so none of the new SQL has run — try a purchase and a
   settle on a throwaway DB before trusting it.
 
+## Campaign rewards in the Shop, and the "Out of attempts" popup
+- **Chapter backgrounds and boss avatars are sold in the Shop, but only
+  after the player has CLEARED that chapter's boss table** (`gateLevel` =
+  the chapter's `levelEnd`). Before that the item does not exist for them:
+  `cosmeticsFor` leaves it out of the catalog (so it is not just hidden in
+  the UI), `buyCosmetic` refuses it, and `updateProfile` refuses to equip
+  it. `loadPlayerCosmetics` reads the cleared set from
+  `db.getClearedLevelIds`. Owned items stay listed regardless. Prices:
+  `CAMPAIGN_BACKGROUND_PRICE` 1000 (not specified when built — change the
+  constant), `CAMPAIGN_BOSS_AVATAR_PRICE` 1500.
+- **Ids**: `scene_camp_<chapter slug>` (art is the campaign map's own
+  `/campaign/chapters/<slug>.webp`, via `sceneArtSrc`) and
+  `boss_<bossId>` (art is `/campaign/characters/<bossId>.webp`, via
+  `bossAvatarSrc`). `campaignCosmetics()` builds both lists lazily —
+  CAMPAIGN_CHAPTERS is defined far below COSMETICS, so `COSMETICS.scenes`
+  and `.avatars` are getters (`_baseScenes` is the old hand-written list).
+  `sanitizeAvatar` accepts boss ids; the client draws any `boss_*` avatar
+  without needing it in a catalog, so other players' tables render fine.
+- **The seven bosses who share a face with an original House Regular
+  (Sharp, Scholar, Wildcard, Optimist, Jester, Charmer, Closer — they carry
+  a `seatAvatar`) don't get a second `boss_` item**: the regular avatar
+  itself (`regular_sharp`...) becomes the reward — gated on that boss's
+  `levelEnd`, 500 credits (`gatedAvatars` in `campaignCosmetics`). They used
+  to be free for everyone. **Accounts that existed when this shipped keep
+  them**: `db.runOneTimeMigrations` (end of `ensureSchema`, own try/catch)
+  inserts ordinary `player_purchases` rows (price 0) for every existing
+  account, once — the `app_migrations` marker and the inserts share one
+  transaction, so a failure rolls both back and the next boot retries. The
+  marker is what stops the INSERT re-running on every boot and handing the
+  avatars to accounts created later. Do not "simplify" it into an
+  unconditional INSERT.
+- **The starting (free) avatars are now Belle, Envoy, Baron, Rookie, Sheikh
+  and Duke** — they used to cost 500. Countess, Castaway and Reveler stay
+  500 in the Shop with no gate. So 33 `boss_` avatars + the 7 regulars are
+  earned through the campaign, and 39 + the old Conservatory = 40 chapter
+  backgrounds.
+- **Chapter 5's background is the old shop scene `scene_conservatory`**,
+  id kept (so anyone who bought it keeps it) but moved out of `_baseScenes`
+  into the campaign list: gated on Level 50, 1000 credits.
+- **A gated avatar missing from the catalog counts as LOCKED.**
+  `updateProfile` used to accept any avatar not found in the catalog (that
+  is how emoji pass); `isCampaignAvatarId` now closes that for gated ids.
+  `startingAvatar` does the same at signup (priced/gated portraits can't be
+  chosen by a brand-new account via a crafted request).
+- Three bosses are called "The Broker" and two "The Keeper"; the chapter
+  title is appended to those names.
+- **My Account's avatar picker shows a "Campaign bosses" row built from the
+  catalog**, so a boss not yet beaten does not appear there either.
+- **The Shop refetches the cosmetics catalog on every open** (was: first
+  time only), otherwise a boss cleared this session would not show up.
+- **Out of attempts**: `campaignModalPlay` checks `campaignData.attempts`
+  before the intro dialogue and opens `#camp-noattempts-modal`; the server
+  also emits `campaignOutOfAttempts` (instead of a campaignError string) if
+  its count disagrees. "Go to Shop" calls `goShopBoosts()`.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

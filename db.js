@@ -487,6 +487,57 @@ async function ensureSchema() {
       PRIMARY KEY (account_id, level_id)
     );
   `);
+
+  // ── One-time migrations ──────────────────────────────────────
+  // Runs LAST and in its own try/catch on purpose: a failure here must never
+  // stop the rest of the schema from being created above, and must never
+  // take the server down. Everything inside is one transaction, so the
+  // "already ran" marker and the work it stands for commit together — if
+  // the work fails, the marker rolls back and the next boot retries.
+  await runOneTimeMigrations();
+}
+
+// The seven original House Regular avatars used to be free for everyone.
+// They are now earned by beating their campaign boss (then bought for 500).
+// Every account that exists at the moment this first runs keeps them, as
+// ordinary purchase rows (price paid 0) — owned forever, exactly like a
+// bought item, so no later rule change can take them away. Accounts created
+// after this ran get nothing here and have to earn them.
+// The marker is what stops later boots from handing them to NEW accounts:
+// without it this INSERT would re-run on every start.
+const LEGACY_FREE_AVATARS = ['regular_charmer', 'regular_sharp', 'regular_optimist', 'regular_jester',
+                             'regular_scholar', 'regular_wildcard', 'regular_closer'];
+async function runOneTimeMigrations() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS app_migrations (
+        name TEXT PRIMARY KEY,
+        ran_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+    await client.query('BEGIN');
+    const mark = await client.query(
+      `INSERT INTO app_migrations (name) VALUES ('grandfather_house_regular_avatars_v1')
+       ON CONFLICT (name) DO NOTHING RETURNING name`
+    );
+    if (mark.rows.length) {
+      const res = await client.query(
+        `INSERT INTO player_purchases (account_id, item_id, price_paid)
+         SELECT a.id, v.item_id, 0
+         FROM accounts a CROSS JOIN (SELECT unnest($1::text[]) AS item_id) v
+         ON CONFLICT (account_id, item_id) DO NOTHING`,
+        [LEGACY_FREE_AVATARS]
+      );
+      console.log(`Migration: kept the original House Regular avatars for existing accounts (${res.rowCount} rows)`);
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    console.error('One-time migration failed (will retry next boot):', e.message);
+  } finally {
+    client.release();
+  }
 }
 
 function toPublic(row) {
@@ -1499,6 +1550,14 @@ async function getPurchases(accountId) {
   return rows.map(r => r.item_id);
 }
 
+// Table ids the player has cleared — what unlocks the campaign rewards
+// (chapter backgrounds, boss avatars) in the Shop.
+async function getClearedLevelIds(accountId) {
+  const { rows } = await pool.query(
+    `SELECT level_id FROM campaign_level_results WHERE account_id = $1 AND cleared`, [accountId]);
+  return rows.map(r => r.level_id);
+}
+
 // ── Campaign Mode ────────────────────────────────────────────────
 async function ensureCampaignProgressRow(accountId) {
   await pool.query(
@@ -1887,5 +1946,5 @@ module.exports = {
   getCampaignState, consumeCampaignAttempt, upsertCampaignLevelResult,
   advanceCampaignUnlock, markCampaignCuesSeen, getCampaignFriendsResults,
   recordCampaignHandStats, getCampaignStats,
-  purchaseAttempts, isDailySettled, settleDailyRewards, getPendingDailyRewards, ackDailyRewards,
+  getClearedLevelIds, purchaseAttempts, isDailySettled, settleDailyRewards, getPendingDailyRewards, ackDailyRewards,
 };

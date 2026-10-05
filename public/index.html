@@ -7714,10 +7714,12 @@ function sceneArtSrc(id){
     ? `/campaign/chapters/${id.replace(/^scene_camp_/,'')}.webp`
     : `/scenes/${sceneArtSlug(id)}.webp`;
 }
-function sceneArtImg(id){
+// `eager` is for the live #scene-layer behind the table. Everything else
+// (shop and picker thumbnails) stays lazy.
+function sceneArtImg(id,eager){
   if(sceneArtMissing[id]) return '';
   return `<img class="scene-art-img" src="${sceneArtSrc(id)}" alt="" aria-hidden="true"`+
-         ` loading="lazy" onerror="sceneArtFailed('${id}',this)"/>`;
+         ` loading="${eager?'eager':'lazy'}" decoding="sync" onerror="sceneArtFailed('${id}',this)"/>`;
 }
 function sceneArtFailed(id,el){
   sceneArtMissing[id]=true;
@@ -7803,7 +7805,11 @@ function applyScene(id,persist){
     // Pseudo-elements (::before/::after) aren't real children, so this
     // can't clobber them — safe to just replace whatever real content
     // (the previous scene's <img>, if any) was here.
-    el.innerHTML=sceneArtImg(equippedScene);
+    el.innerHTML=sceneArtImg(equippedScene,true);
+    // updateSceneLayer compares against the last markup IT wrote; this wrote
+    // something else, so make the next show() re-evaluate (and re-apply the
+    // campaign background if that's what should be showing).
+    sceneLayerHtml='';
   }
   if(persist!==false){ try{ localStorage.setItem(SCENE_KEY,equippedScene); }catch(e){} }
 }
@@ -7836,18 +7842,25 @@ function updateSceneLayer(){
   // side) rather than campaignData, since this has to work on a cold
   // reconnect straight into a hand, before the map was ever fetched.
   const campaignSlug=(onTable&&S&&S.campaign)?S.campaignChapterSlug:null;
-  const campaignImg=campaignSlug?campaignBgImg(campaignSlug):'';
-  if(campaignImg){
-    el.setAttribute('data-scene',equippedScene);
-    el.innerHTML=campaignImg;
-  }else{
-    // Either not a campaign table, or the chapter's art hasn't loaded
-    // (or 404'd) — falls back to the player's own equipped scene rather
-    // than showing nothing.
-    el.setAttribute('data-scene',equippedScene);
-    el.innerHTML=sceneArtImg(equippedScene);
-  }
+  const campaignImg=campaignSlug?campaignBgImg(campaignSlug,true):'';
+  // Either a campaign chapter's background, or — when this isn't a campaign
+  // table, or that art hasn't loaded / 404'd — the player's own equipped
+  // scene rather than showing nothing.
+  const html=campaignImg||sceneArtImg(equippedScene,true);
+  el.setAttribute('data-scene',equippedScene);
+  // THIS RUNS ON EVERY show(), and every render of the table calls show() —
+  // i.e. once per card played. Re-assigning innerHTML each time destroyed and
+  // re-created the background <img>, and on iOS a freshly created image paints
+  // blank for a frame or two while it decodes, so the scene layer's own
+  // default (red curtains) flashed through behind the table on every single
+  // gameState. A frame-by-frame look at an iPhone recording showed exactly
+  // that: two frames of a different background at each render. So the image is
+  // only replaced when the picture it shows has actually changed.
+  if(html===sceneLayerHtml&&el.firstChild) return;
+  sceneLayerHtml=html;
+  el.innerHTML=html;
 }
+let sceneLayerHtml='';
 function initCosmeticLook(){
   let s=null,c=null;
   try{ s=localStorage.getItem(SCENE_KEY); c=localStorage.getItem(CARDFRONT_KEY); }catch(e){}
@@ -8936,11 +8949,11 @@ const campaignArtMissing={};
 // exists in the game as an equippable SCENE points at that art instead of
 // a duplicated copy under /campaign/chapters/, so the two can never drift.
 const CAMPAIGN_BG_SRC={ conservatory:'/scenes/conservatory.webp' };
-function campaignBgImg(slug){
+function campaignBgImg(slug,eager){
   if(campaignArtMissing['bg:'+slug]) return '';
   const src=CAMPAIGN_BG_SRC[slug]||`/campaign/chapters/${slug}.webp`;
   return `<img class="campaign-bg-img" src="${src}" alt="" aria-hidden="true"`+
-         ` loading="lazy" onerror="campaignArtFailed('bg:${slug}',this)"/>`;
+         ` loading="${eager?'eager':'lazy'}" decoding="sync" onerror="campaignArtFailed('bg:${slug}',this)"/>`;
 }
 // A campaign character who is ALSO an existing in-game avatar points
 // straight at that avatar's art instead of a duplicated copy under

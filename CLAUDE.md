@@ -4257,6 +4257,29 @@ before pushing.
   also emits `campaignOutOfAttempts` (instead of a campaignError string) if
   its count disagrees. "Go to Shop" calls `goShopBoosts()`.
 
+## The table background must NOT be re-created on every render (iOS flash)
+- **Reported on an iPhone 16 as "flashes"; it was ours, not the phone's.**
+  A frame-by-frame read of the screen recording (played back in a browser,
+  every presented frame sampled) showed the same signature at every render:
+  for exactly two frames the background switched to the scene layer's own
+  default (red curtains), then back. `updateSceneLayer()` runs inside
+  `show()`, and every table render calls `show()` — once per card played —
+  and it used to re-assign `#scene-layer.innerHTML`, destroying and
+  re-creating the background `<img>` each time. That image was also
+  `loading="lazy"`. Chrome re-paints a re-created cached image instantly;
+  iOS Safari paints it blank for a frame or two, so whatever sits behind
+  showed through.
+- **Fix**: `updateSceneLayer` keeps the markup it last wrote
+  (`sceneLayerHtml`) and does nothing when the picture is unchanged; the
+  layer's image is `eager` with `decoding="sync"`. It still swaps when the
+  chapter or equipped scene changes, and rebuilds if the image was removed
+  (onerror). `applyScene` invalidates the cache.
+- **Verified in Chrome only** (the `<img>` element is the same node after
+  repeated renders, and swaps on a chapter/scene change). The iOS symptom
+  itself can't be reproduced here — confirm on the phone. Same family as the
+  campaign-portrait lazy-load bug above: **never re-create a lazy image on a
+  per-render path.**
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

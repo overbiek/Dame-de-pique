@@ -4498,6 +4498,20 @@ before pushing.
   no loop point so they run forever, zero bytes, one recipe table (`BEDS`,
   all 40 chapter slugs, cross-checked against `CAMPAIGN_CHAPTERS`). Any bed can
   be replaced by a recorded loop later.
+- **Recorded ambience is a bed part too**: `['loop', {file, i, lp}]` plays
+  `public/audio/ambience/<file>.mp3` through the same crossfaded-lap machinery
+  as the music (whole file is the loop, 5s crossfade, level `AMBIENCE_DB` -27,
+  `lp` rolls the top off to sound distant). A missing file is silent and the
+  rest of the bed carries on. `casino.mp3` is a 60s steady stereo cut from
+  the 6.5-minute freesound "casino ambiance" (126.5s-186.5s, picked as the
+  window with the lowest peak-to-bed ratio; re-encoded 112kbps, 0.84MB) and is
+  used by **rooftop (rolled off at 1.8kHz, wind kept low), carnival_lounge,
+  cabaret_of_oddities, grand_ballroom** — the rooms that should have people
+  talking in the background. Decoded it is ~23MB, dropped as soon as a bed
+  with no loop part starts. Verified in the preview: loads, no dropout across
+  the lap seam at 55s. The source's licence was not checked — confirm it
+  allows use in a shipped game. Add another room by adding the part to its
+  `BEDS` row; a different recording is a new file + `file:` name.
 - **Leaving campaign doesn't stop things for 6s (`GRACE_MS`)**: a hand ends on
   the final screen and returns to the map; the same room carries on instead of
   restarting.

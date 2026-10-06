@@ -20,6 +20,10 @@ const Music = (() => {
   // Where each track should sit: this RMS, in dBFS. Sound effects peak around
   // -14 dBFS, so music has to sit well under them or the cards get buried.
   const TARGET_DB = -26;
+  // Recorded room ambience (public/audio/ambience/<file>.mp3) sits here: quiet
+  // enough to be furniture under the music, with the bed bus taking it down a
+  // little further.
+  const AMBIENCE_DB = -27;
 
   let ctx = null, outGain = null, musicBus = null, bedBus = null, analyser = null;
   let muted = false;
@@ -80,7 +84,7 @@ const Music = (() => {
   // point is the last stretch that is still at normal energy (>= 70% of the
   // track's median level, measured in 2s windows). Also measures loudness so
   // every track lands at TARGET_DB without hand-tuning.
-  function analyse(buffer) {
+  function analyse(buffer, ambience) {
     const d = buffer.getChannelData(0);
     const W = Math.floor(buffer.sampleRate * 2);
     const wins = [];
@@ -100,6 +104,14 @@ const Music = (() => {
     let loopEnd = (last + 1) * 2;
     if (loopEnd < 20 || loopEnd > buffer.duration) loopEnd = buffer.duration;
     const rmsDb = 20 * Math.log10(rmsAll + 1e-9);
+    // A recorded ambience loop is steady start to finish (that is what makes it
+    // loopable), so it loops over its whole length, minus the few ms of encoder
+    // padding at the end, and lands at its own level.
+    if (ambience) {
+      const g = Math.max(0.15, Math.min(2, Math.pow(10, (AMBIENCE_DB - rmsDb) / 20)));
+      const end = Math.max(1, buffer.duration - 0.05);
+      return { buffer, loopEnd: end, xfade: Math.min(5, end * 0.1), gain: g, rmsDb };
+    }
     const gain = Math.max(0.15, Math.min(1.5, Math.pow(10, (TARGET_DB - rmsDb) / 20)));
     return { buffer, loopEnd, xfade: Math.min(6, loopEnd * 0.08), gain, rmsDb };
   }
@@ -110,10 +122,12 @@ const Music = (() => {
     if (loading[id]) return loading[id];
     loading[id] = (async () => {
       try {
-        const res = await fetch('/audio/music/' + id + '.mp3');
+        // 'amb:<file>' is a recorded room loop, everything else a House track
+        const amb = id.indexOf('amb:') === 0;
+        const res = await fetch(amb ? '/audio/ambience/' + id.slice(4) + '.mp3' : '/audio/music/' + id + '.mp3');
         if (!res.ok) { missing.add(id); return null; }
         const buffer = await ctx.decodeAudioData(await res.arrayBuffer());
-        const t = analyse(buffer);
+        const t = analyse(buffer, amb);
         buffers.set(id, t);
         return t;
       } catch (e) {
@@ -169,7 +183,7 @@ const Music = (() => {
     cur = loop;
     startVoice(loop, ctx.currentTime + 0.05, 2.5);
     // Only the playing track stays decoded (a 2:30 stereo track is ~57MB).
-    for (const k of Array.from(buffers.keys())) if (k !== id) buffers.delete(k);
+    for (const k of Array.from(buffers.keys())) if (k !== id && k.indexOf('amb:') !== 0) buffers.delete(k);
   }
 
   function stopLoop(loop, fade) {
@@ -368,6 +382,33 @@ const Music = (() => {
       env.lfo(g.gain, 0.11, 0.07 * i);
       env.lfo(g.gain, 0.29, 0.05 * i);
     },
+    // A recorded room loop (public/audio/ambience/<file>.mp3) — e.g. the
+    // murmur of a casino floor. Loops over its whole length with the same
+    // crossfaded laps as the music. A file that doesn't exist is simply silent
+    // and the rest of the bed carries on. `lp` rolls the top off, to make the
+    // same recording sound further away (the rooftop).
+    loop(env, o) {
+      const id = 'amb:' + o.file;
+      load(id).then((t) => {
+        if (!t || !env.alive) return;
+        const g = ctx.createGain();
+        g.gain.value = o.i == null ? 1 : o.i;
+        let dest = g;
+        if (o.lp) {
+          const f = ctx.createBiquadFilter();
+          f.type = 'lowpass'; f.frequency.value = o.lp; f.Q.value = 0.5;
+          g.connect(f); dest = f;
+        }
+        dest.connect(env.out);
+        const lp = { id, t, gain: g, voices: new Set(), timer: null, stopped: false, nextAt: 0 };
+        startVoice(lp, ctx.currentTime + 0.05, Math.min(3, t.xfade));
+        env.stops.push(() => {
+          lp.stopped = true;
+          clearTimeout(lp.timer);
+          lp.voices.forEach((v) => { try { v.stop(); } catch (e) {} });
+        });
+      });
+    },
     // a clock: tick, tock
     clock(env, o) {
       const i = o.i == null ? 0.7 : o.i, rate = o.rate || 1;
@@ -417,14 +458,15 @@ const Music = (() => {
   const BEDS = {
     // House of Spades
     velvet_entrance:     [['rain', { i: 0.5 }], ['crowd', { i: 0.3, lp: 600 }], ['hum']],
-    // (rooftop / lounge / cabaret / ballroom: the voices-in-the-background layer
-    //  is to be a recorded loop, so no synthesized chatter here meanwhile)
-    rooftop:             [['wind', { i: 0.4 }]],
+    // rooftop / lounge / cabaret / ballroom: people talking in the background,
+    // from the recorded casino loop (the rooftop's is rolled off, as if heard
+    // through a wall and a floor)
+    rooftop:             [['wind', { i: 0.3 }], ['loop', { file: 'casino', i: 0.9, lp: 1800 }]],
     grand_library:       [['hum', { i: 0.7 }], ['clock', { rate: 0.8 }], ['fire', { i: 0.4 }]],
-    carnival_lounge:     [['hum', { i: 0.5 }]],
+    carnival_lounge:     [['loop', { file: 'casino', i: 1 }], ['hum', { i: 0.4 }]],
     conservatory:        [['drip', { i: 0.9 }], ['wind', { i: 0.15 }], ['rain', { i: 0.2 }]],
-    cabaret_of_oddities: [['hum', { i: 0.7 }], ['chimes', { i: 0.4 }]],
-    grand_ballroom:      [['hum', { i: 0.5, f: 49 }], ['clock', { rate: 0.5, i: 0.5 }]],
+    cabaret_of_oddities: [['loop', { file: 'casino', i: 0.85 }], ['hum', { i: 0.6 }], ['chimes', { i: 0.4 }]],
+    grand_ballroom:      [['loop', { file: 'casino', i: 0.8 }], ['hum', { i: 0.5, f: 49 }], ['clock', { rate: 0.5, i: 0.5 }]],
     vault:               [['hum', { i: 1.2, f: 41 }], ['clock', { rate: 0.5 }]],
     countess_antechamber:[['hum', { i: 0.6 }], ['clock', { rate: 0.6 }], ['fire', { i: 0.25 }]],
     hidden_throne_room:  [['hum', { i: 1, f: 36 }]],
@@ -498,6 +540,11 @@ const Music = (() => {
     const parts = (BEDS[want.bed] || DEFAULT_BED).slice();
     if (want.tension) parts.push(['pulse', { i: 0.9 }]);
     curBed = buildBed(key, parts);
+    // The recorded loop is ~20MB once decoded: drop it as soon as the room
+    // you are in has no use for it.
+    if (!parts.some((p) => p[0] === 'loop')) {
+      for (const k of Array.from(buffers.keys())) if (k.indexOf('amb:') === 0) buffers.delete(k);
+    }
   }
 
   // ---- public ------------------------------------------------------------

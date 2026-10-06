@@ -1242,6 +1242,18 @@ before pushing.
   it deletes the whole old cache namespace in `activate`, which is what
   forces the re-fetch. Editing the image bytes alone changes nothing
   this service worker will notice, exactly like the manifest case above.
+- **`.js` files are now NETWORK-first (`sw.js`, `ddp-v19`).** This bit us a
+  fourth time: `sfx.js` gained ten presets while the always-fresh
+  `index.html` started calling them, but `sfx.js` itself was served from the
+  runtime cache forever (the cache-first handler caches every same-origin
+  file on first sight, ASSETS-listed or not), so every new `SFX.play(...)`
+  hit "unknown sound" and the whole sound set was silent for returning
+  players. A script sitting next to a fresher page is the dangerous
+  combination, so scripts now fetch network-first and keep the cache only as
+  the offline fallback. **Anything that is not a script still needs the
+  CACHE bump when overwritten in place**, and a bump still helps scripts by
+  dropping the stale copy at once. After a deploy that touches `sw.js`, a
+  returning player needs one full close-and-reopen to pick the new worker up.
 
 ## Accounts & stats (needs DATABASE_URL — Railway Postgres plugin)
 - Username/password, bcrypt-hashed, session tokens

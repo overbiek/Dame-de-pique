@@ -74,7 +74,15 @@
 // colour, comfortably inside the standard ~80% maskable safe zone. The
 // two 'any'-purpose icons and the Apple touch icon stay plain resizes,
 // same convention as the icon they replaced.
-const CACHE = 'ddp-v18';
+// v19: sfx.js gained ten new presets (trick sweep, queen sting, moon, timer,
+// credit tally, ranked jingles) while index.html — loaded network-first —
+// started calling them. sfx.js is NOT in ASSETS but the fetch handler caches
+// every same-origin file on first sight and then serves it cache-first, so
+// players kept the OLD sfx.js, every new `SFX.play('trickSweep')` hit
+// "unknown sound", and the whole set was silent. Same in-place-overwrite trap
+// as v8. Bumping drops the stale copy; the handler below now also fetches
+// .js files network-first so a script change can never be stranded again.
+const CACHE = 'ddp-v19';
 const ASSETS = ['/', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png',
                 '/brand/marquee-logo.webp', '/brand/marquee-splash-portrait.webp'];
 
@@ -105,6 +113,24 @@ self.addEventListener('fetch', e => {
   // Page loads: always try the network so updates land immediately
   if (e.request.mode === 'navigate') {
     e.respondWith(fetch(e.request).catch(() => caches.match('/')));
+    return;
+  }
+
+  // Scripts: NETWORK first, cache only as the offline fallback. index.html is
+  // always fresh (navigations above) and calls into these files, so a stale
+  // cached script next to a fresh page is exactly the mismatch that silenced
+  // the sound effects. They're small, and offline play still works from the
+  // copy kept below.
+  if (url.origin === location.origin && url.pathname.endsWith('.js') && url.pathname !== '/sw.js') {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, copy));
+        }
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
     return;
   }
 

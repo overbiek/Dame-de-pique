@@ -4472,6 +4472,43 @@ before pushing.
   `accounts.lifetime_credits_earned` is already recorded and ready to
   resume its mode-unlock role if it returns).
 
+## Campaign music + room ambience (public/music.js, public/audio/music/*.mp3)
+- **Two layers behind ONE toggle (`🎵 Music`, `ddp.musicMuted`), separate
+  from Sound.** Music = one looping mp3 per House (`spades`, `hearts`,
+  `clubs`, `diamonds`); ambience = a procedural "room bed" per chapter slug.
+  Campaign only: `syncCampaignAudio()` (index.html) works out what should
+  play from the screen (map chapter, or the table's `S.campaignLevel`/
+  `campaignChapterSlug`) and calls `Music.set({track,fallback,bed,tension})`.
+  It runs from `show()`, `campaignRenderChapterView` and `renderCampaignHub`;
+  `Music.set` is idempotent and only changes what differs.
+- **A missing mp3 is silent, not an error** (one 404, remembered in
+  `missing`). Only `spades.mp3` exists so far; Hearts/Clubs/Diamonds play
+  their ambience bed alone until `hearts.mp3` etc. are dropped in — no code
+  change. A House's FINAL chapter (chapter id % 10 === 0) asks for
+  `<house>-endgame` and falls back to `<house>`; it also adds the `pulse`
+  bed part (low drone + heartbeat).
+- **The loop point is measured, not hard-coded.** `analyse()` finds the last
+  2s window still at >=70% of the track's median level, so a Suno-style
+  fade-out is excluded (a loop that crossfades through a fade-out dips every
+  lap). spades.mp3: 149.85s, loopEnd 138s, 6s equal-power crossfade, normalized
+  to -26 dB RMS (gain 0.39). Laps are separate `BufferSource` voices scheduled
+  `xfade` before the last one ends (setValueCurveAtTime), not `loop=true`.
+  Only the playing track stays decoded (~57MB per 2:30 stereo track).
+- **Beds are procedural on purpose** (filtered noise + LFOs + random blips):
+  no loop point so they run forever, zero bytes, one recipe table (`BEDS`,
+  all 40 chapter slugs, cross-checked against `CAMPAIGN_CHAPTERS`). Any bed can
+  be replaced by a recorded loop later.
+- **Leaving campaign doesn't stop things for 6s (`GRACE_MS`)**: a hand ends on
+  the final screen and returns to the map; the same room carries on instead of
+  restarting.
+- Shares `SFX.context()` (one AudioContext, one iOS unlock); `visibilitychange`
+  fades out and suspends. `Music.debug()` reports track/bed/level for tests.
+- Not heard by the developer when built: gains (`TARGET_DB`, bed `i` values,
+  `bedBus` 0.7) were set from analyser levels, tune by ear. Verified in the
+  preview: loops start, mute silences to -180 dB, all 40 beds build without
+  errors, endgame adds `+t`, menu rail fits at 667x375. The lap seam itself
+  (at 132s) was not waited out.
+
 ## Sound effects (public/sfx.js + public/sounds/*.ogg)
 - Self-contained module, own global `SFX` object (`SFX.play(name)`,
   `.setMuted()`, `.unlock()`, `.loadCardSounds()`) — loaded via its own
@@ -4541,3 +4578,13 @@ before pushing.
   same eval'd string to expose what needs testing
 - Delete all test files and `node_modules` before considering a change
   finished
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

@@ -466,7 +466,12 @@ const SFX = (() => {
     getCtx();
   }
 
-  return { play, setVolume, setMuted, unlock, load, loadCardSounds, presets };
+  // The shared AudioContext, for music.js — one context means one iOS unlock.
+  // Deliberately NOT gated on `muted`: the Sound toggle is for effects only,
+  // and the Music toggle has its own switch.
+  function context() { return getCtx(); }
+
+  return { play, setVolume, setMuted, unlock, load, loadCardSounds, context, presets };
 })();
 
 // Example usage:

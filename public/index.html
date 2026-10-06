@@ -6273,6 +6273,7 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
     <div class="exit-row" style="margin-top:22px">
       <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
       <button class="btn btn-ghost btn-sm" id="sfx-toggle" onclick="toggleSfxMuted()">🔊 Sound</button>
+      <button class="btn btn-ghost btn-sm" id="music-toggle" onclick="toggleMusicMuted()">🎵 Music</button>
       <!-- A full-size labelled button rather than the small round "?" this
            used to be: the tutorial is the one control here a new player
            actually needs to find, and an unlabelled icon buried it. -->
@@ -7596,6 +7597,7 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/sfx.js"></script>
+<script src="/music.js"></script>
 <script>
 "use strict";
 
@@ -7614,6 +7616,7 @@ const MK='ddp.sfxMuted';
 function loadSfxMuted(){ try{return localStorage.getItem(MK)==='1';}catch(e){return false;} }
 function saveSfxMuted(m){ try{localStorage.setItem(MK,m?'1':'0');}catch(e){} }
 SFX.setMuted(loadSfxMuted());
+if(typeof Music!=='undefined') Music.setMuted(loadMusicMuted());
 SFX.loadCardSounds('/sounds/').catch(()=>{}); // fetch doesn't need a user gesture — playback does
 // Web Audio needs a user gesture before it'll actually make sound —
 // unlock on the very first tap/click anywhere, whichever screen that is.
@@ -7654,6 +7657,61 @@ function toggleSfxMuted(){
   SFX.setMuted(m);
   updateSfxToggleUI();
   if(!m) SFX.play('click');
+}
+
+/* ── music + room ambience (public/music.js) ──
+   Its own toggle, separate from Sound: plenty of people want the cards
+   clicking and no soundtrack, or the reverse. The music is campaign-only. */
+const MUK='ddp.musicMuted';
+function loadMusicMuted(){ try{return localStorage.getItem(MUK)==='1';}catch(e){return false;} }
+function saveMusicMuted(m){ try{localStorage.setItem(MUK,m?'1':'0');}catch(e){} }
+function updateMusicToggleUI(){
+  const b=$('music-toggle'); if(!b) return;
+  b.textContent=loadMusicMuted()?'🎵 Music off':'🎵 Music';
+}
+function toggleMusicMuted(){
+  const m=!loadMusicMuted();
+  saveMusicMuted(m);
+  if(typeof Music!=='undefined') Music.setMuted(m);
+  updateMusicToggleUI();
+  if(!m){ SFX.play('click'); syncCampaignAudio(); }
+}
+// What should be playing right now? Works it out from where the player is —
+// the campaign map's chapter, or the table they are sitting at — and hands
+// the answer to Music, which only changes what actually differs. Called from
+// show() and the campaign renderers, so it is always cheap and idempotent.
+// Track names are per House (spades/hearts/clubs/diamonds); a House's last
+// chapter asks for "<house>-endgame" and falls back to the ordinary track
+// until that file exists. A track with no file is silent, not an error.
+const MUSIC_HOUSES=['spades','hearts','clubs','diamonds'];
+function syncCampaignAudio(){
+  if(typeof Music==='undefined') return;
+  let chId=null, slug=null, hub=false;
+  if(currentScreenId==='campaign'){
+    const scene=$('camp-scene');
+    if(scene&&scene.classList.contains('hub-mode')){
+      hub=true;
+    }else if(campaignData){
+      const ch=campaignData.chapters.find(c=>c.id===campaignViewChapterId);
+      if(ch){ chId=ch.id; slug=ch.slug; }
+    }
+  }else if((currentScreenId==='pass'||currentScreenId==='play')&&S&&S.campaign&&S.campaignLevel){
+    chId=Math.ceil(S.campaignLevel/10);
+    slug=S.campaignChapterSlug||null;
+  }
+  // The hub (choosing a House) has the Spades art behind it and no room of
+  // its own, so it gets the opening theme and no ambience.
+  if(hub){ Music.set({track:MUSIC_HOUSES[0]}); return; }
+  if(!chId){ Music.set(null); return; }
+  const house=Math.min(4,Math.max(1,Math.ceil(chId/10)));
+  const base=MUSIC_HOUSES[house-1];
+  const endgame=chId%10===0;
+  Music.set({
+    track:endgame?base+'-endgame':base,
+    fallback:endgame?base:null,
+    bed:slug,
+    tension:endgame
+  });
 }
 
 /* ── table theme (see the --ddp-* token block in <style>) ──
@@ -8081,6 +8139,7 @@ function show(id){
   applyOrientationLock(id);
   updateLandscapeMode();
   updateSceneLayer();
+  syncCampaignAudio();
   if(id==='menu') maybeShowDailyRewards();
 }
 // The game is landscape-only: every screen has a landscape layout, so
@@ -9578,6 +9637,7 @@ function renderCampaignHub(d){
   // hidden until the account has finished the whole House of Clubs
   // campaign (clearing Level 300 advances highestUnlockedLevel to 301).
   $('hub-tile-diamonds-btn').style.display = d.highestUnlockedLevel>300 ? '' : 'none';
+  syncCampaignAudio();
 }
 // The top-left ‹ on the campaign screen — .camp-home's one onclick,
 // shared by the hub and every chapter's table overview alike. Once an
@@ -9777,6 +9837,7 @@ function campaignRenderChapterView(){
   campaignReturnLevelId=null;
 
   campaignRenderChapterNav(d);
+  syncCampaignAudio();
 }
 // Prev/next chapter arrows — only enabled toward a chapter the player has
 // actually reached (levelStart <= highestUnlockedLevel), so this never
@@ -14745,6 +14806,7 @@ function tutorialPartBNext(){
 (function(){
   updateMenuProfileUI();
   updateSfxToggleUI();
+  updateMusicToggleUI();
   // data-theme is already set by the inline <head> script (before first
   // paint); this run is what marks the active swatch and syncs the
   // theme-color meta, now that the menu markup exists.

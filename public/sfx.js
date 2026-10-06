@@ -278,6 +278,181 @@ const SFX = (() => {
                attack: 0.01, decay: 0.08, sustain: 0.1, gain: 0.2 });
       });
     },
+
+    // ── Trick sweep: the four cards gathered off the table toward whoever won
+    // them. `heavy` (a trick with hearts or the queen in it) adds a low thud.
+    trickSweep(heavy) {
+      noise({ duration: 0.3, gain: 0.34, filterType: 'bandpass',
+              freqStart: 500, freqEnd: 2600, Q: 0.8, attack: 0.03, decay: 0.24 });
+      noise({ duration: 0.22, delay: 0.16, gain: 0.2, filterType: 'highpass',
+              freqStart: 2400, freqEnd: 1400, Q: 0.7, attack: 0.005, decay: 0.16 });
+      tone({ freq: 130, freqEnd: 70, type: 'sine', duration: 0.18, delay: 0.2,
+             attack: 0.004, decay: 0.12, gain: heavy ? 0.34 : 0.16 });
+      if (heavy) {
+        tone({ freq: 98, freqEnd: 58, type: 'sine', duration: 0.32, delay: 0.24,
+               attack: 0.004, decay: 0.22, gain: 0.22 });
+      }
+    },
+
+    // ── Queen of Spades hits the table: a low dissonant stab (a minor second),
+    // a cymbal-like hiss, a falling squeal and a deep thump. The most dramatic
+    // card in the game now sounds like it.
+    queenSting() {
+      tone({ freq: 98, type: 'sawtooth', duration: 1.1, attack: 0.01,
+             decay: 0.8, sustain: 0.25, gain: 0.22 });
+      tone({ freq: 103.83, type: 'sawtooth', duration: 1.1, attack: 0.01,
+             decay: 0.8, sustain: 0.25, gain: 0.2 });
+      tone({ freq: 392, type: 'square', duration: 0.5, attack: 0.004,
+             decay: 0.4, sustain: 0.1, gain: 0.08 });
+      tone({ freq: 415.3, type: 'square', duration: 0.5, attack: 0.004,
+             decay: 0.4, sustain: 0.1, gain: 0.07 });
+      tone({ freq: 62, freqEnd: 36, type: 'sine', duration: 0.5, attack: 0.003,
+             decay: 0.4, gain: 0.5 });
+      noise({ duration: 0.8, gain: 0.22, filterType: 'highpass',
+              freqStart: 4200, freqEnd: 1800, Q: 0.5, attack: 0.005, decay: 0.7 });
+      tone({ freq: 1568, freqEnd: 740, type: 'triangle', duration: 0.7,
+             delay: 0.05, attack: 0.02, decay: 0.55, sustain: 0.1, gain: 0.07 });
+    },
+
+    // ── Moon pace: one player holds every penalty card so far. `level` is how
+    // far along they are (0..1) — the riser climbs and the heartbeat quickens.
+    moonBuild(level) {
+      const l = Math.max(0, Math.min(1, Number(level) || 0.3));
+      const f = 146.83 * Math.pow(2, l * 1.7);
+      tone({ freq: f, freqEnd: f * 1.05, type: 'triangle', duration: 0.8,
+             attack: 0.04, decay: 0.55, sustain: 0.3, gain: 0.14 + 0.1 * l });
+      tone({ freq: f * 1.498, type: 'sine', duration: 0.7, delay: 0.04,
+             attack: 0.04, decay: 0.5, sustain: 0.2, gain: 0.07 + 0.07 * l });
+      noise({ duration: 0.7, gain: 0.05 + 0.1 * l, filterType: 'highpass',
+              freqStart: 1500 + 2500 * l, freqEnd: 5000, Q: 0.6,
+              attack: 0.25, decay: 0.4 });
+      const gap = 0.34 - 0.14 * l;
+      [0, gap, gap * 2.6, gap * 3.6].forEach((d, i) => {
+        tone({ freq: 70, freqEnd: 45, type: 'sine', duration: 0.16, delay: d,
+               attack: 0.003, decay: 0.12,
+               gain: (i % 2 ? 0.26 : 0.36) * (0.5 + 0.5 * l) });
+      });
+    },
+
+    // ── The moon shot itself, in two parts that match the on-screen rocket:
+    // a rising rumble while it launches, then the boom + fanfare on impact.
+    moonLaunch() {
+      noise({ duration: 1.0, gain: 0.34, filterType: 'lowpass',
+              freqStart: 180, freqEnd: 1800, Q: 0.7, attack: 0.08, decay: 0.9 });
+      tone({ freq: 70, freqEnd: 520, type: 'sawtooth', duration: 1.0,
+             attack: 0.05, decay: 0.85, sustain: 0.2, gain: 0.14 });
+      tone({ freq: 140, freqEnd: 1040, type: 'triangle', duration: 1.0,
+             attack: 0.05, decay: 0.85, sustain: 0.15, gain: 0.08 });
+    },
+    moonImpact() {
+      tone({ freq: 72, freqEnd: 30, type: 'sine', duration: 0.9, attack: 0.003,
+             decay: 0.8, gain: 0.7 });
+      noise({ duration: 0.8, gain: 0.4, filterType: 'lowpass',
+              freqStart: 1400, freqEnd: 120, Q: 0.6, attack: 0.003, decay: 0.7 });
+      noise({ duration: 1.1, delay: 0.04, gain: 0.2, filterType: 'highpass',
+              freqStart: 5000, freqEnd: 2500, Q: 0.5, attack: 0.01, decay: 1.0 });
+      [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568].forEach((f, i) => {
+        tone({ freq: f, type: 'triangle', duration: 0.5, delay: 0.12 + i * 0.075,
+               attack: 0.005, decay: 0.3, sustain: 0.3, gain: 0.24 });
+      });
+      [261.63, 329.63, 392, 523.25].forEach((f) => {
+        tone({ freq: f, type: 'sine', duration: 1.6, delay: 0.5, attack: 0.04,
+               decay: 1.2, sustain: 0.3, gain: 0.12 });
+      });
+      for (let i = 0; i < 9; i++) {
+        tone({ freq: 2200 + Math.random() * 3200, type: 'sine', duration: 0.18,
+               delay: 0.25 + Math.random() * 0.9, attack: 0.002, decay: 0.12,
+               gain: 0.07 });
+      }
+    },
+
+    // ── Last five seconds of an auto-advance countdown. `left` is the seconds
+    // remaining (5..1): the tick climbs in pitch and the last one lands.
+    timerTick(left) {
+      const n = Math.max(1, Math.min(5, Number(left) || 3));
+      const f = 880 + (5 - n) * 150;
+      tone({ freq: f, type: 'sine', duration: 0.07, attack: 0.002, decay: 0.05,
+             gain: n === 1 ? 0.3 : 0.2 });
+      tone({ freq: f * 2, type: 'sine', duration: 0.04, attack: 0.002,
+             decay: 0.03, gain: 0.07 });
+      if (n === 1) {
+        tone({ freq: f * 0.75, type: 'triangle', duration: 0.25, delay: 0.05,
+               attack: 0.004, decay: 0.2, gain: 0.12 });
+      }
+    },
+
+    // ── Credit counter: a tiny coin tick per step (pitch climbs with progress
+    // 0..1), then a bright register ring when the total lands.
+    creditTick(p) {
+      const f = 1500 + 1400 * Math.max(0, Math.min(1, Number(p) || 0));
+      tone({ freq: f, type: 'triangle', duration: 0.05, attack: 0.001,
+             decay: 0.035, gain: 0.1 });
+      tone({ freq: f * 1.5, type: 'sine', duration: 0.035, attack: 0.001,
+             decay: 0.025, gain: 0.05 });
+    },
+    creditTally() {
+      [1318.5, 1760, 2093].forEach((f, i) => {
+        tone({ freq: f, type: 'triangle', duration: 0.5, delay: i * 0.055,
+               attack: 0.002, decay: 0.4, sustain: 0.1, gain: 0.2 });
+      });
+      noise({ duration: 0.3, delay: 0.02, gain: 0.12, filterType: 'highpass',
+              freqStart: 6000, freqEnd: 4000, Q: 0.7, attack: 0.002, decay: 0.25 });
+    },
+
+    // ── Ranked: three rising bells when a table has been found.
+    matchFound() {
+      [659.25, 987.77, 1318.5].forEach((f, i) => {
+        tone({ freq: f, type: 'sine', duration: 0.5, delay: i * 0.11,
+               attack: 0.005, decay: 0.4, sustain: 0.15, gain: 0.26 });
+      });
+      [329.63, 493.88].forEach((f) => {
+        tone({ freq: f, type: 'triangle', duration: 0.7, delay: 0.1,
+               attack: 0.01, decay: 0.5, sustain: 0.2, gain: 0.14 });
+      });
+      noise({ duration: 0.5, gain: 0.12, filterType: 'bandpass',
+              freqStart: 400, freqEnd: 3000, Q: 0.8, attack: 0.04, decay: 0.35 });
+    },
+
+    // ── Ranked: promoted to a new TIER. `tier` is 1..7 (the new tier's index —
+    // Apprentice=1 ... Legend=7). Every tier is the same idea played bigger:
+    // a longer climbing arpeggio, a fuller chord, more sparkle, and from Ace
+    // up a low pad; Legend adds bell strikes.
+    rankUp(tier) {
+      const t = Math.max(1, Math.min(7, Math.round(Number(tier)) || 1));
+      const root = 261.63 * Math.pow(2, (t - 1) * 2 / 12);
+      const steps = [0, 4, 7, 12, 16, 19, 24, 28, 31, 36];
+      const n = 3 + t;
+      for (let i = 0; i < n; i++) {
+        const f = root * Math.pow(2, steps[i % steps.length] / 12);
+        tone({ freq: f, type: 'triangle', duration: 0.4, delay: i * 0.075,
+               attack: 0.004, decay: 0.28, sustain: 0.25, gain: 0.22 });
+        if (t >= 3) {
+          tone({ freq: f * 2, type: 'sine', duration: 0.25, delay: i * 0.075,
+                 attack: 0.004, decay: 0.18, gain: 0.07 });
+        }
+      }
+      const end = n * 0.075;
+      [0, 4, 7].concat(t >= 3 ? [12] : [], t >= 5 ? [16] : []).forEach((st) => {
+        tone({ freq: root * Math.pow(2, st / 12), type: 'sine',
+               duration: 1.1 + 0.12 * t, delay: end, attack: 0.02,
+               decay: 0.8 + 0.1 * t, sustain: 0.3, gain: 0.14 });
+      });
+      for (let i = 0; i < t * 2; i++) {
+        tone({ freq: 2400 + Math.random() * 3000, type: 'sine', duration: 0.2,
+               delay: end * 0.5 + Math.random() * 0.8, attack: 0.002,
+               decay: 0.14, gain: 0.06 });
+      }
+      if (t >= 5) {
+        tone({ freq: root / 2, type: 'sine', duration: 1.8, delay: end,
+               attack: 0.05, decay: 1.4, sustain: 0.3, gain: 0.22 });
+      }
+      if (t >= 7) {
+        [1046.5, 1568, 1046.5 * 2.76].forEach((f, i) => {
+          tone({ freq: f, type: 'sine', duration: 2.0, delay: end + i * 0.12,
+                 attack: 0.003, decay: 1.7, sustain: 0.05, gain: 0.14 });
+        });
+      }
+    },
   };
 
   // ---- public API ---------------------------------------------------------

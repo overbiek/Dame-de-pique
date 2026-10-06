@@ -4371,6 +4371,51 @@ before pushing.
   value was chosen, leaning easy.
 - Not run against Postgres; only the objective evaluation was unit-tested.
 
+## The expanded sound set (all synthesized — no new audio files)
+- **New `sfx.js` presets**, built from the existing `tone()`/`noise()`
+  helpers like every non-card sound: `trickSweep(heavy)`, `queenSting`,
+  `moonBuild(level)`, `moonLaunch`, `moonImpact`, `timerTick(left)`,
+  `creditTick(progress)`, `creditTally`, `matchFound`, `rankUp(tier)`.
+  Calling a preset directly (`SFX.presets.x()`) throws on a bug;
+  `SFX.play` swallows errors, so test through the former.
+- **Where they fire** (`public/index.html`): `handleSfxForState` — sweep on
+  every resolved trick (heavy when it held a heart or the queen) and the
+  queen sting when Q♠ lands on the table, both seeded silently on the first
+  state seen like every tracker there; `paintCountdown` — the last five
+  seconds of any auto-advance countdown, once per second, pitch climbing;
+  `showMoonFx` — `moonLaunch` at the rocket launch, `moonImpact` (replaces
+  the old plain `gameWin`) on impact; `rankedMatchFound`; `rankedResult`.
+- **Two small server additions, both cosmetic-only.** `moonBuild` is emitted
+  from `resolveTrick` while ONE player (`moonPaceOwner`) holds every penalty
+  card so far and has at least `MOON_BUILD_MIN_CARDS` (5) of the 14 — the
+  client riser climbs with `cards/14`. **It goes to that player's socket
+  ALONE, never the room**: a rising tone everyone heard would announce that
+  the moon is still alive, which opponents must work out for themselves.
+  Don't "fix" it back to a room broadcast. And `rankedResult` now carries
+  `rankedUp`/`tierIndex`: `db.applyRankedMmr` also returns `appliedDelta` and
+  `wasPlacement`, **because `placement_games_played` is CAPPED at 5**, so the
+  5th placement game (the first rank reveal — not a promotion) cannot be told
+  from game 50 by the counter alone. Promotion = a settled player whose tier
+  index rose across this game.
+- **The credit tally** (`#credit-tally`, `queueCreditTally`/`runCreditTally`):
+  a box that slides in from the left, coin chips fly into it, the total counts
+  up with a tick per step and a register ring at the end. Triggered from the
+  four EARN events only (`finalCreditsOk` for casual/ranked, `dailyResult`,
+  `campaignResult`, collecting the daily podium) — NOT from any balance
+  change, so spending in the Shop never pops it. Callers pass only the amount
+  earned; the figures shown are the server's own balance (fetched right
+  after) minus that amount. Deliberately un-themed (fixed dark panel): it
+  floats over every screen and the themed tokens invert on Clair. Tallies are
+  serialised (`creditTallyBusy`), and the flying chips have a timeout
+  backstop because a backgrounded tab pauses animations.
+- **Not built yet, on purpose:** the separate Sound/Music toggles (a Music
+  toggle with no music is a dead control — it arrives with the music system),
+  ambience, music, boss motifs.
+- Verified in Chrome: every preset runs, every hook fires exactly once per
+  event (including the "not again on re-broadcast" and "silent on first
+  state" cases), the tally counts and cleans up. **Nothing was heard** — the
+  sounds are synthesized and unaudited by ear; expect to tune gains.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

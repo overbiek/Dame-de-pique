@@ -1127,7 +1127,13 @@ async function applyRankedMmr(accountId, mmrDelta) {
       [accountId, appliedDelta, RANKED_STARTING_MMR]
     );
     await client.query('COMMIT');
-    return { mmr: rows[0].mmr, placementGamesPlayed: rows[0].placement_games_played };
+    // appliedDelta/wasPlacement are additive: callers that only read
+    // {mmr, placementGamesPlayed} are unaffected. The counter above is
+    // CAPPED at 5, so it cannot tell the 5th placement game from the 50th —
+    // wasPlacement is what lets the caller know whether a rank change is a
+    // real promotion or just the first reveal.
+    return { mmr: rows[0].mmr, placementGamesPlayed: rows[0].placement_games_played,
+             appliedDelta, wasPlacement };
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch (_) {}
     throw e;

@@ -402,6 +402,10 @@ function isGuaranteedWinner(G, card, myHand) {
 // people can't yet have crossed it and be picked as owner in the same
 // call, since the second one to appear kills the moon outright below.
 const MOON_PACE_MIN_CARDS = 2;
+// The table-wide tension riser (see resolveTrick) starts a bit later than the
+// AI's own alarm above: with fewer than this many penalty cards it's still
+// just an unlucky start, and a riser every early trick would cry wolf.
+const MOON_BUILD_MIN_CARDS = 5;
 
 // Which player currently owns every heart/Q♠ trick captured so far this
 // round — i.e. who (if anyone) is on pace to shoot the moon. -1 once two
@@ -10607,12 +10611,25 @@ function applyRankedResult(G) {
     if (!acctId) continue;
     const socketId = G.players[i].socketId;
     trackStat(async () => {
-      const { mmr, placementGamesPlayed } = await db.applyRankedMmr(acctId, deltas[i]);
+      const applied = await db.applyRankedMmr(acctId, deltas[i]);
+      const { mmr, placementGamesPlayed } = applied;
       const isPlacement = placementGamesPlayed < 5;
+      // A promotion sound needs to know the player crossed into a higher TIER.
+      // Only a settled rank can be promoted: the game that first reveals the
+      // rank (wasPlacement) is a reveal, not a promotion. Purely cosmetic, so
+      // any surprise here just means no jingle — never a lost result.
+      let rankedUp = false, tierIndex = -1;
+      try {
+        if (!applied.wasPlacement) {
+          tierIndex = TIER_ORDER.indexOf(rankForMmr(mmr).slug);
+          rankedUp = tierIndex > TIER_ORDER.indexOf(rankForMmr(mmr - applied.appliedDelta).slug);
+        }
+      } catch (e) { rankedUp = false; }
       if (socketId) {
         io.to(socketId).emit('rankedResult', {
           mmrChange: deltas[i], mmr, placementGamesPlayed, isPlacement,
           rank: isPlacement ? null : rankForMmr(mmr),
+          rankedUp, tierIndex,
         });
       }
     });
@@ -11176,6 +11193,21 @@ function resolveTrick(G) {
   // looking at the play screen) so the celebration plays there, then give
   // it time to finish before actually ending the round.
   const moonShooter = checkMoon(G);
+  // Tension build, sound only, sent to the PACE OWNER ALONE: while one player
+  // holds every penalty card so far (moonPaceOwner) they hear a riser that
+  // climbs trick by trick. It must NOT go to the table — a rising tone heard
+  // by the opponents would announce that the moon is still alive, which is
+  // exactly what they're supposed to have to work out for themselves. The
+  // owner already knows their own position, so it tells them nothing new.
+  if (moonShooter < 0) {
+    const paceOwner = moonPaceOwner(G);
+    const ownerSeat = paceOwner >= 0 ? G.players[paceOwner] : null;
+    if (ownerSeat && !ownerSeat.isAI && ownerSeat.socketId) {
+      const cards = ownerSeat.tricks
+        .filter(c => c.suit === '♥' || (c.suit === '♠' && c.rank === 'Q')).length;
+      if (cards >= MOON_BUILD_MIN_CARDS) io.to(ownerSeat.socketId).emit('moonBuild', { owner: paceOwner, cards, of: 14 });
+    }
+  }
   if (moonShooter >= 0) {
     io.to(G.code).emit('moonShot', { shooter: moonShooter });
     setTimeout(() => endRound(G), MOON_FX_MS);

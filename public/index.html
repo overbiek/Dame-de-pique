@@ -1149,6 +1149,29 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
 .daily-rows td.score-col{text-align:right;font-weight:700;color:var(--cream)}
 .daily-rows tr.me td{background:rgba(var(--ddp-brass-rgb),.12);color:var(--gold-hi)}
 
+/* Credit tally: a small box that slides in from the left edge when credits
+   are earned, chips fly into it and the total counts up. Deliberately NOT
+   themed (fixed dark panel, cream/brass text): it floats over every screen
+   and every theme, and on Clair the themed ink/gold tokens would invert. */
+#credit-tally{
+  position:fixed;left:calc(8px + env(safe-area-inset-left));top:36%;z-index:1800;
+  display:flex;align-items:center;gap:10px;padding:8px 14px 8px 10px;border-radius:14px;
+  background:rgba(20,16,10,.92);border:1px solid rgba(212,175,95,.5);
+  box-shadow:0 8px 22px rgba(0,0,0,.5),inset 0 0 0 1px rgba(0,0,0,.35);
+  transform:translateX(-130%);opacity:0;pointer-events:none;
+  transition:transform .35s cubic-bezier(.2,.9,.25,1),opacity .25s;
+}
+#credit-tally.show{transform:none;opacity:1}
+#credit-tally .ct-label{display:block;font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:#B9AE96}
+#credit-tally .ct-n{
+  display:block;min-width:4.4ch;font-family:var(--font-num);font-variant-numeric:tabular-nums;
+  font-size:1.3rem;line-height:1.15;color:#EED08E;
+}
+#credit-tally .ct-n.pop{animation:ct-pop .32s ease}
+@keyframes ct-pop{50%{transform:scale(1.16)}}
+#credit-tally .ct-d{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:.82rem;font-weight:700;color:#7FE0B4}
+.ct-fly{position:fixed;left:0;top:0;z-index:1801;pointer-events:none;opacity:0}
+
 /* ══ Friends list (My Account) ══ */
 .friend-row{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)}
 .friend-row:last-child{border-bottom:none}
@@ -6666,6 +6689,13 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
   </div>
 </div>
 
+<!-- Credit tally overlay (see runCreditTally). Floats over every screen. -->
+<div id="credit-tally" aria-hidden="true">
+  <span class="ct-chip" id="ct-chip"></span>
+  <span class="ct-body"><span class="ct-label">Credits</span><b class="ct-n" id="ct-n">0</b></span>
+  <span class="ct-d" id="ct-d">+0</span>
+</div>
+
 <!-- ═══ RANKED MULTIPLAYER ═══ -->
 <section id="s-ranked" class="screen">
   <div class="center-wrap" style="max-width:440px">
@@ -8705,7 +8735,7 @@ let lastDailyResult=null;
 socket.on('dailyResult',d=>{
   // Credits are banked server-side from the server's own copy of the
   // score (see submitDailyResult); this only reports what was paid.
-  if(d.credits) requestCredits();
+  if(d.credits) queueCreditTally(d.credits);
   lastDailyResult=d;
   // A guest's attempt isn't banked anywhere, so they're free to play again
   // — don't mark the tile as done for them.
@@ -9982,7 +10012,7 @@ function campaignStartLevel(levelId){
 
 let lastCampaignResult=null;
 socket.on('campaignResult',d=>{
-  if(d.creditsAwarded) requestCredits();
+  if(d.creditsAwarded) queueCreditTally(d.creditsAwarded);
   lastCampaignResult=d;
   // See campaignLastNewUnlock's own declaration (near goCampaignFromTable)
   // for why this lives in its own variable rather than being read off
@@ -10718,7 +10748,88 @@ function requestCredits(){
   if(!accountToken){ setCreditBalance(0); return; }
   socket.emit('getCredits',{token:accountToken});
 }
-socket.on('creditsOk',d=>{ setCreditBalance(d.guest?0:d.balance); });
+socket.on('creditsOk',d=>{
+  setCreditBalance(d.guest?0:d.balance);
+  // A tally was waiting for the real balance (see queueCreditTally).
+  if(creditTallyPending>0&&!d.guest){
+    const amt=creditTallyPending; creditTallyPending=0;
+    runCreditTally(Math.max(0,d.balance-amt),d.balance);
+  }
+});
+
+/* ── Credit tally ──
+   Whenever credits are EARNED (a finished game, a daily, a campaign clear, a
+   daily podium payout) a small box slides in from the left, coin chips fly
+   into it from the middle of the screen and the total counts up to the new
+   balance with a tick per step and a register ring at the end.
+   Callers only say HOW MUCH was earned: the figures shown are the server's
+   own balance (fetched right after) minus that amount, so the tally can
+   never claim a total the server didn't report. */
+let creditTallyPending=0, creditTallyBusy=false;
+function queueCreditTally(amount){
+  amount=Math.round(Number(amount)||0);
+  if(amount<=0||!account) return;
+  creditTallyPending+=amount;
+  requestCredits();
+}
+function runCreditTally(from,to){
+  const box=$('credit-tally'); if(!box) return;
+  if(creditTallyBusy){ setTimeout(()=>runCreditTally(from,to),700); return; }
+  creditTallyBusy=true;
+  const amount=Math.max(0,to-from);
+  const nEl=$('ct-n'), dEl=$('ct-d');
+  if(!$('ct-chip').firstChild) $('ct-chip').innerHTML=creditChipHTML(28);
+  nEl.textContent=fmtCredits(from); dEl.textContent='+'+fmtCredits(amount);
+  nEl.classList.remove('pop');
+  const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  setTimeout(()=>box.classList.add('show'),300);
+
+  // Chips fly from the middle of the screen into the box.
+  const flyAt=reduce?0:750;
+  if(!reduce) setTimeout(()=>{
+    const tx=box.offsetLeft+box.offsetWidth/2-11, ty=box.offsetTop+box.offsetHeight/2-11;
+    const sx=innerWidth/2-11, sy=innerHeight*0.45;
+    const n=Math.min(10,Math.max(3,Math.ceil(amount/10)));
+    for(let i=0;i<n;i++){
+      const el=document.createElement('div');
+      el.className='ct-fly'; el.innerHTML=creditChipHTML(22);
+      document.body.appendChild(el);
+      const jx=(Math.random()-0.5)*60, jy=(Math.random()-0.5)*40;
+      if(el.animate){
+        const a=el.animate([
+          {transform:`translate(${sx+jx}px,${sy+jy}px) scale(1.1)`,opacity:0},
+          {opacity:1,offset:.18},
+          {transform:`translate(${tx}px,${ty}px) scale(.55)`,opacity:.85}
+        ],{duration:640,delay:i*70,easing:'cubic-bezier(.45,.05,.55,.95)',fill:'forwards'});
+        a.onfinish=()=>el.remove();
+        // Backstop: a backgrounded tab pauses animations, so onfinish may
+        // never fire — don't leave stranded chips on the page.
+        setTimeout(()=>el.remove(),640+i*70+500);
+      }else el.remove();
+    }
+  },700);
+
+  // Count up once the first chips have landed.
+  const D=Math.min(2400,Math.max(900,500+amount*9));
+  setTimeout(()=>{
+    const t0=Date.now(); let lastTick=0;
+    const iv=setInterval(()=>{
+      const t=Math.min(1,(Date.now()-t0)/D);
+      const eased=1-Math.pow(1-t,3);
+      nEl.textContent=fmtCredits(Math.round(from+amount*eased));
+      if(Date.now()-lastTick>=70&&t<1){ lastTick=Date.now(); SFX.play('creditTick',t); }
+      if(t>=1){
+        clearInterval(iv);
+        nEl.textContent=fmtCredits(to);
+        nEl.classList.add('pop');
+        SFX.play('creditTally');
+        setTimeout(()=>{ box.classList.remove('show'); },1200);
+        setTimeout(()=>{ creditTallyBusy=false; },1700);
+      }
+    },40);
+  },(reduce?500:flyAt+450));
+}
 
 // Which of the four top-row boxes is open. Reset to Themes every time the
 // Shop is (re)entered — same "stale sub-tab from a return visit" reasoning
@@ -12156,10 +12267,14 @@ socket.on('rankedMatchFound',d=>{
   rankedQueued=false;
   room=d.code; me=d.playerIndex; host=d.isHost; token=d.token;
   saveSession();
+  SFX.play('matchFound');
 });
 socket.on('rankedResult',d=>{
   lastRankedResult=d;
   renderRankedResult();
+  // Promoted into a higher tier: the jingle grows with the tier (1=Apprentice
+  // ... 7=Legend). Slightly delayed so it lands after the result appears.
+  if(d.rankedUp&&d.tierIndex>=1) setTimeout(()=>SFX.play('rankUp',d.tierIndex),500);
 });
 function renderRankedResult(){
   const el=$('f-ranked');
@@ -12381,8 +12496,10 @@ function dismissDailyRewards(){
   if(accountToken&&dailyRewardsPending.length){
     socket.emit('ackDailyRewards',{token:accountToken,dates:dailyRewardsPending.map(r=>r.date)});
   }
+  const earned=dailyRewardsPending.reduce((s,r)=>s+r.credits,0);
   dailyRewardsPending=[];
-  requestCredits();   // the balance moved when the day closed
+  // The balance moved when the day closed; this just shows it counting up.
+  if(earned>0) queueCreditTally(earned); else requestCredits();
 }
 function openDailyLeaveModal(){ $('daily-leave-modal').classList.add('show'); }
 function closeDailyLeaveModal(){ $('daily-leave-modal').classList.remove('show'); }
@@ -12478,6 +12595,7 @@ socket.on('roomClosed',d=>{
   goLanding((d&&d.reason)||'The game was closed.');
 });
 
+let lastCountdownTick=-1;
 function paintCountdown(){
   const vt=$('vote-time');
   if(vt){
@@ -12486,6 +12604,10 @@ function paintCountdown(){
   }
   const els=[$('r-auto'),$('d-auto'),$('p-auto')].filter(Boolean);
   const left=autoDeadline?Math.max(0,Math.round((autoDeadline-Date.now())/1000)):0;
+  // Last five seconds: one tick per second, climbing in pitch.
+  if(autoDeadline&&left>=1&&left<=5){
+    if(left!==lastCountdownTick){ lastCountdownTick=left; SFX.play('timerTick',left); }
+  }else lastCountdownTick=-1;
   els.forEach(el=>{
     if(!autoDeadline){ el.textContent=''; el.classList.remove('soon'); return; }
     el.textContent=left>0
@@ -12510,6 +12632,7 @@ let lastDealtRound=null;
 let seatingDrawPlayed=false;
 let lastAnnouncedTrickKey=null;
 let wasMyTurn=false;
+let queenStingSeeded=false, lastQueenKey='';
 function handleSfxForState(G){
   if(G.phase==='draw'||G.phase==='draw1Done'||G.phase==='drawDone'){
     lastDealtRound=0; // arms the next 'pass'/'play' phase as a genuine fresh deal
@@ -12536,12 +12659,25 @@ function handleSfxForState(G){
     lastAnnouncedTrickKey=trickKey;
   }else if(trickKey&&trickKey!==lastAnnouncedTrickKey){
     lastAnnouncedTrickKey=trickKey;
+    const penalty=lt.cards.some(t=>t.card.suit==='♥'||(t.card.suit==='♠'&&t.card.rank==='Q'));
+    SFX.play('trickSweep',penalty);
     if(lt.winner===me){
-      const penalty=lt.cards.some(t=>t.card.suit==='♥'||(t.card.suit==='♠'&&t.card.rank==='Q'));
       SFX.play(penalty?'penaltyCard':'trickWin');
     }else{
       SFX.play('trickLose');
     }
+  }
+
+  // The Queen of Spades landing on the table — heard by everyone, whoever
+  // played her. Seeded silently on the first state seen, like every other
+  // tracker here, so a rejoin mid-trick doesn't re-fire it.
+  const qOnTable=G.phase==='play'&&G.currentTrick.some(t=>t.card.suit==='♠'&&t.card.rank==='Q');
+  const qKey=qOnTable?`${G.round}-${G.trickNum}`:'';
+  if(!queenStingSeeded){
+    queenStingSeeded=true; lastQueenKey=qKey;
+  }else if(qKey&&qKey!==lastQueenKey){
+    lastQueenKey=qKey;
+    SFX.play('queenSting');
   }
 
   if(G.phase==='play'){
@@ -13133,6 +13269,9 @@ function maybeShowPassTransition(G){
 // Fired by the server the instant a moon is locked in — while everyone's
 // still looking at the play screen, before the round actually ends.
 socket.on('moonShot',d=>{ showMoonFx(d.shooter); });
+// One player has every penalty card so far — a riser that climbs (and a
+// quickening heartbeat) as they close in. `cards` of `of` (14) are theirs.
+socket.on('moonBuild',d=>{ if(d&&d.of) SFX.play('moonBuild',d.cards/d.of); });
 
 // Rough launch point per seat, matching the table's own layout (seatOf:
 // 0 me/bottom, 1 left, 2 top/opponent-across, 3 right) — the rocket departs
@@ -13152,11 +13291,12 @@ function showMoonFx(shooter){
     `<div class="moonfx-flash"></div>`+
     `<div class="moonfx-banner">${name} ${verb} shot the moon!</div>`;
   document.body.appendChild(layer);
+  SFX.play('moonLaunch');
 
   setTimeout(()=>{
     if(!layer.isConnected) return;
     layer.classList.add('impact');
-    SFX.play('gameWin');
+    SFX.play('moonImpact');
     const suits=['♠','♥','♦','♣'];
     for(let i=0;i<16;i++){
       const p=document.createElement('div');
@@ -13745,6 +13885,7 @@ socket.on('finalCreditsOk',d=>{
   if(!$('s-final').classList.contains('active')) return;
   finalCreditsBySeat=d.credits;
   applyFinalCredits();
+  if(d.credits&&d.credits[me]>0) queueCreditTally(d.credits[me]);
 });
 function renderFinal(G){
   show('final');

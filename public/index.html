@@ -12660,7 +12660,6 @@ function handleSfxForState(G){
   }else if(trickKey&&trickKey!==lastAnnouncedTrickKey){
     lastAnnouncedTrickKey=trickKey;
     const penalty=lt.cards.some(t=>t.card.suit==='♥'||(t.card.suit==='♠'&&t.card.rank==='Q'));
-    SFX.play('trickSweep',penalty);
     if(lt.winner===me){
       SFX.play(penalty?'penaltyCard':'trickWin');
     }else{

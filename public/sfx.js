@@ -279,21 +279,6 @@ const SFX = (() => {
       });
     },
 
-    // ── Trick sweep: the four cards gathered off the table toward whoever won
-    // them. `heavy` (a trick with hearts or the queen in it) adds a low thud.
-    trickSweep(heavy) {
-      noise({ duration: 0.3, gain: 0.34, filterType: 'bandpass',
-              freqStart: 500, freqEnd: 2600, Q: 0.8, attack: 0.03, decay: 0.24 });
-      noise({ duration: 0.22, delay: 0.16, gain: 0.2, filterType: 'highpass',
-              freqStart: 2400, freqEnd: 1400, Q: 0.7, attack: 0.005, decay: 0.16 });
-      tone({ freq: 130, freqEnd: 70, type: 'sine', duration: 0.18, delay: 0.2,
-             attack: 0.004, decay: 0.12, gain: heavy ? 0.34 : 0.16 });
-      if (heavy) {
-        tone({ freq: 98, freqEnd: 58, type: 'sine', duration: 0.32, delay: 0.24,
-               attack: 0.004, decay: 0.22, gain: 0.22 });
-      }
-    },
-
     // ── Queen of Spades hits the table: a low dissonant stab (a minor second),
     // a cymbal-like hiss, a falling squeal and a deep thump. The most dramatic
     // card in the game now sounds like it.

@@ -4385,15 +4385,15 @@ before pushing.
 
 ## The expanded sound set (all synthesized — no new audio files)
 - **New `sfx.js` presets**, built from the existing `tone()`/`noise()`
-  helpers like every non-card sound: `trickSweep(heavy)`, `queenSting`,
+  helpers like every non-card sound: `queenSting`,
   `moonBuild(level)`, `moonLaunch`, `moonImpact`, `timerTick(left)`,
   `creditTick(progress)`, `creditTally`, `matchFound`, `rankUp(tier)`.
   Calling a preset directly (`SFX.presets.x()`) throws on a bug;
   `SFX.play` swallows errors, so test through the former.
-- **Where they fire** (`public/index.html`): `handleSfxForState` — sweep on
-  every resolved trick (heavy when it held a heart or the queen) and the
-  queen sting when Q♠ lands on the table, both seeded silently on the first
-  state seen like every tracker there; `paintCountdown` — the last five
+- **Where they fire** (`public/index.html`): `handleSfxForState` — the
+  queen sting when Q♠ lands on the table, seeded silently on the first
+  state seen like every tracker there. (A trick-sweep whoosh existed briefly
+  and was removed on request — don't re-add it unasked.); `paintCountdown` — the last five
   seconds of any auto-advance countdown, once per second, pitch climbing;
   `showMoonFx` — `moonLaunch` at the rocket launch, `moonImpact` (replaces
   the old plain `gameWin`) on impact; `rankedMatchFound`; `rankedResult`.

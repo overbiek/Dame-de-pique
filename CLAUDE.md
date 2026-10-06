@@ -4482,9 +4482,9 @@ before pushing.
   It runs from `show()`, `campaignRenderChapterView` and `renderCampaignHub`;
   `Music.set` is idempotent and only changes what differs.
 - **A missing mp3 is silent, not an error** (one 404, remembered in
-  `missing`). `spades.mp3`, `hearts.mp3` and `clubs.mp3` exist (all ~150s,
-  loopEnd 138/144/146s, normalized to -26 dB RMS); Diamonds plays its ambience
-  bed alone until `diamonds.mp3` is dropped in — no code change. A House's FINAL chapter (chapter id % 10 === 0) asks for
+  `missing`). All four House tracks exist: `spades`/`hearts`/`clubs` (~150s,
+  loopEnd 138/144/146s) and `diamonds` (178.5s, loopEnd 174s, gain 0.41), each
+  normalized to -26 dB RMS. No `<house>-endgame.mp3` exists yet. A House's FINAL chapter (chapter id % 10 === 0) asks for
   `<house>-endgame` and falls back to `<house>`; it also adds the `pulse`
   bed part (low drone + heartbeat).
 - **The loop point is measured, not hard-coded.** `analyse()` finds the last

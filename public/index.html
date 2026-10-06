@@ -7699,10 +7699,18 @@ function syncCampaignAudio(){
     chId=Math.ceil(S.campaignLevel/10);
     slug=S.campaignChapterSlug||null;
   }
-  // The hub (choosing a House) has the Spades art behind it and no room of
-  // its own, so it gets the opening theme and no ambience.
-  if(hub){ Music.set({track:MUSIC_HOUSES[0]}); return; }
-  if(!chId){ Music.set(null); return; }
+  // The hub (choosing a House) is silent: each House has its own music, so
+  // nothing starts until one has been chosen. Arriving here from a chapter
+  // map stops it quickly.
+  if(hub){ Music.set(null,{now:true}); return; }
+  // Between a campaign hand and its result the same room should carry on
+  // through the round summary / final screen (Music holds it a few seconds).
+  // Anywhere else — the menu above all — leaving means it fades out fast.
+  if(!chId){
+    const between=currentScreenId==='summary'||currentScreenId==='final';
+    Music.set(null,between?undefined:{now:true});
+    return;
+  }
   const house=Math.min(4,Math.max(1,Math.ceil(chId/10)));
   const base=MUSIC_HOUSES[house-1];
   const endgame=chId%10===0;

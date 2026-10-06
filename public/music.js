@@ -46,7 +46,7 @@ const Music = (() => {
     musicBus = ctx.createGain();
     musicBus.connect(outGain);
     bedBus = ctx.createGain();
-    bedBus.gain.value = 0.7;
+    bedBus.gain.value = 0.48;
     bedBus.connect(outGain);
     document.addEventListener('visibilitychange', onVisibility);
     return true;
@@ -417,12 +417,14 @@ const Music = (() => {
   const BEDS = {
     // House of Spades
     velvet_entrance:     [['rain', { i: 0.5 }], ['crowd', { i: 0.3, lp: 600 }], ['hum']],
-    rooftop:             [['wind', { i: 0.8 }], ['rain', { i: 0.4 }], ['city', { i: 0.7 }]],
+    // (rooftop / lounge / cabaret / ballroom: the voices-in-the-background layer
+    //  is to be a recorded loop, so no synthesized chatter here meanwhile)
+    rooftop:             [['wind', { i: 0.4 }]],
     grand_library:       [['hum', { i: 0.7 }], ['clock', { rate: 0.8 }], ['fire', { i: 0.4 }]],
-    carnival_lounge:     [['crowd', { i: 0.8 }], ['hum', { i: 0.6 }]],
+    carnival_lounge:     [['hum', { i: 0.5 }]],
     conservatory:        [['drip', { i: 0.9 }], ['wind', { i: 0.15 }], ['rain', { i: 0.2 }]],
-    cabaret_of_oddities: [['crowd', { i: 0.6, lp: 1000 }], ['hum', { i: 0.8 }], ['chimes', { i: 0.4 }]],
-    grand_ballroom:      [['crowd', { i: 0.4, lp: 900 }], ['hum', { i: 0.5, f: 49 }], ['clock', { rate: 0.5, i: 0.5 }]],
+    cabaret_of_oddities: [['hum', { i: 0.7 }], ['chimes', { i: 0.4 }]],
+    grand_ballroom:      [['hum', { i: 0.5, f: 49 }], ['clock', { rate: 0.5, i: 0.5 }]],
     vault:               [['hum', { i: 1.2, f: 41 }], ['clock', { rate: 0.5 }]],
     countess_antechamber:[['hum', { i: 0.6 }], ['clock', { rate: 0.6 }], ['fire', { i: 0.25 }]],
     hidden_throne_room:  [['hum', { i: 1, f: 36 }]],
@@ -518,12 +520,25 @@ const Music = (() => {
   // same room should simply carry on through that rather than restart.
   let graceTimer = null;
   const GRACE_MS = 6000;
-  function set(opts) {
+  //
+  // `set(null, {now:true})` skips the grace and fades out in under a second:
+  // for leaving on purpose (back to the menu, or the House picker), where
+  // music carrying on would just feel like a bug.
+  function set(opts, flags) {
     const o = opts || {};
     const next = { track: o.track || null, fallback: o.fallback || null, bed: o.bed || null, tension: !!o.tension };
     clearTimeout(graceTimer);
     graceTimer = null;
     if (!next.track && !next.bed) {
+      if (flags && flags.now) {
+        want = next;
+        trackGen++;
+        if (ctx) {
+          stopLoop(cur, 0.7);
+          if (curBed) { curBed.stop(0.7); curBed = null; }
+        }
+        return;
+      }
       if (!cur && !curBed) { want = next; return; }          // nothing to wind down
       graceTimer = setTimeout(() => { want = next; if (!muted) apply(); }, GRACE_MS);
       return;

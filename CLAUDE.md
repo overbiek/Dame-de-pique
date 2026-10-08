@@ -4426,11 +4426,17 @@ before pushing.
   386/399) missions, which the goal-seeking bots clear 15-100%. Moon-prone hands
   (the AI shoots 40-60 on a few) have gaps between values, so a few golds
   (332, 336, 395, 398) are ~equal to their clear.
-  **NOT retuned: the five clean-hand missions 303/316/329/356/369** — they clear
-  0-4% for any bot, and allowing a few penalty points does not fix it
-  (P(penalty <= 20) is 0.7-21%, the queen and many hearts are forced), so they
-  need a different goal (score line, or avoid-the-queen) rather than a looser
-  limit. Benchmarks used 150 runs, so each rate is +/-3%.
+  **The five clean-hand missions 303/316/329/356/369 were converted**
+  (decided with the developer): as clean-hand they cleared 0-4% for any bot and
+  allowing a few penalty points did not fix it (P(penalty <= 20) was 0.7-21%;
+  the queen and many hearts are forced on those hands). **316 became
+  avoid-the-queen** (clears ~21%, gold = no queen AND score >= 9, ~9%). The
+  other four were measured as avoid-the-queen first (95-100% clear, far too
+  easy) and went to **plain score lines instead**: 303 = 6/11, 329 = 4/7,
+  356 = 20/22, 369 = 3/8 (clear ~11-14%, gold ~4-6%; 200 AI runs). The clear
+  rate of an avoidQueen level is fixed by the hand and cannot be tuned, which
+  is why a score line is the better tool when the hand is that hard.
+  Benchmarks used 150-200 runs, so each rate is +/-3%.
 - **Scores on a fixed hand are lumpy**: the AI lands on the same few totals,
   so no line may exist at a given target rate (Table 84 jumps from 37% at
   +20 to 2% at +21; Table 89's tricks from 22% at 9 to 5% at 10). The nearer

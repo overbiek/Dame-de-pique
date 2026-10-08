@@ -4776,7 +4776,8 @@ const CAMPAIGN_LEVELS = {
        objective: { type: 'score', min: 16, gold: 20 } },
   303: { id: 303, chapter: 31, type: 'Mission', forcePassDir: 'left', hands: 1,
        seed: 'ddp-ch4-L303-clean-c108', hand: parseHand('9♠ 6♣ Q♠ 2♣ 10♦ 5♠ 10♥ 8♦ 10♣ J♥ 5♣ 3♠ K♠'),
-       objective: { type: 'cleanHand', goldScoreBar: 0 } },
+       // Retuned (simulation, 200 runs, normal AI incl. its own pass): the clean-hand goal cleared 0-4% for any bot (the hand forces the queen/hearts); avoid-the-queen was tried and is far too easy (66-100% clear on this hand), so it is a plain score line now: 6/11 is ~12%/4.5%.
+       objective: { type: 'score', min: 6, gold: 11 } },
   304: { id: 304, chapter: 31, type: 'Harder', forcePassDir: 'left', hands: 1,
        seed: 'ddp-ch4-L304-score-c129', hand: parseHand('6♠ 8♦ K♠ 10♦ Q♠ K♦ 2♦ 8♠ A♣ K♣ 7♥ 2♥ 9♣'),
        // Retuned (simulation, 150 runs, normal AI incl. its own pass): was 38/45 = 7.3%/1.3%; 37/38 is ~17%/7%.
@@ -4829,7 +4830,8 @@ const CAMPAIGN_LEVELS = {
        objective: { type: 'score', min: 11, gold: 20 } },
   316: { id: 316, chapter: 32, type: 'Mission', forcePassDir: 'left', hands: 1,
        seed: 'ddp-ch4-L316-clean-c231', hand: parseHand('10♠ 5♠ 10♣ 7♣ 9♦ 9♣ 9♥ 7♥ 6♠ 3♥ 9♠ 4♠ K♥'),
-       objective: { type: 'cleanHand', goldScoreBar: 0 } },
+       // Retuned (simulation, 150 runs, normal AI incl. its own pass): the clean-hand goal cleared 0-4% for any bot (the hand forces the queen/hearts) and a looser penalty limit did not help; now avoid-the-queen. Clear is 21.3%; gold = no queen AND score >= 9 (~5%).
+       objective: { type: 'avoidQueen', goldScoreBar: 9 } },
   317: { id: 317, chapter: 32, type: 'Normal', forcePassDir: 'left', hands: 1,
        seed: 'ddp-ch4-L317-score-c707', hand: parseHand('3♠ 10♦ K♥ J♦ 7♣ A♣ 9♥ A♥ K♦ 8♥ 6♥ J♣ J♥'),
        // Retuned (simulation, 150 runs, normal AI incl. its own pass): was 30/44 = 4.0%/4.0%; -3/11 is ~12%/5%.
@@ -4884,7 +4886,8 @@ const CAMPAIGN_LEVELS = {
        objective: { type: 'score', min: 8, gold: 16 } },
   329: { id: 329, chapter: 33, type: 'Mission', forcePassDir: 'right', hands: 1,
        seed: 'ddp-ch4-L329-clean-c22', hand: parseHand('Q♥ 4♠ A♣ 9♣ 5♠ K♠ 4♥ 8♦ K♥ 7♣ 4♦ Q♠ 10♦'),
-       objective: { type: 'cleanHand', goldScoreBar: -20 } },
+       // Retuned (simulation, 200 runs, normal AI incl. its own pass): the clean-hand goal cleared 0-4% for any bot (the hand forces the queen/hearts); avoid-the-queen was tried and is far too easy (66-100% clear on this hand), so it is a plain score line now: 4/7 is ~13.5%/4%.
+       objective: { type: 'score', min: 4, gold: 7 } },
   330: { id: 330, chapter: 33, type: 'BOSS', forcePassDir: null, hands: 8, bossId: 'the_doubter',
          seed: 'ddp-ch4-L330-boss-c140',
          hands8: [
@@ -5021,7 +5024,8 @@ const CAMPAIGN_LEVELS = {
        objective: { type: 'score', min: 17, gold: 24 } },
   356: { id: 356, chapter: 36, type: 'Mission', forcePassDir: 'across', hands: 1,
        seed: 'ddp-ch4-L356-clean-c35', hand: parseHand('A♠ 4♠ A♦ J♦ Q♦ 6♠ 6♥ 4♦ Q♠ 10♣ 3♦ 5♠ 10♠'),
-       objective: { type: 'cleanHand', goldScoreBar: 10 } },
+       // Retuned (simulation, 200 runs, normal AI incl. its own pass): the clean-hand goal cleared 0-4% for any bot (the hand forces the queen/hearts); avoid-the-queen was tried and is far too easy (66-100% clear on this hand), so it is a plain score line now: 20/22 is ~14.5%/6%.
+       objective: { type: 'score', min: 20, gold: 22 } },
   357: { id: 357, chapter: 36, type: 'Normal', forcePassDir: 'across', hands: 1,
        seed: 'ddp-ch4-L357-score-c680', hand: parseHand('5♥ K♣ K♦ 8♠ 2♦ 3♦ 9♣ 6♦ 3♣ 10♠ J♣ A♦ 3♥'),
        // Retuned (simulation, 150 runs, normal AI incl. its own pass): was 42/53 = 0.0%/0.0%; 29/30 is ~13%/7%.
@@ -5083,7 +5087,8 @@ const CAMPAIGN_LEVELS = {
        objective: { type: 'score', min: 21, gold: 27 } },
   369: { id: 369, chapter: 37, type: 'Mission', forcePassDir: 'keep', hands: 1,
        seed: 'ddp-ch4-L369-clean-c15', hand: parseHand('K♥ 5♦ 8♦ 9♦ Q♠ Q♦ Q♣ 2♦ 6♠ 8♥ 5♠ 9♠ K♠'),
-       objective: { type: 'cleanHand', goldScoreBar: 0 } },
+       // Retuned (simulation, 200 runs, normal AI incl. its own pass): the clean-hand goal cleared 0-4% for any bot (the hand forces the queen/hearts); avoid-the-queen was tried and is far too easy (66-100% clear on this hand), so it is a plain score line now: 3/8 is ~11%/5%.
+       objective: { type: 'score', min: 3, gold: 8 } },
   370: { id: 370, chapter: 37, type: 'BOSS', forcePassDir: null, hands: 16, bossId: 'the_judge',
          seed: 'ddp-ch4-L370-boss-c263',
          hands16: [

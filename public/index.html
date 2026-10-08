@@ -3764,6 +3764,9 @@ html.landscape-mode #s-draw .dcw .slot-tier{display:none}
 .btn-sm{padding:9px 15px;font-size:.8rem}
 .btn.danger{border-color:rgba(214,90,70,.55);background:rgba(214,90,70,.14);color:#f3ab9f}
 .exit-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+/* Sound + Music share one line, half each (main menu) */
+.exit-pair{display:flex;gap:8px;width:100%}
+.exit-pair .btn{flex:1 1 0;min-width:0;padding-left:6px;padding-right:6px;white-space:nowrap;text-align:center !important}
 .autoline{text-align:center;font-size:.78rem;color:var(--faint);margin-top:10px;min-height:1.1em}
 .autoline.soon{color:var(--warn)}
 
@@ -6357,8 +6360,10 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
 
     <div class="exit-row" style="margin-top:22px">
       <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
-      <button class="btn btn-ghost btn-sm" id="sfx-toggle" onclick="toggleSfxMuted()">🔊 Sound</button>
-      <button class="btn btn-ghost btn-sm" id="music-toggle" onclick="toggleMusicMuted()">🎵 Music</button>
+      <div class="exit-pair">
+        <button class="btn btn-ghost btn-sm" id="sfx-toggle" onclick="toggleSfxMuted()">🔊 Sound</button>
+        <button class="btn btn-ghost btn-sm" id="music-toggle" onclick="toggleMusicMuted()">🎵 Music</button>
+      </div>
       <!-- A full-size labelled button rather than the small round "?" this
            used to be: the tutorial is the one control here a new player
            actually needs to find, and an unlabelled icon buried it. -->

@@ -5539,6 +5539,27 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
   border:1px solid rgba(var(--ddp-brass-rgb),.45);border-radius:18px;
   box-shadow:0 10px 30px rgba(0,0,0,.6);padding:18px 20px;
 }
+/* A speaking line gets the same portrait-over-the-card treatment the
+   ordinary dialogue card uses: the prologues fold "THE SHARP: ..." into
+   the text, so the speaker is parsed back out (campaignProlSpeaker) and
+   shown as a portrait + name instead of a printed prefix. The player sits
+   on the right, everyone else on the left, like .camp-dlg-mine. */
+.camp-prol-portrait{
+  display:none;position:absolute;top:-58px;left:18px;z-index:2;
+  width:96px;height:96px;
+  filter:drop-shadow(0 6px 14px rgba(var(--ddp-scrim-rgb),.6));
+}
+.camp-prol-portrait .camp-portrait{width:100%;height:100%}
+.camp-prol-name{
+  display:none;font-family:'Playfair Display',serif;font-weight:700;font-size:15px;
+  letter-spacing:.03em;text-transform:uppercase;color:var(--gold-hi);margin-bottom:5px;
+  font-style:normal;
+}
+.camp-prol-box.has-name .camp-prol-name{display:block}
+.camp-prol-box.has-portrait .camp-prol-portrait{display:block}
+.camp-prol-box.has-portrait{padding-left:128px}
+.camp-prol-box.mine.has-portrait{padding-left:20px;padding-right:128px;text-align:right}
+.camp-prol-box.mine .camp-prol-portrait{left:auto;right:18px}
 .camp-prol-text{
   font-family:'Playfair Display',serif;font-style:italic;font-weight:500;
   font-size:17px;line-height:1.5;color:var(--cream);min-height:1.5em;
@@ -6676,6 +6697,8 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
   <img class="camp-prol-bg" id="camp-prol-bg" alt="" aria-hidden="true"/>
   <div class="camp-prol-vignette"></div>
   <div class="camp-prol-box" id="camp-prol-box">
+    <div class="camp-prol-portrait" id="camp-prol-portrait"></div>
+    <div class="camp-prol-name" id="camp-prol-name"></div>
     <div class="camp-prol-text" id="camp-prol-text"></div>
   </div>
   <button class="btn btn-primary camp-prol-continue" id="camp-prol-continue" style="display:none" onclick="campaignPrologueAdvance()">Continue</button>
@@ -9836,6 +9859,29 @@ function campaignPrologueTypeText(text){
     if(i>=text.length){ clearInterval(campProlTypeTimer); campProlTyping=false; }
   },CAMP_TYPE_MS);
 }
+/* "THE SHARP: \"line\"" -> {id, name, body}. Only a prefix that names a
+   known character (or PLAYER) counts as a speaker with a portrait; any
+   other ALL-CAPS prefix (e.g. DIAMOND ATTENDANT, who has no art) still
+   becomes a name label, just without a portrait. Anything else is
+   narration and comes back null. Parsed from the RAW text, before the
+   PLAYER -> account-name swap, or "PLAYER:" would no longer be found. */
+let campProlNameMap=null;
+function campaignProlSpeaker(text){
+  const m=/^([A-Z][A-Z0-9 '.-]{1,30}):\s+([\s\S]*)$/.exec(text||'');
+  if(!m) return null;
+  if(!campProlNameMap){
+    campProlNameMap={};
+    Object.keys(CAMPAIGN_CHARACTERS).forEach(id=>{ const n=CAMPAIGN_CHARACTERS[id].name; if(n) campProlNameMap[n.toUpperCase()]=id; });
+  }
+  let body=m[2];
+  // Drop one pair of wrapping quotes: the card is the speech bubble.
+  const q=/^"([^"]*)"$/.exec(body);
+  if(q) body=q[1];
+  if(m[1]==='PLAYER') return {id:'player',name:identity().name||'You',body};
+  const id=campProlNameMap[m[1]];
+  const title=m[1].toLowerCase().replace(/(^|[ '-])([a-z])/g,(x,a,b)=>a+b.toUpperCase());
+  return {id:id||null,name:id?CAMPAIGN_CHARACTERS[id].name:title,body};
+}
 function campaignPrologueStep(){
   if(!campProlQueue.length){
     $('camp-prologue').classList.remove('show');
@@ -9858,8 +9904,17 @@ function campaignPrologueStep(){
   }else{
     campProlHolding=false;
     $('camp-prol-continue').style.display='none';
-    $('camp-prol-box').style.display='block';
-    campaignPrologueTypeText(campaignPlayerText(cue.text));
+    const box=$('camp-prol-box');
+    box.style.display='block';
+    const sp=campaignProlSpeaker(cue.text);
+    box.classList.toggle('has-name',!!sp);
+    box.classList.toggle('has-portrait',!!(sp&&sp.id));
+    box.classList.toggle('mine',!!(sp&&sp.id==='player'));
+    $('camp-prol-name').textContent=sp?sp.name:'';
+    $('camp-prol-portrait').innerHTML=!(sp&&sp.id)?''
+      :sp.id==='player'?`<span class="avatar" style="width:100%;height:100%">${avatarHTML(account&&account.avatar,sp.name)}</span>`
+      :campaignPortraitHTML(sp.id);
+    campaignPrologueTypeText(campaignPlayerText(sp?sp.body:cue.text));
   }
 }
 function campaignPrologueAdvance(){

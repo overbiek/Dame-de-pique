@@ -12728,9 +12728,14 @@ function handleSfxForState(G){
     lastAnnouncedTrickKey=trickKey;
   }else if(trickKey&&trickKey!==lastAnnouncedTrickKey){
     lastAnnouncedTrickKey=trickKey;
-    const penalty=lt.cards.some(t=>t.card.suit==='♥'||(t.card.suit==='♠'&&t.card.rank==='Q'));
+    // Judged by what the trick is actually worth to its winner, not by
+    // whether a heart is in it: +10 for the trick, minus each heart's face
+    // value, minus 26 for the queen. Three clubs and a 7♥ is +3, so that is
+    // the happy sound; a trick that nets zero or less is the penalty one.
+    const trickNet=10-lt.cards.reduce((n,t)=>n+
+      (t.card.suit==='♥'?RV[t.card.rank]:(t.card.suit==='♠'&&t.card.rank==='Q')?26:0),0);
     if(lt.winner===me){
-      SFX.play(penalty?'penaltyCard':'trickWin');
+      SFX.play(trickNet>0?'trickWin':'penaltyCard');
     }else{
       SFX.play('trickLose');
     }

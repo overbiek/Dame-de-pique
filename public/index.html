@@ -1172,6 +1172,81 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
 #credit-tally .ct-d{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:.82rem;font-weight:700;color:#7FE0B4}
 .ct-fly{position:fixed;left:0;top:0;z-index:1801;pointer-events:none;opacity:0}
 
+/* ══ Friends chip (menu rail) + friends sheet + online toast ══
+   The chip sits in the menu's identity rail (row 5, the 1fr spacer's top),
+   so like the credits box it costs nothing against the 2x3 tile budget.
+   The sheet is a right-hand drawer rather than a bottom sheet: landscape
+   phones are ~375px tall, and a bottom sheet would leave no list. z-index
+   215 sits under the profile card (220) so tapping a row opens the card
+   ABOVE the sheet, and under the invite popup (240). */
+.friends-chip{
+  display:flex;align-items:center;gap:9px;width:100%;margin-top:8px;
+  padding:9px 13px;border-radius:14px;
+  background:linear-gradient(160deg,rgba(var(--ddp-brass-rgb),.10),rgba(var(--ddp-gloss-rgb),.02));
+  border:1px solid rgba(var(--ddp-brass-rgb),.28);
+  font:inherit;color:inherit;text-align:left;cursor:pointer;appearance:none;
+  touch-action:manipulation;
+}
+.friends-chip:active{transform:scale(.985)}
+.friends-chip .fc-dot{flex:0 0 auto;width:10px;height:10px;border-radius:50%;background:var(--muted)}
+.friends-chip.live .fc-dot{background:#3fbf88;box-shadow:0 0 0 3px rgba(63,191,136,.2)}
+.friends-chip .fc-label{font-size:.78rem;font-weight:600;color:var(--cream);line-height:1.15}
+.friends-chip .fc-sub{display:block;font-size:.58rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.friends-chip .fc-badge{
+  margin-left:auto;flex:0 0 auto;min-width:18px;height:18px;padding:0 5px;border-radius:9px;
+  display:none;place-items:center;font:700 .66rem var(--font-num);
+  background:linear-gradient(160deg,var(--gold-hi),var(--gold-lo));color:var(--ddp-on-brass);
+}
+.friends-chip.has-req .fc-badge{display:grid}
+html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:start}
+
+#friends-sheet{
+  display:none;position:fixed;inset:0;z-index:215;
+  background:rgba(3,16,11,.62);backdrop-filter:blur(2px);
+}
+#friends-sheet.on{display:block}
+.fs-panel{
+  position:absolute;top:0;right:0;bottom:0;width:min(380px,92vw);
+  display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top) + 12px) calc(env(safe-area-inset-right) + 14px) calc(env(safe-area-inset-bottom) + 12px) 14px;
+  background:linear-gradient(170deg,var(--ddp-felt),var(--ddp-felt) 60%,var(--ddp-bg));
+  border-left:1px solid rgba(var(--ddp-brass-rgb),.34);
+  box-shadow:-18px 0 50px rgba(var(--ddp-scrim-rgb),.5);
+  animation:fs-in .2s ease;
+}
+@keyframes fs-in{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+.fs-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.fs-head h3{margin:0;flex:1;font:600 1.05rem 'Playfair Display',serif;color:var(--gold-hi)}
+.fs-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.fs-sec{font-size:.6rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:10px 2px 2px}
+.fs-foot{display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.fs-foot label{flex:1;display:flex;align-items:center;gap:7px;font-size:.72rem;color:var(--faint);cursor:pointer}
+.fs-empty{padding:18px 6px;text-align:center;font-size:.8rem;color:var(--faint);line-height:1.45}
+.friend-dot.menu{background:#3fbf88}
+.friend-dot.lobby{background:#e6b84a}
+.friend-dot.playing{background:#d9644f}
+.friend-status.lobby{color:var(--gold-hi)}
+
+#friend-toast{
+  position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);z-index:214;
+  transform:translate(-50%,-140%);opacity:0;pointer-events:none;
+  max-width:min(360px,90vw);
+  display:flex;align-items:center;gap:9px;padding:8px 14px;border-radius:999px;
+  background:linear-gradient(170deg,var(--ddp-felt),var(--ddp-bg));
+  border:1px solid rgba(var(--ddp-brass-rgb),.45);
+  box-shadow:0 8px 26px rgba(var(--ddp-scrim-rgb),.55);
+  font:600 .78rem 'DM Sans',sans-serif;color:var(--cream);cursor:pointer;
+  transition:transform .28s ease,opacity .28s ease;
+}
+#friend-toast.on{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+#friend-toast .ft-dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:#3fbf88;box-shadow:0 0 0 3px rgba(63,191,136,.22)}
+#friend-toast .ft-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ros.prof,.frow.prof,.sg-id.prof{cursor:pointer}
+.frow-add{
+  flex:0 0 auto;font:700 .6rem 'DM Sans',sans-serif;letter-spacing:.04em;
+  padding:2px 7px;border-radius:999px;border:1px solid rgba(var(--ddp-brass-rgb),.4);color:var(--gold-hi);
+}
+
 /* ══ Friends list (My Account) ══ */
 .friend-row{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line)}
 .friend-row:last-child{border-bottom:none}
@@ -6203,6 +6278,16 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
       <span class="cb-plus" aria-hidden="true">+</span>
     </button>
 
+    <button class="friends-chip deco-box" id="menu-friends" onclick="openFriendsSheet()"
+            style="display:none" aria-label="Friends">
+      <span class="fc-dot"></span>
+      <span>
+        <span class="fc-label" id="menu-friends-label">Friends</span>
+        <span class="fc-sub" id="menu-friends-sub">None online</span>
+      </span>
+      <span class="fc-badge" id="menu-friends-badge">0</span>
+    </button>
+
     <div class="menu-tiles">
       <!-- Six equal tiles, 2x3. Markup order (Campaign, Daily, Casual,
            Ranked, Statistics, My Account) is exactly the reading order
@@ -7480,6 +7565,22 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
      actually answered. Tapping the scrim declines, same as the button —
      it's a real answer to the invite (the sender does get told), not
      just dismissing an info popup, so that's deliberate, not a shortcut. -->
+<div id="friend-toast" onclick="openFriendsSheet()" role="status"><span class="ft-dot"></span><span class="ft-txt" id="ft-txt"></span></div>
+
+<div id="friends-sheet" onclick="if(event.target===this)closeFriendsSheet()">
+  <div class="fs-panel">
+    <div class="fs-head">
+      <h3>Friends</h3>
+      <button class="rulex" onclick="closeFriendsSheet()" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="fs-body" id="fs-body"></div>
+    <div class="fs-foot">
+      <label><input type="checkbox" id="fs-notify" onchange="setFriendToasts(this.checked)"/> Tell me when friends come online</label>
+      <button class="friend-btn" onclick="manageFriends()">Add / manage</button>
+    </div>
+  </div>
+</div>
+
 <div id="friend-invite" onclick="if(event.target===this)dismissFriendInvite()">
   <div class="fi-card">
     <div class="avatar-preview" id="fi-avatar">👤</div>
@@ -8149,6 +8250,7 @@ function show(id){
   updateSceneLayer();
   syncCampaignAudio();
   if(id==='menu') maybeShowDailyRewards();
+  flushFriendToasts();
 }
 // The game is landscape-only: every screen has a landscape layout, so
 // every screen asks to be locked there. Kept as a set (rather than
@@ -8409,7 +8511,8 @@ function rosterRowHTML(G,i,active){
   // equipped, which is the documented bare-wrapper state: every
   // decorative layer stays display:none and it degrades to plain name +
   // title. That's why the dressing is emitted conditionally too.
-  return `<div class="ros ${cls}">`
+  const pt=profTap(p,i);
+  return `<div class="ros ${cls}${pt.cls}"${pt.attrs}>`
     +`<span class="ros-av avatar${mat?' rank-framed':''}"`
       +`${mat?` data-material="${mat}"`:''}>`
       +avatarContent
@@ -11692,8 +11795,9 @@ function doLogout(){
   renderAchievements();
   renderHeroCosmetics();
   renderShop();
-  friendsList=[]; friendsLoadedOnce=false;
+  friendsList=[]; friendsLoadedOnce=false; friendRequestsList=[];
   renderLobbyFriendPicker();
+  closeFriendsSheet(); updateFriendsChip();
 }
 
 /* ══════════ FRIENDS ══════════
@@ -11818,6 +11922,155 @@ function renderLobbyFriendPicker(){
     : '<p class="codehint" style="padding:8px 4px">No friends online right now.</p>';
 }
 
+
+/* ── Friends sheet, menu chip, online toast ──
+   Everything here reads friendsList/friendRequestsList, which authOk now
+   loads on every login/resume (they used to load only when My Account's
+   Friends tab or a lobby opened), so the chip is accurate from the first
+   frame of the menu. Presence changes arrive as friendPresence; richer
+   status (menu / lobby / playing) only comes with a getFriends fetch, so
+   the open sheet re-asks every FS_REFRESH_MS rather than the server
+   pushing on every room change. */
+const FS_REFRESH_MS=6000;
+const FT_COOLDOWN_MS=5*60*1000;   // per friend — mobile reconnects flap
+const FT_DEFER_SCREENS=new Set(['draw','pass','play']);
+let fsTimer=null, ftHideTimer=null, ftQueue=[], pendingFriendInvite=null;
+const ftLast={};                  // friend id -> last time we toasted them
+function friendToastsOn(){ try{ return localStorage.getItem('ddp.friendToasts')!=='0'; }catch(e){ return true; } }
+function setFriendToasts(on){ try{ localStorage.setItem('ddp.friendToasts',on?'1':'0'); }catch(e){} }
+function updateFriendsChip(){
+  const chip=$('menu-friends'); if(!chip) return;
+  chip.style.display=account?'flex':'none';
+  if(!account) return;
+  const online=friendsList.filter(f=>f.online).length;
+  const reqs=friendRequestsList.length;
+  chip.classList.toggle('live',online>0);
+  chip.classList.toggle('has-req',reqs>0);
+  $('menu-friends-badge').textContent=reqs;
+  $('menu-friends-label').textContent=friendsList.length?'Friends':'Add friends';
+  $('menu-friends-sub').textContent=online>0?online+' online':(friendsList.length?'None online':'Tap to start');
+  if($('friends-sheet').classList.contains('on')) renderFriendsSheet();
+}
+const FS_STATUS_ORDER={lobby:0,menu:1,playing:2,offline:3};
+function fsStatusOf(f){ return f.online?(f.status||'menu'):'offline'; }
+function fsStatusText(f){
+  const st=fsStatusOf(f);
+  return st==='lobby'?(f.code?'In a lobby · seat open':'In a lobby')
+    :st==='playing'?'Playing'
+    :st==='menu'?'In the menu':'Offline';
+}
+function fsRowHTML(f){
+  const st=fsStatusOf(f);
+  const inRoom=!!room;
+  let act='';
+  if(st==='lobby'&&f.code&&!inRoom) act=`<button class="friend-btn invite" onclick="joinFriendLobby('${esc(f.code)}')">Join</button>`;
+  else if(st==='menu'&&!inRoom) act=`<button class="friend-btn invite" onclick="playWithFriend(${f.id},this)">Play</button>`;
+  else if(f.online&&inRoom&&lobbyInviteEligible) act=`<button class="friend-btn invite" onclick="inviteFriendToRoom(${f.id},this)">Invite</button>`;
+  return `<div class="friend-row">
+    <button class="friend-main" onclick="openFriendProfile(${f.id})">
+      <span class="friend-avatar">${avatarHTML(f.avatar,f.nickname)}<span class="friend-dot ${st}"></span></span>
+      <span class="friend-info">
+        <div class="friend-name">${esc(f.nickname)}</div>
+        <div class="friend-status ${st}">${fsStatusText(f)}</div>
+      </span>
+    </button>
+    <span class="friend-actions">${act}</span>
+  </div>`;
+}
+function renderFriendsSheet(){
+  const el=$('fs-body'); if(!el) return;
+  let h='';
+  if(friendRequestsList.length){
+    h+=`<div class="fs-sec">Requests</div>`+friendRequestsList.map(friendRequestRowHTML).join('');
+  }
+  if(!friendsList.length){
+    h+=`<div class="fs-empty">No friends yet.<br>Tap any player's name after a game &mdash; or at a table &mdash; to view their profile and add them.</div>`;
+  }else{
+    const sorted=[...friendsList].sort((a,b)=>
+      FS_STATUS_ORDER[fsStatusOf(a)]-FS_STATUS_ORDER[fsStatusOf(b)]||a.nickname.localeCompare(b.nickname));
+    const on=sorted.filter(f=>f.online), off=sorted.filter(f=>!f.online);
+    if(on.length) h+=`<div class="fs-sec">Online · ${on.length}</div>`+on.map(fsRowHTML).join('');
+    if(off.length) h+=`<div class="fs-sec">Offline · ${off.length}</div>`+off.map(fsRowHTML).join('');
+  }
+  el.innerHTML=h;
+}
+function openFriendsSheet(){
+  if(!account) return;
+  SFX.play('click');
+  hideFriendToast();
+  $('fs-notify').checked=friendToastsOn();
+  $('friends-sheet').classList.add('on');
+  renderFriendsSheet();
+  const ask=()=>{ socket.emit('getFriends',{token:accountToken}); socket.emit('getFriendRequests',{token:accountToken}); };
+  ask();
+  clearInterval(fsTimer);
+  fsTimer=setInterval(ask,FS_REFRESH_MS);
+}
+function closeFriendsSheet(){
+  $('friends-sheet').classList.remove('on');
+  clearInterval(fsTimer); fsTimer=null;
+}
+function manageFriends(){
+  closeFriendsSheet();
+  goPersonal();
+  switchAccountTab('friends');
+}
+function joinFriendLobby(code){
+  const id=identity();
+  closeFriendsSheet();
+  if(!id.name){ goPersonal(); return; }
+  socket.emit('joinRoom',{code,name:id.name,avatar:id.avatar||'',accountToken:account?accountToken:''});
+}
+// One tap from the list to a table with that friend invited: creates the
+// casual room exactly as the Create button does, and the 'joined' handler
+// sends the invite the moment the server confirms we're seated in it
+// (inviteFriend is refused until then).
+function playWithFriend(id,btn){
+  if(!identity().name){ closeFriendsSheet(); goPersonal(); return; }
+  if(btn) btn.disabled=true;
+  pendingFriendInvite=id;
+  closeFriendsSheet();
+  doCreate();
+}
+function hideFriendToast(){ clearTimeout(ftHideTimer); $('friend-toast').classList.remove('on'); }
+function showFriendToast(names){
+  const t=names.length===1?`${names[0]} is online`
+    :names.length===2?`${names[0]} and ${names[1]} are online`
+    :`${names[0]} and ${names.length-1} others are online`;
+  $('ft-txt').textContent=t;
+  $('friend-toast').classList.add('on');
+  clearTimeout(ftHideTimer);
+  ftHideTimer=setTimeout(hideFriendToast,5000);
+}
+// Never over a table: the pass phase has a one-minute clock and the hand
+// has no spare pixels. A deferred arrival waits in ftQueue and is flushed
+// by show() on the first non-table screen — in practice the round summary,
+// whose confirm window is exactly the dead time this wants.
+function flushFriendToasts(){
+  if(!ftQueue.length||FT_DEFER_SCREENS.has(currentScreenId)||tutorialActive) return;
+  const names=ftQueue; ftQueue=[];
+  showFriendToast(names);
+}
+function noteFriendCameOnline(f){
+  if(!friendToastsOn()||$('friends-sheet').classList.contains('on')) return;
+  const now=Date.now();
+  if(ftLast[f.id]&&now-ftLast[f.id]<FT_COOLDOWN_MS) return;
+  ftLast[f.id]=now;
+  if(!ftQueue.includes(f.nickname)) ftQueue.push(f.nickname);
+  flushFriendToasts();
+}
+// Tapping a human at the table / on a results screen opens their profile
+// card, which is where the Add Friend button lives. Strangers meeting in
+// casual or ranked is how the friend graph grows at all. Returns a string
+// to splice into a class="..." attribute (closing quote included by the
+// caller's own markup), so it is only ever non-empty for another human
+// with an account, viewed by a logged-in player.
+function profTap(p,i){
+  return (account&&p&&p.accountId&&!p.isAI&&i!==me)
+    ? {cls:' prof',attrs:` onclick="openPlayerProfile(${p.accountId})" role="button" tabindex="0" aria-label="View ${esc(p.name)}'s profile"`}
+    : {cls:'',attrs:''};
+}
+
 socket.on('friendCodeOk',d=>{
   if(!$('s-personal').classList.contains('active')) return;
   $('friend-code').textContent=d.code;
@@ -11826,6 +12079,7 @@ socket.on('friendsOk',d=>{
   friendsList=d.friends||[];
   if($('s-personal').classList.contains('active')) renderFriendsList();
   renderLobbyFriendPicker();
+  updateFriendsChip();
 });
 socket.on('friendsError',d=>{
   if($('s-personal').classList.contains('active')&&$('acct-panel-friends').classList.contains('active')){
@@ -11839,13 +12093,19 @@ socket.on('friendAdded',d=>{
   friendsList=[...friendsList,d].sort((a,b)=>a.nickname.localeCompare(b.nickname));
   if($('s-personal').classList.contains('active')) renderFriendsList();
   renderLobbyFriendPicker();
+  updateFriendsChip();
 });
 socket.on('friendPresence',d=>{
   const f=friendsList.find(x=>x.id===d.id);
   if(!f) return;
+  const was=f.online;
   f.online=d.online;
+  f.status=d.status||(d.online?'menu':'offline');
+  f.code=null;
   if($('s-personal').classList.contains('active')) renderFriendsList();
   renderLobbyFriendPicker();
+  updateFriendsChip();
+  if(d.online&&!was) noteFriendCameOnline(f);
 });
 
 /* ── Friend requests ──
@@ -11897,6 +12157,7 @@ socket.on('friendRequestReceived',d=>{
   if(!friendRequestsList.some(r=>r.id===d.id)){
     friendRequestsList=[d,...friendRequestsList];
     if($('s-personal').classList.contains('active')) renderFriendRequests();
+    updateFriendsChip();
   }
   if(fpTargetId===d.id) renderFpActions({id:d.id,friendStatus:'incoming'});
 });
@@ -11907,6 +12168,7 @@ socket.on('friendRequestAccepted',d=>{
     friendsList=[...friendsList,d].sort((a,b)=>a.nickname.localeCompare(b.nickname));
     if($('s-personal').classList.contains('active')) renderFriendsList();
     renderLobbyFriendPicker();
+    updateFriendsChip();
   }
   if(fpTargetId===d.id) renderFpActions({id:d.id,friendStatus:'friends'});
 });
@@ -12259,6 +12521,10 @@ socket.on('joined',d=>{
   saveSession();
   $('l-code').textContent=room;
   campaignStartPending=false;
+  if(pendingFriendInvite&&d.isHost){
+    socket.emit('inviteFriend',{token:accountToken,friendId:pendingFriendInvite,code:d.code});
+  }
+  pendingFriendInvite=null;
 });
 
 /* ══════════ RANKED ══════════ */
@@ -12438,6 +12704,8 @@ socket.on('authOk',d=>{
   // holds nothing but the defaults. Fires on silent session resume too,
   // so it lands well before the player reaches a table.
   requestCosmetics();
+  socket.emit('getFriends',{token:accountToken});
+  socket.emit('getFriendRequests',{token:accountToken});
   if(lastAuthAction==='login'||lastAuthAction==='signup'){
     renderAccountUI();
     draftAvatar=account.avatar||'';
@@ -13818,7 +14086,8 @@ function summaryStandingsHTML(G){
     const set=mat?RANK_SETS.find(r=>r.material===mat):null;
     const title=p.isAI?AI_TITLE:(p.title||'');
     const mine=i===me;
-    cells+=`<div class="sg-id ros${mine?' mine':''}">`
+    const pt=profTap(p,i);
+    cells+=`<div class="sg-id ros${mine?' mine':''}${pt.cls}"${pt.attrs}>`
       +`<span class="ros-av avatar${mat?' rank-framed':''}"`
         +`${mat?` data-material="${mat}"`:''}>`
         +(p.campaignCharId?campaignPortraitHTML(p.campaignCharId):p.isAI?'🤖':avatarHTML(p.avatar,p.name))
@@ -13938,7 +14207,9 @@ function finalRowHTML(p,n){
   const crests=crestIds.map(id=>
     `<span class="frow-crest crest-art">${crestHTML(id,id===p.crest?p.crestLevel:p.crest2Level)}</span>`
   ).join('');
-  return `<div class="frow${n===0?' win':''}${p.i===me?' mine':''}" data-seat="${p.i}">
+  const pt=profTap(p,p.i);
+  const addPill=pt.cls&&!friendsList.some(f=>f.id===p.accountId)?'<span class="frow-add">+ Add</span>':'';
+  return `<div class="frow${n===0?' win':''}${p.i===me?' mine':''}${pt.cls}" data-seat="${p.i}"${pt.attrs}>
     <span class="frow-rank">${n+1}</span>
     <span class="avatar md${mat?' rank-framed':''}"${mat?` data-material="${mat}"`:''}>${avatarContent}</span>
     <span class="frow-info">
@@ -13946,6 +14217,7 @@ function finalRowHTML(p,n){
         <span class="frow-name">${esc(p.name)}${p.i===me?' &middot; you':''}</span>
         ${badge}
         ${crests}
+        ${addPill}
       </span>
       ${p.title?`<span class="frow-title">${esc(p.title)}</span>`:''}
     </span>

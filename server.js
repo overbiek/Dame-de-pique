@@ -11325,11 +11325,38 @@ function attachAccountSocket(socket, accountId) {
   set.add(socket.id);
   if (wasOffline) announceFriendPresence(accountId, true);
 }
+// What a friend is doing right now, for the friends sheet: 'offline',
+// 'menu' (connected, in no room), 'lobby' (sitting in a casual lobby —
+// `code` is included only while a seat is actually open, so it doubles as
+// the "Join" button's payload) or 'playing' (any room past the lobby, or a
+// ranked/daily/campaign room). Deliberately nothing finer than that: a
+// friend list that says which mode someone is in, or what round, leaks
+// more than the invite flow ever did. Computed on request rather than
+// pushed on every room change — the client refetches while the sheet is
+// open — so no room code path needs to know presence exists.
+function friendActivity(accountId) {
+  if (!accountSockets.has(accountId)) return { status: 'offline' };
+  for (const code of Object.keys(rooms)) {
+    const G = rooms[code];
+    const seat = G.players.findIndex(p => p.accountId === accountId && p.connected && !p.isAI);
+    if (seat === -1) continue;
+    if (G.phase === 'lobby' && !G.ranked && !G.daily && !G.campaign) {
+      const open = G.players.some((p, i) => i > 0 && !p.connected && !p.isAI);
+      return open ? { status: 'lobby', code: G.code } : { status: 'lobby' };
+    }
+    return { status: 'playing' };
+  }
+  return { status: 'menu' };
+}
+function withFriendPresence(f) {
+  const act = friendActivity(f.id);
+  return { ...f, online: act.status !== 'offline', status: act.status, code: act.code || null };
+}
 async function announceFriendPresence(accountId, online) {
   if (!DB_ENABLED) return;
   try {
     const friends = await db.getFriends(accountId);
-    for (const f of friends) notifySocketsForAccount(f.id, 'friendPresence', { id: accountId, online });
+    for (const f of friends) notifySocketsForAccount(f.id, 'friendPresence', { id: accountId, online, status: online ? 'menu' : 'offline' });
   } catch (e) {
     console.error('announceFriendPresence error:', e.message);
   }
@@ -11560,7 +11587,7 @@ io.on('connection', (socket) => {
       if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
       const friends = await db.getFriends(account.id);
       socket.emit('friendsOk', {
-        friends: friends.map(f => ({ ...f, online: accountSockets.has(f.id) })),
+        friends: friends.map(f => withFriendPresence(f)),
       });
     } catch (e) {
       console.error('getFriends error:', e.message);
@@ -11580,7 +11607,7 @@ io.on('connection', (socket) => {
       if (target.id === account.id) return socket.emit('friendsError', { msg: "That's your own code." });
       await db.addFriend(account.id, target.id);
       const friends = await db.getFriends(account.id);
-      socket.emit('friendsOk', { friends: friends.map(f => ({ ...f, online: accountSockets.has(f.id) })) });
+      socket.emit('friendsOk', { friends: friends.map(f => withFriendPresence(f)) });
       // Tell the other side too, live, if they're online right now — no
       // need to wait for them to reload their own Friends tab to see it.
       notifySocketsForAccount(target.id, 'friendAdded', {
@@ -11599,7 +11626,7 @@ io.on('connection', (socket) => {
       if (!account) return socket.emit('friendsError', { msg: 'Your session expired — log in again.' });
       await db.removeFriend(account.id, Number(friendId));
       const friends = await db.getFriends(account.id);
-      socket.emit('friendsOk', { friends: friends.map(f => ({ ...f, online: accountSockets.has(f.id) })) });
+      socket.emit('friendsOk', { friends: friends.map(f => withFriendPresence(f)) });
     } catch (e) {
       console.error('removeFriend error:', e.message);
       socket.emit('friendsError', { msg: 'Could not remove that friend. Try again.' });
@@ -11629,7 +11656,7 @@ io.on('connection', (socket) => {
         // They'd already sent ME one — this just completed it, same
         // instant-mutual result as addFriendByCode.
         const friends = await db.getFriends(account.id);
-        socket.emit('friendsOk', { friends: friends.map(f => ({ ...f, online: accountSockets.has(f.id) })) });
+        socket.emit('friendsOk', { friends: friends.map(f => withFriendPresence(f)) });
         socket.emit('friendRequestStatus', { targetId: tid, status: 'friends' });
         notifySocketsForAccount(tid, 'friendAdded', {
           id: account.id, nickname: account.nickname, avatar: account.avatar, online: true,
@@ -11655,7 +11682,7 @@ io.on('connection', (socket) => {
       if (!Number.isInteger(rid)) return;
       await db.acceptFriendRequest(account.id, rid);
       const friends = await db.getFriends(account.id);
-      socket.emit('friendsOk', { friends: friends.map(f => ({ ...f, online: accountSockets.has(f.id) })) });
+      socket.emit('friendsOk', { friends: friends.map(f => withFriendPresence(f)) });
       socket.emit('friendRequestsOk', { requests: await db.getIncomingFriendRequests(account.id) });
       socket.emit('friendRequestStatus', { targetId: rid, status: 'friends' });
       notifySocketsForAccount(rid, 'friendRequestAccepted', {

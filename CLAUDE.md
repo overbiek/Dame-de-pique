@@ -4451,6 +4451,34 @@ before pushing.
   state" cases), the tally counts and cleans up. **Nothing was heard** — the
   sounds are synthesized and unaudited by ear; expect to tune gains.
 
+## Friends chip, sheet, online toast, tap-a-player-for-profile
+- **Menu chip `#menu-friends`** lives in the landscape rail at grid-row 5
+  (top of the 1fr spacer, under the credits box), so it costs nothing
+  against the tile budget. Logged-in only. Shows "N online" + a badge for
+  pending requests. `authOk` now loads `getFriends`/`getFriendRequests` on
+  every login/resume (previously only My Account / lobby did).
+- **`#friends-sheet` is a right-hand drawer, not a bottom sheet** — landscape
+  is ~375px tall. z-index 215: under the profile card (220) and invite (240).
+  Rows show rich status; the open sheet re-fetches `getFriends` every 6s
+  (`FS_REFRESH_MS`) instead of the server pushing on every room change.
+- **Rich status is computed on request** (`friendActivity`/`withFriendPresence`
+  in `server.js`): offline / menu / lobby (+`code` only while a seat is open,
+  which is what the Join button uses) / playing. Deliberately nothing finer
+  (no mode, no round). `friendPresence` events carry only online/offline.
+- **Play** on a menu-status friend = `playWithFriend`: `doCreate()` then the
+  `joined` handler sends `inviteFriend` (server refuses it before seating).
+- **Online toast never shows over pass/play/draw** (`FT_DEFER_SCREENS`); it
+  queues and `show()` flushes it on the next other screen — usually the round
+  summary. 5-minute per-friend cooldown (reconnect flapping), on/off checkbox
+  in the sheet (`ddp.friendToasts`). A "Favorites only" mode was NOT built.
+- **Tapping a human opens their profile card (Add Friend lives there)** from
+  the roster rail (pass/play), round-summary identity cell and final rows,
+  via `profTap()`; final rows also get a "+ Add" pill for non-friends. Not
+  wired into the portrait seat blocks (`seatHTML`) or trick captions.
+- Verified client-side in the preview at 915x412 with injected state (chip,
+  sheet, toast rules, profTap); `server.js` passes `node --check` but the new
+  `friendActivity` has not run against a live DB/room.
+
 ## Not implemented
 - Password reset (no email service configured)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

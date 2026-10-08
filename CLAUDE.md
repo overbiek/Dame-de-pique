@@ -4325,7 +4325,21 @@ before pushing.
   Tested in Chrome: image nodes identical across renders, `has-art` kept,
   and the morphed DOM equals the fresh markup after structure changes
   (title removed, rank set removed/changed, disconnected seat, long name,
-  new scores). **NOT covered**: the portrait-mode seat blocks (`seatHTML`)
+  new scores). **Same fix, later, on two more screens** (reported as the
+  flashes also appearing when a casual/ranked game starts): `renderPass` and
+  `renderPassReveal` also emit the roster rail and rebuilt it with a bare
+  `innerHTML` — they now grab `#p-table .roster` first and call
+  `adoptRoster(old,'p-table')` (the function takes the table id; default
+  `g-table`). And `renderDraw` (seat draw / dealer cut) rebuilt `#d-row` — four
+  seats of avatar, crest and rank-banner images — on every reveal; it now
+  morphs the row in place (`morphNode` against a `cloneNode(false)` of the
+  shell, so the row's own attributes are untouched). Verified in Chrome with
+  fabricated states: the same `<img>` nodes survive consecutive renders on
+  both screens and the morphed markup is byte-identical to a direct render.
+  A side effect on the draw screen: an already-flipped card no longer replays
+  its flip when another player reveals. **Not checked on an iPhone.** The
+  lobby (`renderLobby`) also rebuilds seat avatars and is NOT covered.
+  **NOT covered**: the portrait-mode seat blocks (`seatHTML`)
   and the trick-slot captions still rebuild their images each render —
   same fix applies if they flash on a portrait iPhone.
 

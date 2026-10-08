@@ -8474,9 +8474,9 @@ function morphNode(old,fresh){
 }
 // Call right AFTER `#g-table.innerHTML` was rebuilt, with the .roster element
 // that was in the table before it (grab it BEFORE the rebuild).
-function adoptRoster(oldRoster){
+function adoptRoster(oldRoster,tableId){
   if(!oldRoster) return;
-  const fresh=document.querySelector('#g-table .roster');
+  const fresh=document.querySelector('#'+(tableId||'g-table')+' .roster');
   if(!fresh) return;
   morphNode(oldRoster,fresh);
   fresh.replaceWith(oldRoster);
@@ -13031,7 +13031,17 @@ function renderDraw(G){
       ${card}
     </div>`;
   }
-  $('d-row').innerHTML=h;
+  // Morphed in place rather than re-assigned: every reveal broadcasts a new
+  // state, and `innerHTML=` re-created every avatar, crest and rank-banner
+  // image in all four seats each time — which paints blank for a frame or two
+  // on iOS (the same "flashes" the table's roster rail had; see adoptRoster).
+  // The shell is cloned so morphNode sees identical attributes and only the
+  // children are brought up to date. As a side effect an already-flipped
+  // card no longer replays its flip when somebody else reveals theirs.
+  const drow=$('d-row');
+  const dfresh=drow.cloneNode(false);
+  dfresh.innerHTML=h;
+  morphNode(drow,dfresh);
 
   const note=$('d-note');
   if(round1Waiting){
@@ -13163,8 +13173,13 @@ function renderPassReveal(G){
   // the tutorial's fake state object, which has no passDir field.
   const dir=G.passDir||['left','right','across','keep'][(G.round-1)%4];
   parkPassChrome();   // must precede the innerHTML rebuild — see the function
+  // The pass screen carries the same roster rail as the play screen, and it
+  // flashed on iOS for the same reason: this rebuild re-created every avatar
+  // and plate image. Keep the old rail's nodes (see adoptRoster).
+  const oldRoster=document.querySelector('#p-table .roster');
   $('p-table').innerHTML=tableHTML(G,{fan:true,roster:!tutorialActive,
     actions:cornerActions(passInfoHTML(G,dir),lastTrickBtnHTML(G,"p-lt-btn"))});
+  adoptRoster(oldRoster,'p-table');
   myStrip(G,'p-me',false);
   $('p-prompt').className='prompt';
   $('p-prompt').textContent='Cards received!';
@@ -13178,8 +13193,13 @@ function renderPass(G){
   show('pass');
   const dir=G.passDir||['left','right','across','keep'][(G.round-1)%4];
   parkPassChrome();   // must precede the innerHTML rebuild — see the function
+  // The pass screen carries the same roster rail as the play screen, and it
+  // flashed on iOS for the same reason: this rebuild re-created every avatar
+  // and plate image. Keep the old rail's nodes (see adoptRoster).
+  const oldRoster=document.querySelector('#p-table .roster');
   $('p-table').innerHTML=tableHTML(G,{fan:true,roster:!tutorialActive,
     actions:cornerActions(passInfoHTML(G,dir),lastTrickBtnHTML(G,"p-lt-btn"))});
+  adoptRoster(oldRoster,'p-table');
   myStrip(G,'p-me',false);
 
   const mine=G.players[me];

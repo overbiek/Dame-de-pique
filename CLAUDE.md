@@ -3862,11 +3862,22 @@ before pushing.
   slot in this chapter's roster, same "more art than slots" surplus
   this codebase has hit before (the original 20-avatar and gold-crest
   batches both had a similar spare).
-- **No gold-medallion crest art exists yet for Levels 201-300**
-  (`public/campaign/gold/` stops at `200.webp`) — `campaignGoldImg`
-  degrades to its existing star-icon fallback for all 100, same as any
-  level whose medallion hasn't been dropped in yet; not supplied in
-  Downloads for this house so far.
+- **Gold-medallion art for Levels 201-300: the first 40 arrived (Tables
+  1-40 of Clubs; `gold club crest 32.png` came in a day later and went
+  through the same pipeline, no closing step needed), so 201-240 exist and
+  241-300 still fall back to the star** (`campaignGoldImg`'s existing
+  `onerror`). Source sheets live
+  in `afbeeldingen/Chapter 3 House of clubs/Gold clubs crest/` (1254x1254
+  RGB on a black page, the number in the file name is the table number).
+  Same pipeline as 11-200 (flood-fill the near-black border, trim, pad
+  square, 160x160 WebP, ~15-26KB) **with one extra step for three of them**:
+  on 223, 224 and 228 the ring's filigree has gaps, so the flood fill leaked
+  through into the dark green interior and left 27-34% of the disc
+  transparent. Those three are closed (`binary_closing` x25, then fill
+  holes) before the alpha is cut, which brought the interior back to 0%
+  transparent. Checked by measuring transparent area inside r<72 for all 39
+  (baseline 2.5% = the soft edge) plus a contact sheet. New filenames, so no
+  `CACHE` bump.
 - **The hub tile envelope art is done** (Chapter 1's tile only — a house
   gets exactly one hub tile regardless of how many chapters it has).
 

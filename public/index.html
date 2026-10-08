@@ -5578,7 +5578,7 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 .camp-hub-content{
   position:relative;z-index:1;
   display:flex;flex-direction:column;align-items:center;gap:20px;
-  padding:24px;text-align:center;max-width:640px;
+  padding:24px;text-align:center;width:100%;max-width:900px;box-sizing:border-box;
 }
 .camp-hub-title{
   font-family:'Playfair Display',serif;font-weight:700;
@@ -5598,8 +5598,12 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
    "1" in this font), which wrapped it to a second line and made the two
    tiles visibly different heights. Fixed flex-basis tiles sidestep the
    containing-block ambiguity entirely and guarantee both are identical. */
-.camp-hub-chapters{display:flex;gap:22px;justify-content:center}
-.camp-hub-chapters .tile{padding:28px 18px;flex:0 0 178px}
+.camp-hub-chapters{display:flex;gap:clamp(8px,2vw,22px);justify-content:center;width:100%}
+/* Four houses is 4x178 + gaps = ~780px, wider than the old 640px content
+   box and than a 667px phone, which pushed the first and last tiles off
+   screen. The tiles now SHRINK (flex-shrink, min-width:0) from their 178px
+   ideal, and the content box spans the scene so there is room to. */
+.camp-hub-chapters .tile{padding:28px clamp(8px,1.6vw,18px);flex:0 1 178px;min-width:0}
 .camp-hub-chapters .tile-title{font-size:16px;white-space:nowrap}
 /* Each house's own envelope photo as the tile's backdrop, in place of the
    plain felt gradient — a dark scrim layer sits between the art and the

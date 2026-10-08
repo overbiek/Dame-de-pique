@@ -4772,7 +4772,8 @@ const CAMPAIGN_LEVELS = {
        objective: { type: 'score', min: 30, gold: 42 } },
   302: { id: 302, chapter: 31, type: 'Normal', forcePassDir: 'left', hands: 1,
        seed: 'ddp-ch4-L302-score-c84', hand: parseHand('10♣ 6♦ 7♥ 2♥ 9♠ K♦ 5♥ J♣ 10♥ 3♥ A♦ 8♣ 10♦'),
-       objective: { type: 'score', min: 26, gold: 39 } },
+       // Retuned (simulation, 300 runs, normal AI incl. its own left pass): was 26/39 = 0.3% / 0% (best score seen 26; five hearts in hand). 16/20 is ~11% / ~6%.
+       objective: { type: 'score', min: 16, gold: 20 } },
   303: { id: 303, chapter: 31, type: 'Mission', forcePassDir: 'left', hands: 1,
        seed: 'ddp-ch4-L303-clean-c108', hand: parseHand('9♠ 6♣ Q♠ 2♣ 10♦ 5♠ 10♥ 8♦ 10♣ J♥ 5♣ 3♠ K♠'),
        objective: { type: 'cleanHand', goldScoreBar: 0 } },

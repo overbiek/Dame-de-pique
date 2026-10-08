@@ -4411,6 +4411,12 @@ before pushing.
   gold was "void by trick 1", which is **0%** (impossible: one card per trick);
   gold is now void by 2 AND score >= 33 (~10%; score quartiles 19/21/29).
   Diamonds 93 (K♣ 5♣ J♣) clears 27%, gold 3.5% — left alone.
+- **House of Diamonds Table 2 (id 302) was unreachable as transcribed from
+  the sheet**: min 26 / gold 39 cleared 0.3% / 0% in 300 AI runs (best score
+  seen was exactly 26; the hand has five hearts). Now 16 / 20 (~11% / ~6%).
+  The rest of House of Diamonds' score lines come from the same sheet and
+  have NOT been benchmarked (Tables 1 and 4 at 30/42 and 38/45 look just as
+  steep) — run the same harness before trusting them.
 - **Scores on a fixed hand are lumpy**: the AI lands on the same few totals,
   so no line may exist at a given target rate (Table 84 jumps from 37% at
   +20 to 2% at +21; Table 89's tricks from 22% at 9 to 5% at 10). The nearer

@@ -4411,12 +4411,26 @@ before pushing.
   gold was "void by trick 1", which is **0%** (impossible: one card per trick);
   gold is now void by 2 AND score >= 33 (~10%; score quartiles 19/21/29).
   Diamonds 93 (K♣ 5♣ J♣) clears 27%, gold 3.5% — left alone.
-- **House of Diamonds Table 2 (id 302) was unreachable as transcribed from
-  the sheet**: min 26 / gold 39 cleared 0.3% / 0% in 300 AI runs (best score
-  seen was exactly 26; the hand has five hearts). Now 16 / 20 (~11% / ~6%).
-  The rest of House of Diamonds' score lines come from the same sheet and
-  have NOT been benchmarked (Tables 1 and 4 at 30/42 and 38/45 look just as
-  steep) — run the same harness before trusting them.
+- **House of Diamonds (303-399, bosses excluded) was benchmarked and retuned.**
+  Table 2 (id 302) was the first find: min 26 / gold 39 cleared 0.3% / 0% in
+  300 AI runs, now 16 / 20. Every non-boss level 303-399 (88 of them) was then
+  run 80 times with the normal AI at seat 0 (plus a goal-seeking bot for the
+  mission types), and the 50 that fell short were rerun 150 times to get the
+  full score / trick-count spread: **score and trickCount levels whose AI clear
+  rate was under ~10%, or whose gold was under ~3%, were reset to clear ~12% /
+  gold ~5%** (the value whose rate is nearest the target; where the AI lands on
+  lumpy totals, gold may equal the clear value or sit under 3%). Each level carries
+  a one-line note above its `objective` with the old and new rates. Levels
+  already at or above the target were left alone, as were the void
+  (313/326/339/353/366/379/393) and avoid-the-queen (306/319/333/346/359/373/
+  386/399) missions, which the goal-seeking bots clear 15-100%. Moon-prone hands
+  (the AI shoots 40-60 on a few) have gaps between values, so a few golds
+  (332, 336, 395, 398) are ~equal to their clear.
+  **NOT retuned: the five clean-hand missions 303/316/329/356/369** — they clear
+  0-4% for any bot, and allowing a few penalty points does not fix it
+  (P(penalty <= 20) is 0.7-21%, the queen and many hearts are forced), so they
+  need a different goal (score line, or avoid-the-queen) rather than a looser
+  limit. Benchmarks used 150 runs, so each rate is +/-3%.
 - **Scores on a fixed hand are lumpy**: the AI lands on the same few totals,
   so no line may exist at a given target rate (Table 84 jumps from 37% at
   +20 to 2% at +21; Table 89's tricks from 22% at 9 to 5% at 10). The nearer

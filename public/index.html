@@ -1241,7 +1241,7 @@ html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:st
 #friend-toast.on{transform:translate(-50%,0);opacity:1;pointer-events:auto}
 #friend-toast .ft-dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:#3fbf88;box-shadow:0 0 0 3px rgba(63,191,136,.22)}
 #friend-toast .ft-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ros.prof,.frow.prof,.sg-id.prof{cursor:pointer}
+.ros.prof,.frow.prof,.sg-id.prof,.seat.prof{cursor:pointer}
 .frow-add{
   flex:0 0 auto;font:700 .6rem 'DM Sans',sans-serif;letter-spacing:.04em;
   padding:2px 7px;border-radius:999px;border:1px solid rgba(var(--ddp-brass-rgb),.4);color:var(--gold-hi);
@@ -8438,7 +8438,8 @@ function seatHTML(G,i,opts){
   // landscape vertical budget is spent (see the --ch formula).
   const mat=p.rankMaterial||'';
   const frame=mat?` rank-framed" data-material="${mat}`:'';
-  return `<div class="seat ${cls}">
+  const pt=profTap(p,i);
+  return `<div class="seat ${cls}${pt.cls}"${pt.attrs}>
     <div class="avatar${frame}">${avatarContent}<span class="dealer-badge${i===G.dealer?' on':''}">D</span></div>
     <div class="seat-name">${mat?rankBadgeHTML(mat)+' ':''}${esc(p.name)}${mine?' · you':''}</div>
     <div class="seat-score">${tw} trick${tw===1?'':'s'}<small>${total}</small></div>

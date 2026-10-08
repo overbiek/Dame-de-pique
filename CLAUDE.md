@@ -4473,8 +4473,8 @@ before pushing.
   in the sheet (`ddp.friendToasts`). A "Favorites only" mode was NOT built.
 - **Tapping a human opens their profile card (Add Friend lives there)** from
   the roster rail (pass/play), round-summary identity cell and final rows,
-  via `profTap()`; final rows also get a "+ Add" pill for non-friends. Not
-  wired into the portrait seat blocks (`seatHTML`) or trick captions.
+  via `profTap()`; final rows also get a "+ Add" pill for non-friends. The
+  portrait seat blocks (`seatHTML`) are tappable too; trick captions are not.
 - Verified client-side in the preview at 915x412 with injected state (chip,
   sheet, toast rules, profTap); `server.js` passes `node --check` but the new
   `friendActivity` has not run against a live DB/room.

@@ -4173,7 +4173,8 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 60, gold: 61 } },
   193: { id: 193, chapter: 20, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch2-L193-void-c102', hand: parseHand('Q♦ 8♦ 6♥ A♣ J♠ 2♠ Q♠ 5♥ K♣ 6♠ 4♥ 7♦ 5♠'),
-         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 2, goldByTrick: 1 } },
+         // Retuned (simulation, 300 runs of a void-seeking bot): Gold used to be 'void by trick 1', impossible with 2 clubs (0%). A♣ then K♣ voids by trick 2 every time, so gold is now that AND score >= 33 (~10%; score quartiles 19/21/29, 90th pct 33).
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 2, goldByTrick: 2, goldScoreBar: 33 } },
   194: { id: 194, chapter: 20, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch2-L194-score-c392', hand: parseHand('Q♣ 10♥ Q♥ J♣ 3♠ 8♥ A♣ Q♦ 4♦ 6♣ 9♥ A♠ 4♣'),
          objective: { type: 'score', min: 3, gold: 22 } },
@@ -4697,7 +4698,8 @@ const CAMPAIGN_LEVELS = {
   293: { id: 293, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L293-void-c123', hand: parseHand('6♥ 3♦ J♣ 10♣ 10♥ 10♦ 6♦ Q♥ 9♥ K♠ 7♠ 4♦ J♠'),
          // Retuned (simulation, 300 runs): Gold used to be 'void by trick 1', impossible with 2 clubs. Now void by trick 2 AND score >= -17 (~5% for a void-seeking bot).
-         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 2, goldByTrick: 2, goldScoreBar: -17 } },
+         // Clear moved from 'void by trick 2' to 'by trick 3' (400 runs, 2 clubs J/10, nothing else to dump on a club lead): clear 11% bot / 4.5% normal AI -> 34% / 16%; gold stays ~9% / 4%.
+         objective: { type: 'suitVoid', suit: '♣', voidByTrick: 3, goldByTrick: 2, goldScoreBar: -17 } },
   294: { id: 294, chapter: 30, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L294-score-c204', hand: parseHand('3♠ 10♦ J♥ 8♥ J♠ 3♥ A♣ 9♣ A♦ Q♦ Q♥ 3♣ 5♠'),
          // Retuned (simulation, 300 runs): Was 33/39 (~5%); 30/33 is ~14%/5%.

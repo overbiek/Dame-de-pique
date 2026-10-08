@@ -4391,6 +4391,15 @@ before pushing.
   three tricks — luck, not play (normal AI 1%, a club-shedding bot 27%) —
   and trick 4 was still too much to ask of opponents who don't lead clubs on
   request. Void by 5 is AI 37% / bot 85%.
+- **Two-club void levels (Clubs 93, Hearts 93) were checked again** (400 runs
+  each, void-seeking bot vs the normal AI at seat 0). With two clubs and
+  nothing else to dump on a club lead, "void by trick 2" needs clubs led on
+  tricks 1 AND 2: Clubs 93 (J♣ 10♣) cleared 11% / 4.5% (bot / AI), so its
+  clear is now **void by trick 3** (34% / 16%), gold unchanged (trick 2 and
+  score >= -17, ~9% / 4%). Hearts 93 (A♣ K♣) clears 100% by trick 2 but its
+  gold was "void by trick 1", which is **0%** (impossible: one card per trick);
+  gold is now void by 2 AND score >= 33 (~10%; score quartiles 19/21/29).
+  Diamonds 93 (K♣ 5♣ J♣) clears 27%, gold 3.5% — left alone.
 - **Scores on a fixed hand are lumpy**: the AI lands on the same few totals,
   so no line may exist at a given target rate (Table 84 jumps from 37% at
   +20 to 2% at +21; Table 89's tricks from 22% at 9 to 5% at 10). The nearer

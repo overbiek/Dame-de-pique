@@ -9495,6 +9495,23 @@ let campDlgTyping=false;
 let campDlgTypeTimer=null;
 let campDlgFullText='';
 const CAMP_TYPE_MS=22; // per character
+/* The screenplay writes the protagonist as "the PLAYER" / "PLAYER" in its
+   narration and in the lines other characters speak. Swapped for the
+   account's CURRENT name at render time (never stored), so renaming in My
+   Account changes every story line from then on. Left alone: numbered
+   regulars like "ROOFTOP PLAYER #3" (the " #" lookahead, plus any
+   all-caps word directly before it). With no name set the text is
+   unchanged rather than guessed at. */
+function campaignPlayerText(text){
+  const name=identity().name;
+  if(!name||typeof text!=='string') return text;
+  return text
+    .replace(/\b(?:the |The |THE )?PLAYER hand/g,()=>name+"'s hand")
+    .replace(/\b(the |The |THE )?PLAYER\b(?! #)/g,(m,the,off,str)=>{
+      if(!the&&/[A-Z]{3,}\s$/.test(str.slice(0,off))) return m;
+      return name;
+    });
+}
 function campaignTypeText(text){
   clearInterval(campDlgTypeTimer);
   campDlgFullText=text;
@@ -9530,7 +9547,7 @@ function campaignDialogueStep(){
   const isPlayer=cue.speakerId==='player';
   const name=isPlayer?(identity().name||'You'):(speaker?speaker.name:'');
   $('camp-dlg-name').textContent=name;
-  campaignTypeText(cue.text);
+  campaignTypeText(campaignPlayerText(cue.text));
   // Same reasoning as the map's profile chip — .avatar supplies the
   // circular background avatarHTML's initials fallback doesn't carry
   // itself. campaignPortraitHTML (the SVG monogram) already draws its
@@ -9838,7 +9855,7 @@ function campaignPrologueStep(){
     campProlHolding=false;
     $('camp-prol-continue').style.display='none';
     $('camp-prol-box').style.display='block';
-    campaignPrologueTypeText(cue.text);
+    campaignPrologueTypeText(campaignPlayerText(cue.text));
   }
 }
 function campaignPrologueAdvance(){

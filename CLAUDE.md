@@ -4454,6 +4454,20 @@ before pushing.
   tables (void / avoid-the-queen / trickCount / cleanHand), the boss tables
   (x0), and the Spades tables that already had gold of 1-20%+ (tables 1, 28, 37,
   87, 99 have gold of 31-62%, far above the 5% target).**
+- **House of Hearts (101-199, bosses excluded) was benchmarked and retuned** the
+  same way: 90 levels x 80 runs (normal AI at seat 0, plus goal-seeking bots for
+  the missions), then 150 runs on the 50 that fell short. 48 were changed; each
+  carries a one-line note above its `objective`. Score/trickCount levels with
+  clear under ~10% were reset to ~12% / ~5%; where only gold was too hard (or
+  impossible: 125, 131, 137, 148, 151, 171, 185 ...) only gold moved. Gold of 60
+  (the moon) and the impossible 61 on 178/192 are gone: 192 is now 0/11. **178
+  is the moon hand** (the AI shoots on it 23%), so it is 60/60 and gold is as
+  easy as clear there; **189** is 9/9 for the same lumpy reason (10 tricks is 0%).
+  Clean-hand 116 (clear 8%) became a score line 14/21; clean-hand 183 (0-1%)
+  became avoid-the-queen with gold = no queen AND score >= 19 (clear 65%, gold
+  6%). Avoid-the-queen 133 and 173 only had their gold bar moved (21 and -7).
+  Left alone: bosses, the void missions, 106/119/146/159/186 (avoid-the-queen
+  with gold already reachable) and 108/194 (screen noise, gold was already ~5%).
 - **Scores on a fixed hand are lumpy**: the AI lands on the same few totals,
   so no line may exist at a given target rate (Table 84 jumps from 37% at
   +20 to 2% at +21; Table 89's tricks from 22% at 9 to 5% at 10). The nearer

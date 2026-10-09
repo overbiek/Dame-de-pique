@@ -3894,10 +3894,11 @@ before pushing.
   every house since Hearts has used. **No art was supplied for this
   house at first** — chapter backgrounds, character portraits, gold
   medallions, the hub tile envelope and the prologue still were all a
-  later pass; all of them have since arrived except the gold medallions
-  (own notes below and in the Brand splash/prologue sections). Every
-  still-missing art reference (`public/campaign/gold/301-400.webp`)
-  degrades to the existing CSS/SVG placeholder or 404-once fallback,
+  later pass; all of them have since arrived, **including the 100 gold
+  medallions (`public/campaign/gold/301-400.webp`, processed from
+  `afbeeldingen/Chapter 4 house of Diamonds/Gold crest diamonds/`, same
+  pipeline as Clubs, no ring leaks)** — so every level 1-400 now has its
+  gold crest. Any still-missing art reference elsewhere degrades to the existing CSS/SVG placeholder or 404-once fallback,
   exactly like every "not dropped in yet" case elsewhere in this file.
 - **The ten chapters and bosses**: 31 The Facet Hall/The Assessor (301-
   310), 32 The Exchange/The Broker (311-320), 33 The Echo Gallery/The

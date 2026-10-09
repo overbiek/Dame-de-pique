@@ -3862,10 +3862,11 @@ before pushing.
   slot in this chapter's roster, same "more art than slots" surplus
   this codebase has hit before (the original 20-avatar and gold-crest
   batches both had a similar spare).
-- **Gold-medallion art for Levels 201-300: the first 40 arrived (Tables
-  1-40 of Clubs; `gold club crest 32.png` came in a day later and went
-  through the same pipeline, no closing step needed), so 201-240 exist and
-  241-300 still fall back to the star** (`campaignGoldImg`'s existing
+- **Gold-medallion art for Levels 201-300 is COMPLETE (all 100).** The first
+  40 arrived first (`gold club crest 32.png` a day later), tables 41-100
+  were processed later from the same folder with the same pipeline — none of
+  those 60 leaked through the ring, so no closing step was needed (interior
+  transparency 0.0% on all). Original note on the first batch: **201-240 exist** (`campaignGoldImg`'s existing
   `onerror`). Source sheets live
   in `afbeeldingen/Chapter 3 House of clubs/Gold clubs crest/` (1254x1254
   RGB on a black page, the number in the file name is the table number).
@@ -4437,6 +4438,21 @@ before pushing.
   rate of an avoidQueen level is fixed by the hand and cannot be tuned, which
   is why a score line is the better tool when the hand is that hard.
   Benchmarks used 150-200 runs, so each rate is +/-3%.
+- **House of Spades: the '0% gold' score tables were retuned.** A benchmark of
+  tables 1-99 (80 runs each, normal AI at seat 0) found gold reached 0-1% on 42
+  tables (the whole back half: 51-60 median 0%, 61-80 ~0%, most of 81-99), and
+  clear under 10% on many of them. For the 42 score tables with ~0% gold (6, 9,
+  12, 22, 24, 34, 41, 46, 48, 51-56, 59, 62, 65-69, 71-77, 79, 81, 82, 84-86, 88,
+  91, 93, 94, 96-98) the full score spread was collected (150 runs) and **41
+  were changed** (81 was already as close as the hand allows): where clear was
+  under ~10% both were reset to ~12% / ~5%, otherwise ONLY gold moved to ~5%
+  (clear left alone, even at 70-88%). Each carries a one-line note above its
+  `objective`. Lumpy hands: 46/71/85 have gold only 1-2 scores above clear
+  (gold ~1%), 9/12/34 land on ~2%, 68's gold is the moon (60, ~16%; the old 77
+  was above the +60 ceiling). **Still not benchmarked/retuned: the mission
+  tables (void / avoid-the-queen / trickCount / cleanHand), the boss tables
+  (x0), and the Spades tables that already had gold of 1-20%+ (tables 1, 28, 37,
+  87, 99 have gold of 31-62%, far above the 5% target).**
 - **Scores on a fixed hand are lumpy**: the AI lands on the same few totals,
   so no line may exist at a given target rate (Table 84 jumps from 37% at
   +20 to 2% at +21; Table 89's tricks from 22% at 9 to 5% at 10). The nearer

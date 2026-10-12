@@ -4372,7 +4372,8 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 10, gold: 13 } },
   202: { id: 202, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L202-score-c324', hand: parseHand('10♠ 4♥ A♣ 4♠ Q♠ K♠ J♠ 4♦ 2♣ A♠ 8♠ 9♣ J♣'),
-         objective: { type: 'score', min: 24, gold: 35 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 24/35 (clear 5%, gold 1%), now 21/22 (clear 7%, gold 5%).
+         objective: { type: 'score', min: 21, gold: 22 } },
   203: { id: 203, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L203-clean-c49', hand: parseHand('6♠ 9♣ 7♥ 8♥ K♣ 4♣ 3♦ 8♠ 6♣ J♦ 10♣ K♠ 4♠'),
          objective: { type: 'cleanHand', goldScoreBar: 10 } },
@@ -4387,13 +4388,15 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'avoidQueen', goldScoreBar: 26 } },
   207: { id: 207, chapter: 21, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L207-score-c892', hand: parseHand('4♥ 8♣ 5♠ A♠ 3♠ 7♠ 3♥ 10♥ Q♣ A♦ J♣ 5♦ K♥'),
-         objective: { type: 'score', min: -2, gold: 11 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was -2/11 (clear 8%, gold 2%), now -7/4 (clear 12%, gold 5%).
+         objective: { type: 'score', min: -7, gold: 4 } },
   208: { id: 208, chapter: 21, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L208-score-c489', hand: parseHand('Q♥ A♦ K♦ 9♥ Q♣ 5♦ K♥ A♥ 8♣ K♣ 10♣ 5♥ 6♦'),
          objective: { type: 'score', min: 15, gold: 22 } },
   209: { id: 209, chapter: 21, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L209-tricks-c32', hand: parseHand('9♣ Q♥ J♠ 5♥ 2♣ 10♦ K♠ 8♣ 7♣ 2♦ 3♠ 6♠ J♦'),
-         objective: { type: 'trickCount', minTricks: 5, goldTricks: 6 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 5/6 tricks (clear 3%, gold 0%), now 4/5 (clear 12%, gold 3%).
+         objective: { type: 'trickCount', minTricks: 4, goldTricks: 5 } },
   210: { id: 210, chapter: 21, type: 'BOSS', forcePassDir: null, hands: 4, bossId: 'the_warden',
          seed: 'ddp-ch3-L210-boss-c566',
          hands4: [
@@ -4412,7 +4415,8 @@ const CAMPAIGN_LEVELS = {
   // call as every earlier chapter's own Mission rows.
   211: { id: 211, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L211-score-c403', hand: parseHand('10♠ J♠ J♣ 2♠ A♠ Q♠ 4♠ K♥ A♦ A♥ 9♣ 8♥ 6♣'),
-         objective: { type: 'score', min: 17, gold: 34 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 17/34 (clear 6%, gold 0%), now 6/21 (clear 11%, gold 5%).
+         objective: { type: 'score', min: 6, gold: 21 } },
   212: { id: 212, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L212-score-c1032', hand: parseHand('10♣ 2♦ 3♦ 8♠ K♦ Q♠ A♦ A♣ 2♣ Q♥ 10♦ 7♥ 3♠'),
          objective: { type: 'score', min: 9, gold: 15 } },
@@ -4421,7 +4425,8 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'suitVoid', suit: '♣', voidByTrick: 8, goldByTrick: 7 } },
   214: { id: 214, chapter: 22, type: 'Harder', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L214-score-c428', hand: parseHand('J♦ 7♥ K♥ Q♥ 9♠ J♥ A♣ A♠ 3♥ 4♠ K♣ 9♥ A♦'),
-         objective: { type: 'score', min: 35, gold: 41 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 35/41 (clear 11%, gold 1%), now 35/37 (clear 11%, gold 6%).
+         objective: { type: 'score', min: 35, gold: 37 } },
   215: { id: 215, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L215-score-c1020', hand: parseHand('10♠ 2♠ 8♥ 7♦ Q♠ J♠ A♠ 2♥ 6♥ 4♠ K♦ 10♥ 3♦'),
          objective: { type: 'score', min: 29, gold: 38 } },
@@ -4430,7 +4435,8 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'cleanHand', goldScoreBar: 0 } },
   217: { id: 217, chapter: 22, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L217-score-c432', hand: parseHand('8♠ 10♠ A♥ K♦ K♣ 3♣ 2♠ J♦ 4♠ 2♣ K♠ Q♦ 6♣'),
-         objective: { type: 'score', min: 22, gold: 38 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 22/38 (clear 9%, gold 0%), now 21/26 (clear 12%, gold 5%).
+         objective: { type: 'score', min: 21, gold: 26 } },
   218: { id: 218, chapter: 22, type: 'Harder', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L218-score-c238', hand: parseHand('7♣ 2♣ 6♣ K♦ 9♦ K♥ A♥ J♠ A♠ 10♣ A♦ 8♥ 2♥'),
          objective: { type: 'score', min: 27, gold: 38 } },
@@ -4458,13 +4464,15 @@ const CAMPAIGN_LEVELS = {
   // the only reading consistent with the measured ceiling.
   221: { id: 221, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L221-score-c523', hand: parseHand('8♥ Q♦ 6♥ K♣ 4♥ K♦ J♥ 3♣ 10♦ A♦ A♠ Q♣ J♠'),
-         objective: { type: 'score', min: 30, gold: 48 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 30/48 (clear 17%, gold 1%), now 30/39 (clear 17%, gold 3%).
+         objective: { type: 'score', min: 30, gold: 39 } },
   222: { id: 222, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L222-score-c956', hand: parseHand('A♣ 3♣ 6♦ 7♦ A♠ 7♥ 3♥ 9♦ 4♠ 6♥ K♠ 7♠ Q♦'),
          objective: { type: 'score', min: 30, gold: 35 } },
   223: { id: 223, chapter: 23, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L223-tricks-c76', hand: parseHand('9♥ 5♦ Q♥ 9♦ 2♣ 8♦ 5♥ J♦ 6♦ 5♣ 5♠ 2♥ Q♦'),
-         objective: { type: 'trickCount', minTricks: 5, goldTricks: 6 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 5/6 tricks (clear 4%, gold 1%), now 4/5 (clear 13%, gold 4%).
+         objective: { type: 'trickCount', minTricks: 4, goldTricks: 5 } },
   224: { id: 224, chapter: 23, type: 'Harder', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L224-score-c974', hand: parseHand('4♣ Q♠ A♣ 7♠ 3♥ Q♦ A♦ 5♥ 6♦ 4♥ J♠ 2♠ 5♦'),
          objective: { type: 'score', min: 40, gold: 40 } },
@@ -4497,7 +4505,8 @@ const CAMPAIGN_LEVELS = {
   // Direction 'right' throughout.
   231: { id: 231, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L231-score-c824', hand: parseHand('7♥ K♦ 8♥ 5♠ A♠ 3♠ K♣ J♦ J♣ 10♥ 2♣ 9♦ J♥'),
-         objective: { type: 'score', min: 4, gold: 18 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 4/18 (clear 16%, gold 1%), now 4/8 (clear 16%, gold 4%).
+         objective: { type: 'score', min: 4, gold: 8 } },
   232: { id: 232, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L232-score-c29', hand: parseHand('3♥ K♣ 8♥ 6♠ 4♠ A♦ 2♠ J♦ A♣ 3♦ J♠ 8♠ J♣'),
          objective: { type: 'score', min: 40, gold: 46 } },
@@ -4506,10 +4515,12 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'avoidQueen', goldScoreBar: -20 } },
   234: { id: 234, chapter: 24, type: 'Harder', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L234-score-c574', hand: parseHand('K♣ 8♥ A♦ 8♦ K♥ J♦ Q♦ 2♠ K♠ Q♠ 5♥ 5♠ 6♦'),
-         objective: { type: 'score', min: 24, gold: 24 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 24/24 (clear 4%, gold 4%), now 21/21 (clear 4%, gold 4%).
+         objective: { type: 'score', min: 21, gold: 21 } },
   235: { id: 235, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L235-score-c316', hand: parseHand('9♦ A♦ 5♠ 10♠ J♥ 8♥ Q♠ 4♣ 2♠ Q♣ J♠ 10♦ 2♥'),
-         objective: { type: 'score', min: 32, gold: 42 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 32/42 (clear 8%, gold 3%), now 27/35 (clear 12%, gold 5%).
+         objective: { type: 'score', min: 27, gold: 35 } },
   236: { id: 236, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L236-tricks-c26', hand: parseHand('J♦ J♠ 8♥ 9♣ 7♦ 3♥ A♦ Q♣ 3♣ 5♠ 2♥ K♥ J♥'),
          objective: { type: 'trickCount', minTricks: 6, goldTricks: 7 } },
@@ -4518,7 +4529,8 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 29, gold: 36 } },
   238: { id: 238, chapter: 24, type: 'Harder', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L238-score-c857', hand: parseHand('A♣ J♠ 6♠ 7♠ 5♥ A♦ K♦ 6♦ K♣ 10♦ 4♦ K♠ 10♣'),
-         objective: { type: 'score', min: -1, gold: 2 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was -1/2 (clear 5%, gold 3%), now -3/1 (clear 14%, gold 5%).
+         objective: { type: 'score', min: -3, gold: 1 } },
   239: { id: 239, chapter: 24, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L239-void-c37', hand: parseHand('4♦ A♠ 8♥ Q♣ A♦ 2♣ 7♦ 5♥ 8♠ 8♦ 6♣ 10♦ Q♠'),
          objective: { type: 'suitVoid', suit: '♣', voidByTrick: 6, goldByTrick: 5 } },
@@ -4546,13 +4558,15 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 22, gold: 23 } },
   243: { id: 243, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L243-clean-c64', hand: parseHand('7♠ 8♦ K♠ 6♥ A♦ J♦ A♥ K♣ J♠ 9♠ 4♠ 5♦ 6♦'),
-         objective: { type: 'cleanHand', goldScoreBar: 10 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): the clean-hand goal cleared 1% (the hand forces penalty cards; avoid-the-queen would be 100%); now a score line 15/19 (clear 13%, gold 5%).
+         objective: { type: 'score', min: 15, gold: 19 } },
   244: { id: 244, chapter: 25, type: 'Harder', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L244-score-c85', hand: parseHand('J♠ 7♦ 9♥ 3♥ 7♠ 6♣ K♠ Q♠ 9♣ K♥ A♥ A♦ 8♠'),
          objective: { type: 'score', min: 21, gold: 30 } },
   245: { id: 245, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L245-score-c448', hand: parseHand('8♣ J♠ 3♦ 9♣ 5♥ A♣ 3♣ J♦ K♥ K♦ 4♥ 7♦ 9♥'),
-         objective: { type: 'score', min: 22, gold: 29 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 22/29 (clear 8%, gold 2%), now 22/24 (clear 8%, gold 6%).
+         objective: { type: 'score', min: 22, gold: 24 } },
   246: { id: 246, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L246-queen-c249', hand: parseHand('3♦ 5♠ K♠ 2♣ 2♥ 9♦ 7♥ 9♣ 10♣ A♣ 7♣ Q♥ 8♣'),
          objective: { type: 'avoidQueen', goldScoreBar: 16 } },
@@ -4561,7 +4575,8 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 8, gold: 18 } },
   248: { id: 248, chapter: 25, type: 'Harder', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L248-score-c375', hand: parseHand('A♦ Q♥ K♥ 6♦ 9♠ 7♦ 6♥ 5♠ 8♦ K♦ 4♠ 6♠ 8♠'),
-         objective: { type: 'score', min: -1, gold: 2 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was -1/2 (clear 8%, gold 6%), now -2/2 (clear 9%, gold 6%).
+         objective: { type: 'score', min: -2, gold: 2 } },
   249: { id: 249, chapter: 25, type: 'Normal', forcePassDir: 'right', hands: 1,
          seed: 'ddp-ch3-L249-tricks-c132', hand: parseHand('J♦ 9♣ Q♣ 5♦ 4♠ 10♦ 7♦ 3♥ A♦ A♣ A♥ 10♥ 10♠'),
          objective: { type: 'trickCount', minTricks: 7, goldTricks: 8 } },
@@ -4599,10 +4614,12 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 28, gold: 35 } },
   255: { id: 255, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L255-score-c32', hand: parseHand('J♠ J♦ 9♣ 9♦ 8♠ 3♠ 10♥ Q♦ 2♣ K♦ 3♥ 6♥ Q♣'),
-         objective: { type: 'score', min: 30, gold: 36 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 30/36 (clear 7%, gold 2%), now 25/31 (clear 13%, gold 3%).
+         objective: { type: 'score', min: 25, gold: 31 } },
   256: { id: 256, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L256-clean-c111', hand: parseHand('K♦ J♥ 10♠ J♦ Q♠ A♠ A♣ 4♣ 3♣ 10♦ 9♠ 6♣ 3♠'),
-         objective: { type: 'cleanHand', goldScoreBar: 20 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): the clean-hand goal cleared 0% (the hand forces penalty cards; avoid-the-queen would be 100%); now a score line 26/37 (clear 13%, gold 6%).
+         objective: { type: 'score', min: 26, gold: 37 } },
   257: { id: 257, chapter: 26, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L257-score-c535', hand: parseHand('J♣ 10♠ J♦ 2♥ 9♥ 5♦ 9♦ 2♣ K♦ 8♥ 7♠ A♥ K♠'),
          objective: { type: 'score', min: 9, gold: 15 } },
@@ -4632,19 +4649,22 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 10, gold: 23 } },
   263: { id: 263, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L263-tricks-c117', hand: parseHand('3♥ 9♥ 4♥ 5♠ 6♦ K♠ K♥ A♥ A♠ 10♥ 9♦ Q♣ J♣'),
-         objective: { type: 'trickCount', minTricks: 7, goldTricks: 8 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 7/8 tricks (clear 1%, gold 0%), now 4/6 (clear 8%, gold 5%).
+         objective: { type: 'trickCount', minTricks: 4, goldTricks: 6 } },
   264: { id: 264, chapter: 27, type: 'Harder', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L264-score-c230', hand: parseHand('K♣ 9♠ 3♥ A♥ 10♠ 2♥ A♦ 9♦ K♦ 10♦ J♠ 4♦ 8♠'),
          objective: { type: 'score', min: 20, gold: 30 } },
   265: { id: 265, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L265-score-c274', hand: parseHand('10♦ 9♣ K♦ 8♥ 4♠ 9♦ J♠ J♦ K♣ 3♣ 2♥ A♣ 9♥'),
-         objective: { type: 'score', min: -3, gold: 40 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was -3/40 (clear 7%, gold 2%), now -12/25 (clear 12%, gold 5%).
+         objective: { type: 'score', min: -12, gold: 25 } },
   266: { id: 266, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L266-void-c29', hand: parseHand('8♣ K♦ 6♠ Q♠ 2♣ 5♦ K♣ 2♠ J♥ A♠ 5♣ 2♦ 5♠'),
          objective: { type: 'suitVoid', suit: '♦', voidByTrick: 4, goldByTrick: 3 } },
   267: { id: 267, chapter: 27, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L267-score-c1025', hand: parseHand('K♣ J♠ K♦ 6♠ 4♣ A♦ 6♦ A♣ 7♥ 9♠ 2♥ J♣ Q♣'),
-         objective: { type: 'score', min: 19, gold: 25 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 19/25 (clear 12%, gold 0%), now 19/20 (clear 12%, gold 2%).
+         objective: { type: 'score', min: 19, gold: 20 } },
   268: { id: 268, chapter: 27, type: 'Harder', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L268-score-c553', hand: parseHand('J♦ Q♣ 7♦ 9♠ 10♠ K♠ Q♦ 4♠ K♣ 6♦ 10♣ 7♥ 10♦'),
          objective: { type: 'score', min: 15, gold: 18 } },
@@ -4681,10 +4701,12 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 28, gold: 35 } },
   272: { id: 272, chapter: 28, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L272-score-c91', hand: parseHand('K♠ J♠ 9♣ A♣ K♣ 5♣ Q♣ 5♥ J♦ 3♥ A♦ Q♦ 2♠'),
-         objective: { type: 'score', min: 20, gold: 28 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 20/28 (clear 4%, gold 1%), now 15/19 (clear 13%, gold 4%).
+         objective: { type: 'score', min: 15, gold: 19 } },
   273: { id: 273, chapter: 28, type: 'Normal', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L273-queen-c37', hand: parseHand('4♣ 8♣ 6♦ K♦ J♣ 5♥ A♦ 7♦ 2♦ 5♠ K♥ 9♣ 4♦'),
-         objective: { type: 'avoidQueen', goldScoreBar: 28 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): gold bar was 28 (gold 0%), now 9 (clear 68% is fixed by the hand, gold 5%).
+         objective: { type: 'avoidQueen', goldScoreBar: 9 } },
   274: { id: 274, chapter: 28, type: 'Harder', forcePassDir: 'across', hands: 1,
          seed: 'ddp-ch3-L274-score-c132', hand: parseHand('2♣ 7♦ 9♥ J♣ 4♦ 7♣ 8♣ K♣ 3♥ 2♥ A♥ 7♥ 10♥'),
          objective: { type: 'score', min: 15, gold: 19 } },
@@ -4754,7 +4776,8 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 52, gold: 57 } },
   288: { id: 288, chapter: 29, type: 'Harder', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L288-score-c248', hand: parseHand('K♠ Q♣ 2♥ 6♦ 9♦ 5♥ 4♥ A♦ 8♦ Q♦ 7♠ 10♥ 5♠'),
-         objective: { type: 'score', min: 24, gold: 28 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 24/28 (clear 8%, gold 4%), now 21/28 (clear 13%, gold 4%).
+         objective: { type: 'score', min: 21, gold: 28 } },
   289: { id: 289, chapter: 29, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L289-tricks-c549', hand: parseHand('A♦ J♦ 8♣ 7♣ J♣ A♣ 4♦ 3♣ Q♥ 8♥ K♦ 7♥ 2♣'),
          // Retuned (simulation, 300 runs): Was 10/11 won tricks (~5%/2%); 9/10 is ~22%/5% (the distribution is lumpy, no value lands on 12%).
@@ -4783,7 +4806,8 @@ const CAMPAIGN_LEVELS = {
          objective: { type: 'score', min: 29, gold: 33 } },
   292: { id: 292, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L292-score-c5', hand: parseHand('3♣ 4♥ 9♣ J♥ 7♦ K♣ A♣ 8♠ 10♠ 3♠ 7♠ 10♥ 2♦'),
-         objective: { type: 'score', min: -7, gold: -5 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was -7/-5 (clear 5%, gold 2%), now -14/-7 (clear 12%, gold 5%).
+         objective: { type: 'score', min: -14, gold: -7 } },
   293: { id: 293, chapter: 30, type: 'Normal', forcePassDir: 'keep', hands: 1,
          seed: 'ddp-ch3-L293-void-c123', hand: parseHand('6♥ 3♦ J♣ 10♣ 10♥ 10♦ 6♦ Q♥ 9♥ K♠ 7♠ 4♦ J♠'),
          // Retuned (simulation, 300 runs): Gold used to be 'void by trick 1', impossible with 2 clubs. Now void by trick 2 AND score >= -17 (~5% for a void-seeking bot).
@@ -4806,7 +4830,8 @@ const CAMPAIGN_LEVELS = {
   298: { id: 298, chapter: 30, type: 'Harder', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L298-score-c125', hand: parseHand('9♠ J♠ A♣ 10♥ 5♦ Q♠ 3♠ 2♠ 2♦ 5♠ 9♥ J♦ 10♦'),
          // Retuned (simulation, 300 runs): Was 10/10 (moon-only, ~5%). 2/10 is ~9%/6%.
-         objective: { type: 'score', min: 2, gold: 10 } },
+         // Retuned (simulation, 300 runs, normal AI incl. its own pass): was 2/10 (clear 8%, gold 6%), now 2/11 (clear 8%, gold 5%).
+         objective: { type: 'score', min: 2, gold: 11 } },
   299: { id: 299, chapter: 30, type: 'Normal', forcePassDir: 'left', hands: 1,
          seed: 'ddp-ch3-L299-queen-c357', hand: parseHand('10♣ 7♥ 4♠ A♣ A♠ 5♦ 2♥ 4♥ 2♣ 7♠ K♦ A♦ 8♥'),
          objective: { type: 'avoidQueen', goldScoreBar: 17 } },

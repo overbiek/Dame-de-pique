@@ -4468,6 +4468,20 @@ before pushing.
   6%). Avoid-the-queen 133 and 173 only had their gold bar moved (21 and -7).
   Left alone: bosses, the void missions, 106/119/146/159/186 (avoid-the-queen
   with gold already reachable) and 108/194 (screen noise, gold was already ~5%).
+- **House of Clubs 201-299 (bosses excluded) was benchmarked and retuned**:
+  90 levels x 80 runs (normal AI at seat 0, plus goal-seeking bots for
+  missions), then **300 runs** on the 43 that fell short (150 was not enough:
+  see Diamonds 347 below). The 300-run rates showed 18 of those were already
+  fine (80-run noise), so **25 were changed**, each with a one-line note above
+  its `objective`; only levels whose 300-run clear was under ~9% or gold under
+  ~2.5% were touched. Clean-hand 243 and 256 (cleared 0-1%, and avoid-the-queen
+  would be 100% because the hand holds no queen) became score lines 15/19 and
+  26/37; avoid-the-queen 273 only had its gold bar moved (9). 285 was left alone
+  (a moon-only hand: min = gold = 60).
+- **Diamonds 347 shows a 150-run estimate can be too kind**: the first retune
+  (21/23) read ~8%/5% at 150 runs but 400 runs gave 6%/5%, because the AI lands
+  on 10 or 20 almost every game and 21 is a rare jump. It is now 20/23 (16%/5%).
+  Use 300+ runs for the final numbers on lumpy hands.
 - **Scores on a fixed hand are lumpy**: the AI lands on the same few totals,
   so no line may exist at a given target rate (Table 84 jumps from 37% at
   +20 to 2% at +21; Table 89's tricks from 22% at 9 to 5% at 10). The nearer

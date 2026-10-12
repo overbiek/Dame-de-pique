@@ -3853,10 +3853,15 @@ before pushing.
   JESTER and CHARMER at Table One") and Level 92 explicitly says "three
   different allies," so both really are pure 3-of-7 rotations with no
   generic seat to fill.
-- **Still genuinely missing**: Map Assistant, the two ledger/records
-  clerks (Level 225), the two servers (chamber_server/lantern_server),
-  and Diamond Observer — all one-off or lightly-recurring characters
-  with no dedicated art supplied, still on the SVG monogram fallback.
+- **Every campaign character now has a portrait** (added 2026-10-12): Map
+  Assistant, the two records clerks, both servers (`chamber_server` and
+  `lantern_server` share ONE image, `server.png`, copied to two files), Diamond
+  Observer, and in House of Diamonds Diamond Champion, the Hall of Keepers
+  `hall_regular`/`beginner1-3`/`new_player`, `diamond_regular1-6`, attendant,
+  hostess, messenger, engineer and `diamond_player1`, plus Hearts `hearts_server`/
+  `woman_in_red` and Spades `nervous_player`. Same 1254px-medallion, circular
+  mask at radius width/2, 480px WebP pipeline as the other medallions. The only
+  ids without a file are `player` (the human) and `champion3` (never rendered).
   `map regular 2.png` was left unclaimed (only `map regular 1.png` was
   used, for `maproom1`) — two were supplied against only one generic
   slot in this chapter's roster, same "more art than slots" surplus

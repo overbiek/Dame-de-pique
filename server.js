@@ -5064,8 +5064,8 @@ const CAMPAIGN_LEVELS = {
        objective: { type: 'avoidQueen', goldScoreBar: -5 } },
   347: { id: 347, chapter: 35, type: 'Normal', forcePassDir: 'across', hands: 1,
        seed: 'ddp-ch4-L347-score-c1009', hand: parseHand('7♥ 6♣ A♦ Q♣ 10♣ 2♥ K♣ 9♥ 8♣ Q♦ 8♥ 2♣ 9♣'),
-       // Retuned (simulation, 150 runs, normal AI incl. its own pass): was 30/40 = 0.7%/0.0%; 21/23 is ~8%/5%.
-       objective: { type: 'score', min: 21, gold: 23 } },
+       // Retuned (simulation, 150 runs, normal AI incl. its own pass): was 30/40 = 0.7%/0.0%; 21/23 looked like ~8%/5% but 400 runs gave 6%/5% (the AI lands on 10 or 20 almost every game, 21 is a rare jump), so now 20/23 = 16%/5%.
+       objective: { type: 'score', min: 20, gold: 23 } },
   348: { id: 348, chapter: 35, type: 'Harder', forcePassDir: 'across', hands: 1,
        seed: 'ddp-ch4-L348-score-c38', hand: parseHand('Q♠ 7♦ K♥ 10♦ 9♥ A♣ K♦ Q♥ 8♣ A♠ 6♠ 4♦ Q♦'),
        // Retuned (simulation, 150 runs, normal AI incl. its own pass): was 29/35 = 0.7%/0.7%; 15/18 is ~12%/6%.

@@ -4487,6 +4487,14 @@ before pushing.
   (21/23) read ~8%/5% at 150 runs but 400 runs gave 6%/5%, because the AI lands
   on 10 or 20 almost every game and 21 is a rare jump. It is now 20/23 (16%/5%).
   Use 300+ runs for the final numbers on lumpy hands.
+- **300-run recheck of every retuned level (2026-10-13).** All 179 levels retuned in
+  the Spades/Hearts/Clubs/Diamonds passes were re-run at 300 games: median clear 13-17%,
+  median gold 4.3-5.7% per House, so the method holds. 28 had drifted (the 150-run picks
+  were noisy on lumpy hands). **Only five were corrected, on request** (Spades 72 and 76,
+  Hearts 123, Clubs 245, Diamonds 364 - the ones whose clear rate was too low), each with a
+  "Re-checked (300 runs...)" note. The other 23 were deliberately left as they were (mostly
+  gold at 0-2% on hands where the AI's totals jump straight from ~15-35% to ~0-2%, or clear
+  at 5-8%); the test is considered done, do not re-open it unasked.
 - **Scores on a fixed hand are lumpy**: the AI lands on the same few totals,
   so no line may exist at a given target rate (Table 84 jumps from 37% at
   +20 to 2% at +21; Table 89's tricks from 22% at 9 to 5% at 10). The nearer

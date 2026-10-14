@@ -4581,7 +4581,7 @@ before pushing.
   `friendActivity` has not run against a live DB/room.
 
 ## Not implemented
-- Password reset (no email service configured)
+- Google Sign-In / account linking (deliberately not built; email + password is enough for the Play Store)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across
   two match lengths would fragment a ranked population that isn't large
   enough yet)
@@ -4674,6 +4674,46 @@ before pushing.
   preview: loops start, mute silences to -180 dB, all 40 beds build without
   errors, endgame adds `+t`, menu rail fits at 667x375. The lap seam itself
   (at 132s) was not waited out.
+
+## Settings screen (`#s-settings`), account deletion, legal pages
+- **The menu's Sound | Music pair is gone; one `⚙ Settings` button (`goSettings()`) takes
+  its place** in the landscape rail (How to play | Tutorial is unchanged beneath it). The
+  menu still fits 667x375 (last tile bottom 367 of 375). Settings is a normal rail screen
+  (`'settings'` is in `LANDSCAPE_SCREENS`), with ONE `.settings-body` panel because the
+  rail layout puts every non-chrome child in the same grid cell.
+- **Cards**: Sound effects and Music, each a On/Off toggle plus a 0-100 slider
+  (`ddp.sfxVol`, `ddp.musicVol`; the slider is disabled while its toggle is off); Account
+  (guest: link to My Account; logged in: recovery email + Delete account); About (Privacy
+  policy, How to delete your data - both open the static pages in a new tab).
+- **Volume**: the gain is the SQUARE of the slider (`volGain`), so the quiet end has finer
+  steps. `SFX.setVolume`/`Music.setVolume` only store a value and apply it when the audio
+  graph is built, so setting them at page load does not create the AudioContext early. Music's
+  volume node is LAST in the chain, after the analyser, so track loudness measurements are not
+  affected. The Sound slider plays a click on release as feedback; Music has no preview (it only
+  plays in Campaign).
+- **A real bug was fixed on the way**: `loadMusicMuted()` was called at boot before its
+  `const MUK` was initialised (temporal dead zone, swallowed by the helper's own try/catch), so a
+  saved "music off" was NOT applied after a reload and the music started anyway. The mute helpers
+  now sit next to the sound ones, above the boot calls.
+- **The recovery email field moved here from My Account and kept its ids** (`pv-email`,
+  `err-email`), so `saveEmail()` and the authOk prefill are unchanged; its "Saved." toast goes to
+  `#set-saved` when Settings is the active screen.
+- **Account deletion**: `deleteAccount {token,password}` -> `accountDeleted`. The server checks the
+  password again (rate limited with login's limiter under a `del:<id>` key), unlinks any live room
+  seat from the account (`p.accountId = null`, otherwise end-of-game stat writes would hit a
+  missing row), then `db.deleteAccount` does a single `DELETE FROM accounts`. **Every table that
+  references `accounts(id)` is declared `ON DELETE CASCADE`, so that one statement is the whole
+  erase - keep every new per-account table on that rule or deletion leaves data behind.** Other open
+  sockets of the account get `accountDeleted` too. The client clears local state with
+  `doLogout(true)` (skip the server round trip) and shows a gold notice on the menu.
+  **Not run against Postgres**: the client flow and the event handler were exercised in the
+  preview, the server handler and the cascade were not (no database there).
+- **`public/privacy.html` and `public/delete-account.html` are DRAFTS** with `[BRACKETED]`
+  placeholders (operator name, contact email, date, backup retention) and a visible "finish before
+  publishing" box. They describe what the game actually stores today (no ads, no analytics; Railway
+  hosts it, Resend sends reset emails, Google Fonts is requested by the page). The two URLs are what
+  the Play Console's privacy-policy and account-deletion fields need. The owner's own email was
+  deliberately NOT written into them.
 
 ## Sound effects (public/sfx.js + public/sounds/*.ogg)
 - Self-contained module, own global `SFX` object (`SFX.play(name)`,

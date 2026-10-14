@@ -655,6 +655,16 @@ async function updatePassword(accountId, passwordHash) {
 // everywhere on most services. Deliberately NOT called on a normal
 // updateProfile save; only a password change is security-sensitive enough
 // to justify signing every device out.
+// Permanently removes an account. Every table that references accounts(id)
+// (sessions, stats, ranked/daily/achievement counters, credits, purchases,
+// cosmetics, campaign progress, friendships and requests, password resets)
+// is declared ON DELETE CASCADE, so this one statement is the whole erase —
+// keep new tables on that same rule or deletion silently leaves data behind.
+async function deleteAccount(accountId) {
+  const r = await pool.query(`DELETE FROM accounts WHERE id = $1`, [accountId]);
+  return r.rowCount === 1;
+}
+
 async function deleteSessionsForAccount(accountId) {
   await pool.query(`DELETE FROM sessions WHERE account_id = $1`, [accountId]);
 }
@@ -1964,7 +1974,7 @@ module.exports = {
   createAccount, findAccountByUsername, findAccountById,
   createSession, findAccountByToken, deleteSession, updateProfile,
   setAccountEmail, findAccountByEmail, createPasswordReset, findValidPasswordReset,
-  usePasswordReset, updatePassword, deleteSessionsForAccount,
+  usePasswordReset, updatePassword, deleteSessionsForAccount, deleteAccount,
   getOrCreateFriendCode, findAccountByFriendCode, addFriend, removeFriend, areFriends, getFriends,
   sendFriendRequest, acceptFriendRequest, declineFriendRequest, cancelFriendRequest,
   getIncomingFriendRequests, getFriendRequestStatus,

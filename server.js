@@ -11678,6 +11678,40 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Permanent account deletion — required by Google Play for any app with
+  // accounts. Asks for the password again (a stolen session alone must not
+  // be able to erase an account) and is rate limited like login. db.deleteAccount
+  // cascades through every table; the only in-memory state that can still
+  // point at the account is a seat in a live room, so those are unlinked
+  // first or their end-of-game stat writes would hit a missing row.
+  socket.on('deleteAccount', async ({ token, password }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return socket.emit('authError', { msg: 'Your session expired — log in again.' });
+      const key = 'del:' + account.id;
+      if (loginRateLimited(key)) {
+        return socket.emit('authError', { msg: 'Too many attempts — wait a few minutes and try again.' });
+      }
+      const ok = await bcrypt.compare(String(password || ''), account.password_hash);
+      recordLoginAttempt(key, !ok);
+      if (!ok) return socket.emit('authError', { msg: 'Wrong password.' });
+      for (const code of Object.keys(rooms)) {
+        for (const p of rooms[code].players) if (p.accountId === account.id) p.accountId = null;
+      }
+      const sockets = Array.from(accountSockets.get(account.id) || []);
+      await db.deleteAccount(account.id);
+      for (const sid of sockets) {
+        const sk = io.sockets.sockets.get(sid);
+        if (sk) { detachAccountSocket(sk); sk.emit('accountDeleted'); }
+      }
+      socket.emit('accountDeleted');
+    } catch (e) {
+      console.error('deleteAccount error:', e.message);
+      socket.emit('authError', { msg: 'Could not delete your account. Try again.' });
+    }
+  });
+
   // ── Password recovery ───────────────────────────────────────
   // Deliberately logged-OUT flows — a locked-out player has no token.
   // Always emits the SAME generic success message whether or not the

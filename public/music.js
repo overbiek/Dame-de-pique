@@ -26,6 +26,7 @@ const Music = (() => {
   const AMBIENCE_DB = -27;
 
   let ctx = null, outGain = null, musicBus = null, bedBus = null, analyser = null;
+  let userGain = null, userVol = 1;          // the player's Settings slider, 0..1
   let muted = false;
   let trackGen = 0;                       // supersedes in-flight track loads
 
@@ -46,7 +47,12 @@ const Music = (() => {
     analyser = ctx.createAnalyser();
     analyser.fftSize = 1024;
     outGain.connect(analyser);
-    analyser.connect(ctx.destination);
+    // The Settings volume sits LAST in the chain, after the analyser, so the
+    // level measurements that normalise tracks are unaffected by it.
+    userGain = ctx.createGain();
+    userGain.gain.value = userVol;
+    analyser.connect(userGain);
+    userGain.connect(ctx.destination);
     musicBus = ctx.createGain();
     musicBus.connect(outGain);
     bedBus = ctx.createGain();
@@ -607,6 +613,11 @@ const Music = (() => {
     }
   }
 
+  function setVolume(v) {
+    userVol = Math.max(0, Math.min(1, +v || 0));
+    if (userGain) userGain.gain.value = userVol;   // no graph yet: applied by ensure()
+  }
+
   // Dialogue and cinematics: tuck the music under the voices.
   function duck(on) {
     if (!ctx) return;
@@ -633,5 +644,5 @@ const Music = (() => {
     };
   }
 
-  return { set, setMuted, isMuted: () => muted, duck, debug, BEDS: Object.keys(BEDS) };
+  return { set, setMuted, setVolume, isMuted: () => muted, duck, debug, BEDS: Object.keys(BEDS) };
 })();

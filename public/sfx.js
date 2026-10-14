@@ -7,6 +7,7 @@
 const SFX = (() => {
   let ctx = null;
   let masterGain = null;
+  let userVol = 1;            // the player's Settings slider, 0..1 (applied on top of the 0.7 headroom)
   let muted = false;
 
   // name -> array of decoded AudioBuffers (multiple = randomized variation)
@@ -16,7 +17,7 @@ const SFX = (() => {
     if (!ctx) {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
       masterGain = ctx.createGain();
-      masterGain.gain.value = 0.7; // samples are quieter-headroom than synth tones
+      masterGain.gain.value = 0.7 * userVol; // samples are quieter-headroom than synth tones
       masterGain.connect(ctx.destination);
     }
     if (ctx.state === 'suspended') ctx.resume();
@@ -453,9 +454,11 @@ const SFX = (() => {
     }
   }
 
+  // Lazy on purpose: this runs at page load, before any tap, and must not
+  // create the AudioContext early. The value is applied when the graph is built.
   function setVolume(v) {
-    getCtx();
-    masterGain.gain.value = Math.max(0, Math.min(1, v));
+    userVol = Math.max(0, Math.min(1, +v || 0));
+    if (masterGain) masterGain.gain.value = 0.7 * userVol;
   }
 
   function setMuted(m) {

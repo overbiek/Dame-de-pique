@@ -3760,11 +3760,29 @@ html.landscape-mode #s-draw .dcw .slot-tier{display:none}
 .sheet .you{color:var(--gold-hi)}
 .legend{font-size:.72rem;color:var(--faint);margin:-2px 0 8px;line-height:1.5}
 
+/* ══ Settings screen ══ */
+.settings-body{display:flex;flex-direction:column;gap:12px;text-align:left}
+.set-card{border:1px solid var(--line);border-radius:14px;padding:14px;background:rgba(var(--ddp-scrim-rgb),.18)}
+.set-card .btn-block{width:100%}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.set-title{font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.04em;color:var(--gold-hi)}
+.set-label{display:block;font-size:.8rem;font-weight:600;color:var(--cream);margin-bottom:2px}
+.set-hint{font-size:.76rem;line-height:1.45;color:var(--muted);margin:6px 0 10px}
+.set-hint.set-warn{color:#f3ada4}
+.set-sep{height:1px;background:var(--line);margin:16px 0 14px}
+.set-toggle{min-width:64px}
+.set-toggle.on{border-color:var(--gold);color:var(--gold-hi)}
+.set-slider{display:flex;align-items:center;gap:12px;margin-top:12px}
+.set-slider input[type=range]{flex:1;min-width:0;height:34px;margin:0;accent-color:var(--gold);cursor:pointer}
+.set-slider input[type=range]:disabled{opacity:.4;cursor:default}
+.set-val{width:3.2em;text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:.8rem;color:var(--muted)}
+#s-settings .set-card input[type=email],#s-settings .set-card input[type=password]{width:100%;box-sizing:border-box}
+
 /* ══ Exit controls & countdown ══ */
 .btn-sm{padding:9px 15px;font-size:.8rem}
 .btn.danger{border-color:rgba(214,90,70,.55);background:rgba(214,90,70,.14);color:#f3ab9f}
 .exit-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
-/* Two buttons per line, half each (main menu: Sound | Music, How to play | Tutorial) */
+/* Two buttons per line, half each (main menu: How to play | Tutorial; Settings is one full line) */
 .exit-pair{display:flex;gap:8px;width:100%}
 .exit-pair .btn{flex:1 1 0;min-width:0;padding-left:6px;padding-right:6px;white-space:nowrap;text-align:center !important}
 .autoline{text-align:center;font-size:.78rem;color:var(--faint);margin-top:10px;min-height:1.1em}
@@ -6384,15 +6402,16 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
     </div>
 
     <div class="exit-row" style="margin-top:22px">
+      <!-- Settings replaced the old Sound | Music pair: the on/off switches
+           (now with volume sliders), the recovery email, account deletion and
+           the privacy policy all live behind it. Then How to play | Tutorial
+           on one line of two, half each - stacked full-width buttons cost a
+           third of the rail's height. The tutorial stays a full labelled
+           button rather than the small round "?" it used to be: it is the one
+           control a new player actually needs to find. -->
       <div class="exit-pair">
-        <button class="btn btn-ghost btn-sm" id="sfx-toggle" onclick="toggleSfxMuted()">🔊 Sound</button>
-        <button class="btn btn-ghost btn-sm" id="music-toggle" onclick="toggleMusicMuted()">🎵 Music</button>
+        <button class="btn btn-ghost btn-sm" onclick="goSettings()">⚙&#xFE0E; Settings</button>
       </div>
-      <!-- Two lines of two, half each: Sound | Music, then How to play |
-           Tutorial. Four stacked full-width buttons cost a third of the
-           rail's height. The tutorial stays a full labelled button rather
-           than the small round "?" it used to be: it is the one control a
-           new player actually needs to find. -->
       <div class="exit-pair">
         <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
         <button class="btn btn-ghost btn-sm" onclick="replayTutorial()" title="Replay tutorial">🎓 Tutorial</button>
@@ -6402,6 +6421,81 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
     <div id="install">
       <button class="btn btn-ghost btn-block" id="install-btn" onclick="doInstall()">Install as an app</button>
       <p id="install-how"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SETTINGS ═══ -->
+<section id="s-settings" class="screen">
+  <div class="center-wrap">
+    <div class="screen-header">
+      <button class="btn btn-ghost btn-sm backlink" onclick="show('menu')">‹ Menu</button>
+    </div>
+    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.35rem,5.6vw,1.8rem);font-weight:600;color:var(--gold-hi)">Settings</h2>
+    <p class="tagline">Sound, account and privacy</p>
+
+    <!-- ONE body panel: in landscape every direct child of .center-wrap that
+         is not rail chrome is placed in the same grid cell, so separate
+         sections would stack on top of each other. -->
+    <div class="settings-body">
+      <div class="set-card">
+        <div class="set-row">
+          <div class="set-title">🔊 Sound effects</div>
+          <button class="btn btn-ghost btn-sm set-toggle" id="set-sfx-toggle" onclick="toggleSfxMuted()" aria-pressed="true">On</button>
+        </div>
+        <div class="set-slider">
+          <input type="range" id="set-sfx-vol" min="0" max="100" step="1" value="100"
+                 aria-label="Sound effects volume" oninput="onSfxVolInput(this.value)" onchange="onSfxVolCommit()">
+          <span class="set-val" id="set-sfx-val">100%</span>
+        </div>
+      </div>
+
+      <div class="set-card">
+        <div class="set-row">
+          <div class="set-title">🎵 Music</div>
+          <button class="btn btn-ghost btn-sm set-toggle" id="set-music-toggle" onclick="toggleMusicMuted()" aria-pressed="true">On</button>
+        </div>
+        <div class="set-slider">
+          <input type="range" id="set-music-vol" min="0" max="100" step="1" value="100"
+                 aria-label="Music volume" oninput="onMusicVolInput(this.value)">
+          <span class="set-val" id="set-music-val">100%</span>
+        </div>
+        <p class="set-hint">Music and room ambience play in Campaign mode.</p>
+      </div>
+
+      <div class="set-card">
+        <div class="set-title">Account</div>
+        <div id="set-account-guest">
+          <p class="set-hint">Log in to set a recovery email or manage your account.</p>
+          <button class="btn btn-ghost btn-block" onclick="goPersonal()">Go to My Account</button>
+        </div>
+        <div id="set-account-user" style="display:none">
+          <label class="set-label" for="pv-email">Recovery email</label>
+          <p class="set-hint">Only used to send you a link if you forget your password.</p>
+          <input type="email" id="pv-email" autocomplete="email" placeholder="you@example.com">
+          <button class="btn btn-ghost btn-block" onclick="saveEmail()" style="margin-top:10px">Save email</button>
+          <div id="err-email" class="note bad" style="display:none"></div>
+          <p id="set-saved" class="note gold" style="display:none;text-align:center">Saved.</p>
+
+          <div class="set-sep"></div>
+          <button class="btn danger btn-block" id="set-del-open" onclick="openDeleteAccount()">Delete account…</button>
+          <div id="set-del-confirm" style="display:none">
+            <p class="set-hint set-warn">This permanently deletes your account, statistics, credits, purchases, friends and campaign progress. It cannot be undone.</p>
+            <input type="password" id="set-del-pw" autocomplete="current-password" placeholder="Enter your password to confirm">
+            <div class="row" style="margin-top:10px">
+              <button class="btn btn-ghost grow" onclick="cancelDeleteAccount()">Cancel</button>
+              <button class="btn danger grow" onclick="confirmDeleteAccount()">Delete forever</button>
+            </div>
+            <div id="err-delete" class="note bad" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="set-card">
+        <div class="set-title">About</div>
+        <button class="btn btn-ghost btn-block" onclick="openPrivacy()">Privacy policy</button>
+        <button class="btn btn-ghost btn-block" onclick="openDeletionInfo()" style="margin-top:10px">How to delete your data</button>
+      </div>
     </div>
   </div>
 </section>
@@ -7042,12 +7136,6 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
             <button class="btn btn-primary btn-block" onclick="savePersonal()">Save</button>
             <div id="err-personal" class="note bad" style="display:none"></div>
             <p id="pv-saved" class="note gold" style="display:none;margin-top:10px;text-align:center">Saved.</p>
-            <!-- Recovery email — separate save action from the name/avatar/
-                 cosmetics Save button above, since it hits its own socket
-                 event (updateEmail) with its own success/error routing. -->
-            <input type="email" id="pv-email" autocomplete="email" placeholder="Recovery email" style="margin-top:14px">
-            <button class="btn btn-ghost btn-block" onclick="saveEmail()" style="margin-top:10px">Save email</button>
-            <div id="err-email" class="note bad" style="display:none"></div>
           </div>
         </div>
 
@@ -7752,8 +7840,22 @@ let autoDeadline=0, autoTick=null, voteDeadline=0;
 const MK='ddp.sfxMuted';
 function loadSfxMuted(){ try{return localStorage.getItem(MK)==='1';}catch(e){return false;} }
 function saveSfxMuted(m){ try{localStorage.setItem(MK,m?'1':'0');}catch(e){} }
+const MUK='ddp.musicMuted';
+function loadMusicMuted(){ try{return localStorage.getItem(MUK)==='1';}catch(e){return false;} }
+function saveMusicMuted(m){ try{localStorage.setItem(MUK,m?'1':'0');}catch(e){} }
+/* Volume sliders (Settings). Stored as 0-100; the audio gain is the SQUARE of
+   the slider, so the quiet end has finer steps than a straight line would. */
+const SVK='ddp.sfxVol', MVK='ddp.musicVol';
+function loadVol(k){ try{const v=parseInt(localStorage.getItem(k),10); return isNaN(v)?100:Math.max(0,Math.min(100,v));}catch(e){return 100;} }
+function saveVol(k,v){ try{localStorage.setItem(k,String(v));}catch(e){} }
+const volGain=p=>Math.pow(p/100,2);
+function applyVolumes(){
+  SFX.setVolume(volGain(loadVol(SVK)));
+  if(typeof Music!=='undefined') Music.setVolume(volGain(loadVol(MVK)));
+}
 SFX.setMuted(loadSfxMuted());
 if(typeof Music!=='undefined') Music.setMuted(loadMusicMuted());
+applyVolumes();
 SFX.loadCardSounds('/sounds/').catch(()=>{}); // fetch doesn't need a user gesture — playback does
 // Web Audio needs a user gesture before it'll actually make sound —
 // unlock on the very first tap/click anywhere, whichever screen that is.
@@ -7784,9 +7886,10 @@ function requestTrueFullscreen(){
 }
 document.addEventListener('pointerdown',requestTrueFullscreen,{once:true});
 function updateSfxToggleUI(){
-  const b=$('sfx-toggle'); if(!b) return;
   const muted=loadSfxMuted();
-  b.textContent=muted?'🔇 Sound off':'🔊 Sound';
+  const b=$('set-sfx-toggle');
+  if(b){ b.textContent=muted?'Off':'On'; b.classList.toggle('on',!muted); b.setAttribute('aria-pressed',String(!muted)); }
+  const s=$('set-sfx-vol'); if(s) s.disabled=muted;
 }
 function toggleSfxMuted(){
   const m=!loadSfxMuted();
@@ -7799,13 +7902,15 @@ function toggleSfxMuted(){
 /* ── music + room ambience (public/music.js) ──
    Its own toggle, separate from Sound: plenty of people want the cards
    clicking and no soundtrack, or the reverse. The music is campaign-only. */
-const MUK='ddp.musicMuted';
-function loadMusicMuted(){ try{return localStorage.getItem(MUK)==='1';}catch(e){return false;} }
-function saveMusicMuted(m){ try{localStorage.setItem(MUK,m?'1':'0');}catch(e){} }
 function updateMusicToggleUI(){
-  const b=$('music-toggle'); if(!b) return;
-  b.textContent=loadMusicMuted()?'🎵 Music off':'🎵 Music';
+  const muted=loadMusicMuted();
+  const b=$('set-music-toggle');
+  if(b){ b.textContent=muted?'Off':'On'; b.classList.toggle('on',!muted); b.setAttribute('aria-pressed',String(!muted)); }
+  const s=$('set-music-vol'); if(s) s.disabled=muted;
 }
+function onSfxVolInput(v){ v=+v; saveVol(SVK,v); SFX.setVolume(volGain(v)); $('set-sfx-val').textContent=v+'%'; }
+function onSfxVolCommit(){ SFX.play('click'); }   // a sample at the new level, so you can hear it
+function onMusicVolInput(v){ v=+v; saveVol(MVK,v); if(typeof Music!=='undefined') Music.setVolume(volGain(v)); $('set-music-val').textContent=v+'%'; }
 function toggleMusicMuted(){
   const m=!loadMusicMuted();
   saveMusicMuted(m);
@@ -8299,7 +8404,7 @@ function show(id){
 // alternate layout. Still belongs in this set: it's what lets the
 // landscape CSS apply when the device genuinely IS in landscape, the
 // same as everything else here.
-const LANDSCAPE_SCREENS=new Set(['menu','landing','daily','ranked','rank','stats','personal','shop',
+const LANDSCAPE_SCREENS=new Set(['menu','landing','daily','ranked','rank','stats','personal','settings','shop',
                                  'lobby','draw','summary','final','pass','play','campaign']);
 // Best-effort only. screen.orientation.lock() reliably works only in an
 // installed/standalone Android Chrome PWA; it's silently unavailable in
@@ -11767,6 +11872,7 @@ function savePersonal(){
 
 /* ── account: login / signup / logout ── */
 function renderAccountUI(){
+  if($('s-settings')&&$('s-settings').classList.contains('active')) renderSettingsAccount();
   $('acct-chip-icon').textContent=account?'✅':'👤';
   $('acct-chip-text').textContent=account?account.username:'Guest';
   $('acct-chip-action').textContent=account?'Log out':'Log in';
@@ -11852,6 +11958,55 @@ function saveEmail(){
   lastAuthAction='updateEmail';
   socket.emit('updateEmail',{token:accountToken,email});
 }
+
+/* ── Settings screen (#s-settings) ──
+   Sound/Music switches + volume, the recovery email, account deletion and the
+   legal pages. The email field kept its ids (pv-email, err-email) when it moved
+   here from My Account, so saveEmail() and the authOk prefill are unchanged. */
+function goSettings(){
+  show('settings');
+  updateSfxToggleUI(); updateMusicToggleUI();
+  const sv=loadVol(SVK), mv=loadVol(MVK);
+  $('set-sfx-vol').value=sv; $('set-sfx-val').textContent=sv+'%';
+  $('set-music-vol').value=mv; $('set-music-val').textContent=mv+'%';
+  renderSettingsAccount();
+}
+function renderSettingsAccount(){
+  const on=!!account;
+  $('set-account-guest').style.display=on?'none':'block';
+  $('set-account-user').style.display=on?'block':'none';
+  if(on&&$('pv-email')) $('pv-email').value=account.email||'';
+  cancelDeleteAccount();
+}
+function openDeleteAccount(){
+  $('set-del-open').style.display='none';
+  $('set-del-confirm').style.display='block';
+  $('set-del-pw').value='';
+  $('err-delete').style.display='none';
+  $('set-del-pw').focus();
+}
+function cancelDeleteAccount(){
+  $('set-del-confirm').style.display='none';
+  $('set-del-open').style.display='block';
+  $('set-del-pw').value='';
+  $('err-delete').style.display='none';
+}
+function confirmDeleteAccount(){
+  if(!accountToken) return;
+  const pw=$('set-del-pw').value;
+  if(!pw) return toast('err-delete','Enter your password to confirm.');
+  lastAuthAction='deleteAccount';
+  socket.emit('deleteAccount',{token:accountToken,password:pw});
+}
+function openPrivacy(){ window.open('/privacy.html','_blank','noopener'); }
+function openDeletionInfo(){ window.open('/delete-account.html','_blank','noopener'); }
+// A neutral confirmation on the menu: #err-menu is the red error note, so it
+// is recoloured for the message and put back after it hides itself.
+function menuNotice(msg){
+  const e=$('err-menu'); if(!e) return;
+  e.className='note gold'; toast('err-menu',msg);
+  setTimeout(()=>{ e.className='note bad'; },4700);
+}
 function submitAuth(){
   const u=$('auth-username').value.trim();
   const p=$('auth-password').value;
@@ -11860,8 +12015,8 @@ function submitAuth(){
   if(authMode==='login') socket.emit('login',{username:u,password:p});
   else socket.emit('signup',{username:u,password:p,nickname:profile.name||u,avatar:profile.avatar||''});
 }
-function doLogout(){
-  socket.emit('logout',{token:accountToken});
+function doLogout(skipEmit){
+  if(!skipEmit) socket.emit('logout',{token:accountToken});
   account=null;
   saveAccountToken('');
   accountToken='';
@@ -12804,7 +12959,7 @@ socket.on('authOk',d=>{
   }else if(lastAuthAction==='updateEmail'){
     renderAccountUI();
     if($('pv-email')) $('pv-email').value=account.email||'';
-    toast('pv-saved','Saved.');
+    toast($('s-settings').classList.contains('active')?'set-saved':'pv-saved','Saved.');
   }else{ // resume (silent — this fires on every page load if a token is stored)
     renderAccountUI();
     if($('s-personal').classList.contains('active')){
@@ -12823,11 +12978,19 @@ socket.on('authError',d=>{
   }
   if(lastAuthAction==='requestReset') toast('err-reset-request',d.msg);
   else if(lastAuthAction==='resetPassword') toast('err-reset-new',d.msg);
+  else if(lastAuthAction==='deleteAccount') toast('err-delete',d.msg);
   else if(lastAuthAction==='updateEmail') toast('err-email',d.msg);
   else toast('err-auth',d.msg);
 });
 socket.on('passwordResetRequested',d=>{
   toast('err-reset-request',d.msg); // reuse the same element for the "check your email" confirmation
+});
+socket.on('accountDeleted',()=>{
+  // The server has already erased everything and dropped this session, so
+  // clear local state without telling it to log out again.
+  doLogout(true);
+  show('menu');
+  menuNotice('Your account has been deleted.');
 });
 socket.on('passwordResetOk',d=>{
   toast('err-reset-new',d.msg);

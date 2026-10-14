@@ -4380,9 +4380,15 @@ before pushing.
   name of that rung ("Master of Diamonds"). Anyone who equipped it while it
   was briefly a rung-1 title loses it until they finish all four, via
   `filterEquipped` as usual. The crest `crest_four_houses` has an inline-SVG
-  placeholder (an arched doorway with a spade); **the real art goes in
-  `public/crests/four_houses/1.webp`..`4.webp`** and layers over it with no
-  code change (same contract as every other crest). Not run against Postgres.
+  placeholder (an arched doorway with a spade); **the real art is in
+  `public/crests/four_houses/1.webp`..`4.webp`** (added 2026-10-14, "Master of
+  Spades/Hearts/Clubs/Diamonds" medallions from `afbeeldingen/Achievements/`) and
+  layers over it with no code change (same contract as every other crest). They
+  are 512px RGBA cut with a close-then-flood-fill: the outer gold rim has small
+  gaps, so a plain flood fill of the black page leaked into the dark band inside
+  the ring (grey patches on crests 3 and 4); closing the gold with a radius-10
+  disk first keeps the whole ring opaque while the ornaments that stick out past
+  it survive. Checked on a light backdrop for fringes. Not run against Postgres.
 - **My Account hero title** (`.hero-title`) is `.66rem` with `margin-top:-4px`
   (was `.72rem` / `-3px`): with the exported plate art loaded, the title's
   bottom edge touched the plate's baked-in tier lozenge. Checked with the art
@@ -4630,7 +4636,7 @@ before pushing.
 - **A missing mp3 is silent, not an error** (one 404, remembered in
   `missing`). All four House tracks exist: `spades`/`hearts`/`clubs` (~150s,
   loopEnd 138/144/146s) and `diamonds` (178.5s, loopEnd 174s, gain 0.41), each
-  normalized to -26 dB RMS. No `<house>-endgame.mp3` exists yet. A House's FINAL chapter (chapter id % 10 === 0) asks for
+  normalized to -26 dB RMS. Endgame tracks exist for **spades** (`spades-endgame.mp3`, "Smokier than usual") and **hearts** (`hearts-endgame.mp3`, "Candlelit Throne"); Clubs and Diamonds still fall back to their House track. A House's FINAL chapter (chapter id % 10 === 0) asks for
   `<house>-endgame` and falls back to `<house>`; it also adds the `pulse`
   bed part (low drone + heartbeat).
 - **The loop point is measured, not hard-coded.** `analyse()` finds the last

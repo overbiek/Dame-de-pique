@@ -7039,6 +7039,8 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
             </div>
             <input type="text" id="auth-username" placeholder="Username" maxlength="20" autocomplete="username"/>
             <input type="password" id="auth-password" placeholder="Password" autocomplete="current-password"/>
+            <!-- Signup only: optional, used solely to reset a forgotten password -->
+            <input type="email" id="auth-email" placeholder="Email (optional - to reset your password)" autocomplete="email" style="display:none"/>
             <a href="#" id="auth-forgot-link" class="link-inline"
                onclick="event.preventDefault(); openResetRequestForm();"
                style="display:none">Forgot password?</a>
@@ -8386,6 +8388,7 @@ function show(id){
   if(next) next.classList.add('active');
   document.querySelectorAll('.screen').forEach(s=>{ if(s!==next) s.classList.remove('active'); });
   currentScreenId=id;
+  if(id!=='final') finalFxPlayed=false;   // re-arm the finish sound for the next game
   applyOrientationLock(id);
   updateLandscapeMode();
   updateSceneLayer();
@@ -10375,6 +10378,7 @@ function campaignStartLevel(levelId){
 
 let lastCampaignResult=null;
 socket.on('campaignResult',d=>{
+  SFX.play(d.cleared?'gameWin':'gameLose');   // passed the objective, not "highest score"
   if(d.creditsAwarded) queueCreditTally(d.creditsAwarded);
   lastCampaignResult=d;
   // See campaignLastNewUnlock's own declaration (near goCampaignFromTable)
@@ -11903,6 +11907,7 @@ function openAuthForm(mode){
   switchAuthTab(mode);
   $('auth-username').value='';
   $('auth-password').value='';
+  $('auth-email').value='';
   $('auth-username').focus();
 }
 function closeAuthForm(){
@@ -11915,6 +11920,7 @@ function switchAuthTab(mode){
   $('auth-submit').textContent=mode==='login'?'Log in':'Create account';
   $('auth-password').autocomplete=mode==='login'?'current-password':'new-password';
   $('auth-forgot-link').style.display=mode==='login'?'block':'none';
+  $('auth-email').style.display=mode==='signup'?'block':'none';
 }
 function openResetRequestForm(){
   $('acct-form').style.display='none';
@@ -12013,7 +12019,7 @@ function submitAuth(){
   if(!u||!p){ toast('err-auth','Fill in both fields.'); return; }
   lastAuthAction=authMode;
   if(authMode==='login') socket.emit('login',{username:u,password:p});
-  else socket.emit('signup',{username:u,password:p,nickname:profile.name||u,avatar:profile.avatar||''});
+  else socket.emit('signup',{username:u,password:p,email:$('auth-email').value.trim(),nickname:profile.name||u,avatar:profile.avatar||''});
 }
 function doLogout(skipEmit){
   if(!skipEmit) socket.emit('logout',{token:accountToken});
@@ -14441,7 +14447,7 @@ function renderSummary(G){
 }
 
 /* ══════════ FINAL ══════════ */
-let finalFxPlayed=false;
+var finalFxPlayed=false;   // var, not let: show() (defined earlier) reads it, and must never hit the temporal dead zone
 // Ranked top-to-bottom, one row per placement: avatar, rank badge
 // ("logo" — the small tier medallion, distinct from an achievement
 // crest), crest(s), name, score and what this game actually paid in
@@ -14542,8 +14548,13 @@ function renderFinal(G){
 
   if(!finalFxPlayed){
     finalFxPlayed=true;
-    const mine=G.players[me];
-    SFX.play(mine&&mine.score===rows[0].score?'gameWin':'gameLose');
+    // A campaign level is not a race against the table: whether you passed the
+    // objective decides the sound, and that arrives in campaignResult (below),
+    // which plays it. Every other mode keeps "did you finish top".
+    if(!isCampaign){
+      const mine=G.players[me];
+      SFX.play(mine&&mine.score===rows[0].score?'gameWin':'gameLose');
+    }
   }
 }
 

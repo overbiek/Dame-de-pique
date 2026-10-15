@@ -4708,14 +4708,29 @@ before pushing.
   `doLogout(true)` (skip the server round trip) and shows a gold notice on the menu.
   **Not run against Postgres**: the client flow and the event handler were exercised in the
   preview, the server handler and the cascade were not (no database there).
+- **Signup has an optional email field** (`#auth-email`, shown only on the Create account tab,
+  sent as `signup.email`). The server validates it with `EMAIL_RE`, refuses one already on another
+  account, and saves it with `db.setAccountEmail` after the account exists (a lost race on the unique
+  index keeps the account without an email, to be added later in Settings). The server handler has not
+  run against Postgres.
+- **The finish sound in Campaign follows PASSING the level, not "highest score"**: the `campaignResult`
+  handler plays `gameWin` when `cleared`, `gameLose` otherwise, and `renderFinal` no longer plays its
+  own sound for campaign games (every other mode still plays win when you finished top). Same change
+  fixed a latent bug: `finalFxPlayed` was a once-per-page-load flag that was never reset, so the finish
+  sound only ever played for the first game after a reload; `show()` now re-arms it whenever you leave
+  the final screen (it is a `var` because `show()` is defined above it and `let` would hit the temporal
+  dead zone).
 - **`public/privacy.html` and `public/delete-account.html` are deliberately MINIMAL** - only what
   the Play Store and GDPR need (operator and contact, what is collected and why, who it is shared with,
   retention and how to delete, the user's rights; plus the in-app and by-email deletion steps). The
   operator (Robin Overbeeke, Belgium) and the public contact address (damedepique@gmail.com) are filled
   in (2026-10-15); change them in privacy.html (lines 28-29, 59) and delete-account.html (line 34). Backup retention, children, security and
-  a "last updated" date were left out on request. They describe what the game really stores (no ads,
-  no analytics; Railway hosts it, Resend sends reset emails, Google Fonts is requested by the page) -
-  update them if that changes. The two URLs are what the Play Console's privacy-policy and
+  a "last updated" date were left out on request. They describe what the game really stores (Railway
+  hosts it, Resend sends reset emails, Google Fonts is requested by the page) - update them if that
+  changes. **They deliberately do NOT say "no ads" or "no real-money purchases"**: the owner wants to be
+  able to sell credits later, so the page must not promise otherwise. When that happens add the payment
+  provider to "Who we share it with" and update the Play Data safety / ads declarations; digital goods
+  sold in the Android app have to go through Google Play Billing. The two URLs are what the Play Console's privacy-policy and
   account-deletion fields need. The owner's own email was deliberately NOT written into them.
 
 ## Sound effects (public/sfx.js + public/sounds/*.ogg)

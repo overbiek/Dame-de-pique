@@ -11556,9 +11556,11 @@ function detachAccountSocket(socket) {
 io.on('connection', (socket) => {
 
   // ── Accounts ─────────────────────────────────────────────────
-  socket.on('signup', async ({ username, password, nickname, avatar }) => {
+  socket.on('signup', async ({ username, password, email, nickname, avatar }) => {
     if (!DB_ENABLED) return socket.emit('authError', { msg: 'Accounts aren\'t set up on this server yet.' });
     const u = String(username || '').trim();
+    // Optional recovery email, so a new account can use password reset from day one.
+    const signupEmail = String(email || '').trim().toLowerCase();
     const p = String(password || '');
     const nick = String(nickname || u).trim().slice(0, 16) || u;
     if (!USERNAME_RE.test(u)) {
@@ -11567,11 +11569,22 @@ io.on('connection', (socket) => {
     if (p.length < 6) {
       return socket.emit('authError', { msg: 'Password needs to be at least 6 characters.' });
     }
+    if (signupEmail && !EMAIL_RE.test(signupEmail)) {
+      return socket.emit('authError', { msg: 'That doesn\'t look like a valid email address.' });
+    }
     try {
       const existing = await db.findAccountByUsername(u);
       if (existing) return socket.emit('authError', { msg: 'That username is already taken.' });
+      if (signupEmail && await db.findAccountByEmail(signupEmail)) {
+        return socket.emit('authError', { msg: 'That email is already on another account.' });
+      }
       const passwordHash = await bcrypt.hash(p, 10);
-      const account = await db.createAccount({ username: u, passwordHash, nickname: nick, avatar: startingAvatar(avatar) });
+      let account = await db.createAccount({ username: u, passwordHash, nickname: nick, avatar: startingAvatar(avatar) });
+      if (signupEmail) {
+        // Two signups racing for the same address can still lose to the unique
+        // index; the account is already made, so keep it without the email.
+        try { account = await db.setAccountEmail(account.id, signupEmail); } catch (e) { /* saved later from Settings */ }
+      }
       const token = makeToken();
       await db.createSession(account.id, token);
       attachAccountSocket(socket, account.id);

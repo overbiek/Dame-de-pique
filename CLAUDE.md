@@ -4710,9 +4710,9 @@ before pushing.
   preview, the server handler and the cascade were not (no database there).
 - **`public/privacy.html` and `public/delete-account.html` are deliberately MINIMAL** - only what
   the Play Store and GDPR need (operator and contact, what is collected and why, who it is shared with,
-  retention and how to delete, the user's rights; plus the in-app and by-email deletion steps). Two
-  placeholders must be filled before publishing: **`[NAME, COUNTRY]`** (privacy.html, once) and
-  **`[EMAIL]`** (privacy.html twice, delete-account.html once). Backup retention, children, security and
+  retention and how to delete, the user's rights; plus the in-app and by-email deletion steps). The
+  operator (Robin Overbeeke, Belgium) and the public contact address (damedepique@gmail.com) are filled
+  in (2026-10-15); change them in privacy.html (lines 28-29, 59) and delete-account.html (line 34). Backup retention, children, security and
   a "last updated" date were left out on request. They describe what the game really stores (no ads,
   no analytics; Railway hosts it, Resend sends reset emails, Google Fonts is requested by the page) -
   update them if that changes. The two URLs are what the Play Console's privacy-policy and

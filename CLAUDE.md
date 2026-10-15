@@ -279,6 +279,24 @@ before pushing.
   pass-transition fx pattern it otherwise resembles. Rocket launches
   from the shooting player's actual seat position via `seatOf()`.
   Purely decorative/emoji-based (🌕/🚀), no new image assets.
+- **UPDATE 2026-10-15: portrait is now BLOCKED on touch devices** by `#rotate-gate`, on the owner's
+  request ("the only way should be landscape"; players opening the shared link kept getting the vertical
+  game). It is CSS-only (`@media (orientation:portrait) and (pointer:coarse)`), so it is up before any
+  script runs and vanishes when the phone is turned; desktop windows (fine pointer) are never gated, and
+  the portrait CSS still exists for them. Its button (`enterLandscape()`) is a user gesture, which lets
+  Chrome on Android enter fullscreen and then `screen.orientation.lock('landscape')` even with
+  auto-rotate off; `requestTrueFullscreen()` also locks right after the first tap's fullscreen succeeds.
+  **iPhone Safari has neither API, so there the player must turn the phone** (the gate's help line says to
+  unlock the rotation lock). **There is deliberately no "continue in portrait" escape** - the earlier
+  gate was reverted because one real player could not rotate at all, so if someone reports being stuck
+  behind it, that is the trade-off that was accepted. **Installing is actively promoted** (owner: it is the best way
+  for people to restart the game quickly): the gate has an "Install the game" button (Chrome's own prompt
+  when it offered one, otherwise the by-hand steps shown on the gate, `gateInstall()`), hidden once the app
+  is installed/running standalone; and the `#orient-welcome` nudge ("Install Dame de Pique - one tap to
+  start, full screen, always in landscape") now shows on the first THREE browser-tab visits
+  (`ddp.installNudgeCount`, `INSTALL_NUDGE_MAX`; "Not now" counts one, tapping Install stops it; the old
+  one-time `ddp.orientHintSeen` still counts as done). The menu's "Install as an app" button and the
+  "reopen the app" nudge for browsers that already have it are unchanged.
 - **The game is landscape-first**, but NOT hard-enforced — a forced
   `#rotate-gate` overlay was tried and then deliberately reverted: it
   blocked a real player whose phone couldn't rotate into landscape at

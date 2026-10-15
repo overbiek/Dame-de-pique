@@ -3760,6 +3760,22 @@ html.landscape-mode #s-draw .dcw .slot-tier{display:none}
 .sheet .you{color:var(--gold-hi)}
 .legend{font-size:.72rem;color:var(--faint);margin:-2px 0 8px;line-height:1.5}
 
+/* ══ Rotate gate (landscape only) ══ */
+#rotate-gate{display:none;position:fixed;inset:0;z-index:9500;background:#071A15;color:#EDE4D2;
+  align-items:center;justify-content:center;padding:24px;text-align:center}
+@media (orientation:portrait) and (pointer:coarse){#rotate-gate{display:flex}}
+#rotate-gate .rg-card{max-width:340px}
+#rotate-gate h2{font-family:'Playfair Display',serif;font-size:1.5rem;color:#EED08E;margin:6px 0 4px}
+#rotate-gate .rg-sub{color:#B0CABE;margin:0 0 20px}
+#rotate-gate .rg-how{color:#EDE4D2;font-size:.85rem;line-height:1.5;margin:14px 0 0}
+#rotate-gate .rg-help{color:#B0CABE;font-size:.78rem;line-height:1.5;margin:18px 0 0;opacity:.85}
+#rotate-gate .rg-phone{width:46px;height:78px;margin:0 auto 18px;border:3px solid #C49E58;border-radius:11px;
+  position:relative;animation:rgTurn 2.6s ease-in-out infinite}
+#rotate-gate .rg-phone::after{content:'';position:absolute;left:50%;bottom:6px;width:12px;height:3px;margin-left:-6px;
+  border-radius:2px;background:#C49E58}
+@keyframes rgTurn{0%,25%{transform:rotate(0)}55%,85%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){#rotate-gate .rg-phone{animation:none;transform:rotate(-90deg)}}
+
 /* ══ Settings screen ══ */
 .settings-body{display:flex;flex-direction:column;gap:12px;text-align:left}
 .set-card{border:1px solid var(--line);border-radius:14px;padding:14px;background:rgba(var(--ddp-scrim-rgb),.18)}
@@ -6214,6 +6230,26 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
   </div>
 </div>
 
+<!-- ═══ ROTATE GATE — the game is landscape-only ═══
+     Shown by CSS alone (portrait + touch device), so it is up before any script
+     runs and disappears the instant the phone is turned. The button is a user
+     gesture, which is what lets Chrome on Android enter fullscreen and LOCK
+     landscape even when the phone's auto-rotate is off. iPhone Safari has no such
+     API, so there the player has to turn the phone (the help line says how).
+     Desktop windows (fine pointer) are never gated. -->
+<div id="rotate-gate" role="dialog" aria-live="polite" aria-label="Turn your phone sideways">
+  <div class="rg-card">
+    <div class="rg-phone" aria-hidden="true"></div>
+    <h2>Turn your phone sideways</h2>
+    <p class="rg-sub">Dame de Pique is played in landscape.</p>
+    <button class="btn btn-primary" onclick="enterLandscape()">Tap to switch to landscape</button>
+    <!-- Installing is the better fix: the installed app opens full screen, straight into landscape, in one tap -->
+    <button class="btn btn-ghost" id="rg-install" onclick="gateInstall()" style="margin-top:10px">Install the game</button>
+    <p class="rg-how" id="rg-install-how" style="display:none"></p>
+    <p class="rg-help">Nothing happens? Turn off your phone's rotation lock: on Android switch on <b>Auto-rotate</b>, on iPhone open Control Center and unlock the rotation lock.</p>
+  </div>
+</div>
+
 <!-- ═══ ORIENTATION / INSTALL — first-run nudge for browser-tab players ═══
      Same forced-overlay pattern as tutorial-welcome below (reuses its
      CSS classes, and the same "shown once via localStorage" rule) so a
@@ -6222,14 +6258,14 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
      anyone already standalone; see maybeShowOrientHint(). -->
 <div id="orient-welcome" class="tutorial-scrim">
   <div class="tutorial-welcome-card">
-    <h2>Turn your phone sideways</h2>
-    <p class="tagline">Dame de Pique plays best in landscape.</p>
-    <p>Rotate your device now — and for the smoothest experience, install
-       the game to your home screen so it opens straight into landscape
-       every time, no rotating needed.</p>
+    <h2>Install Dame de Pique</h2>
+    <p class="tagline">One tap to start, full screen, always in landscape.</p>
+    <p>Add the game to your home screen: it opens in a second like any other
+       app, fills the whole screen and stays in landscape, so you can pick up
+       a game whenever you like.</p>
     <div class="tutorial-welcome-actions">
-      <button class="btn btn-primary" onclick="orientWelcomeInstall()">Install as an app</button>
-      <button class="btn btn-ghost" onclick="dismissOrientWelcome()">Continue in browser</button>
+      <button class="btn btn-primary" onclick="orientWelcomeInstall()">Install the game</button>
+      <button class="btn btn-ghost" onclick="dismissOrientWelcome()">Not now</button>
     </div>
   </div>
 </div>
@@ -7883,7 +7919,8 @@ function requestTrueFullscreen(){
     const fn=el.requestFullscreen||el.webkitRequestFullscreen;
     if(!fn) return;
     const r=fn.call(el,{navigationUI:'hide'});
-    if(r&&r.catch) r.catch(()=>{});   // denied / not user-activated — fine
+    // Landscape can only be locked once fullscreen is on, so lock right after it.
+    if(r&&r.then) r.then(()=>applyOrientationLock()).catch(()=>{});   // denied / not user-activated - fine
   }catch(e){}
 }
 document.addEventListener('pointerdown',requestTrueFullscreen,{once:true});
@@ -8420,6 +8457,21 @@ function applyOrientationLock(id){
   const so=screen.orientation;
   if(!so||!so.lock) return;
   try{ so.lock('landscape').catch(()=>{}); }catch(e){}
+}
+// The rotate gate's button. Chrome on Android only honours orientation.lock()
+// while the page is fullscreen, and fullscreen needs a user gesture - so enter
+// fullscreen first and lock when it succeeds. Silently does nothing where the
+// APIs do not exist (iPhone Safari): there the player turns the phone.
+function enterLandscape(){
+  const el=document.documentElement;
+  const fs=el.requestFullscreen||el.webkitRequestFullscreen;
+  try{
+    if(fs&&!document.fullscreenElement){
+      const r=fs.call(el,{navigationUI:'hide'});
+      if(r&&r.then) r.then(()=>applyOrientationLock()).catch(()=>applyOrientationLock());
+      else applyOrientationLock();
+    }else applyOrientationLock();
+  }catch(e){ applyOrientationLock(); }
 }
 
 // Whether the LANDSCAPE CSS applies. Still gated on the viewport really
@@ -14584,20 +14636,29 @@ window.addEventListener('beforeinstallprompt',e=>{
 // ...but always offer the button anyway, with manual steps as a fallback.
 window.addEventListener('load',()=>setTimeout(showInstall,1500));
 
+function installStepsHTML(){
+  const ua=navigator.userAgent;
+  if(/iPhone|iPad|iPod/.test(ua))
+    return 'In <b>Safari</b>, tap the Share button at the bottom, scroll down and choose <b>Add to Home Screen</b>.';
+  if(/Android/.test(ua))
+    return 'In <b>Chrome</b>, tap the <b>⋮</b> menu at the top right, then <b>Add to Home screen</b> (it may read <b>Install app</b>).';
+  return 'In <b>Chrome</b> on desktop, click the install icon at the right of the address bar, or <b>⋮</b> → <b>Cast, save and share</b> → <b>Install page as app</b>.';
+}
+// The rotate gate's Install button: Chrome's own prompt when it has offered one,
+// otherwise the by-hand steps shown right on the gate (the menu is hidden behind it).
+function gateInstall(){
+  if(deferredPrompt){ doInstall(); return; }
+  const el=$('rg-install-how');
+  el.innerHTML=installStepsHTML();
+  el.style.display='block';
+}
 function doInstall(){
   if(deferredPrompt){
     deferredPrompt.prompt();
     deferredPrompt.userChoice.finally(()=>{ deferredPrompt=null; $('install').style.display='none'; });
     return;
   }
-  const ua=navigator.userAgent;
-  let msg;
-  if(/iPhone|iPad|iPod/.test(ua))
-    msg='In <b>Safari</b>, tap the Share button at the bottom, scroll down and choose <b>Add to Home Screen</b>.';
-  else if(/Android/.test(ua))
-    msg='In <b>Chrome</b>, tap the <b>⋮</b> menu at the top right, then <b>Add to Home screen</b> (it may read <b>Install app</b>).';
-  else
-    msg='In <b>Chrome</b> on desktop, click the install icon at the right of the address bar, or <b>⋮</b> → <b>Cast, save and share</b> → <b>Install page as app</b>.';
+  const msg=installStepsHTML();
   const el=$('install-how');
   el.innerHTML=msg;
   el.style.display='block';
@@ -14770,6 +14831,10 @@ function tutorialFadeCallout(){ $('tutorial-callout').classList.remove('show'); 
 // lock (applyOrientationLock), so this has nothing to offer them and is
 // skipped outright rather than nagging every launch.
 function maybeShowOrientHint(){
+  // Already running as the app, or known to have it installed: nothing to install.
+  let hasApp=false;
+  try{ hasApp=isStandalone()||!!localStorage.getItem('ddp.appInstalled'); }catch(e){}
+  if(hasApp&&$('rg-install')) $('rg-install').style.display='none';
   if(isStandalone()){
     // The one place this marker is ever set — it can only become true
     // once the app has actually been launched standalone, not just
@@ -14783,10 +14848,21 @@ function maybeShowOrientHint(){
   let installed=null;
   try{ installed=localStorage.getItem('ddp.appInstalled'); }catch(e){}
   if(installed){ maybeShowReopenHint(); return; }
-  let seen=null;
-  try{ seen=localStorage.getItem('ddp.orientHintSeen'); }catch(e){}
-  if(!seen){ $('orient-welcome').classList.add('show'); }
+  // Installing is the goal (one tap to restart, full screen, always landscape), so
+  // the nudge comes back on the next two visits too before it stops nagging.
+  if($('rg-install')) $('rg-install').style.display='';
+  if(installNudgeCount()<INSTALL_NUDGE_MAX){ $('orient-welcome').classList.add('show'); }
   else{ maybeShowWelcome(); }
+}
+const INSTALL_NUDGE_MAX=3;
+function installNudgeCount(){
+  try{
+    if(localStorage.getItem('ddp.orientHintSeen')) return INSTALL_NUDGE_MAX;   // saw the old one-time nudge
+    return parseInt(localStorage.getItem('ddp.installNudgeCount'),10)||0;
+  }catch(e){ return INSTALL_NUDGE_MAX; }
+}
+function bumpInstallNudge(toMax){
+  try{ localStorage.setItem('ddp.installNudgeCount',String(toMax?INSTALL_NUDGE_MAX:installNudgeCount()+1)); }catch(e){}
 }
 // Platform-specific "go find it" instructions — deliberately a separate
 // helper from doInstall()'s ua-sniffing rather than a shared one: the
@@ -14814,12 +14890,12 @@ function dismissReopenWelcome(){
   maybeShowWelcome();
 }
 function dismissOrientWelcome(){
-  try{ localStorage.setItem('ddp.orientHintSeen','1'); }catch(e){}
+  bumpInstallNudge(false);
   $('orient-welcome').classList.remove('show');
   maybeShowWelcome();
 }
 function orientWelcomeInstall(){
-  try{ localStorage.setItem('ddp.orientHintSeen','1'); }catch(e){}
+  bumpInstallNudge(true);
   $('orient-welcome').classList.remove('show');
   // showInstall() first: doInstall()'s manual-steps fallback writes into
   // #install-how, a child of #install — which is display:none until

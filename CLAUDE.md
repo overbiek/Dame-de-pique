@@ -4708,12 +4708,15 @@ before pushing.
   `doLogout(true)` (skip the server round trip) and shows a gold notice on the menu.
   **Not run against Postgres**: the client flow and the event handler were exercised in the
   preview, the server handler and the cascade were not (no database there).
-- **`public/privacy.html` and `public/delete-account.html` are DRAFTS** with `[BRACKETED]`
-  placeholders (operator name, contact email, date, backup retention) and a visible "finish before
-  publishing" box. They describe what the game actually stores today (no ads, no analytics; Railway
-  hosts it, Resend sends reset emails, Google Fonts is requested by the page). The two URLs are what
-  the Play Console's privacy-policy and account-deletion fields need. The owner's own email was
-  deliberately NOT written into them.
+- **`public/privacy.html` and `public/delete-account.html` are deliberately MINIMAL** - only what
+  the Play Store and GDPR need (operator and contact, what is collected and why, who it is shared with,
+  retention and how to delete, the user's rights; plus the in-app and by-email deletion steps). Two
+  placeholders must be filled before publishing: **`[NAME, COUNTRY]`** (privacy.html, once) and
+  **`[EMAIL]`** (privacy.html twice, delete-account.html once). Backup retention, children, security and
+  a "last updated" date were left out on request. They describe what the game really stores (no ads,
+  no analytics; Railway hosts it, Resend sends reset emails, Google Fonts is requested by the page) -
+  update them if that changes. The two URLs are what the Play Console's privacy-policy and
+  account-deletion fields need. The owner's own email was deliberately NOT written into them.
 
 ## Sound effects (public/sfx.js + public/sounds/*.ogg)
 - Self-contained module, own global `SFX` object (`SFX.play(name)`,

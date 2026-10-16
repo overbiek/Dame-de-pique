@@ -5171,7 +5171,8 @@ const CAMPAIGN_LEVELS = {
            parseHand('Q♥ 2♦ 6♣ 7♠ Q♣ A♠ 9♥ Q♠ 5♦ 3♥ 7♥ 4♣ 6♦'),
            parseHand('K♣ 2♥ 9♠ Q♠ 8♣ K♥ 8♠ 5♦ 10♦ K♠ 10♠ 7♦ J♠'),
          ],
-         objective: { type: 'score', min: 121, gold: 142 } },
+         // Retuned (simulation, 40 AI games): Was 121/142 - 0% clear, best 71, mean -27. Set to 75/100 on request (the AI reaches 75 in under ~3% of games; a human should do better).
+         objective: { type: 'score', min: 75, gold: 100 } },
 
   // ═══ House of Diamonds, Chapter 37: levelStart 361 ═══
   361: { id: 361, chapter: 37, type: 'Normal', forcePassDir: 'across', hands: 1,

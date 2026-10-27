@@ -4943,6 +4943,34 @@ before pushing.
   scores, deltas) and one per recorded player, and `trackStat`'s give-up log now
   includes the pg error code. Search Railway logs for `Ranked game`.
 
+## Ranked result card and rank-change popup (final screen)
+- **`rankedResult` now carries what the card animates**: `mmrBefore` (read inside
+  `applyRankedMmr`'s row-locked transaction - NOT rebuilt as `mmr - delta`, the 0
+  floor makes that wrong), `rankBefore`/`spanBefore` (null for a placement game),
+  `span` (null while still in placement), `revealed` (the game that ENDS placement:
+  `wasPlacement && !isPlacement`) and `rankDir` (+1/-1/0, by `rankIndexFor` - every
+  division is a step, so Gold I -> II counts, unlike the older tier-only `rankedUp`
+  which still drives nothing visual). `rankSpan(mmr)` = floor of the current division
+  to the floor of the next (`ceil: null` at Legend). The shown change is
+  `mmr - mmrBefore` (the APPLIED change, doubled in placement), not `mmrChange`.
+- **Card** (`#f-ranked`, `renderRankedResult`): badge + rank label, the MMR change
+  counting up, a bar through the division; a promotion fills the bar to the end of the
+  old division, flips badge/labels, then fills the new one (demotion mirrors it);
+  placement games show five pips instead; Legend shows a full bar and "Max rank".
+  Every step also has a plain end state (`finish`, forced at 2.3s and used for
+  `prefers-reduced-motion`), so a hidden tab or frozen timer still ends correct.
+- **Popup** (`#rank-pop`) for PROMOTED / RANK REVEALED / DEMOTED, ~2.5s after the card
+  starts. Tier changes get the stronger halo; a demotion has no halo and no sound; the
+  jingle is `SFX.rankUp(max(1, tier))`. Rank is still only ever derived server-side.
+- **Placeholder**: on a ranked final with no result yet the card says "Updating your
+  rank..." and after 9s admits it is taking long. Added because the original bug
+  (above) was invisible to players: the box simply never appeared.
+- **Landscape**: the ranked final is two columns (standings left, card + button right,
+  `#s-final.ranked-final`). Stacked, the card fell below the fold at 915x412 and the
+  screen scrolled, so it was never seen. Verified at 915x412, 667x375 and 18/20px root
+  font: no scroll. The result is drawn when the final screen is active (handler stores
+  it otherwise), so the animation is not played to an unseen screen.
+
 ## Testing convention
 - **Real Postgres without installing anything: PGlite** (`@electric-sql/pglite`, Postgres
   compiled to WASM, `npm i` in a scratch folder OUTSIDE the repo). Make a copy of `db.js`

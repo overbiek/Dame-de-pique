@@ -1119,12 +1119,15 @@ async function applyRankedMmr(accountId, mmrDelta) {
   try {
     await client.query('BEGIN');
     const { rows: existing } = await client.query(
-      `SELECT placement_games_played FROM ranked_stats WHERE account_id = $1 FOR UPDATE`,
+      `SELECT mmr, placement_games_played FROM ranked_stats WHERE account_id = $1 FOR UPDATE`,
       [accountId]
     );
     // No row yet means this is this account's very first ranked result,
     // which is definitionally a placement game.
     const wasPlacement = existing.length ? existing[0].placement_games_played < 5 : true;
+    // Where this game started, for the result card's before -> after animation.
+    // Read here, not rebuilt as mmr - delta: the 0 floor makes that wrong.
+    const mmrBefore = existing.length ? existing[0].mmr : RANKED_STARTING_MMR;
     const appliedDelta = mmrDelta * (wasPlacement ? 2 : 1);
     // The ::int casts are NOT decoration. `$3 + $2` adds two untyped parameters
     // and Postgres refuses it ("operator is not unique: unknown + unknown"), so
@@ -1152,7 +1155,7 @@ async function applyRankedMmr(accountId, mmrDelta) {
     // wasPlacement is what lets the caller know whether a rank change is a
     // real promotion or just the first reveal.
     return { mmr: rows[0].mmr, placementGamesPlayed: rows[0].placement_games_played,
-             appliedDelta, wasPlacement };
+             appliedDelta, wasPlacement, mmrBefore };
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch (_) {}
     throw e;

@@ -1473,6 +1473,73 @@ html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:st
 .inv-head h3{margin:0;flex:1;font:600 1.05rem 'Playfair Display',serif;color:var(--gold-hi)}
 .inv-list{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 
+/* ══ Ranked result card (final screen) + rank-change popup ══
+   The card shows what the game did to your rating: the MMR change counting up,
+   the bar moving through your division (and over the edge into the next one when
+   you are promoted), or the five placement pips. A change of rank also gets the
+   popup (#rank-pop). Everything animates from the OLD state to the new one, and
+   every step also has a plain final state (reduced motion, hidden tab). */
+.rr-card{margin-top:14px;padding:14px 16px 12px;border-radius:16px;text-align:left}
+.rr-top{display:flex;align-items:center;gap:14px}
+.rr-badge{flex:0 0 auto;width:68px;height:68px;display:grid;place-items:center;font-size:2.3rem}
+.rr-badge img{width:68px;height:68px;display:block}
+.rr-badge.pop{animation:rp-pop .55s cubic-bezier(.2,1.4,.4,1) both}
+.rr-main{flex:1;min-width:0}
+.rr-rank{font:600 1.15rem 'Playfair Display',serif;color:var(--gold-hi);line-height:1.15}
+.rr-delta{font:700 1.75rem var(--font-num);font-variant-numeric:tabular-nums;line-height:1.1;margin-top:3px;color:var(--cream)}
+.rr-delta small{font:600 .68rem 'DM Sans',sans-serif;letter-spacing:.14em;margin-left:6px;opacity:.8}
+.rr-delta.up{color:var(--ddp-pos)}
+.rr-delta.down{color:var(--ddp-neg)}
+.rr-sub{font-size:.76rem;color:var(--cream);opacity:.72;margin-top:2px}
+.rr-bar{position:relative;height:10px;margin-top:12px;border-radius:6px;overflow:hidden;
+  background:rgba(var(--ddp-scrim-rgb),.35);border:1px solid var(--line)}
+.rr-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:6px;
+  background:linear-gradient(90deg,var(--gold-lo),var(--gold-hi))}
+.rr-barlbl{display:flex;justify-content:space-between;gap:10px;margin-top:5px;font-size:.68rem;color:var(--cream);opacity:.72}
+.rr-pips{display:flex;gap:7px;margin-top:12px}
+.rr-pip{flex:1;height:9px;border-radius:5px;background:rgba(var(--ddp-scrim-rgb),.35);border:1px solid var(--line)}
+.rr-pip.on{background:linear-gradient(90deg,var(--gold-lo),var(--gold-hi));border-color:transparent}
+.rr-pending{display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--cream);opacity:.85}
+.rr-spin{flex:0 0 auto;width:14px;height:14px;border-radius:50%;border:2px solid rgba(var(--ddp-brass-rgb),.35);
+  border-top-color:var(--gold-hi);animation:rp-spin 1s linear infinite}
+#rank-pop{
+  display:none;position:fixed;inset:0;z-index:300;align-items:center;justify-content:center;
+  background:rgba(3,16,11,.84);backdrop-filter:blur(3px);
+  padding:calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 12px);
+}
+#rank-pop.on{display:flex}
+.rp-card{
+  position:relative;overflow:hidden;width:100%;max-width:340px;max-height:100%;text-align:center;
+  padding:18px 20px 16px;border-radius:20px;
+  background:linear-gradient(170deg,var(--ddp-felt),var(--ddp-felt) 60%,var(--ddp-bg));
+  border:1px solid rgba(var(--ddp-brass-rgb),.5);
+  box-shadow:0 18px 60px rgba(var(--ddp-scrim-rgb),.7);animation:votein .3s ease;
+}
+.rp-halo{
+  position:absolute;left:50%;top:96px;width:320px;height:320px;margin:-160px 0 0 -160px;border-radius:50%;
+  background:repeating-conic-gradient(from 0deg,rgba(var(--ddp-brass-rgb),.2) 0 7deg,transparent 7deg 22deg);
+  -webkit-mask:radial-gradient(circle,#000 0,transparent 66%);mask:radial-gradient(circle,#000 0,transparent 66%);
+  animation:rp-spin 22s linear infinite;pointer-events:none;
+}
+.rp-card.tier .rp-halo{background:repeating-conic-gradient(from 0deg,rgba(var(--ddp-brass-rgb),.38) 0 7deg,transparent 7deg 22deg)}
+.rp-card.down .rp-halo{display:none}
+.rp-ribbon{
+  position:relative;display:inline-block;padding:4px 14px;border-radius:999px;
+  font:700 .66rem 'DM Sans',sans-serif;letter-spacing:.22em;
+  background:linear-gradient(160deg,var(--gold-hi),var(--gold-lo));color:var(--ddp-on-brass);
+}
+.rp-card.down .rp-ribbon{background:rgba(var(--ddp-scrim-rgb),.5);color:var(--cream);border:1px solid var(--line)}
+.rp-badges{position:relative;display:flex;align-items:center;justify-content:center;gap:12px;margin:12px 0 4px;min-height:100px}
+.rp-badges img{display:block;width:100px;height:100px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.55))}
+.rp-badges img.old{width:56px;height:56px;opacity:.5;filter:grayscale(.5)}
+.rp-badges .new{animation:rp-pop .75s cubic-bezier(.2,1.4,.4,1) both .15s}
+.rp-arrow{font-size:1.3rem;color:var(--gold-hi)}
+.rp-name{position:relative;font:600 1.5rem 'Playfair Display',serif;color:var(--gold-hi);line-height:1.2}
+.rp-sub{position:relative;font-size:.8rem;color:var(--cream);opacity:.78;margin:3px 0 12px}
+@keyframes rp-spin{to{transform:rotate(360deg)}}
+@keyframes rp-pop{0%{transform:scale(.3);opacity:0}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.rp-halo,.rp-badges .new,.rr-badge.pop,.rr-spin{animation:none}}
+
 /* ══ Empty / placeholder states (ranked, rank) ══ */
 .empty-state{text-align:center;padding:30px 6px 6px}
 .empty-icon{font-size:2.2rem;margin-bottom:10px;opacity:.85}
@@ -5055,6 +5122,18 @@ html.landscape-mode #s-summary .sheet-wrap{max-height:40vh;margin:.4rem 0}
    rule already makes #f-body a scrollable body panel (see that rule's
    own note), so this is a size trim for a short viewport, not a
    different layout. */
+/* A ranked final also carries the rank-result card. Stacked under the standings
+   it fell below the fold at 915x412 (the screen scrolled and the card was never
+   seen), so in landscape the two sit side by side: standings left, result and the
+   way out right. Portrait keeps the plain stack. */
+html.landscape-mode #s-final.ranked-final>.center-wrap{
+  display:grid;grid-template-columns:1fr 1fr;column-gap:16px;align-items:start;
+}
+html.landscape-mode #s-final.ranked-final>.center-wrap>#f-title{grid-column:1 / -1}
+html.landscape-mode #s-final.ranked-final>.center-wrap>#f-body{grid-column:1;grid-row:2 / span 4}
+html.landscape-mode #s-final.ranked-final>.center-wrap>#f-ranked{grid-column:2;grid-row:2}
+html.landscape-mode #s-final.ranked-final>.center-wrap>#f-ranked .rr-card{margin-top:0}
+html.landscape-mode #s-final.ranked-final>.center-wrap>#f-newgame{grid-column:2;grid-row:3;margin-top:12px !important}
 html.landscape-mode #s-final .final-list{gap:6px;margin:8px 0}
 html.landscape-mode #s-final .frow{padding:7px 10px}
 html.landscape-mode #s-final .frow-score{font-size:1rem}
@@ -7837,6 +7916,18 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
       <button class="rulex" onclick="closeInviteModal()" aria-label="Close">&#10005;</button>
     </div>
     <div class="inv-list" id="inv-list"></div>
+  </div>
+</div>
+
+<!-- ═══ RANK CHANGE POPUP (promotion, demotion, rank revealed) ═══ -->
+<div id="rank-pop" onclick="if(event.target===this)closeRankPop()">
+  <div class="rp-card" id="rp-card">
+    <div class="rp-halo"></div>
+    <span class="rp-ribbon" id="rp-ribbon"></span>
+    <div class="rp-badges" id="rp-badges"></div>
+    <div class="rp-name" id="rp-name"></div>
+    <div class="rp-sub" id="rp-sub"></div>
+    <button class="btn btn-primary btn-block" style="position:relative" onclick="closeRankPop()">Continue</button>
   </div>
 </div>
 
@@ -13270,36 +13361,155 @@ socket.on('rankedProfileError',d=>{
 });
 socket.on('rankedMatchFound',d=>{
   rankedQueued=false;
+  rankedResultShown=false; lastRankedResult=null; rrClear(); closeRankPop();
+  if($('f-ranked')){ $('f-ranked').style.display='none'; $('f-ranked').innerHTML=''; }
   room=d.code; me=d.playerIndex; host=d.isHost; token=d.token;
   saveSession();
   SFX.play('matchFound');
 });
 socket.on('rankedResult',d=>{
   lastRankedResult=d;
-  renderRankedResult();
-  // Promoted into a higher tier: the jingle grows with the tier (1=Apprentice
-  // ... 7=Legend). Slightly delayed so it lands after the result appears.
-  if(d.rankedUp&&d.tierIndex>=1) setTimeout(()=>SFX.play('rankUp',d.tierIndex),500);
+  // Drawn when the final screen is actually up, so the animation is seen: the
+  // server can answer before this client has rendered the final state.
+  if($('s-final').classList.contains('active')) renderRankedResult();
 });
-function renderRankedResult(){
+
+/* ── Ranked result card ──
+   Sequence (each step also has a plain final state, see rrFinish):
+   count the MMR change up while the bar moves; on a promotion the bar fills to
+   the end of the old division, the labels flip, and it fills again in the new
+   one (demotion: the mirror image); then the popup if the RANK changed. */
+var rrTimers=[], rankedResultShown=false;
+const RR_TIER_SLUGS=['bronze','silver','gold','platinum','diamond','master','grandmaster','legend'];
+function rrAfter(ms,fn){ rrTimers.push(setTimeout(fn,ms)); }
+function rrClear(){ rrTimers.forEach(clearTimeout); rrTimers=[]; }
+function rrPct(mmr,span){
+  if(!span||span.ceil==null) return 100;
+  return Math.max(0,Math.min(100,(mmr-span.floor)/(span.ceil-span.floor)*100));
+}
+function rrSigned(n){ return (n>0?'+':n<0?'−':'')+Math.abs(n); }
+function renderRankedPending(){
   const el=$('f-ranked');
-  if(!lastRankedResult){ el.style.display='none'; return; }
-  const d=lastRankedResult;
-  const sign=d.mmrChange>0?'+':'';
-  let h=`<div class="empty-state" style="padding-top:14px">`;
-  if(d.isPlacement){
-    h+=`<div class="empty-icon">⚔️</div>
-        <h3>Placement Match ${d.placementGamesPlayed}/5</h3>
-        <p>MMR ${sign}${d.mmrChange} &middot; now ${d.mmr}</p>`;
-  }else{
-    h+=`<div class="empty-icon">${badgeImg(d.rank,56)}</div>
-        <h3><span class="tag ${rankSlug(d.rank)}">${esc(d.rank.label)}</span></h3>
-        <p>MMR ${sign}${d.mmrChange} &middot; now ${d.mmr}</p>`;
-  }
-  h+='</div>';
-  el.innerHTML=h;
+  if(el.querySelector('.rr-pending')) return;
+  rrClear();
   el.style.display='block';
-  lastRankedResult=null;
+  el.innerHTML=`<div class="rr-card deco-box rr-pending"><span class="rr-spin"></span><span>Updating your rank&hellip;</span></div>`;
+  // The result is written by the server a moment after the game ends. If it
+  // never arrives, say so rather than leaving the player to wonder.
+  rrAfter(9000,()=>{
+    if(!rankedResultShown) el.innerHTML=`<div class="rr-card deco-box rr-pending"><span>Your rank update is taking longer than expected. It will show under Ranked once it is saved.</span></div>`;
+  });
+}
+function rrBar(rank,span,mmr){
+  $('rr-l').textContent=rank.label;
+  $('rr-r').textContent=(span&&span.next)?`${span.next.label} · ${Math.max(0,span.ceil-mmr)} to go`:'Max rank';
+}
+function rrFillTo(pct,ms){
+  const f=$('rr-fill'); if(!f) return;
+  f.style.transition=ms?`width ${ms}ms ease`:'none';
+  if(!ms) void f.offsetWidth;          // commit the jump before the next transition starts
+  f.style.width=pct+'%';
+}
+function rrCount(to,ms){
+  const el=$('rr-count'); if(!el) return;
+  const t0=Date.now();
+  const tick=()=>{
+    const k=Math.min(1,(Date.now()-t0)/ms), e=1-Math.pow(1-k,3);
+    el.textContent=rrSigned(Math.round(to*e));
+    if(k<1) rrAfter(40,tick);
+  };
+  tick();
+}
+function renderRankedResult(){
+  const d=lastRankedResult; if(!d) return;
+  lastRankedResult=null; rankedResultShown=true; rrClear();
+  const el=$('f-ranked'); el.style.display='block';
+  const before=(d.mmrBefore!=null)?d.mmrBefore:d.mmr-d.mmrChange;
+  const change=d.mmr-before;
+  const cls=change>0?'up':change<0?'down':'';
+  const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
+  let h='';
+  if(d.isPlacement){
+    h=`<div class="rr-card deco-box">
+      <div class="rr-top">
+        <div class="rr-badge">&#9876;&#65039;</div>
+        <div class="rr-main">
+          <div class="rr-rank">Placement Match ${d.placementGamesPlayed}/5</div>
+          <div class="rr-delta ${cls}"><span id="rr-count">${rrSigned(0)}</span><small>MMR</small></div>
+          <div class="rr-sub">now ${d.mmr.toLocaleString()} &middot; your rank is revealed after match 5</div>
+        </div>
+      </div>
+      <div class="rr-pips">${[1,2,3,4,5].map(i=>`<i class="rr-pip${i<=d.placementGamesPlayed?' on':''}"></i>`).join('')}</div>
+    </div>`;
+    el.innerHTML=h;
+    if(reduce) $('rr-count').textContent=rrSigned(change); else rrAfter(300,()=>rrCount(change,900));
+    rrAfter(1500,()=>{ if($('rr-count')) $('rr-count').textContent=rrSigned(change); });
+    return;
+  }
+  // Settled rank. Start from where the game started (the reveal game has no
+  // "before": the bar just grows into the revealed rank).
+  const startRank=d.rankBefore||d.rank, startSpan=d.spanBefore||d.span;
+  const startMmr=d.rankBefore?before:d.span.floor;
+  h=`<div class="rr-card deco-box">
+    <div class="rr-top">
+      <div class="rr-badge" id="rr-badge">${badgeImg(startRank,68)}</div>
+      <div class="rr-main">
+        <div class="rr-rank" id="rr-rank">${esc(startRank.label)}</div>
+        <div class="rr-delta ${cls}"><span id="rr-count">${rrSigned(0)}</span><small>MMR</small></div>
+        <div class="rr-sub">now ${d.mmr.toLocaleString()}${d.revealed?' &middot; rank revealed':''}</div>
+      </div>
+    </div>
+    <div class="rr-bar"><i class="rr-fill" id="rr-fill"></i></div>
+    <div class="rr-barlbl"><span id="rr-l"></span><span id="rr-r"></span></div>
+  </div>`;
+  el.innerHTML=h;
+  rrBar(startRank,startSpan,startMmr);
+  rrFillTo(rrPct(startMmr,startSpan),0);
+  const toNew=()=>{
+    $('rr-badge').innerHTML=badgeImg(d.rank,68);
+    $('rr-badge').classList.remove('pop'); void $('rr-badge').offsetWidth; $('rr-badge').classList.add('pop');
+    $('rr-rank').textContent=d.rank.label;
+    rrBar(d.rank,d.span,d.mmr);
+  };
+  const finish=()=>{
+    if(!$('rr-fill')) return;
+    toNew(); $('rr-badge').classList.remove('pop');
+    $('rr-count').textContent=rrSigned(change);
+    rrFillTo(rrPct(d.mmr,d.span),0);
+  };
+  const needPop=d.rankDir!==0||d.revealed;
+  if(reduce){ finish(); if(needPop) showRankPop(d); return; }
+  rrAfter(400,()=>rrCount(change,900));
+  if(d.rankDir>0||d.rankDir<0){
+    rrAfter(400,()=>rrFillTo(d.rankDir>0?100:0,700));
+    rrAfter(1150,()=>{ toNew(); rrFillTo(d.rankDir>0?0:100,0); });
+    rrAfter(1250,()=>rrFillTo(rrPct(d.mmr,d.span),800));
+  }else{
+    rrAfter(400,()=>rrFillTo(rrPct(d.mmr,d.span),900));
+    if(d.revealed) rrAfter(900,toNew);
+  }
+  rrAfter(2300,finish);                  // whatever the timers did, end on the right picture
+  if(needPop) rrAfter(2500,()=>showRankPop(d));
+}
+
+/* ── Rank change popup ── */
+function closeRankPop(){ $('rank-pop').classList.remove('on'); }
+function showRankPop(d){
+  const dir=d.revealed?'reveal':d.rankDir>0?'up':'down';
+  const tierOf=r=>RR_TIER_SLUGS.indexOf(rankSlug(r));
+  const tierChanged=d.revealed||(d.rankBefore&&tierOf(d.rankBefore)!==tierOf(d.rank));
+  $('rp-card').className='rp-card '+dir+(tierChanged&&dir!=='down'?' tier':'');
+  $('rp-ribbon').textContent=dir==='reveal'?'RANK REVEALED':dir==='up'?'PROMOTED':'DEMOTED';
+  $('rp-badges').innerHTML=(dir==='up'?`<img class="old" src="${badgeSrc(d.rankBefore)}" alt=""/><span class="rp-arrow">&rsaquo;</span>`:'')
+    +`<img class="new" src="${badgeSrc(d.rank)}" alt="${esc(d.rank.label)}"/>`;
+  $('rp-name').textContent=d.rank.label;
+  $('rp-sub').textContent=dir==='reveal'?`Your placement matches are done · ${d.mmr.toLocaleString()} MMR`
+    :dir==='up'?`${d.rankBefore.label} → ${d.rank.label} · ${d.mmr.toLocaleString()} MMR`
+    :`${d.rankBefore.label} → ${d.rank.label} · win your next game to climb back`;
+  $('rank-pop').classList.add('on');
+  // The jingle grows with the tier (1=Apprentice ... 7=Legend); a division-only
+  // promotion gets the shortest one. Nothing plays for a demotion.
+  if(dir!=='down') SFX.play('rankUp',Math.max(1,tierOf(d.rank)));
 }
 
 function goRank(){
@@ -14966,6 +15176,13 @@ function renderFinal(G){
   // actually belongs (the daily leaderboard, or the campaign map).
   $('f-title').style.display=(isDaily||isCampaign)?'none':'block';
   $('f-newgame').style.display=(isDaily||isCampaign)?'none':'block';
+  $('s-final').classList.toggle('ranked-final',!!G.ranked);
+  if(G.ranked){
+    if(lastRankedResult) renderRankedResult();           // the server answered before this screen was up
+    else if(!rankedResultShown) renderRankedPending();
+  }else{
+    $('f-ranked').style.display='none';
+  }
   $('f-daily-return').style.display=isDaily?'block':'none';
   $('f-campaign-return').style.display=isCampaign?'block':'none';
   if(isDaily||isCampaign){

@@ -1349,6 +1349,20 @@ const RANK_TABLE = [
   { mmr: 3500, tier: 'Legend',       slug: 'legend',      div: null },
 ];
 const DIV_ROMAN = { 1: 'I', 2: 'II', 3: 'III' };
+// Position on the ladder (every division is its own step; Legend is the last).
+function rankIndexFor(mmr) {
+  let idx = 0;
+  for (let k = 0; k < RANK_TABLE.length; k++) { if (mmr >= RANK_TABLE[k].mmr) idx = k; else break; }
+  return idx;
+}
+// The stretch of MMR the result card's progress bar covers: from the floor of
+// the player's current division to the floor of the next one (`ceil` is null at
+// Legend, which has nothing above it). Display data only - rank itself is still
+// derived by rankForMmr, never stored or computed client-side.
+function rankSpan(mmr) {
+  const i = rankIndexFor(mmr), nxt = RANK_TABLE[i + 1] || null;
+  return { floor: RANK_TABLE[i].mmr, ceil: nxt ? nxt.mmr : null, next: nxt ? rankForMmr(nxt.mmr) : null };
+}
 function rankForMmr(mmr) {
   let best = RANK_TABLE[0];
   for (const row of RANK_TABLE) {
@@ -10893,11 +10907,27 @@ function applyRankedResult(G) {
           rankedUp = tierIndex > TIER_ORDER.indexOf(rankForMmr(mmr - applied.appliedDelta).slug);
         }
       } catch (e) { rankedUp = false; }
+      // What the result card animates: where the game started and ended on the
+      // ladder. `revealed` is the game that ends placement (the rank was hidden
+      // until now); `rankDir` is +1/-1 when the rank (division, not just tier)
+      // changed between two settled ranks.
+      const revealed = !!applied.wasPlacement && !isPlacement;
+      let rankBefore = null, spanBefore = null, rankDir = 0;
+      try {
+        if (!applied.wasPlacement) {
+          rankBefore = rankForMmr(applied.mmrBefore);
+          spanBefore = rankSpan(applied.mmrBefore);
+          rankDir = Math.sign(rankIndexFor(mmr) - rankIndexFor(applied.mmrBefore));
+        }
+      } catch (e) { rankBefore = null; spanBefore = null; rankDir = 0; }
       if (socketId) {
         io.to(socketId).emit('rankedResult', {
           mmrChange: deltas[i], mmr, placementGamesPlayed, isPlacement,
           rank: isPlacement ? null : rankForMmr(mmr),
           rankedUp, tierIndex,
+          mmrBefore: applied.mmrBefore, appliedDelta: applied.appliedDelta,
+          rankBefore, spanBefore, span: isPlacement ? null : rankSpan(mmr),
+          revealed, rankDir,
         });
       }
     });

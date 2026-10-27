@@ -13027,6 +13027,12 @@ socket.on('joined',d=>{
     setInviteState(pendingFriendInvite,'sent');
   }
   pendingFriendInvite=null;
+  if(autoJoinInFlight){ autoJoinInFlight=false; pendingJoinCode=''; clearTimeout(autoJoinTimer); hideBanner(); }
+  else if(pendingJoinCode){
+    // Seated by rejoining a saved game, so the link was NOT what we joined.
+    pendingJoinCode=''; clearTimeout(autoJoinTimer);
+    showBanner('You are already in a game - leave it first to join another.',{dot:'gold',ms:6000});
+  }
   if(account&&accountToken) socket.emit('getInbox',{token:accountToken});
 });
 
@@ -13184,11 +13190,20 @@ socket.on('leaderboardError',d=>{
   $('rank-empty').style.display='block';
 });
 socket.on('errorMsg',d=>{
+  // The join from a shared link failed (room closed, full, already started):
+  // land on the Casual screen with the code typed in, where the toast shows.
+  if(autoJoinInFlight) giveUpAutoJoin(true);
   const target=$('s-lobby').classList.contains('active')?'err-lobby':'err-landing';
   toast(target,d.msg);
 });
 socket.on('error',d=>{ if(d&&d.msg) toast('err-landing',d.msg); });
-socket.on('rejoinFailed',()=>{ clearSession(); });
+socket.on('rejoinFailed',()=>{
+  clearSession();
+  // The saved room is gone. boot set room/token from it, which would otherwise
+  // linger and block a pending link join.
+  if(me===-1){ room=''; token=''; }
+  tryAutoJoin();
+});
 
 socket.on('authOk',d=>{
   accountToken=d.token;
@@ -13209,6 +13224,10 @@ socket.on('authOk',d=>{
   requestCosmetics();
   socket.emit('getFriends',{token:accountToken});
   socket.emit('getFriendRequests',{token:accountToken});
+  // The Casual screen may have been painted a moment ago, before this login
+  // was restored, and said "log in first" - repaint it now that we know.
+  if($('s-landing').classList.contains('active')) goCasual();
+  tryAutoJoin();
   if(lastAuthAction==='login'||lastAuthAction==='signup'){
     renderAccountUI();
     draftAvatar=account.avatar||'';
@@ -13236,6 +13255,7 @@ socket.on('authError',d=>{
   if(lastAuthAction==='resume'){
     // stale/expired token from a previous visit — drop it quietly, no need to alarm anyone
     accountToken=''; saveAccountToken('');
+    tryAutoJoin();   // not logged in after all: a pending link joins as a guest
     return;
   }
   if(lastAuthAction==='requestReset') toast('err-reset-request',d.msg);
@@ -13272,6 +13292,7 @@ socket.on('connect',()=>{
   if(s&&s.room&&s.token&&me===-1){ socket.emit('rejoin',{code:s.room,token:s.token}); }
   else if(room&&token){ socket.emit('rejoin',{code:room,token}); }
   if(accountToken&&!account){ lastAuthAction='resume'; socket.emit('resumeSession',{token:accountToken}); }
+  tryAutoJoin();   // no-op unless a shared link is waiting (and it waits for a resume itself)
   // Correct the menu's Daily dot against the server rather than trusting
   // the localStorage cache — the account may have played today on another
   // device, and the UTC day may have rolled over while the tab sat open.
@@ -15651,6 +15672,46 @@ function tutorialPartBNext(){
   exitTutorial();
 }
 
+/* ── Joining from a shared link ──
+   The link is <origin>/?join=CODE. It used to open the Casual screen with the
+   code typed in, which (1) said "log in first" because the saved login had not
+   been restored yet at that instant, and (2) left the player to press Join. Now
+   the code is remembered and the join is sent once we know who the player is:
+   connected, and either never logged in or the account resumed. A link that
+   cannot be completed (no name yet, room gone, no answer in 6 s) falls back to
+   the Casual screen with the code filled in, so nothing is lost. The code is
+   removed from the address bar at once so a reload cannot re-join. var, not
+   let: the handlers that call these can run before the boot lines below. */
+var pendingJoinCode='', pendingJoinAt=0, autoJoinInFlight=false, autoJoinTimer=null;
+function takeJoinParam(){
+  let c='';
+  try{ c=(new URLSearchParams(location.search).get('join')||'').trim().toUpperCase(); }catch(e){}
+  if(!/^[A-Z0-9]{4,8}$/.test(c)) return '';
+  try{ history.replaceState(null,'',location.pathname+location.hash); }catch(e){}
+  return c;
+}
+function giveUpAutoJoin(clear){
+  const c=pendingJoinCode;
+  autoJoinInFlight=false; clearTimeout(autoJoinTimer);
+  if(clear) pendingJoinCode='';
+  if(!c) return;
+  $('f-code').value=c;
+  goCasual();
+}
+function tryAutoJoin(){
+  if(!pendingJoinCode||autoJoinInFlight||!socket.connected) return;
+  if(Date.now()-pendingJoinAt>120000){ pendingJoinCode=''; return; }   // a stale link must not join later
+  if(accountToken&&!account) return;   // login still being restored: authOk/authError will call again
+  if(room) return;                     // a saved game is being rejoined: joined/rejoinFailed decide
+  if(!identity().name){                // nobody to seat yet: the Casual screen asks, and a login finishes the join
+    $('f-code').value=pendingJoinCode; goCasual(); return;
+  }
+  const id=identity();
+  autoJoinInFlight=true;
+  showBanner(`Joining room ${pendingJoinCode}…`,{dot:'gold'});
+  socket.emit('joinRoom',{code:pendingJoinCode,name:id.name,avatar:id.avatar||'',accountToken:account?accountToken:''});
+}
+
 /* prefill menu with remembered profile, and jump in from invite links */
 (function(){
   updateMenuProfileUI();
@@ -15670,8 +15731,13 @@ function tutorialPartBNext(){
   // Paints from the localStorage cache immediately; the server corrects it
   // on the first getDailyStatus (goDaily, or the reconnect handler below).
   refreshDailyBadge();
-  const c=new URLSearchParams(location.search).get('join');
-  if(c){ $('f-code').value=c.toUpperCase(); goCasual(); }
+  // A shared link (?join=CODE) joins that room by itself as soon as the saved
+  // login has been restored - see tryAutoJoin.
+  pendingJoinCode=takeJoinParam();
+  if(pendingJoinCode){
+    pendingJoinAt=Date.now();
+    autoJoinTimer=setTimeout(()=>{ if(pendingJoinCode&&!autoJoinInFlight) giveUpAutoJoin(true); },6000);
+  }
   const s=loadSession();
   if(s&&s.room){ room=s.room; token=s.token; }
   if(resetToken){ goPersonal(); openResetNewPasswordForm(); }

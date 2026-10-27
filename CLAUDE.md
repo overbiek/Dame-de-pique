@@ -4640,6 +4640,26 @@ before pushing.
   so the popup, the Friends sheet and My Account's list stay in sync. The state
   belongs to the room it was sent from (`inviteStateRoom`). A sent invite can be
   sent again after 30 s or once declined.
+- **Shared links (`?join=CODE`) now join by themselves** (`takeJoinParam`,
+  `tryAutoJoin`, `giveUpAutoJoin`). They used to open the Casual screen with the
+  code typed in, which said "log in first" because the saved login had not been
+  restored yet when it painted, and left the player to press Join. Now the code
+  is remembered, removed from the address bar (a reload cannot re-join) and the
+  `joinRoom` goes out once the player is known: socket connected AND (never
+  logged in OR `authOk`/stale-token `authError` arrived). Falls back to the
+  Casual screen with the code filled in when: no name yet (a login then finishes
+  the join via `authOk`), the room is gone/full/started (`errorMsg` while
+  `autoJoinInFlight`), or nothing answered within 6 s. A pending link expires
+  after 2 minutes. A saved game being rejoined wins over the link (banner says
+  so); a stale saved session (`rejoinFailed`) is cleared, which now also resets
+  `room`/`token` that boot had set from it. `authOk` repaints the Casual screen
+  if it is open. Verified in the preview with two tabs: link joins seat 2
+  directly, dead room lands on Casual with the code, stale session then link,
+  live session then link. NOT verified: the logged-in resume path (needs
+  Postgres) - it is the same code path with `account` set.
+  A link opened from another app (WhatsApp, mail) often lands in a different
+  browser than the installed PWA: its own localStorage, so it is genuinely
+  logged out there. That cannot be fixed from the page.
 - Gotcha repeated from earlier: the inbox/banner state is `var`, not `let`.
   `doLogout` resets it and can run before the declaring line executes.
 - **Not run against Postgres/live**: the server half needs accounts, so only

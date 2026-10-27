@@ -4943,6 +4943,65 @@ before pushing.
   scores, deltas) and one per recorded player, and `trackStat`'s give-up log now
   includes the pg error code. Search Railway logs for `Ranked game`.
 
+## Light themes (Clair, Sable Royale): palette legibility pass (2026-10)
+- **Reported**: text in the Settings boxes and the credit prices was hard to read in Clair
+  and Sable. Measured (text composited against the real surface behind it, in all eight
+  themes) the two light themes failed everywhere: headings/tabs/prices/ghost-button labels
+  1.0-2.4:1, hints and sub-lines 1.4-2.4, Sable's main text 2.9. Cause was the PALETTE, not
+  individual rules: `--gold-hi` (= `--ddp-brass-hi`) is the colour of every heading and price,
+  a bright gold that is right on a dark felt and ~1.5:1 on a pale page, and `--faint` is the
+  ink at .42.
+- **Fix, at the end of the stylesheet** (the "Light themes" block): on Clair and Sable
+  `--ddp-brass-hi`/`--ddp-brass`/`--ddp-brass-lo` are deep bronzes (so headings read AND the
+  brass button gradient is dark enough for its light `--ddp-on-brass` label; `--ddp-brass-rgb`,
+  used for borders/glows, is unchanged), `--ddp-muted` is darker, `--faint` is the ink at
+  .74/.82 (the derived `:root` block defines `--faint`, so a theme block must come LATER in
+  source order to override it, which is why this lives at the end). **Sable's page ramp and
+  ink changed** (bg `#EBDEC4`, felt `#D3BD95`/`#E0CDA8`, ink `#2E2218`; status bar tint and the
+  theme swatch in `THEME_CATALOG`/`DDP_THEME_BG` follow); Clair's surfaces are unchanged.
+- **The dark smear at the bottom of every light-theme screen was the page background**: its
+  bottom radial shadow is `rgba(var(--ddp-scrim-rgb),.75)`, and on a light theme the scrim
+  colour is the INK. Down to .10 for Clair/Sable (the `body` rule in the same block).
+- **Dimmed things**: `.cos-buy:disabled` ("Not enough", every inactive buy button) is now an
+  ink-on-wash chip in EVERY theme (opacity .45 over the brass gradient measured 1.0-3.1:1, the
+  credits side of the Shop); `.friend-btn:disabled` .75-.8; secondary lines that dark themes dim
+  to .72 (`.rr-sub`, `.ib-list .friend-status`, idle inbox filters...) are .88-.92 here; the
+  demoted ribbon is cream-on-dark-scrim only on dark themes. Small brass badges (inbox badge,
+  banner Join, popup ribbon) now use `gold-hi -> gold`, not `-> gold-lo`: the dark end of the
+  gradient could not carry the dark label on the DARK themes either (2.9-3.5).
+- **Result**: every screen added this month (menu rail + inbox button, banner, inbox, invite popup,
+  Settings, song list, Shop Music, rank card and popups) has NO failing text pair on Clair or
+  Sable (>= 4.5, or >= 3 for large text), and the other screens (account, stats, ranked, daily,
+  Casual) pass there too.
+- **Second pass: the dark themes and the TABLE (same month).** (1) `--faint` was the ink at .42 in
+  every theme: 2.6-3.5:1 on the dark felts (taglines, idle tabs, hints, "Log in", placeholders).
+  Each dark theme now sets the alpha it needs (`.62`-`.84`, solved per theme against its lightest
+  felt: Émeraude's green and Riviera's teal need the most; Riviera's muted mint is lighter too).
+  Bordeaux is `:root` with no attribute, hence `:root:not([data-theme])`. (2) Shared styles that
+  used the DARK end of the gold ramp for text or under a dark label: `.sec-label`,
+  `.menu-crest` and the round-sheet pass letters now use `--gold-hi`; `.btn-primary` is
+  `gold-hi -> gold` (its `gold-lo` end gave the dark label 3.0-4.2:1); `.tile-sub` opacity 1;
+  `.frow-rank` uses `--muted`. (3) **THE TABLE ON A LIGHT THEME WAS UNREADABLE**: pass/play
+  always have the dark scene photo behind them (`html.scene-on`), but the chrome (round badge,
+  "Trick 1/13", the "Your turn" note, roster, home button) took its colours from the theme, which on
+  Clair/Sable is dark ink for a pale felt: 1.0-2.5:1, dark brown on near-black. Only the old
+  PORTRAIT `.banner`/`.prompt` had ever been patched. `html.scene-on[data-theme="clair"|"sable"]`
+  now swaps in the dark palette (Obsidienne's values) while the scene is up; the card tokens are
+  untouched. Verified in a screenshot and by measurement.
+  **Left alone on purpose:** the placeholder "·" cells on the round summary (future rounds),
+  playing-card face glyphs (the auditor mis-measures them: gradient faces), and deliberately
+  disabled controls (the 👁 last-trick button before a trick exists, "Pass 2 cards" until two are
+  picked). **Not audited at all:** the campaign map/dialogue screens and the lobby (need a live
+  account/room to render).
+- **How it was measured** (reuse it): for every text node, composite the text colour (incl.
+  opacity) over every colour the surface can be (all gradient stops of every ancestor, over
+  `--ddp-bg`), take the worst, compare with 4.5 (3.0 large). Traps hit: (1) the Browser pane
+  freezes transitions, so inject `*{transition:none!important;animation:none!important}`
+  BEFORE measuring or fading overlays read as opacity 0 ("1.0:1" everywhere); (2) a gradient
+  stop with alpha ~0 must be skipped or it reads as a black background; (3) `.screen` itself is
+  at opacity 0 mid-fade, skip it; (4) the body's vignette gradient is part of the worst case,
+  which is how the smear above was found.
+
 ## Ranked result card and rank-change popup (final screen)
 - **`rankedResult` now carries what the card animates**: `mmrBefore` (read inside
   `applyRankedMmr`'s row-locked transaction - NOT rebuilt as `mmr - delta`, the 0

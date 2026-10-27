@@ -495,7 +495,9 @@ p{font-size:.9rem;color:var(--muted);line-height:1.6}
 .btn:active{transform:scale(.97)}
 .btn:disabled{opacity:.35;pointer-events:none}
 .btn-primary{
-  background:linear-gradient(175deg,var(--gold-hi),var(--gold) 45%,var(--gold-lo));
+  /* hi -> gold only: the dark --gold-lo end could not carry the dark label (3.0-4.2:1
+     on the dark themes). Light themes darken the whole ramp, see the end of the file. */
+  background:linear-gradient(175deg,var(--gold-hi),var(--gold));
   color:var(--ddp-on-brass);border-color:transparent;
   box-shadow:0 4px 14px rgba(var(--ddp-scrim-rgb),.32),inset 0 1px 0 rgba(var(--ddp-gloss-rgb),.4);
 }
@@ -925,7 +927,7 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
 
 /* ══ Main menu ══ */
 .menu-wrap{max-width:420px;margin:0 auto;padding-top:5.5vh;text-align:center}
-.menu-crest{font-size:1rem;letter-spacing:.5em;color:var(--gold-lo);opacity:.75;margin-bottom:4px}
+.menu-crest{font-size:1rem;letter-spacing:.5em;color:var(--gold-hi);opacity:1;margin-bottom:4px}
 .menu-tiles{display:flex;flex-direction:column;gap:11px;margin-top:28px;text-align:left}
 /* ══ Menu tiles — Marquee Deco ══
    Icon → name → tagline, stacked and centred, with a dark vertical
@@ -1006,7 +1008,7 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
 /* the short explanation */
 .tile-sub{
   font-size:9px;letter-spacing:.08em;text-transform:uppercase;line-height:1.35;
-  opacity:.7;color:var(--muted);margin-top:4px;
+  opacity:1;color:var(--muted);margin-top:4px;
 }
 /* a centred three-line stack has nowhere to put a chevron */
 .tile-arrow{display:none}
@@ -1258,7 +1260,7 @@ html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:st
 #banner .bn-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #banner .bn-act{
   flex:0 0 auto;font:700 .72rem 'DM Sans',sans-serif;padding:5px 13px;border-radius:999px;cursor:pointer;
-  border:none;background:linear-gradient(160deg,var(--gold-hi),var(--gold-lo));color:var(--ddp-on-brass);
+  border:none;background:linear-gradient(160deg,var(--gold-hi),var(--gold));color:var(--ddp-on-brass);
 }
 .ros.prof,.frow.prof,.sg-id.prof,.seat.prof{cursor:pointer}
 .frow-add{
@@ -1430,7 +1432,7 @@ html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:st
 .ib-badge{
   display:none;min-width:16px;height:16px;padding:0 4px;margin-left:6px;border-radius:8px;
   place-items:center;vertical-align:1px;font:700 .62rem var(--font-num);
-  background:linear-gradient(160deg,var(--gold-hi),var(--gold-lo));color:var(--ddp-on-brass);
+  background:linear-gradient(160deg,var(--gold-hi),var(--gold));color:var(--ddp-on-brass);
 }
 .ib-badge.on{display:inline-grid}
 .fs-panel.ib-panel{width:min(520px,96vw)}
@@ -1450,11 +1452,13 @@ html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:st
 .ib-list .friend-btn.invite,.inv-list .friend-btn.invite{color:var(--cream);border-color:rgba(var(--ddp-brass-rgb),.7);background:rgba(var(--ddp-brass-rgb),.16)}
 .ib-n{
   display:none;flex:0 0 auto;min-width:17px;height:17px;padding:0 4px;border-radius:9px;place-items:center;
-  font:700 .62rem var(--font-num);background:linear-gradient(160deg,var(--gold-hi),var(--gold-lo));color:var(--ddp-on-brass);
+  font:700 .62rem var(--font-num);background:linear-gradient(160deg,var(--gold-hi),var(--gold));color:var(--ddp-on-brass);
 }
 .ib-n.on{display:grid}
 .ib-list{flex:1;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.friend-btn:disabled{opacity:.6;cursor:default}
+.friend-btn:disabled{opacity:.88;cursor:default}
+.ib-list .friend-btn:not(.invite){color:var(--cream);border-color:rgba(var(--ddp-ink-rgb),.35)}
+.ib-list .fs-empty,.inv-list .fs-empty{color:var(--cream);opacity:.82}
 
 #invite-modal,#music-modal{
   display:none;position:fixed;inset:0;z-index:240;
@@ -1487,7 +1491,7 @@ html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:st
 .rr-main{flex:1;min-width:0}
 .rr-rank{font:600 1.15rem 'Playfair Display',serif;color:var(--gold-hi);line-height:1.15}
 .rr-delta{font:700 1.75rem var(--font-num);font-variant-numeric:tabular-nums;line-height:1.1;margin-top:3px;color:var(--cream)}
-.rr-delta small{font:600 .68rem 'DM Sans',sans-serif;letter-spacing:.14em;margin-left:6px;opacity:.8}
+.rr-delta small{font:600 .68rem 'DM Sans',sans-serif;letter-spacing:.14em;margin-left:6px;color:var(--cream);opacity:.85}
 .rr-delta.up{color:var(--ddp-pos)}
 .rr-delta.down{color:var(--ddp-neg)}
 .rr-sub{font-size:.76rem;color:var(--cream);opacity:.72;margin-top:2px}
@@ -1526,7 +1530,7 @@ html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:st
 .rp-ribbon{
   position:relative;display:inline-block;padding:4px 14px;border-radius:999px;
   font:700 .66rem 'DM Sans',sans-serif;letter-spacing:.22em;
-  background:linear-gradient(160deg,var(--gold-hi),var(--gold-lo));color:var(--ddp-on-brass);
+  background:linear-gradient(160deg,var(--gold-hi),var(--gold));color:var(--ddp-on-brass);
 }
 .rp-card.down .rp-ribbon{background:rgba(var(--ddp-scrim-rgb),.5);color:var(--cream);border:1px solid var(--line)}
 .rp-badges{position:relative;display:flex;align-items:center;justify-content:center;gap:12px;margin:12px 0 4px;min-height:100px}
@@ -1800,7 +1804,7 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
    unaffected by moving .acct-main earlier in the markup. */
 
 .sec-label{
-  font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-lo);
+  font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-hi);
   margin:0 2px 9px;display:flex;align-items:center;gap:8px;text-align:left;
 }
 .sec-label::after{content:'';flex:1;height:1px;background:rgba(var(--ddp-brass-rgb),.16)}
@@ -3782,9 +3786,9 @@ html.landscape-mode #s-draw .dcw .slot-tier{display:none}
 .frow-rank{
   flex:0 0 auto;width:22px;text-align:center;
   font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;
-  color:var(--faint);
+  color:var(--muted);
 }
-.frow.win .frow-rank{color:var(--gold)}
+.frow.win .frow-rank{color:var(--gold-hi)}
 .avatar.md{width:40px;height:40px;font-size:1.15rem;flex:0 0 auto}
 .frow-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .frow-name-row{display:flex;align-items:center;gap:6px;min-width:0}
@@ -4415,7 +4419,7 @@ html.landscape-mode .sg-h{
 }
 html.landscape-mode .sg-r i{
   font-style:normal;margin-left:2px;font-size:.92em;
-  color:var(--gold);opacity:.8;
+  color:var(--gold-hi);opacity:1;
 }
 /* THE SCORE SITS OUTSIDE THE PLAQUE, and that is load-bearing.
    --ddp-pos/neg are THEMED; the plate materials deliberately are NOT (a
@@ -5983,8 +5987,8 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
    working. The per-rank hue still reads from each tag's own background
    wash and border, which are unchanged. */
 [data-theme="clair"] .tag{color:var(--ddp-ink)}
-[data-theme="clair"] .note.bad{color:#8E2A20}
-[data-theme="clair"] .btn.danger{color:#8E2A20}
+[data-theme="clair"] .note.bad{color:#74190F}
+[data-theme="clair"] .btn.danger{color:#74190F}
 [data-theme="clair"] .note.good{color:var(--ddp-mine)}
 
 /* The Deco treatment on Clair, which breaks in BOTH directions at once —
@@ -6052,7 +6056,7 @@ html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 [data-theme="clair"] .title-opt .to-req,
 [data-theme="clair"] .sec-count,
 [data-theme="clair"] .cos-tab,
-[data-theme="clair"] .crest-slot-btn{color:rgba(var(--ddp-ink-rgb),.72)}
+[data-theme="clair"] .crest-slot-btn{color:rgba(var(--ddp-ink-rgb),.82)}
 
 /* Rank nameplate on Clair: the OUTER RING, not the plate.
    The eight materials are deliberately un-themed (a rank is the same rank
@@ -6108,8 +6112,8 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
    the shape of the fix is identical. Lives at the END of the stylesheet
    for the same specificity-tie reason Clair's block does. */
 [data-theme="sable"] .tag{color:var(--ddp-ink)}
-[data-theme="sable"] .note.bad{color:#8E2A20}
-[data-theme="sable"] .btn.danger{color:#8E2A20}
+[data-theme="sable"] .note.bad{color:#5F0F08}
+[data-theme="sable"] .btn.danger{color:#5F0F08}
 [data-theme="sable"] .note.good{color:var(--ddp-mine)}
 [data-theme="sable"]{
   --deco-edge:rgba(var(--ddp-scrim-rgb),.13);
@@ -6126,7 +6130,7 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
 [data-theme="sable"] .title-opt .to-req,
 [data-theme="sable"] .sec-count,
 [data-theme="sable"] .cos-tab,
-[data-theme="sable"] .crest-slot-btn{color:rgba(var(--ddp-ink-rgb),.72)}
+[data-theme="sable"] .crest-slot-btn{color:rgba(var(--ddp-ink-rgb),.86)}
 [data-theme="sable"] .rank-plate[data-material]{
   box-shadow:inset 0 1px 0 rgba(255,255,255,.22),
              inset 0 -1px 0 rgba(0,0,0,.30),
@@ -6134,6 +6138,124 @@ html[data-theme="clair"].landscape-mode .sg-c.moon b{color:#7A5A18}
              0 0 0 1px rgba(var(--ddp-scrim-rgb),.62);
 }
 html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
+
+/* ══ Dark themes: legibility pass ══
+   --faint (hints, taglines, idle tab labels, placeholders, "Log in" links) is the ink at
+   .42 everywhere. Over a near-black felt that is ~3:1; over Émeraude's green and
+   Riviera's teal it is 2.6-2.8. Each theme gets the alpha it needs for 4.5:1 on its own
+   lightest felt (solved per theme, not one number: .56-.82). Riviera's muted mint was 3.8
+   against its teal felt and is lighter now. Bordeaux has no [data-theme] attribute (it is
+   :root), hence the :not(). */
+:root:not([data-theme]),[data-theme="bordeaux"]{--faint:rgba(var(--ddp-ink-rgb),.62)}
+[data-theme="obsidienne"]{--faint:rgba(var(--ddp-ink-rgb),.62)}
+[data-theme="emeraude"]{--faint:rgba(var(--ddp-ink-rgb),.80)}
+[data-theme="marquee"]{--faint:rgba(var(--ddp-ink-rgb),.68)}
+[data-theme="minuit"]{--faint:rgba(var(--ddp-ink-rgb),.68)}
+[data-theme="riviera"]{--ddp-muted:#C2DBD8;--faint:rgba(var(--ddp-ink-rgb),.84)}
+
+/* ══ Light themes (Clair, Sable Royale): legibility pass ══
+   Measured on the rendered screens (Settings, Shop, Inbox, the rank card,
+   the credit prices) with the text colour composited against the real
+   surface behind it. Before this the light themes failed everywhere, for
+   the same four reasons, so the fix is in the PALETTE rather than a long
+   list of per-selector patches:
+     1. --ddp-brass-hi, which the derived layer calls --gold-hi, is the colour
+        of every heading, tab, price and ghost-button label. On a dark theme it
+        is the bright end of the ramp; on a pale page that same value is 1.0-1.6:1.
+        On the light themes it is now a deep bronze (brass-lo darker still), so
+        headings read AND the brass button gradient is dark enough to carry its
+        light --ddp-on-brass label (it was cream on pale gold: 1.7-2.2:1).
+     2. --faint is the ink at .42, fine as a pale cream on dark felt and 2.1:1 as
+        a dark ink on pale felt. .72 here.
+     3. --ddp-muted (hints, sub-lines) was 1.4-2.4 against the surfaces it sits on.
+     4. Sable's page ramp started at #B89D76 and its ink was #49392C: 2.9:1 for the
+        main text. The ramp is lighter and the ink deeper (the look is the same
+        sand-and-stone, just not muddy).
+   Also the bottom vignette: the page's radial shadow uses the scrim colour, which
+   on a light theme is the INK at .75, a dark smear across the lower half of every
+   screen. Down to .10 here. END of the stylesheet, as with every other correction:
+   [data-theme] ties with :root and only wins on source order. */
+[data-theme="clair"]{
+  /* hi -> brass -> lo is the button gradient; all three must carry the light
+     --ddp-on-brass label, so the MIDDLE stop (--ddp-brass, also the text colour
+     of --gold) is darkened too. --ddp-brass-rgb (borders, glows) is untouched. */
+  --ddp-brass:#735518;     --ddp-brass-hi:#5C410D;  --ddp-brass-lo:#46310A;
+  --ddp-muted:#4C4136;
+  --faint:rgba(var(--ddp-ink-rgb),.74);
+}
+[data-theme="sable"]{
+  --ddp-bg:#EBDEC4;        --ddp-bg-rgb:235,222,196;
+  --ddp-felt:#D3BD95;      --ddp-felt-lo:#E0CDA8;   --ddp-felt-rgb:211,189,149;
+  --ddp-ink:#2E2218;       --ddp-ink-rgb:46,34,24;
+  --ddp-muted:#3F301F;
+  --ddp-brass:#654918;     --ddp-brass-hi:#4A330B;  --ddp-brass-lo:#3A2808;
+  --ddp-scrim-rgb:46,34,24;
+  --ddp-pos:#14633F;       --ddp-neg:#8F2D22;
+  --faint:rgba(var(--ddp-ink-rgb),.82);
+}
+/* Dimmed (disabled) controls: .45-.6 is fine over dark felt, unreadable on pale.
+   Still visibly "off", but legible. */
+/* "Not enough" and the other inactive buy buttons, in EVERY theme: .45 opacity over
+   the brass gradient measured 1.0-3.1:1 (the credits side of the Shop). A quiet
+   ink-on-wash chip instead: clearly inactive, readable, same on dark and light. */
+.cos-buy:disabled{
+  opacity:1;background:rgba(var(--ddp-ink-rgb),.10);color:var(--cream);
+  border:1px solid rgba(var(--ddp-ink-rgb),.28);box-shadow:none;text-shadow:none;
+}
+/* secondary lines that dark themes dim to .72: too faint once ink-on-pale */
+[data-theme="clair"] .acct-toptab:not(.active),[data-theme="sable"] .acct-toptab:not(.active),
+[data-theme="clair"] .info-circle-btn,[data-theme="sable"] .info-circle-btn{color:var(--cream)}
+[data-theme="clair"] .rr-sub,[data-theme="sable"] .rr-sub,
+[data-theme="clair"] .rr-barlbl,[data-theme="sable"] .rr-barlbl,
+[data-theme="clair"] .ib-list .friend-status,[data-theme="sable"] .ib-list .friend-status,
+[data-theme="clair"] .ib-filter:not(.active)>span:first-child,[data-theme="sable"] .ib-filter:not(.active)>span:first-child{opacity:.92}
+[data-theme="clair"] .rp-sub,[data-theme="sable"] .rp-sub{opacity:.9}
+[data-theme="clair"] .friend-btn:disabled,
+[data-theme="sable"] .friend-btn:disabled{opacity:.8}
+/* the unit label next to the MMR change: the change itself is a large figure in
+   the status colour; this small label is body text and takes the ink */
+[data-theme="clair"] .rr-delta small,
+[data-theme="sable"] .rr-delta small{color:var(--cream);opacity:.78}
+/* demoted ribbon: cream-on-translucent-black reads on a dark theme only */
+[data-theme="clair"] .rp-card.down .rp-ribbon,
+[data-theme="sable"] .rp-card.down .rp-ribbon{background:rgba(var(--ddp-scrim-rgb),.82);color:var(--ddp-on-brass);border-color:transparent}
+/* ── The table: a light theme sits on a DARK photo ──
+   The pass/play screens always have the scene picture behind them
+   (html.scene-on), every scene is a dark room, and the chrome on top of it (round
+   badge, trick counter, "Your turn" note, roster, home button, last-trick eye) takes
+   its colours from the theme tokens. On Clair and Sable those are dark ink for a pale
+   felt, so the table's own text measured 1.0-2.5:1: dark brown on near-black. Only
+   the old portrait .banner/.prompt had ever been patched (see html.scene-on
+   [data-theme="clair"] above); landscape, which is how the game is played, never was.
+   While the scene is up, the light themes therefore use the dark palette (Obsidienne's
+   values: neutral, so it suits any scene). The CARD tokens are not touched: the faces
+   stay white/cream whatever the theme. (0,2,1) beats the (0,1,0) blocks above, so this
+   does not depend on source order. */
+html.scene-on[data-theme="clair"],
+html.scene-on[data-theme="sable"]{
+  --ddp-bg:#050506;      --ddp-bg-rgb:5,5,6;
+  --ddp-felt:#1A1D1F;    --ddp-felt-lo:#0D0F10;   --ddp-felt-rgb:26,29,31;
+  --ddp-ink:#EFE9DE;     --ddp-ink-rgb:239,233,222;
+  --ddp-muted:#C4BFB5;
+  --ddp-brass:#B9A06A;   --ddp-brass-hi:#E1CFA0;  --ddp-brass-lo:#8A7648;
+  --ddp-brass-rgb:185,160,106;
+  --ddp-pos:#7FE0B4;     --ddp-neg:#F0968C;
+  --ddp-ai:#A8D4FF;      --ddp-ai-rgb:110,180,255;
+  --ddp-mine:#A8ECCE;    --ddp-mine-rgb:63,191,136;
+  --ddp-on-brass:#111112;
+  --ddp-scrim-rgb:0,0,0; --ddp-gloss-rgb:255,255,255;
+  --faint:rgba(239,233,222,.66);
+  --deco-edge:rgba(var(--ddp-bg-rgb),.55);
+  --deco-frame:rgba(var(--ddp-brass-rgb),.22);
+  --deco-frame-strong:rgba(var(--ddp-brass-rgb),.5);
+}
+[data-theme="clair"] body,
+[data-theme="sable"] body{
+  background-image:
+    radial-gradient(120% 80% at 50% 0%,rgba(var(--ddp-felt-rgb),.30) 0%,transparent 62%),
+    radial-gradient(100% 70% at 50% 100%,rgba(var(--ddp-scrim-rgb),.10) 0%,transparent 60%),
+    linear-gradient(170deg,var(--felt-0) 0%,var(--felt-1) 55%,var(--felt-2) 100%);
+}
 
 /* Campaign Mode — Clair/Sable correction. Measured, not guessed: on
    Clair, --gold-hi (#C7A45C) on --felt-1 (#EDE5D6, the .camp-node
@@ -8297,7 +8419,7 @@ const DDP_DEFAULT_THEME='obsidienne';
 // tint, which would otherwise stay the old hardcoded green
 const DDP_THEME_BG={
   bordeaux:'#120A0D',emeraude:'#0D1512',clair:'#F7F2E7',marquee:'#020605',
-  minuit:'#040812',sable:'#E3D0AF',riviera:'#041419',obsidienne:'#050506',
+  minuit:'#040812',sable:'#EBDEC4',riviera:'#041419',obsidienne:'#050506',
 };
 // The catalog behind the Table theme picker/shop: display data
 // (gradient/chip swatch colours, the 500-credit price on the six locked
@@ -8315,7 +8437,7 @@ const THEME_CATALOG=[
   {id:'theme_clair',     key:'clair',     name:'Clair',       grad:'linear-gradient(160deg,#E4D9C5,#CDBFA6)',chip:'#A9863C',price:THEME_PRICE},
   {id:'theme_marquee',   key:'marquee',   name:'Marquee',     grad:'linear-gradient(160deg,#0D2E25,#020605)',chip:'#C49E58',price:THEME_PRICE},
   {id:'theme_minuit',    key:'minuit',    name:'Minuit',      grad:'linear-gradient(160deg,#102C49,#040812)',chip:'#C9A45F',price:THEME_PRICE},
-  {id:'theme_sable',     key:'sable',     name:'Sable Royale',grad:'linear-gradient(160deg,#D0B68F,#B89D76)',chip:'#B98945',price:THEME_PRICE},
+  {id:'theme_sable',     key:'sable',     name:'Sable Royale',grad:'linear-gradient(160deg,#E0CDA8,#D3BD95)',chip:'#B98945',price:THEME_PRICE},
   {id:'theme_riviera',   key:'riviera',   name:'Riviera',     grad:'linear-gradient(160deg,#0B5261,#041419)',chip:'#D0A85F',price:THEME_PRICE},
 ];
 const THEME_ID_TO_KEY=Object.fromEntries(THEME_CATALOG.map(t=>[t.id,t.key]));

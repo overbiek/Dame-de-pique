@@ -1200,11 +1200,11 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
 .friends-chip.has-req .fc-badge{display:grid}
 html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:start}
 
-#friends-sheet{
+#friends-sheet,#inbox-sheet{
   display:none;position:fixed;inset:0;z-index:215;
   background:rgba(3,16,11,.62);backdrop-filter:blur(2px);
 }
-#friends-sheet.on{display:block}
+#friends-sheet.on,#inbox-sheet.on{display:block}
 .fs-panel{
   position:absolute;top:0;right:0;bottom:0;width:min(380px,92vw);
   display:flex;flex-direction:column;
@@ -1227,20 +1227,39 @@ html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:st
 .friend-dot.playing{background:#d9644f}
 .friend-status.lobby{color:var(--gold-hi)}
 
-#friend-toast{
-  position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);z-index:214;
-  transform:translate(-50%,-140%);opacity:0;pointer-events:none;
-  max-width:min(360px,90vw);
-  display:flex;align-items:center;gap:9px;padding:8px 14px;border-radius:999px;
+/* ══ Banner ══
+   The one place the app says something without moving the interface: a
+   friend coming online, a game invite, a friend request, and the "you left
+   the game" line that used to be written into the menu's bottom note (which
+   resized the rail). A thin pill hung from the top edge, above everything
+   but the rotate gate. pointer-events stay off unless the banner has
+   something to tap, and are always off over a table. */
+#banner{
+  position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 6px);z-index:260;
+  transform:translate(-50%,-160%);opacity:0;pointer-events:none;
+  max-width:min(440px,90vw);
+  display:flex;align-items:center;gap:9px;padding:5px 6px 5px 13px;border-radius:999px;
   background:linear-gradient(170deg,var(--ddp-felt),var(--ddp-bg));
   border:1px solid rgba(var(--ddp-brass-rgb),.45);
   box-shadow:0 8px 26px rgba(var(--ddp-scrim-rgb),.55);
-  font:600 .78rem 'DM Sans',sans-serif;color:var(--cream);cursor:pointer;
+  font:600 .78rem 'DM Sans',sans-serif;color:var(--cream);
   transition:transform .28s ease,opacity .28s ease;
 }
-#friend-toast.on{transform:translate(-50%,0);opacity:1;pointer-events:auto}
-#friend-toast .ft-dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:#3fbf88;box-shadow:0 0 0 3px rgba(63,191,136,.22)}
-#friend-toast .ft-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#banner.on{transform:translate(-50%,0);opacity:1}
+/* Over a table the top of the trick cross is a card slot, so the pill moves
+   into the empty strip beside it (between that slot and the info stack):
+   showBanner() sets --bn-left/--bn-max from the live geometry. */
+#banner.bn-table{left:var(--bn-left,50%);max-width:var(--bn-max,40vw);transform:translate(0,-160%)}
+#banner.bn-table.on{transform:none}
+#banner.on.tap{pointer-events:auto;cursor:pointer}
+#banner .bn-dot{flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:#3fbf88;box-shadow:0 0 0 3px rgba(63,191,136,.22)}
+#banner .bn-dot.gold{background:var(--gold-hi);box-shadow:0 0 0 3px rgba(var(--ddp-brass-rgb),.28)}
+#banner .bn-dot.info{background:var(--muted);box-shadow:0 0 0 3px rgba(var(--ddp-brass-rgb),.16)}
+#banner .bn-txt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#banner .bn-act{
+  flex:0 0 auto;font:700 .72rem 'DM Sans',sans-serif;padding:5px 13px;border-radius:999px;cursor:pointer;
+  border:none;background:linear-gradient(160deg,var(--gold-hi),var(--gold-lo));color:var(--ddp-on-brass);
+}
 .ros.prof,.frow.prof,.sg-id.prof,.seat.prof{cursor:pointer}
 .frow-add{
   flex:0 0 auto;font:700 .6rem 'DM Sans',sans-serif;letter-spacing:.04em;
@@ -1405,35 +1424,54 @@ html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:st
    actually answers. z-index sits just above #crest-popup (230) since
    the two can never be open at once but there's no reason not to
    order them. */
-#friend-invite{
+/* ══ Inbox drawer + invite popup ══
+   The drawer reuses the friends sheet's panel (same slide-in, same scrim);
+   only the body differs: a filter column on the left, the list on the right. */
+.ib-badge{
+  display:none;min-width:16px;height:16px;padding:0 4px;margin-left:6px;border-radius:8px;
+  place-items:center;vertical-align:1px;font:700 .62rem var(--font-num);
+  background:linear-gradient(160deg,var(--gold-hi),var(--gold-lo));color:var(--ddp-on-brass);
+}
+.ib-badge.on{display:inline-grid}
+.fs-panel.ib-panel{width:min(520px,96vw)}
+.ib-wrap{flex:1;min-height:0;display:flex;gap:10px}
+.ib-filters{flex:0 0 118px;display:flex;flex-direction:column;gap:6px;padding-right:10px;border-right:1px solid var(--line)}
+.ib-filter{
+  display:flex;align-items:center;justify-content:space-between;gap:6px;text-align:left;
+  padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:transparent;
+  font:600 .76rem 'DM Sans',sans-serif;color:var(--cream);cursor:pointer;touch-action:manipulation;
+}
+/* --faint is a .42-alpha ink: 2.3:1 on Clair. The cream ink at reduced opacity
+   keeps the idle labels readable on all four themes. */
+.ib-filter:not(.active)>span:first-child{opacity:.72}
+.ib-filter.active{border-color:rgba(var(--ddp-brass-rgb),.6);background:rgba(var(--ddp-brass-rgb),.16)}
+.ib-list .friend-status{color:var(--cream);opacity:.72}
+/* Join / Invite is the point of these rows: --gold-hi text vanishes on Clair. */
+.ib-list .friend-btn.invite,.inv-list .friend-btn.invite{color:var(--cream);border-color:rgba(var(--ddp-brass-rgb),.7);background:rgba(var(--ddp-brass-rgb),.16)}
+.ib-n{
+  display:none;flex:0 0 auto;min-width:17px;height:17px;padding:0 4px;border-radius:9px;place-items:center;
+  font:700 .62rem var(--font-num);background:linear-gradient(160deg,var(--gold-hi),var(--gold-lo));color:var(--ddp-on-brass);
+}
+.ib-n.on{display:grid}
+.ib-list{flex:1;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.friend-btn:disabled{opacity:.6;cursor:default}
+
+#invite-modal{
   display:none;position:fixed;inset:0;z-index:240;
   background:rgba(3,16,11,.78);backdrop-filter:blur(3px);
   padding:calc(env(safe-area-inset-top) + 14px) 12px calc(env(safe-area-inset-bottom) + 14px);
 }
-#friend-invite.on{display:flex;align-items:center;justify-content:center}
-.fi-card{
-  position:relative;width:100%;max-width:340px;
-  display:flex;flex-direction:column;align-items:center;text-align:center;
-  padding:26px 22px 22px;
+#invite-modal.on{display:flex;align-items:center;justify-content:center}
+.inv-card{
+  position:relative;width:100%;max-width:400px;max-height:100%;
+  display:flex;flex-direction:column;padding:16px 16px 12px;
   background:linear-gradient(170deg,var(--ddp-felt),var(--ddp-felt) 60%,var(--ddp-bg));
   border:1px solid rgba(var(--ddp-brass-rgb),.34);border-radius:18px;
   box-shadow:0 18px 50px rgba(var(--ddp-scrim-rgb),.6);animation:votein .22s ease;
 }
-/* Reuses .avatar-preview's own circle/ring/glow — the same element
-   every other "here's a player's avatar" surface in the app already
-   uses (the hero, the friend-profile card) — rather than a bespoke
-   one, so it renders a portrait-image avatar exactly like everywhere
-   else, not just an emoji glyph (see avatarHTML's own note on why a
-   raw .textContent assignment isn't enough for that). cursor:default
-   overrides its usual pointer/active affordance since this one isn't
-   tappable. */
-.fi-card .avatar-preview{cursor:default;margin-bottom:14px}
-.fi-card .avatar-preview:active{transform:none}
-.fi-title{font:600 1.15rem 'Playfair Display',serif;color:var(--cream);line-height:1.4}
-.fi-title b{color:var(--gold-hi)}
-.fi-sub{font-size:.8rem;color:var(--faint);margin-top:4px}
-.fi-actions{display:flex;gap:10px;margin-top:20px;width:100%}
-.fi-actions .btn{flex:1}
+.inv-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.inv-head h3{margin:0;flex:1;font:600 1.05rem 'Playfair Display',serif;color:var(--gold-hi)}
+.inv-list{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 
 /* ══ Empty / placeholder states (ranked, rank) ══ */
 .empty-state{text-align:center;padding:30px 6px 6px}
@@ -6447,6 +6485,7 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
            control a new player actually needs to find. -->
       <div class="exit-pair">
         <button class="btn btn-ghost btn-sm" onclick="goSettings()">⚙&#xFE0E; Settings</button>
+        <button class="btn btn-ghost btn-sm" onclick="openInbox()" aria-label="Inbox">✉&#xFE0E; Inbox<span class="ib-badge" id="menu-inbox-badge"></span></button>
       </div>
       <div class="exit-pair">
         <button class="btn btn-ghost btn-sm" onclick="openRules()">How to play</button>
@@ -7621,9 +7660,8 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
         <span class="lcc-code">Code <b id="l-code">·····</b></span>
         <span class="lcc-hint" id="l-hint">Tap to copy</span>
       </button>
-      <button class="btn btn-ghost btn-block" id="l-invite-btn" onclick="toggleLobbyFriendPicker()" style="display:none">Invite friends</button>
+      <button class="btn btn-ghost btn-block" id="l-invite-btn" onclick="openInviteModal()" style="display:none">Invite friends</button>
     </div>
-    <div id="l-friend-picker" style="display:none;margin-top:10px"></div>
     <div id="err-lobby" class="note bad" style="display:none"></div>
   </div>
 </section>
@@ -7713,21 +7751,11 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
   </div>
 </section>
 
-<!-- ═══ FRIEND INVITE POPUP ═══
-     A plain sibling of every screen, not nested in any of them — fixed
-     positioning makes its place in the DOM irrelevant for where it
-     visually lands, but it DOES matter for whether it renders at all:
-     inside a .screen it would inherit that screen's display:none the
-     moment a different one is active. Living here means it can show up
-     no matter which screen the recipient is actually on.
-     Was a small bottom-anchored pill (easy to miss); now the same
-     centered scrim+card overlay contract as #friend-profile/#crest-popup
-     below — display:none by default, .on flips it to a centered card
-     over a blurred scrim that blocks the rest of the screen until it's
-     actually answered. Tapping the scrim declines, same as the button —
-     it's a real answer to the invite (the sender does get told), not
-     just dismissing an info popup, so that's deliberate, not a shortcut. -->
-<div id="friend-toast" onclick="openFriendsSheet()" role="status"><span class="ft-dot"></span><span class="ft-txt" id="ft-txt"></span></div>
+<!-- ═══ BANNER ═══
+     A plain sibling of every screen, not nested in any of them, so it can
+     show no matter which one is active (inside a .screen it would inherit
+     that screen's display:none). See the Banner CSS and showBanner(). -->
+<div id="banner" role="status" onclick="bannerTap()"><span class="bn-dot" id="bn-dot"></span><span class="bn-txt" id="bn-txt"></span><button class="bn-act" id="bn-act" onclick="event.stopPropagation();bannerAct()" style="display:none"></button></div>
 
 <div id="friends-sheet" onclick="if(event.target===this)closeFriendsSheet()">
   <div class="fs-panel">
@@ -7743,15 +7771,31 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
   </div>
 </div>
 
-<div id="friend-invite" onclick="if(event.target===this)dismissFriendInvite()">
-  <div class="fi-card">
-    <div class="avatar-preview" id="fi-avatar">👤</div>
-    <div class="fi-title" id="fi-text"></div>
-    <div class="fi-sub">Join their table?</div>
-    <div class="fi-actions">
-      <button class="btn btn-ghost" onclick="dismissFriendInvite()">Decline</button>
-      <button class="btn btn-primary" onclick="acceptFriendInvite()">Accept</button>
+<!-- ═══ INBOX DRAWER ═══
+     Game invites (kept by the server until they expire), friend requests
+     (the persistent ones, same data as the Friends sheet) and, later, news.
+     Same right-hand drawer as the friends sheet: landscape is ~375px tall. -->
+<div id="inbox-sheet" onclick="if(event.target===this)closeInbox()">
+  <div class="fs-panel ib-panel">
+    <div class="fs-head">
+      <h3>Inbox</h3>
+      <button class="rulex" onclick="closeInbox()" aria-label="Close">&#10005;</button>
     </div>
+    <div class="ib-wrap">
+      <div class="ib-filters" id="ib-filters"></div>
+      <div class="ib-list" id="ib-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ INVITE FRIENDS POPUP (lobby) ═══ -->
+<div id="invite-modal" onclick="if(event.target===this)closeInviteModal()">
+  <div class="inv-card">
+    <div class="inv-head">
+      <h3>Invite friends</h3>
+      <button class="rulex" onclick="closeInviteModal()" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="inv-list" id="inv-list"></div>
   </div>
 </div>
 
@@ -8431,7 +8475,6 @@ function show(id){
   updateSceneLayer();
   syncCampaignAudio();
   if(id==='menu') maybeShowDailyRewards();
-  flushFriendToasts();
 }
 // The game is landscape-only: every screen has a landscape layout, so
 // every screen asks to be locked there. Kept as a set (rather than
@@ -12058,12 +12101,10 @@ function confirmDeleteAccount(){
 }
 function openPrivacy(){ window.open('/privacy.html','_blank','noopener'); }
 function openDeletionInfo(){ window.open('/delete-account.html','_blank','noopener'); }
-// A neutral confirmation on the menu: #err-menu is the red error note, so it
-// is recoloured for the message and put back after it hides itself.
+// A neutral confirmation on the menu, as a banner (the red #err-menu note under
+// the tiles resizes the rail, which is why leaving a game stopped using it too).
 function menuNotice(msg){
-  const e=$('err-menu'); if(!e) return;
-  e.className='note gold'; toast('err-menu',msg);
-  setTimeout(()=>{ e.className='note bad'; },4700);
+  showBanner(msg,{dot:'info'});
 }
 function submitAuth(){
   const u=$('auth-username').value.trim();
@@ -12095,6 +12136,7 @@ function doLogout(skipEmit){
   renderHeroCosmetics();
   renderShop();
   friendsList=[]; friendsLoadedOnce=false; friendRequestsList=[];
+  inboxInvites=[]; closeInbox(); updateInboxBadge();
   renderLobbyFriendPicker();
   closeFriendsSheet(); updateFriendsChip();
 }
@@ -12150,7 +12192,7 @@ function friendRowHTML(f,opts){
       </span>
     </button>
     <span class="friend-actions">
-      ${canInvite?`<button class="friend-btn invite" onclick="inviteFriendToRoom(${f.id},this)">Invite</button>`:''}
+      ${canInvite?inviteBtnHTML(f.id):''}
       ${opts.remove!==false?`<button class="friend-btn" onclick="confirmRemoveFriend(${f.id},this)">Remove</button>`:''}
     </span>
   </div>`;
@@ -12190,35 +12232,66 @@ function renderFriendRequests(){
   sec.style.display='block';
   list.innerHTML=friendRequestsList.map(friendRequestRowHTML).join('');
 }
-function inviteFriendToRoom(id,btn){
+/* ── Inviting from a lobby ──
+   Each invite button shows how that invite is going: Invite -> Sent -> Joined
+   (or Declined, which can be sent again). The state belongs to the room it
+   was sent from, so a new room starts clean. Every button for a friend
+   carries data-inv, so the lobby popup, the Friends sheet and My Account's
+   list all update together when the server reports back. */
+const INVITE_RETRY_MS=30000;
+var inviteStateRoom='', inviteState={};
+function inviteView(id){
+  const s=(inviteStateRoom===room)?inviteState[id]:null;
+  if(s){
+    if(s.v==='joined') return {label:'Joined ✓',dis:true};
+    if(s.v==='declined') return {label:'Declined',dis:false};
+    if(s.v==='sent'&&Date.now()-s.at<INVITE_RETRY_MS) return {label:'Sent ✓',dis:true};
+  }
+  return {label:'Invite',dis:false};
+}
+function inviteBtnHTML(id){
+  const v=inviteView(id);
+  return `<button class="friend-btn invite" data-inv="${id}" onclick="inviteFriendToRoom(${id})"${v.dis?' disabled':''}>${v.label}</button>`;
+}
+function refreshInviteButtons(){
+  document.querySelectorAll('[data-inv]').forEach(b=>{
+    const v=inviteView(+b.dataset.inv);
+    b.textContent=v.label; b.disabled=v.dis;
+  });
+}
+function setInviteState(id,v){
+  if(inviteStateRoom!==room){ inviteStateRoom=room; inviteState={}; }
+  inviteState[id]={v,at:Date.now()};
+  refreshInviteButtons();
+}
+function inviteFriendToRoom(id){
   if(!room) return;
   socket.emit('inviteFriend',{token:accountToken,friendId:id,code:room});
-  btn.disabled=true; btn.textContent='Sent';
-  setTimeout(()=>{ btn.disabled=false; btn.textContent='Invite'; },2500);
+  setInviteState(id,'sent');
+  setTimeout(refreshInviteButtons,INVITE_RETRY_MS+100);   // an unanswered invite can be sent again
 }
-function toggleLobbyFriendPicker(){
-  const panel=$('l-friend-picker');
-  const opening=panel.style.display!=='block';
-  panel.style.display=opening?'block':'none';
-  panel.classList.toggle('open',opening);
-  if(opening) renderLobbyFriendPicker();
+function openInviteModal(){
+  if(!lobbyInviteEligible||!room) return;
+  SFX.play('click');
+  $('invite-modal').classList.add('on');
+  renderInviteModal();
+  if(accountToken) socket.emit('getFriends',{token:accountToken});
 }
+function closeInviteModal(){ $('invite-modal').classList.remove('on'); }
+function renderInviteModal(){
+  const el=$('inv-list'); if(!el) return;
+  const online=friendsList.filter(f=>f.online);
+  el.innerHTML=online.length
+    ? online.map(f=>friendRowHTML(f,{invite:true,remove:false,showStatus:false})).join('')
+    : '<div class="fs-empty">No friends online right now.<br>Friends who come online will show up here.</div>';
+}
+// Called from every place the friends list changes. The lobby button still
+// only exists for a real casual room (never ranked/daily/guest).
 function renderLobbyFriendPicker(){
   const btn=$('l-invite-btn'); if(!btn) return;
-  const online=friendsList.filter(f=>f.online);
-  // The button now always sits in the code row (see .lobby-code-row),
-  // half-width beside the code chip, so it stays visible even with zero
-  // friends online — it used to hide itself in that case, which is what
-  // read as "the button is gone" once the code chip stopped being the
-  // only thing in the row. Still gated on lobbyInviteEligible (ranked/
-  // daily/guest have nothing to invite into).
   btn.style.display=lobbyInviteEligible?'block':'none';
-  if(!lobbyInviteEligible) $('l-friend-picker').style.display='none';
-  const panel=$('l-friend-picker');
-  if(!panel.classList.contains('open')) return;
-  panel.innerHTML=online.length
-    ? online.map(f=>friendRowHTML(f,{invite:true,remove:false,showStatus:false})).join('')
-    : '<p class="codehint" style="padding:8px 4px">No friends online right now.</p>';
+  if(!lobbyInviteEligible) closeInviteModal();
+  if($('invite-modal').classList.contains('on')) renderInviteModal();
 }
 
 
@@ -12233,8 +12306,8 @@ function renderLobbyFriendPicker(){
 const FS_REFRESH_MS=6000;
 const FT_COOLDOWN_MS=5*60*1000;   // per friend — mobile reconnects flap
 const FT_DEFER_SCREENS=new Set(['draw','pass','play']);
-let fsTimer=null, ftHideTimer=null, ftQueue=[], pendingFriendInvite=null;
-const ftLast={};                  // friend id -> last time we toasted them
+let fsTimer=null, pendingFriendInvite=null;
+const ftLast={};                  // friend id -> last time we announced them
 function friendToastsOn(){ try{ return localStorage.getItem('ddp.friendToasts')!=='0'; }catch(e){ return true; } }
 function setFriendToasts(on){ try{ localStorage.setItem('ddp.friendToasts',on?'1':'0'); }catch(e){} }
 function updateFriendsChip(){
@@ -12264,7 +12337,7 @@ function fsRowHTML(f){
   let act='';
   if(st==='lobby'&&f.code&&!inRoom) act=`<button class="friend-btn invite" onclick="joinFriendLobby('${esc(f.code)}')">Join</button>`;
   else if(st==='menu'&&!inRoom) act=`<button class="friend-btn invite" onclick="playWithFriend(${f.id},this)">Play</button>`;
-  else if(f.online&&inRoom&&lobbyInviteEligible) act=`<button class="friend-btn invite" onclick="inviteFriendToRoom(${f.id},this)">Invite</button>`;
+  else if(f.online&&inRoom&&lobbyInviteEligible) act=inviteBtnHTML(f.id);
   return `<div class="friend-row">
     <button class="friend-main" onclick="openFriendProfile(${f.id})">
       <span class="friend-avatar">${avatarHTML(f.avatar,f.nickname)}<span class="friend-dot ${st}"></span></span>
@@ -12296,7 +12369,7 @@ function renderFriendsSheet(){
 function openFriendsSheet(){
   if(!account) return;
   SFX.play('click');
-  hideFriendToast();
+  hideBanner();
   $('fs-notify').checked=friendToastsOn();
   $('friends-sheet').classList.add('on');
   renderFriendsSheet();
@@ -12331,32 +12404,70 @@ function playWithFriend(id,btn){
   closeFriendsSheet();
   doCreate();
 }
-function hideFriendToast(){ clearTimeout(ftHideTimer); $('friend-toast').classList.remove('on'); }
-function showFriendToast(names){
-  const t=names.length===1?`${names[0]} is online`
-    :names.length===2?`${names[0]} and ${names[1]} are online`
-    :`${names[0]} and ${names.length-1} others are online`;
-  $('ft-txt').textContent=t;
-  $('friend-toast').classList.add('on');
-  clearTimeout(ftHideTimer);
-  ftHideTimer=setTimeout(hideFriendToast,5000);
+/* ── Banner + popups ──
+   showBanner() is for direct feedback (you left the game): always shown.
+   popupNotify() is for things that happen TO you (a friend online, an invite,
+   a friend request): at most one a minute, whoever sent it, so nobody can
+   spam you. A popup that loses to the cooldown is not lost - invites and
+   friend requests are still in the Inbox with their badge. Over a table the
+   banner is a thin strip that never takes taps. */
+const POPUP_COOLDOWN_MS=60*1000;
+var bannerTimer=null, bannerTapFn=null, bannerActFn=null, lastPopupAt=0;
+function hideBanner(){
+  clearTimeout(bannerTimer);
+  $('banner').classList.remove('on','tap');
+  bannerTapFn=bannerActFn=null;
 }
-// Never over a table: the pass phase has a one-minute clock and the hand
-// has no spare pixels. A deferred arrival waits in ftQueue and is flushed
-// by show() on the first non-table screen — in practice the round summary,
-// whose confirm window is exactly the dead time this wants.
-function flushFriendToasts(){
-  if(!ftQueue.length||FT_DEFER_SCREENS.has(currentScreenId)||tutorialActive) return;
-  const names=ftQueue; ftQueue=[];
-  showFriendToast(names);
+function placeBanner(){
+  const el=$('banner');
+  let left=0,max=0;
+  if((currentScreenId==='pass'||currentScreenId==='play')&&document.documentElement.classList.contains('landscape-mode')){
+    const mid=document.querySelector('.table .mid'), rt=document.querySelector('.rt-stack'), card=document.querySelector('.hand .card');
+    if(mid&&rt){
+      const m=mid.getBoundingClientRect(), cw=card?card.getBoundingClientRect().width:60;
+      // Only when the trick cross really reaches the banner's strip (it does at
+      // 915x412; at 667x375 it starts lower and the centred pill clears it).
+      if(m.top<40){
+        left=m.left+m.width/2+cw/2+12;
+        max=rt.getBoundingClientRect().left-10-left;
+      }
+    }
+  }
+  const beside=max>=140;   // below that even a short name is cut to nothing - centre it instead
+  el.classList.toggle('bn-table',beside);
+  if(beside){ el.style.setProperty('--bn-left',Math.round(left)+'px'); el.style.setProperty('--bn-max',Math.floor(max)+'px'); }
+}
+function showBanner(text,o){
+  o=o||{};
+  const onTable=FT_DEFER_SCREENS.has(currentScreenId);
+  $('bn-txt').textContent=text;
+  $('bn-dot').className='bn-dot '+(o.dot||'');
+  bannerTapFn=o.onTap||null;
+  bannerActFn=(o.act&&!onTable)?o.act.fn:null;
+  const act=$('bn-act');
+  act.style.display=bannerActFn?'':'none';
+  if(bannerActFn) act.textContent=o.act.label;
+  $('banner').classList.toggle('tap',!onTable&&!!(bannerTapFn||bannerActFn));
+  placeBanner();
+  $('banner').classList.add('on');
+  clearTimeout(bannerTimer);
+  bannerTimer=setTimeout(hideBanner,o.ms||5000);
+}
+function bannerTap(){ const f=bannerTapFn; hideBanner(); if(f) f(); }
+function bannerAct(){ const f=bannerActFn; hideBanner(); if(f) f(); }
+function popupNotify(text,o){
+  if(tutorialActive) return false;
+  const now=Date.now();
+  if(now-lastPopupAt<POPUP_COOLDOWN_MS) return false;
+  lastPopupAt=now;
+  showBanner(text,o);
+  return true;
 }
 function noteFriendCameOnline(f){
   if(!friendToastsOn()||$('friends-sheet').classList.contains('on')) return;
   const now=Date.now();
-  if(ftLast[f.id]&&now-ftLast[f.id]<FT_COOLDOWN_MS) return;
-  ftLast[f.id]=now;
-  if(!ftQueue.includes(f.nickname)) ftQueue.push(f.nickname);
-  flushFriendToasts();
+  if(ftLast[f.id]&&now-ftLast[f.id]<FT_COOLDOWN_MS) return;   // mobile reconnects flap
+  if(popupNotify(`${f.nickname} is online`,{dot:'',onTap:openFriendsSheet})) ftLast[f.id]=now;
 }
 // Tapping a human at the table / on a results screen opens their profile
 // card, which is where the Add Friend button lives. Strangers meeting in
@@ -12441,6 +12552,7 @@ function declineFriendRequestFrom(id,btn){
 socket.on('friendRequestsOk',d=>{
   friendRequestsList=d.requests||[];
   if($('s-personal').classList.contains('active')) renderFriendRequests();
+  updateInboxBadge();
 });
 // The open profile card's own status, pushed after every send/cancel/
 // accept/decline that touches it — 'self'/'friends' both render to
@@ -12457,6 +12569,8 @@ socket.on('friendRequestReceived',d=>{
     friendRequestsList=[d,...friendRequestsList];
     if($('s-personal').classList.contains('active')) renderFriendRequests();
     updateFriendsChip();
+    updateInboxBadge();
+    popupNotify(`${d.nickname} sent you a friend request`,{dot:'gold',onTap:()=>openInbox('friends')});
   }
   if(fpTargetId===d.id) renderFpActions({id:d.id,friendStatus:'incoming'});
 });
@@ -12686,33 +12800,121 @@ socket.on('friendProfileError',d=>{
   $('fp-error').style.display='block';
   $('fp-error-msg').textContent=d.msg;
 });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeFriendProfile(); dismissFriendInvite(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeFriendProfile(); closeInbox(); closeInviteModal(); } });
 
-/* Invite popup — a plain sibling of every screen (see the markup near
-   #app's closing tag), so it can show up over whichever one is active.
-   Only ever shown when not already in a room: this app tracks one
-   room/me/host triple at a time, and interrupting an active game with a
-   foreign invite would mean juggling two — simplest and safest is to
-   just drop the invite silently in that case. */
-let pendingInvite=null;
-socket.on('friendInvite',d=>{
-  if(room) return;
-  pendingInvite=d;
-  setAvatarInto($('fi-avatar'),d.fromAvatar||'',d.fromName);
-  $('fi-text').innerHTML=`<b>${esc(d.fromName)}</b> invited you to play`;
-  $('friend-invite').classList.add('on');
-});
-function dismissFriendInvite(){
-  pendingInvite=null;
-  $('friend-invite').classList.remove('on');
+/* ══════════ INBOX ══════════
+   Three filters: News (nothing sends any yet), Invites (game invites, held
+   by the server until they expire) and Friend invites (= friend requests,
+   the same persistent rows the Friends sheet shows). The menu button's
+   badge counts what is waiting to be answered. An invite arriving always
+   goes in here; whether it ALSO pops up is popupNotify's once-a-minute call. */
+var inboxInvites=[], inboxNews=[], inboxFilter='invites';   // var, not let: doLogout (above) resets it and could run before this line
+const INBOX_FILTERS=[['news','News'],['invites','Invites'],['friends','Friend invites']];
+function liveInvites(){ const now=Date.now(); return inboxInvites.filter(i=>i.expiresAt>now); }
+function inboxCounts(){ return {news:inboxNews.length,invites:liveInvites().length,friends:friendRequestsList.length}; }
+function updateInboxBadge(){
+  const c=inboxCounts(), n=c.news+c.invites+c.friends;
+  const b=$('menu-inbox-badge');
+  if(b){ b.textContent=n>99?'99+':n; b.classList.toggle('on',n>0&&!!account); }
+  if($('inbox-sheet').classList.contains('on')) renderInbox();
 }
-function acceptFriendInvite(){
-  if(!pendingInvite) return;
-  const code=pendingInvite.code;
-  dismissFriendInvite();
-  const id=identity();
-  if(!id.name){ goPersonal(); return; }
-  socket.emit('joinRoom',{code,name:id.name,avatar:id.avatar||'',accountToken:account?accountToken:''});
+function inviteFromServer(d){
+  return {id:d.id,fromId:d.fromId,fromName:d.fromName,fromAvatar:d.fromAvatar||'',code:d.code,ts:d.ts,expiresAt:Date.now()+(d.expiresIn||0)};
+}
+socket.on('inboxState',d=>{
+  inboxInvites=(d.invites||[]).map(inviteFromServer);
+  updateInboxBadge();
+});
+socket.on('inboxItem',d=>{
+  const it=inviteFromServer(d);
+  inboxInvites=[it,...inboxInvites.filter(i=>i.id!==it.id&&!(i.fromId===it.fromId&&i.code===it.code))];
+  updateInboxBadge();
+  // Join straight from the banner when there is nothing in the way; in a
+  // game or over a table it is just a notice (the drawer has the button).
+  const canJoin=!room&&!FT_DEFER_SCREENS.has(currentScreenId);
+  popupNotify(`${it.fromName} invited you to play`,{
+    dot:'gold',onTap:()=>openInbox('invites'),
+    act:canJoin?{label:'Join',fn:()=>joinInboxInvite(it.id)}:null,
+  });
+});
+// How an invite I sent ended.
+socket.on('inviteAnswered',d=>{
+  if(d.code!==room) return;
+  setInviteState(d.friendId,d.status);
+  if(d.status==='declined'){
+    const f=friendsList.find(x=>x.id===d.friendId);
+    showBanner(`${f?f.nickname:'Your friend'} declined your invite`,{dot:'info'});
+  }
+});
+socket.on('friendInviteSent',d=>setInviteState(d.friendId,'sent'));
+setInterval(()=>{ if(inboxInvites.length) updateInboxBadge(); },20000);   // expired invites drop out
+
+function timeAgo(ts){
+  const m=Math.floor(Math.max(0,Date.now()-ts)/60000);
+  return m<1?'just now':m+' min ago';
+}
+function inviteRowHTML(i){
+  return `<div class="friend-row">
+    <button class="friend-main" onclick="openPlayerProfile(${i.fromId})">
+      <span class="friend-avatar">${avatarHTML(i.fromAvatar,i.fromName)}</span>
+      <span class="friend-info">
+        <div class="friend-name">${esc(i.fromName)}</div>
+        <div class="friend-status">invited you to play &middot; ${timeAgo(i.ts)}</div>
+      </span>
+    </button>
+    <span class="friend-actions">
+      <button class="friend-btn invite" onclick="joinInboxInvite('${esc(i.id)}')">Join</button>
+      <button class="friend-btn" onclick="declineInboxInvite('${esc(i.id)}')">Dismiss</button>
+    </span>
+  </div>`;
+}
+function renderInbox(){
+  const c=inboxCounts();
+  $('ib-filters').innerHTML=INBOX_FILTERS.map(([k,l])=>
+    `<button class="ib-filter${inboxFilter===k?' active':''}" onclick="setInboxFilter('${k}')"><span>${l}</span><span class="ib-n${(k!=='news'&&!account)?'':(c[k]?' on':'')}">${c[k]}</span></button>`).join('');
+  let h;
+  if(inboxFilter==='news'){
+    h='<div class="fs-empty">No news yet.<br>Updates about the game will show up here.</div>';
+  }else if(!account){
+    h='<div class="fs-empty">Log in to get game invites and friend requests.<br><br><button class="friend-btn invite" onclick="closeInbox();goPersonal()">Log in</button></div>';
+  }else if(inboxFilter==='invites'){
+    const l=liveInvites();
+    h=l.length?l.map(inviteRowHTML).join(''):'<div class="fs-empty">No game invites right now.<br>When a friend invites you to their table it shows up here.</div>';
+  }else{
+    h=friendRequestsList.length?friendRequestsList.map(friendRequestRowHTML).join(''):'<div class="fs-empty">No friend invites right now.</div>';
+  }
+  $('ib-list').innerHTML=h;
+}
+function setInboxFilter(k){ inboxFilter=k; renderInbox(); }
+function openInbox(filter){
+  SFX.play('click');
+  hideBanner();
+  const c=inboxCounts();
+  inboxFilter=filter||(c.invites?'invites':c.friends?'friends':c.news?'news':'invites');
+  $('inbox-sheet').classList.add('on');
+  renderInbox();
+  // The server may have dropped some since the last push (expired, room full).
+  if(account&&accountToken){
+    socket.emit('getInbox',{token:accountToken});
+    socket.emit('getFriendRequests',{token:accountToken});
+  }
+}
+function closeInbox(){ $('inbox-sheet').classList.remove('on'); }
+function joinInboxInvite(id){
+  const it=inboxInvites.find(i=>i.id===id);
+  if(!it) return;
+  if(room){ showBanner('Leave your current game first to join.',{dot:'gold'}); return; }
+  const idn=identity();
+  closeInbox(); hideBanner();
+  inboxInvites=inboxInvites.filter(i=>i.id!==id);
+  updateInboxBadge();
+  if(!idn.name){ goPersonal(); return; }
+  socket.emit('joinRoom',{code:it.code,name:idn.name,avatar:idn.avatar||'',accountToken:account?accountToken:''});
+}
+function declineInboxInvite(id){
+  inboxInvites=inboxInvites.filter(i=>i.id!==id);
+  updateInboxBadge();
+  if(accountToken) socket.emit('declineInvite',{token:accountToken,id});
 }
 
 /* ══════════ STATISTICS ══════════ */
@@ -12822,8 +13024,10 @@ socket.on('joined',d=>{
   campaignStartPending=false;
   if(pendingFriendInvite&&d.isHost){
     socket.emit('inviteFriend',{token:accountToken,friendId:pendingFriendInvite,code:d.code});
+    setInviteState(pendingFriendInvite,'sent');
   }
   pendingFriendInvite=null;
+  if(account&&accountToken) socket.emit('getInbox',{token:accountToken});
 });
 
 /* ══════════ RANKED ══════════ */
@@ -13220,8 +13424,11 @@ function goLanding(msg){
   autoDeadline=0; voteDeadline=0;
   clearInterval(autoTick); autoTick=null;
   $('votebox').style.display='none';
+  closeInviteModal();
   show('menu');
-  if(msg) toast('err-menu',msg);
+  // A banner at the top, NOT the note under the menu: writing into that note
+  // resized the menu's rail every time someone left a game.
+  if(msg) showBanner(msg,{dot:'info'});
 }
 // A campaign player goes back to their chapter map, not the casual
 // landing screen — that's the screen they came from and the only one

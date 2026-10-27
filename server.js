@@ -180,6 +180,67 @@ function notifySocketsForAccount(accountId, event, payload) {
   return true;
 }
 
+// ── Inbox: pending game invites, per recipient account ───────────
+// Invites used to be one live push to the friend's open sockets and then
+// gone: a backgrounded phone, a mid-reconnect socket or a client that was
+// already seated in a room never saw it. They are now parked here until
+// they expire, resent on login/resume and fetched when the inbox opens.
+// In memory only, on purpose: an invite is worthless once its room is
+// gone, and rooms don't survive a redeploy either. Friend requests are NOT
+// kept here - they are already persistent rows in Postgres and the client
+// shows them in the same inbox from that data.
+const INVITE_TTL_MS = 10 * 60 * 1000;
+const INBOX_MAX_INVITES = 20;
+const inboxes = new Map();   // accountId -> Map(itemId -> invite)
+// The same "is there still a seat to take" test friendActivity uses to decide
+// whether a lobby is joinable.
+function lobbyHasOpenSeat(G) {
+  return !!G && G.phase === 'lobby' && !G.ranked && !G.daily && !G.campaign
+    && G.players.some((p, i) => i > 0 && !p.connected && !p.isAI);
+}
+function inviteIsLive(item) {
+  return Date.now() < item.expires && lobbyHasOpenSeat(findRoom(item.code));
+}
+// Drops what has expired or whose room is gone/started/full, and returns
+// the survivors in the shape the client needs. `expiresIn` is relative so
+// the client never has to trust its clock against ours.
+function pendingInvitesFor(accountId) {
+  const box = inboxes.get(accountId);
+  if (!box) return [];
+  const out = [];
+  for (const [id, item] of box) {
+    if (!inviteIsLive(item)) { box.delete(id); continue; }
+    out.push({
+      id: item.id, type: 'invite', fromId: item.fromId, fromName: item.fromName,
+      fromAvatar: item.fromAvatar, code: item.code, ts: item.ts,
+      expiresIn: Math.max(0, item.expires - Date.now()),
+    });
+  }
+  if (!box.size) inboxes.delete(accountId);
+  return out.sort((a, b) => b.ts - a.ts);
+}
+function addInvite(toId, from, code) {
+  let box = inboxes.get(toId);
+  if (!box) { box = new Map(); inboxes.set(toId, box); }
+  // Re-inviting to the same room replaces the earlier card instead of stacking.
+  for (const [id, it] of box) if (it.fromId === from.id && it.code === code) box.delete(id);
+  const item = {
+    id: 'inv_' + crypto.randomBytes(6).toString('hex'),
+    fromId: from.id, fromName: from.nickname, fromAvatar: from.avatar || '',
+    code, ts: Date.now(), expires: Date.now() + INVITE_TTL_MS,
+  };
+  box.set(item.id, item);
+  while (box.size > INBOX_MAX_INVITES) box.delete(box.keys().next().value);
+  return item;
+}
+// The sender hears how the invite ended ('joined' / 'declined'), which is
+// what turns the lobby's "Sent" into a real status.
+function resolveInvite(toId, item, status) {
+  const box = inboxes.get(toId);
+  if (box) { box.delete(item.id); if (!box.size) inboxes.delete(toId); }
+  notifySocketsForAccount(item.fromId, 'inviteAnswered', { friendId: toId, status, code: item.code });
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 function makeCode() {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusing chars
@@ -11500,6 +11561,8 @@ function attachAccountSocket(socket, accountId) {
   if (!set) { set = new Set(); accountSockets.set(accountId, set); }
   set.add(socket.id);
   if (wasOffline) announceFriendPresence(accountId, true);
+  // Whatever was sent while this account was away or reconnecting.
+  socket.emit('inboxState', { invites: pendingInvitesFor(accountId) });
 }
 // What a friend is doing right now, for the friends sheet: 'offline',
 // 'menu' (connected, in no room), 'lobby' (sitting in a casual lobby —
@@ -11981,14 +12044,45 @@ io.on('connection', (socket) => {
       if (!inRoom) return socket.emit('friendsError', { msg: "That's not your room." });
       const isFriend = await db.areFriends(account.id, Number(friendId));
       if (!isFriend) return socket.emit('friendsError', { msg: 'Not on your friends list.' });
-      const sent = notifySocketsForAccount(Number(friendId), 'friendInvite', {
-        code: G.code, fromName: account.nickname, fromAvatar: account.avatar || '',
+      const fid = Number(friendId);
+      // Stored first, then pushed: if the friend is offline, backgrounded or
+      // mid-reconnect it is still waiting in their inbox when they are back.
+      const item = addInvite(fid, account, G.code);
+      const delivered = notifySocketsForAccount(fid, 'inboxItem', {
+        id: item.id, type: 'invite', fromId: item.fromId, fromName: item.fromName,
+        fromAvatar: item.fromAvatar, code: item.code, ts: item.ts, expiresIn: INVITE_TTL_MS,
       });
-      if (sent) socket.emit('friendInviteSent', { friendId: Number(friendId) });
-      else socket.emit('friendsError', { msg: "They're not online right now." });
+      socket.emit('friendInviteSent', { friendId: fid, delivered });
     } catch (e) {
       console.error('inviteFriend error:', e.message);
       socket.emit('friendsError', { msg: 'Could not send the invite. Try again.' });
+    }
+  });
+
+  // The inbox drawer asks for the current list when it opens (items may have
+  // expired or been answered from another device since the last push).
+  socket.on('getInbox', async ({ token }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return;
+      socket.emit('inboxState', { invites: pendingInvitesFor(account.id) });
+    } catch (e) {
+      console.error('getInbox error:', e.message);
+    }
+  });
+
+  // Dismissing an invite is a real answer: the sender is told.
+  socket.on('declineInvite', async ({ token, id }) => {
+    if (!DB_ENABLED || !token) return;
+    try {
+      const account = await db.findAccountByToken(token);
+      if (!account) return;
+      const item = inboxes.get(account.id)?.get(String(id));
+      if (item) resolveInvite(account.id, item, 'declined');
+      socket.emit('inboxState', { invites: pendingInvitesFor(account.id) });
+    } catch (e) {
+      console.error('declineInvite error:', e.message);
     }
   });
 
@@ -12630,6 +12724,12 @@ io.on('connection', (socket) => {
     socket.join(G.code);
     socket.emit('joined', { code: G.code, playerIndex: slot, token, isHost: false });
     broadcastRoom(G);
+    // Taking the seat is what answers an invite to this room, whichever way
+    // the player got here (invite card, friends list or the room code).
+    if (acct) {
+      const box = inboxes.get(acct.id);
+      if (box) for (const item of [...box.values()]) if (item.code === G.code) resolveInvite(acct.id, item, 'joined');
+    }
   });
 
   // Reconnect after the phone backgrounds / network blips

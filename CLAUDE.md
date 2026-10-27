@@ -4586,10 +4586,10 @@ before pushing.
   (no mode, no round). `friendPresence` events carry only online/offline.
 - **Play** on a menu-status friend = `playWithFriend`: `doCreate()` then the
   `joined` handler sends `inviteFriend` (server refuses it before seating).
-- **Online toast never shows over pass/play/draw** (`FT_DEFER_SCREENS`); it
-  queues and `show()` flushes it on the next other screen — usually the round
-  summary. 5-minute per-friend cooldown (reconnect flapping), on/off checkbox
-  in the sheet (`ddp.friendToasts`). A "Favorites only" mode was NOT built.
+- **"X is online" is now a banner popup** (see the Inbox section below), not the
+  old `#friend-toast` that waited for a non-table screen. Still a 5-minute
+  per-friend cooldown (reconnect flapping) and the on/off checkbox in the sheet
+  (`ddp.friendToasts`). A "Favorites only" mode was NOT built.
 - **Tapping a human opens their profile card (Add Friend lives there)** from
   the roster rail (pass/play), round-summary identity cell and final rows,
   via `profTap()`; final rows also get a "+ Add" pill for non-friends. The
@@ -4597,6 +4597,54 @@ before pushing.
 - Verified client-side in the preview at 915x412 with injected state (chip,
   sheet, toast rules, profTap); `server.js` passes `node --check` but the new
   `friendActivity` has not run against a live DB/room.
+
+## Inbox, game invites, the banner (2026-10)
+- **Why it exists**: invites used to be one live `friendInvite` push. A friend
+  who was backgrounded, mid-reconnect, or already in a room (`if(room) return;`
+  silently dropped it) never saw it, and the sender's "Sent" lied. Reported as
+  "my friends never got the invite".
+- **Server keeps game invites** (`inboxes`: accountId -> Map(id -> invite),
+  `INVITE_TTL_MS` 10 min, max 20 per account, in memory only on purpose - an
+  invite is worthless once its room is gone and rooms do not survive a
+  redeploy either). `inviteFriend` stores first, then pushes `inboxItem`; a
+  re-invite to the same room replaces the old card. `pendingInvitesFor()` is the
+  single reader and prunes as it goes: expired, room gone, room started, room
+  full (`lobbyHasOpenSeat`, the same test `friendActivity` uses). `expiresIn` is
+  relative so the client never trusts its clock against ours. Sent as
+  `inboxState` on every login/resume (`attachAccountSocket`) and on `getInbox`.
+  `declineInvite` and `joinRoom` (taking the seat, whichever way you got there)
+  both call `resolveInvite`, which tells the SENDER via `inviteAnswered`
+  (`joined`/`declined`) - that is what turns "Sent" into a real status.
+- **Friend requests are NOT stored in the inbox store.** They are persistent
+  Postgres rows already; the drawer's "Friend invites" filter renders
+  `friendRequestsList` (same data and row markup as the Friends sheet).
+- **The drawer** (`#inbox-sheet`) reuses the friends sheet's panel CSS (the
+  selectors are shared) with a filter column: News (empty, reserved for
+  updates) / Invites / Friend invites. Opened from the menu's `✉ Inbox` button,
+  which shares the `.exit-pair` row with Settings (same row, so the landscape
+  rail budget did not change). Badge = news + live invites + friend requests.
+- **ONE banner for everything** (`#banner`, `showBanner()`): friend online, game
+  invite, friend request, and the "You left the game" line. That last one used
+  to be written into the menu's red `#err-menu` note, which resized the rail
+  every time; `goLanding(msg)` and `menuNotice()` now use the banner instead.
+  `#err-menu` still shows real errors.
+- **`popupNotify()` is the rate limiter**: one popup a minute (`POPUP_COOLDOWN_MS`),
+  whoever sent it. A popup that loses to the cooldown is not lost - the item is
+  already in the inbox and the badge. `showBanner()` (direct feedback to your own
+  action) is NOT limited. Popups show over a table too, as a thin strip that
+  never takes taps there (`pointer-events` only when not on draw/pass/play) and
+  has no Join button there. Suppressed during the tutorial.
+- **The lobby's "Invite friends" opens a centred popup** (`#invite-modal`), not
+  the old panel under the code. Every invite button carries `data-inv=<friendId>`
+  and `inviteView()` decides its label (Invite / Sent ✓ / Joined ✓ / Declined),
+  so the popup, the Friends sheet and My Account's list stay in sync. The state
+  belongs to the room it was sent from (`inviteStateRoom`). A sent invite can be
+  sent again after 30 s or once declined.
+- Gotcha repeated from earlier: the inbox/banner state is `var`, not `let`.
+  `doLogout` resets it and can run before the declaring line executes.
+- **Not run against Postgres/live**: the server half needs accounts, so only
+  `node --check` and the client (driven with injected events in the preview) were
+  exercised. Test a real invite between two accounts before trusting it.
 
 ## Not implemented
 - Google Sign-In / account linking (deliberately not built; email + password is enough for the Play Store)

@@ -1597,6 +1597,21 @@ const SCENE_PRICE_2 = 1000;
 // only once Chapter 5 is cleared, like every other chapter background.
 const CAMPAIGN_BACKGROUND_PRICE = 1000;
 const CAMPAIGN_BOSS_AVATAR_PRICE = 1500;
+// Songs for Casual and Ranked games (campaign has its own music and is not
+// affected). One entry per mp3 under public/audio/music/ - `track` is that file
+// name without ".mp3". Each opens in the Shop once the House's FINAL boss table
+// is cleared (gateLevel), like the chapter backgrounds and boss avatars, and
+// costs the same as a boss avatar. Clubs and Diamonds have no endgame track yet:
+// add the entry here the day the file exists.
+const MUSIC_PRICE = 1500;
+const MUSIC_SONGS = [
+  { id: 'music_spades',           track: 'spades',           house: 'House of Spades',   name: 'House of Spades',     gateLevel: 100 },
+  { id: 'music_spades_endgame',   track: 'spades-endgame',   house: 'House of Spades',   name: 'Smokier Than Usual',  gateLevel: 100 },
+  { id: 'music_hearts',           track: 'hearts',           house: 'House of Hearts',   name: 'House of Hearts',     gateLevel: 200 },
+  { id: 'music_hearts_endgame',   track: 'hearts-endgame',   house: 'House of Hearts',   name: 'Candlelit Throne',    gateLevel: 200 },
+  { id: 'music_clubs',            track: 'clubs',            house: 'House of Clubs',    name: 'House of Clubs',      gateLevel: 300 },
+  { id: 'music_diamonds',         track: 'diamonds',         house: 'House of Diamonds', name: 'House of Diamonds',   gateLevel: 400 },
+].map(m => ({ ...m, unlock: null, price: MUSIC_PRICE }));
 let _campaignCosmetics = null;
 function campaignCosmetics() {
   if (_campaignCosmetics) return _campaignCosmetics;
@@ -1798,6 +1813,7 @@ const COSMETICS = {
   // twice — same reasoning as crests/rankSets above. A getter because
   // AVATAR_COLLECTIONS/PRICED_AVATAR_IDS are defined further down the
   // file; deferred until first read, same as those two.
+  music: MUSIC_SONGS,
   get avatars() {
     const gated = campaignCosmetics().gatedAvatars;
     return AVATAR_COLLECTIONS.flatMap(c => c.avatars.map(([id, name]) => {
@@ -2011,8 +2027,13 @@ function cosmeticsFor(achievements, stats, purchases, cleared) {
   // "Reach Gambler" without carrying its own copy of RANK_TABLE — the
   // rule that visible rank is server-derived applies here too.
   const tierName = slug => (RANK_COSMETICS.find(r => r.slug === slug) || {}).tier || slug;
-  const mark = list => list.filter(visible).map(c => ({
+  const gateOpen = c => !c.gateLevel || bought.has(c.id) || !!(cleared && cleared.has(c.gateLevel));
+  const mark = (list, keepGated) => list.filter(c => keepGated || visible(c)).map(c => ({
     id: c.id, name: c.name, unlock: c.unlock || null,
+    // Songs only (null for everything else): the mp3 under /audio/music/, the
+    // House it belongs to, and whether that House is finished so the Shop may
+    // sell it. Settings lists ALL songs and greys out the ones not owned.
+    track: c.track || null, house: c.house || null, gateOpen: gateOpen(c),
     // Names the rung that actually unlocks it (the first, unless unlockLevel
     // says otherwise), so a locked title reads "Master of Diamonds".
     unlockName: c.unlock ? ((ACHIEVEMENTS.find(a => a.id === c.unlock) || {}).names || [])[(c.unlockLevel || 1) - 1] || null : null,
@@ -2051,6 +2072,7 @@ function cosmeticsFor(achievements, stats, purchases, cleared) {
     rankSets: mark(COSMETICS.rankSets),
     tableThemes: mark(COSMETICS.tableThemes),
     avatars: mark(COSMETICS.avatars),
+    music: mark(COSMETICS.music, true),
   };
 }
 
@@ -2082,6 +2104,8 @@ function filterEquipped(equipped, catalog) {
     // side) — same "always resolve to something equipped" reasoning as
     // scene/cardFront above, not a fixed fallback picked at random.
     tableTheme: ok(catalog.tableThemes, equipped.tableTheme) || 'theme_obsidienne',
+    // null = no song: Casual and Ranked stay silent unless one is owned AND chosen.
+    music: ok(catalog.music, equipped.music),
   };
 }
 
@@ -12239,7 +12263,7 @@ io.on('connection', (socket) => {
   // than rejected outright, so a partially-stale client (one that hasn't
   // reloaded since a cosmetic was renamed) still saves the fields it got
   // right instead of failing the whole request.
-  socket.on('saveCosmetics', async ({ token, scene, cardFront, crest, crest2, title, rankSet, tableTheme }) => {
+  socket.on('saveCosmetics', async ({ token, scene, cardFront, crest, crest2, title, rankSet, tableTheme, music }) => {
     if (!DB_ENABLED || !token) return;
     try {
       const account = await db.findAccountByToken(token);
@@ -12259,6 +12283,7 @@ io.on('connection', (socket) => {
         title: pick(catalog.titles, title),
         rankSet: pick(catalog.rankSets, rankSet),
         tableTheme: pick(catalog.tableThemes, tableTheme),
+        music: pick(catalog.music, music),
       });
       const after = await loadPlayerCosmetics(account.id);
       socket.emit('profileCosmeticsOk', {
@@ -12294,9 +12319,9 @@ io.on('connection', (socket) => {
     try {
       const account = await db.findAccountByToken(token);
       if (!account) return socket.emit('shopError', { msg: 'Your session expired — log in again.' });
-      // Only the four purchasable categories are even searched, so an id
+      // Only the purchasable categories are even searched, so an id
       // from any other category simply isn't found.
-      const item = [...COSMETICS.scenes, ...COSMETICS.cardFronts, ...COSMETICS.tableThemes, ...COSMETICS.avatars].find(c => c.id === itemId);
+      const item = [...COSMETICS.scenes, ...COSMETICS.cardFronts, ...COSMETICS.tableThemes, ...COSMETICS.avatars, ...COSMETICS.music].find(c => c.id === itemId);
       if (!item || !item.price) return socket.emit('shopError', { msg: "That item isn't for sale." });
       // A campaign reward can only be bought once its boss table is cleared.
       // Checked here, not just by leaving it out of the catalog, so a
@@ -12310,6 +12335,12 @@ io.on('connection', (socket) => {
         return socket.emit('shopError', {
           msg: res.reason === 'funds' ? 'Not enough credits yet.' : 'You already own that.',
         });
+      }
+      // A first song starts playing without a trip to Settings: if nothing is
+      // chosen yet, the one just bought becomes the choice.
+      if (item.track) {
+        const st = await db.getCosmetics(account.id);
+        if (!st.music) await db.saveCosmetics(account.id, { music: item.id });
       }
       const after = await loadPlayerCosmetics(account.id);
       socket.emit('shopOk', { itemId: item.id, name: item.name, price: item.price, balance: res.balance });

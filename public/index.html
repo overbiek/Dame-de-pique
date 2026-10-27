@@ -1456,12 +1456,12 @@ html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:st
 .ib-list{flex:1;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .friend-btn:disabled{opacity:.6;cursor:default}
 
-#invite-modal{
+#invite-modal,#music-modal{
   display:none;position:fixed;inset:0;z-index:240;
   background:rgba(3,16,11,.78);backdrop-filter:blur(3px);
   padding:calc(env(safe-area-inset-top) + 14px) 12px calc(env(safe-area-inset-bottom) + 14px);
 }
-#invite-modal.on{display:flex;align-items:center;justify-content:center}
+#invite-modal.on,#music-modal.on{display:flex;align-items:center;justify-content:center}
 .inv-card{
   position:relative;width:100%;max-width:400px;max-height:100%;
   display:flex;flex-direction:column;padding:16px 16px 12px;
@@ -3831,6 +3831,37 @@ html.landscape-mode #s-draw .dcw .slot-tier{display:none}
 .set-slider input[type=range]:disabled{opacity:.4;cursor:default}
 .set-val{width:3.2em;text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:.8rem;color:var(--muted)}
 #s-settings .set-card input[type=email],#s-settings .set-card input[type=password]{width:100%;box-sizing:border-box}
+.set-actions{display:flex;gap:6px;flex:0 0 auto}
+.set-listbtn{min-width:40px;padding-left:10px;padding-right:10px;display:inline-flex;align-items:center;justify-content:center}
+.set-listbtn svg{width:18px;height:18px;display:block}
+.set-song{margin:10px 0 0;font-size:.78rem;color:var(--muted)}
+.set-song b{color:var(--cream);font-weight:600}
+#set-email-card .set-hint{margin:2px 0 8px}
+/* The recovery email lives in the LEFT rail, under the Settings title, at the
+   bottom (rows 4-5 are the rail's auto rows; row 3 is the flexible one). It is a
+   direct child of .center-wrap, so the shared rule would push it into the body
+   column - the id here wins that, and puts the card's own frame back. */
+html.landscape-mode #s-settings.screen.active>.center-wrap>#set-email-card{
+  grid-column:1;grid-row:4 / 6;align-self:end;margin:0 0 2px;
+  overflow:visible;padding:11px;border:1px solid var(--line);
+}
+/* Song list popup (Settings > Music > list button) */
+.mus-row{
+  display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:10px 6px;
+  border:none;border-bottom:1px solid var(--line);background:none;color:var(--cream);
+  font:inherit;cursor:pointer;touch-action:manipulation;
+}
+.mus-row:last-child{border-bottom:none}
+.mus-radio{flex:0 0 auto;width:17px;height:17px;border-radius:50%;border:2px solid rgba(var(--ddp-brass-rgb),.7)}
+.mus-row.on .mus-radio{background:radial-gradient(circle,var(--gold-hi) 0 42%,transparent 46%)}
+.mus-txt{flex:1;min-width:0}
+.mus-name{display:block;font-size:.9rem;font-weight:600}
+.mus-sub{display:block;font-size:.7rem;color:var(--muted);margin-top:1px}
+.mus-row.locked{cursor:default;opacity:.4;filter:grayscale(.8)}
+.mus-row.locked .mus-name{text-decoration:line-through}
+.mus-row.locked .mus-radio{border-style:dashed}
+.mus-thumb{display:grid;place-items:center;font-size:1.6rem;color:var(--cream);background:rgba(var(--ddp-brass-rgb),.14)}
+
 
 /* ══ Exit controls & countdown ══ */
 .btn-sm{padding:9px 15px;font-size:.8rem}
@@ -6528,14 +6559,20 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
       <div class="set-card">
         <div class="set-row">
           <div class="set-title">🎵 Music</div>
-          <button class="btn btn-ghost btn-sm set-toggle" id="set-music-toggle" onclick="toggleMusicMuted()" aria-pressed="true">On</button>
+          <div class="set-actions">
+            <button class="btn btn-ghost btn-sm set-listbtn" id="set-music-list" onclick="openMusicPicker()" aria-label="Choose the song for Casual and Ranked games" title="Songs">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.2" fill="currentColor" stroke="none"/></svg>
+            </button>
+            <button class="btn btn-ghost btn-sm set-toggle" id="set-music-toggle" onclick="toggleMusicMuted()" aria-pressed="true">On</button>
+          </div>
         </div>
         <div class="set-slider">
           <input type="range" id="set-music-vol" min="0" max="100" step="1" value="100"
                  aria-label="Music volume" oninput="onMusicVolInput(this.value)">
           <span class="set-val" id="set-music-val">100%</span>
         </div>
-        <p class="set-hint">Music and room ambience play in Campaign mode.</p>
+        <p class="set-song" id="set-song-line"></p>
+        <p class="set-hint">Campaign plays its own music. The song you choose with the list button plays in Casual, Ranked and the Daily Challenge.</p>
       </div>
 
       <div class="set-card">
@@ -6545,14 +6582,6 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
           <button class="btn btn-ghost btn-block" onclick="goPersonal()">Go to My Account</button>
         </div>
         <div id="set-account-user" style="display:none">
-          <label class="set-label" for="pv-email">Recovery email</label>
-          <p class="set-hint">Only used to send you a link if you forget your password.</p>
-          <input type="email" id="pv-email" autocomplete="email" placeholder="you@example.com">
-          <button class="btn btn-ghost btn-block" onclick="saveEmail()" style="margin-top:10px">Save email</button>
-          <div id="err-email" class="note bad" style="display:none"></div>
-          <p id="set-saved" class="note gold" style="display:none;text-align:center">Saved.</p>
-
-          <div class="set-sep"></div>
           <button class="btn danger btn-block" id="set-del-open" onclick="openDeleteAccount()">Delete account…</button>
           <div id="set-del-confirm" style="display:none">
             <p class="set-hint set-warn">This permanently deletes your account, statistics, credits, purchases, friends and campaign progress. It cannot be undone.</p>
@@ -6571,6 +6600,17 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
         <button class="btn btn-ghost btn-block" onclick="openPrivacy()">Privacy policy</button>
         <button class="btn btn-ghost btn-block" onclick="openDeletionInfo()" style="margin-top:10px">How to delete your data</button>
       </div>
+    </div>
+
+    <!-- The recovery email: in landscape it sits in the left rail, bottom, under
+         the Settings title (see #set-email-card in the CSS), which frees the
+         right-hand panel. Same id as before (pv-email), so
+         saveEmail() and the authOk prefill did not change. Logged-in only. -->
+    <div class="set-card" id="set-email-card" style="display:none">
+      <label class="set-label" for="pv-email">Recovery email</label>
+      <p class="set-hint">Only used to reset a forgotten password.</p>
+      <input type="email" id="pv-email" autocomplete="email" placeholder="you@example.com">
+      <button class="btn btn-ghost btn-block" onclick="saveEmail()" style="margin-top:8px">Save email</button>
     </div>
   </div>
 </section>
@@ -7358,6 +7398,7 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
         <button class="cos-tab" type="button" data-shop-cat="scene" onclick="switchShopCat('scene')">Backgrounds</button>
         <button class="cos-tab" type="button" data-shop-cat="avatar" onclick="switchShopCat('avatar')">Avatars</button>
         <button class="cos-tab" type="button" data-shop-cat="cardFront" onclick="switchShopCat('cardFront')">Cards</button>
+        <button class="cos-tab" type="button" data-shop-cat="music" onclick="switchShopCat('music')">Music</button>
         <button class="cos-tab" type="button" data-shop-cat="boosts" onclick="switchShopCat('boosts')">Boosts</button>
       </div>
       <div id="shop-loading" class="cos-empty" style="display:none">Loading the shop…</div>
@@ -7799,6 +7840,20 @@ html[data-theme="sable"].landscape-mode .sg-c.moon b{color:#7A5A18}
   </div>
 </div>
 
+<!-- ═══ SONG LIST (Settings > Music > list button) ═══
+     One choice for Casual AND Ranked. Songs you do not own are listed but
+     struck through and dimmed. Same popup chrome as the invite popup. -->
+<div id="music-modal" onclick="if(event.target===this)closeMusicPicker()">
+  <div class="inv-card">
+    <div class="inv-head">
+      <h3>Songs</h3>
+      <button class="rulex" onclick="closeMusicPicker()" aria-label="Close">&#10005;</button>
+    </div>
+    <p class="set-hint" style="margin:0 0 6px">Plays in Casual, Ranked and the Daily Challenge. Earn songs by finishing a House, then buy them in the Shop.</p>
+    <div class="inv-list" id="mus-list"></div>
+  </div>
+</div>
+
 <!-- ═══ FRIEND PROFILE CARD ═══
      Tapping a friend row (friendRowHTML's new .friend-main wrapper) opens
      this. Same #rules/.rulecard open-by-class pattern: closeFriendProfile
@@ -8008,6 +8063,92 @@ function toggleMusicMuted(){
 // Track names are per House (spades/hearts/clubs/diamonds); a House's last
 // chapter asks for "<house>-endgame" and falls back to the ordinary track
 // until that file exists. A track with no file is silent, not an error.
+/* ── Songs for Casual and Ranked ──
+   The server decides what you own (COSMETICS.music, bought in the Shop once
+   the House is finished) and what is chosen; this table is presentation only,
+   so the list can show every song - struck through - before any catalog has
+   arrived, and for guests. Keep it in step with MUSIC_SONGS in server.js.
+   `equippedSong` is a song id; ddp.musicSong caches it so the right track
+   starts with the first game (same idea as ddp.scene). It is overwritten by
+   every server reply and cleared on logout. var, not let: resetCosmeticLook
+   (above) calls setEquippedSong and can run first. */
+const MUSIC_SONGS=[
+  {id:'music_spades',         track:'spades',         name:'House of Spades',   house:'House of Spades'},
+  {id:'music_spades_endgame', track:'spades-endgame', name:'Smokier Than Usual', house:'House of Spades'},
+  {id:'music_hearts',         track:'hearts',         name:'House of Hearts',   house:'House of Hearts'},
+  {id:'music_hearts_endgame', track:'hearts-endgame', name:'Candlelit Throne',  house:'House of Hearts'},
+  {id:'music_clubs',          track:'clubs',          name:'House of Clubs',    house:'House of Clubs'},
+  {id:'music_diamonds',       track:'diamonds',       name:'House of Diamonds', house:'House of Diamonds'},
+];
+const MUSIC_SONG_KEY='ddp.musicSong';
+var equippedSong=(function(){ try{ return localStorage.getItem('ddp.musicSong')||''; }catch(e){ return ''; } })();
+function songById(id){ return MUSIC_SONGS.find(m=>m.id===id)||null; }
+function setEquippedSong(id){
+  equippedSong=songById(id)?id:'';
+  try{ equippedSong?localStorage.setItem(MUSIC_SONG_KEY,equippedSong):localStorage.removeItem(MUSIC_SONG_KEY); }catch(e){}
+  renderSongLine();
+  if($('music-modal')&&$('music-modal').classList.contains('on')) renderMusicPicker();
+  syncCampaignAudio();
+}
+function renderSongLine(){
+  const el=$('set-song-line'); if(!el) return;
+  const m=songById(equippedSong);
+  el.innerHTML=!account?'Casual &amp; Ranked: log in to unlock songs'
+    :m?`Casual &amp; Ranked: <b>${esc(m.name)}</b>`:'Casual &amp; Ranked: no song chosen';
+}
+// The catalog entry for a song (state: owned / sold once the House is done /
+// not yet), or null while it has not arrived or for a guest.
+function songState(m){
+  const c=cosState&&cosState.catalog&&cosState.catalog.music&&cosState.catalog.music.find(x=>x.id===m.id);
+  return c||null;
+}
+function openMusicPicker(){
+  SFX.play('click');
+  $('music-modal').classList.add('on');
+  renderMusicPicker();
+  if(account) requestCosmetics();
+}
+function closeMusicPicker(){
+  $('music-modal').classList.remove('on');
+  syncCampaignAudio();   // ends a song previewed from the list
+}
+function renderMusicPicker(){
+  const el=$('mus-list'); if(!el) return;
+  let rows=`<button class="mus-row${equippedSong?'':' on'}" onclick="pickSong('')">
+    <span class="mus-radio"></span>
+    <span class="mus-txt"><span class="mus-name">No music</span><span class="mus-sub">Silent tables</span></span></button>`;
+  rows+=MUSIC_SONGS.map(m=>{
+    const st=songState(m), owned=!!(st&&st.unlocked);
+    const sub=owned?m.house+(/endgame/.test(m.track)?' · final chapter':' · main theme')
+      :!account?'Log in, finish the House, then buy it in the Shop'
+      :(st&&st.gateOpen)?'Buy it in the Shop'
+      :'Finish the '+m.house+' to unlock it';
+    return `<button class="mus-row${equippedSong===m.id?' on':''}${owned?'':' locked'}" ${owned?`onclick="pickSong('${m.id}')"`:'aria-disabled="true"'}>
+      <span class="mus-radio"></span>
+      <span class="mus-txt"><span class="mus-name">${esc(m.name)}</span><span class="mus-sub">${esc(sub)}</span></span></button>`;
+  }).join('');
+  el.innerHTML=rows;
+}
+function pickSong(id){
+  if(id&&!(songState(songById(id))||{}).unlocked) return;
+  SFX.play('click');
+  setEquippedSong(id);
+  if(account&&accountToken) socket.emit('saveCosmetics',{token:accountToken,music:id});
+  // Hear it right away: the list is the only place a song's name has to do
+  // for a tune. closeMusicPicker() hands the speakers back.
+  const m=songById(id);
+  if(typeof Music!=='undefined'&&!loadMusicMuted()) Music.set(m?{track:m.track}:null,m?undefined:{now:true});
+}
+// Which track the CURRENT room should play, or null. Casual, Ranked and the
+// Daily Challenge: campaign has its own music, and the tutorial stays quiet.
+const SONG_SCREENS=new Set(['lobby','draw','pass','play','summary','final']);
+function roomSongTrack(){
+  if(tutorialActive||!equippedSong||!SONG_SCREENS.has(currentScreenId)) return null;
+  if(!S||S.campaign) return null;
+  const m=songById(equippedSong);
+  return m?m.track:null;
+}
+
 const MUSIC_HOUSES=['spades','hearts','clubs','diamonds'];
 function syncCampaignAudio(){
   if(typeof Music==='undefined') return;
@@ -8031,6 +8172,9 @@ function syncCampaignAudio(){
   // Between a campaign hand and its result the same room should carry on
   // through the round summary / final screen (Music holds it a few seconds).
   // Anywhere else — the menu above all — leaving means it fades out fast.
+  // Not campaign: a Casual or Ranked game plays the song you chose, if any.
+  const roomTrack=chId?null:roomSongTrack();
+  if(roomTrack){ Music.set({track:roomTrack}); return; }
   if(!chId){
     const between=currentScreenId==='summary'||currentScreenId==='final';
     Music.set(null,between?undefined:{now:true});
@@ -8322,6 +8466,7 @@ function initCosmeticLook(){
 // leaving the previous account's unlocks on screen until the next load.
 function resetCosmeticLook(){
   try{ localStorage.removeItem(SCENE_KEY); localStorage.removeItem(CARDFRONT_KEY); }catch(e){}
+  setEquippedSong('');   // the previous account's song must not keep playing
   applyScene(DEFAULT_SCENE,false);
   applyCardFront(DEFAULT_CARDFRONT,false);
 }
@@ -11307,6 +11452,9 @@ const SHOP_CATS={
   scene:{label:'background',kind:'scene',catalogKey:'scenes'},
   avatar:{label:'avatar',kind:'avatar',catalogKey:'avatars'},
   cardFront:{label:'card design',kind:'cardFront',catalogKey:'cardFronts'},
+  // Songs for Casual and Ranked. Only the ones whose House you have finished
+  // are for sale (gateOpen); the rest are not offered here at all.
+  music:{label:'song',kind:'music',catalogKey:'music'},
   // Not a cosmetic: no catalogKey, rendered by renderBoostsShop from its
   // own server payload (campaignShopOk) instead of cosState.catalog.
   boosts:{label:'boost',kind:'boosts'},
@@ -11387,11 +11535,17 @@ function renderShop(){
   if(shopCat==='boosts'){ renderBoostsShop(); return; }
 
   const {label,kind,catalogKey}=SHOP_CATS[shopCat];
-  const forSale=cosState.catalog[catalogKey].filter(c=>c.price&&!c.unlocked);
+  const forSale=cosState.catalog[catalogKey].filter(c=>c.price&&!c.unlocked&&c.gateOpen!==false);
+  const anyOpen=cosState.catalog[catalogKey].some(c=>c.gateOpen!==false);
+  const hint=kind==='music'
+    ? 'Choose your song in Settings &rarr; Music (the list button). It plays in Casual, Ranked and the Daily Challenge.'
+    : 'Buying unlocks it immediately &mdash; equip anything you own from My Account.';
   wrap.innerHTML=forSale.length
     ? `<div class="cos-grid">`+forSale.map(c=>shopItemHTML(kind,c)).join('')+`</div>`
-      +`<p class="pick-hint">Buying unlocks it immediately &mdash; equip anything you own from My Account.</p>`
-    : `<div class="cos-empty">You own every ${label} in the Shop already &mdash; nice collection.</div>`;
+      +`<p class="pick-hint">${hint}</p>`
+    : (kind==='music'&&!anyOpen)
+      ? `<div class="cos-empty">Finish a House in the Campaign and its songs open here.</div>`
+      : `<div class="cos-empty">You own every ${label} in the Shop already &mdash; nice collection.</div>`;
 }
 
 // forSale already filtered out anything unlocked, so every item reaching
@@ -11404,10 +11558,13 @@ function shopItemHTML(kind,item){
       ? `<span class="cos-thumb">${themeSwatchThumb(item.id)}</span>`
       : kind==='avatar'
         ? `<span class="cos-thumb">${avatarHTML(item.id,item.name,true)}</span>`
-        : `<span class="cos-thumb">${cardFrontThumb(item.id)}</span>`;
+        : kind==='music'
+          ? `<span class="cos-thumb mus-thumb">&#9834;</span>`
+          : `<span class="cos-thumb">${cardFrontThumb(item.id)}</span>`;
   return `<div class="cos-item deco-box">
     ${thumb}
     <span class="cos-body"><span class="cos-name">${esc(item.name)}</span>
+      ${kind==='music'?`<span class="cos-sub">${esc(item.house||'Song')}</span>`:''}
       <span class="cos-price${afford?'':' short'}">${creditChipHTML(13)}${fmtCredits(item.price)}</span>
       <button class="cos-buy"${afford?'':' disabled'} onclick="buyCosmetic('${item.id}')">${afford?'Buy':'Not enough'}</button>
     </span>
@@ -11927,6 +12084,7 @@ socket.on('profileCosmeticsOk',d=>{
   applyScene(cosState.equipped.scene);
   applyCardFront(cosState.equipped.cardFront);
   applyTableTheme(THEME_ID_TO_KEY[cosState.equipped.tableTheme]||DDP_DEFAULT_THEME);
+  setEquippedSong(cosState.equipped.music||'');
   if(d.credits) setCreditBalance(d.credits.balance);
   renderCosmeticPanels();
   renderAchievements();
@@ -12062,7 +12220,7 @@ function saveEmail(){
 
 /* ── Settings screen (#s-settings) ──
    Sound/Music switches + volume, the recovery email, account deletion and the
-   legal pages. The email field kept its ids (pv-email, err-email) when it moved
+   legal pages. The email field kept its id (pv-email) when it moved
    here from My Account, so saveEmail() and the authOk prefill are unchanged. */
 function goSettings(){
   show('settings');
@@ -12071,11 +12229,14 @@ function goSettings(){
   $('set-sfx-vol').value=sv; $('set-sfx-val').textContent=sv+'%';
   $('set-music-vol').value=mv; $('set-music-val').textContent=mv+'%';
   renderSettingsAccount();
+  renderSongLine();
+  if(account) requestCosmetics();   // the song list reads the catalog (what you own)
 }
 function renderSettingsAccount(){
   const on=!!account;
   $('set-account-guest').style.display=on?'none':'block';
   $('set-account-user').style.display=on?'block':'none';
+  $('set-email-card').style.display=on?'block':'none';
   if(on&&$('pv-email')) $('pv-email').value=account.email||'';
   cancelDeleteAccount();
 }
@@ -13240,7 +13401,10 @@ socket.on('authOk',d=>{
   }else if(lastAuthAction==='updateEmail'){
     renderAccountUI();
     if($('pv-email')) $('pv-email').value=account.email||'';
-    toast($('s-settings').classList.contains('active')?'set-saved':'pv-saved','Saved.');
+    // On Settings the recovery email sits in the narrow left rail, which has no
+    // spare height for an inline "Saved." line - say it in the banner instead.
+    if($('s-settings').classList.contains('active')) showBanner('Email saved.',{dot:'gold'});
+    else toast('pv-saved','Saved.');
   }else{ // resume (silent — this fires on every page load if a token is stored)
     renderAccountUI();
     if($('s-personal').classList.contains('active')){
@@ -13255,13 +13419,14 @@ socket.on('authError',d=>{
   if(lastAuthAction==='resume'){
     // stale/expired token from a previous visit — drop it quietly, no need to alarm anyone
     accountToken=''; saveAccountToken('');
+    setEquippedSong('');   // stale login: no account, so no songs
     tryAutoJoin();   // not logged in after all: a pending link joins as a guest
     return;
   }
   if(lastAuthAction==='requestReset') toast('err-reset-request',d.msg);
   else if(lastAuthAction==='resetPassword') toast('err-reset-new',d.msg);
   else if(lastAuthAction==='deleteAccount') toast('err-delete',d.msg);
-  else if(lastAuthAction==='updateEmail') toast('err-email',d.msg);
+  else if(lastAuthAction==='updateEmail') showBanner(d.msg,{dot:'info',ms:6000});   // the email card is in the narrow rail: no room for an inline error
   else toast('err-auth',d.msg);
 });
 socket.on('passwordResetRequested',d=>{

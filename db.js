@@ -406,6 +406,8 @@ async function ensureSchema() {
   // into a real shop-gated cosmetic — same NULL-means-"use the default"
   // convention as rank_set, resolved by filterEquipped to theme_obsidienne.
   await pool.query(`ALTER TABLE player_cosmetics ADD COLUMN IF NOT EXISTS table_theme TEXT;`);
+  // The song played in Casual and Ranked games (a COSMETICS.music id).
+  await pool.query(`ALTER TABLE player_cosmetics ADD COLUMN IF NOT EXISTS music TEXT;`);
 
   // ── Campaign Mode ("The Hundred Tables") ────────────────────────
   // A THIRD, separate progression track from ranked MMR and casual/daily
@@ -1411,7 +1413,7 @@ async function getAchievementStats(accountId) {
 // queried by element.
 async function getCosmetics(accountId) {
   const { rows } = await pool.query(
-    `SELECT scene, card_front, crest, crest2, title, rank_set, table_theme, seen_achievements
+    `SELECT scene, card_front, crest, crest2, title, rank_set, table_theme, music, seen_achievements
      FROM player_cosmetics WHERE account_id = $1`,
     [accountId]
   );
@@ -1426,6 +1428,7 @@ async function getCosmetics(accountId) {
     title: (c && c.title) || null,
     rankSet: (c && c.rank_set) || null,
     tableTheme: (c && c.table_theme) || null,
+    music: (c && c.music) || null,
     seen: c && c.seen_achievements ? c.seen_achievements.split(',').filter(Boolean) : [],
   };
 }
@@ -1434,12 +1437,12 @@ async function getCosmetics(accountId) {
 // impossible, so an explicit empty string is the unequip signal and is
 // stored as NULL. The caller (server.js) has already validated every ID
 // against what the account has actually unlocked.
-async function saveCosmetics(accountId, { scene, cardFront, crest, crest2, title, rankSet, tableTheme }) {
+async function saveCosmetics(accountId, { scene, cardFront, crest, crest2, title, rankSet, tableTheme, music }) {
   const norm = v => (v === undefined ? undefined : (v || null));
-  const s = norm(scene), cf = norm(cardFront), cr = norm(crest), cr2 = norm(crest2), t = norm(title), rs = norm(rankSet), tt = norm(tableTheme);
+  const s = norm(scene), cf = norm(cardFront), cr = norm(crest), cr2 = norm(crest2), t = norm(title), rs = norm(rankSet), tt = norm(tableTheme), mu = norm(music);
   await pool.query(
-    `INSERT INTO player_cosmetics (account_id, scene, card_front, crest, crest2, title, rank_set, table_theme)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO player_cosmetics (account_id, scene, card_front, crest, crest2, title, rank_set, table_theme, music)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $16)
      ON CONFLICT (account_id) DO UPDATE SET
        scene = CASE WHEN $9 THEN $2 ELSE player_cosmetics.scene END,
        card_front = CASE WHEN $10 THEN $3 ELSE player_cosmetics.card_front END,
@@ -1448,9 +1451,11 @@ async function saveCosmetics(accountId, { scene, cardFront, crest, crest2, title
        title = CASE WHEN $13 THEN $6 ELSE player_cosmetics.title END,
        rank_set = CASE WHEN $14 THEN $7 ELSE player_cosmetics.rank_set END,
        table_theme = CASE WHEN $15 THEN $8 ELSE player_cosmetics.table_theme END,
+       music = CASE WHEN $17 THEN $16 ELSE player_cosmetics.music END,
        updated_at = now()`,
     [accountId, s ?? null, cf ?? null, cr ?? null, cr2 ?? null, t ?? null, rs ?? null, tt ?? null,
-     s !== undefined, cf !== undefined, cr !== undefined, cr2 !== undefined, t !== undefined, rs !== undefined, tt !== undefined]
+     s !== undefined, cf !== undefined, cr !== undefined, cr2 !== undefined, t !== undefined, rs !== undefined, tt !== undefined,
+     mu ?? null, mu !== undefined]
   );
   return getCosmetics(accountId);
 }

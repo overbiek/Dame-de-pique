@@ -4761,6 +4761,53 @@ before pushing.
   errors, endgame adds `+t`, menu rail fits at 667x375. The lap seam itself
   (at 132s) was not waited out.
 
+## Songs for Casual and Ranked (Shop "Music" tab + Settings song list)
+- **Campaign keeps its own music untouched.** Casual and Ranked rooms now play ONE
+  chosen song (the same choice for both, deliberately - no per-mode pick), looped
+  by the existing `Music` engine as `Music.set({track})` with no bed. Silent by
+  default: nothing plays until a song is owned AND chosen. The Daily Challenge
+  plays it too (owner's call, 2026-10-29); the tutorial does not.
+- **Catalog**: `MUSIC_SONGS` in `server.js` -> `COSMETICS.music`, one entry per mp3
+  in `public/audio/music/` (`track` = filename without `.mp3`): spades, spades-
+  endgame ("Smokier Than Usual"), hearts, hearts-endgame ("Candlelit Throne"),
+  clubs, diamonds. 1500 credits each (`MUSIC_PRICE`), `gateLevel` = the House's
+  FINAL boss table (100/200/300/400). **Clubs and Diamonds have no endgame track
+  yet: add the mp3 AND a `MUSIC_SONGS` row (and the client mirror) together.**
+  The House song names are placeholders ("House of Spades" ...); display strings only.
+- **Unlike the other campaign rewards, songs are ALWAYS in the catalog.** Settings
+  lists every song and strikes through / dims the ones not owned, so
+  `cosmeticsFor` calls `mark(COSMETICS.music, true)` (no `visible` filter) and
+  adds `gateOpen` (House finished, or already owned) plus `track`/`house` to every
+  item. The Shop only sells `gateOpen && !unlocked`; `buyCosmetic` still
+  enforces `gateLevel` server-side, so a crafted id cannot skip the gate.
+- **Equipped**: `player_cosmetics.music` (new column, `ADD COLUMN IF NOT EXISTS`),
+  validated by `filterEquipped` like every cosmetic (not owned -> null).
+  `saveCosmetics` takes `music` ('' = no music). Buying a song when none is
+  chosen yet auto-chooses it (`buyCosmetic`), so the first purchase is heard
+  without a trip to Settings; later purchases never override a choice.
+- **Client**: `equippedSong` (a song id, `var` for the usual TDZ reason) is cached
+  in `ddp.musicSong` so the right track starts with the first game; every
+  `profileCosmeticsOk` overwrites it, logout / a stale login clears it.
+  `roomSongTrack()` -> `syncCampaignAudio()`: lobby, draw, pass, play, summary and
+  final screens of a non-campaign, non-daily room. The client's `MUSIC_SONGS` is
+  presentation only (so guests and a not-yet-loaded catalog still show the list);
+  ownership always comes from `cosState.catalog.music`.
+- **Settings layout**: the list button (SVG, not an emoji) sits beside the On/Off
+  toggle in the Music card and opens `#music-modal` (same popup chrome as the
+  invite popup): "No music" + every song, owned ones selectable (and previewed
+  at once; `closeMusicPicker` hands the speakers back), the rest struck through
+  with why ("Finish the House of X", "Buy it in the Shop"). **The recovery email
+  moved to the LEFT rail**, bottom, under the Settings title (`#set-email-card`,
+  grid rows 4-5 of the shared rail grid; a direct child of `.center-wrap`, which
+  is why it needs its own id-qualified rule to stay out of the body column).
+  Its "Saved." confirmation and any error are BANNERS now, not inline notes: the
+  rail has ~60px of slack at 667x375/20px root font and an inline note ate it
+  (card overlapped the title). Verified at 915x412 and 667x375, 16/18/20px.
+- Shop: a sixth tab, **Music**, between Cards and Boosts.
+- **Not run against Postgres**: the new column, `saveCosmetics` with `music` and the
+  buy-then-auto-choose path are unexecuted SQL. The catalog logic (what is open,
+  owned, equippable) was unit-tested against a copy of `server.js`.
+
 ## Settings screen (`#s-settings`), account deletion, legal pages
 - **The menu's Sound | Music pair is gone; one `⚙ Settings` button (`goSettings()`) takes
   its place** in the landscape rail (How to play | Tutorial is unchanged beneath it). The

@@ -4923,7 +4923,35 @@ before pushing.
   nobody starts, not a real hand in progress. `EMPTY_CLOSE_MS` (nobody
   connected at all) is untouched and still applies to every phase.
 
+## Ranked results were silently dropped from 2026-08-18 to 2026-10-28 (FIXED)
+- **Symptom (reported 2026-10-28):** a full 4-human ranked game finished, the final
+  scores and credits showed, but no MMR box appeared and placement stayed 0/5.
+- **Cause:** `db.applyRankedMmr` added two untyped parameters (`$3 + $2`, the
+  starting-MMR parameter introduced by f77b630 on 2026-08-18; it used to be the
+  literal `1000 + $2`). Postgres rejects that with "operator is not unique:
+  unknown + unknown". `trackStat` retried 3 times, logged and gave up, so EVERY
+  ranked game since then banked NO MMR and NO placement count, for everyone.
+  Everything else in a finished game (credits, achievements, per-trick/round
+  stats) goes through other queries and kept working, which is why nothing
+  looked broken. A ranked game needs four humans, so it went unnoticed.
+- **Fix:** explicit `::int` casts on every `$2`/`$3` in that statement (comment
+  there says why). **Games played before the fix are not recoverable** - their
+  MMR deltas were never stored. Every account's ranked MMR/placement still reads
+  what it was on 2026-08-18.
+- **Rule: never do arithmetic on two bare `$n` in SQL; cast them.**
+- `applyRankedResult` now logs one line per finished ranked game (accounts,
+  scores, deltas) and one per recorded player, and `trackStat`'s give-up log now
+  includes the pg error code. Search Railway logs for `Ranked game`.
+
 ## Testing convention
+- **Real Postgres without installing anything: PGlite** (`@electric-sql/pglite`, Postgres
+  compiled to WASM, `npm i` in a scratch folder OUTSIDE the repo). Make a copy of `db.js`
+  with the `require('pg')` line replaced by a ~3-line `Pool` shim that forwards
+  `query`/`connect` to a `new PGlite()`, then call the real functions: `ensureSchema()`
+  (run it twice), `applyRankedMmr`, `saveCosmetics`, `purchaseItem`... This found the ranked
+  bug above in one run and verified the `music` column, `saveCosmetics` and a song purchase.
+  It uses the same extended-protocol parameter typing as the `pg` driver, which is the
+  thing a mock cannot reproduce. Do this for any new SQL before pushing.
 - Copy `server.js` → `server.test.js`, sed the AI/round `setTimeout`
   delays down to ~5ms for fast local iteration; delete before shipping
 - Test `db.js` against a real local Postgres instance, not a mock

@@ -118,7 +118,7 @@ function trackStat(fn) {
       if (triesLeft > 0) {
         setTimeout(() => attempt(triesLeft - 1), 400);
       } else {
-        console.error('Stats tracking error (gave up after retries):', err.message);
+        console.error('Stats tracking error (gave up after retries):', err.message, err.code ? `[pg ${err.code}]` : '', err.detail || '');
       }
     });
   };
@@ -10869,13 +10869,18 @@ function applyRankedResult(G) {
   if (!G.ranked) return;
   const scores = G.players.map(p => p.score);
   const deltas = computeMmrChanges(scores);
+  // One line per finished ranked game, so "my placement did not count" can be
+  // answered from the Railway logs: who was seated with an account (a seat with
+  // no accountId is skipped below), the scores and the MMR deltas.
+  console.log(`Ranked game ${G.code} finished: accounts=${JSON.stringify(G.players.map(p => p.accountId || null))} scores=${JSON.stringify(scores)} deltas=${JSON.stringify(deltas)}`);
   for (let i = 0; i < 4; i++) {
     const acctId = G.players[i].accountId;
-    if (!acctId) continue;
+    if (!acctId) { console.warn(`Ranked game ${G.code}: seat ${i} has no accountId, its result is NOT recorded`); continue; }
     const socketId = G.players[i].socketId;
     trackStat(async () => {
       const applied = await db.applyRankedMmr(acctId, deltas[i]);
       const { mmr, placementGamesPlayed } = applied;
+      console.log(`Ranked game ${G.code}: account ${acctId} recorded (mmr ${mmr}, placement ${placementGamesPlayed}/5)`);
       const isPlacement = placementGamesPlayed < 5;
       // A promotion sound needs to know the player crossed into a higher TIER.
       // Only a settled rank can be promoted: the game that first reveals the

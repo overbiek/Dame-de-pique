@@ -1126,14 +1126,21 @@ async function applyRankedMmr(accountId, mmrDelta) {
     // which is definitionally a placement game.
     const wasPlacement = existing.length ? existing[0].placement_games_played < 5 : true;
     const appliedDelta = mmrDelta * (wasPlacement ? 2 : 1);
+    // The ::int casts are NOT decoration. `$3 + $2` adds two untyped parameters
+    // and Postgres refuses it ("operator is not unique: unknown + unknown"), so
+    // from 2026-08-18 (the commit that replaced the literal `1000 + $2` with the
+    // starting-MMR parameter) until this fix EVERY ranked result failed, was
+    // retried, and was dropped: placement stayed 0/5 and MMR never moved.
+    // Verified against a real Postgres engine (PGlite): the uncast SQL fails,
+    // this version inserts and updates correctly. Keep every use of $2/$3 cast.
     const { rows } = await client.query(
       `INSERT INTO ranked_stats (account_id, mmr, placement_games_played, mmr_highest, mmr_lowest)
-       VALUES ($1, GREATEST(0, $3 + $2), 1, GREATEST(0, $3 + $2), GREATEST(0, $3 + $2))
+       VALUES ($1, GREATEST(0, $3::int + $2::int), 1, GREATEST(0, $3::int + $2::int), GREATEST(0, $3::int + $2::int))
        ON CONFLICT (account_id) DO UPDATE SET
-         mmr = GREATEST(0, ranked_stats.mmr + $2),
+         mmr = GREATEST(0, ranked_stats.mmr + $2::int),
          placement_games_played = LEAST(5, ranked_stats.placement_games_played + 1),
-         mmr_highest = GREATEST(ranked_stats.mmr_highest, GREATEST(0, ranked_stats.mmr + $2)),
-         mmr_lowest = LEAST(ranked_stats.mmr_lowest, GREATEST(0, ranked_stats.mmr + $2)),
+         mmr_highest = GREATEST(ranked_stats.mmr_highest, GREATEST(0, ranked_stats.mmr + $2::int)),
+         mmr_lowest = LEAST(ranked_stats.mmr_lowest, GREATEST(0, ranked_stats.mmr + $2::int)),
          updated_at = now()
        RETURNING mmr, placement_games_played`,
       [accountId, appliedDelta, RANKED_STARTING_MMR]

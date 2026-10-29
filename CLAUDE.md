@@ -4761,6 +4761,44 @@ before pushing.
   one request for final screen + credits event together, a duplicated response showing one banner. A real game on a
   live account was not run.
 
+## App tour (first run: menu, then My Account)
+- **After the game tutorial (finished, skipped, or declined with "No thanks") a first-timer is walked round the app**:
+  Campaign, Daily, Casual, Ranked, Statistics, Inbox, Settings, **the Shop (the credits box)**, then "tap My Account" and,
+  inside it: create account, name, avatar, Save, each customisation tab (Theme/Scenes/Cards/Crests/Titles/Banners),
+  Achievements (the player taps the tab), Friends (the player taps the tab, then how to add/invite), done. Data-driven:
+  `TOUR_STEPS` (id, screen, `target` selector, `mode` info|click|ready, `event`, `when`, `enter`, `leave`, `noSkip`), engine =
+  `startAppTour` / `tourNext` / `tourEvent` / `tourFrame` / `tourPlaceCard`.
+- **Creating an account is MANDATORY in the tour (owner's call): there is no "later".** Guests cannot set a name or avatar
+  at all (the editor is gated behind an account, the name field opens signup), so the "Create your account" step waits for
+  `authOk` and the **Skip link is hidden from "tap My Account" through Save** (`noSkip`), while the shield also blocks the
+  Menu back link. The one exception: **if the socket is disconnected the Skip link shows** (`tourSyncSkip`), otherwise a
+  player on a server that cannot be reached would be trapped. Logging in to an existing account also satisfies the step.
+  Skip is available again from the customisation steps on. New accounts start with nickname = username, so the name step
+  is satisfied at once unless they clear it.
+- **The Shop step is in the menu overview, just before My Account.** The credits box is hidden for guests (new players),
+  so the step's `enter` forces it visible and its `leave` calls `setCreditBalance(creditBalance)` to restore it; its text
+  says the box shows once you have an account.
+- **No replay button anywhere** (owner's call): the tour runs once (`ddp.appTourSeen`, set when it ends or is skipped).
+  Someone replaying the game tutorial who never saw the tour gets it once afterwards.
+- **Not built on `.tutorial-target`**: that box-shadow cutout is clipped by an ancestor's overflow on the scrolling My
+  Account panels. The tour is body-level: `#tour-hole` (fixed ring, its 9999px box-shadow is the dimming),
+  `#tour-shield` (fixed click blocker; on `click`/`ready` steps a real evenodd `clip-path` hole lets taps and typing
+  through to the target) and `#tour-card`. Everything is measured with `getBoundingClientRect` on a 100ms timer
+  (NOT rAF: frames stop in a hidden tab). The card goes beside the target (right/left/below/above), shrinks into a narrow
+  strip beside a huge target (the avatar list), else takes the least-overlapping corner.
+- **Hooks that advance `click` steps**: `goPersonal` ('personal'), `switchAccountTab` ('tab:<name>'), `authOk` ('auth'),
+  `savePersonal` ('saved'), each calling `tourEvent(name)` (no-op when no tour). Entry: `dismissWelcome` and the end of
+  `exitTutorial` call `maybeStartAppTour()` (needs `ddp.appTourSeen` unset and the menu showing).
+- **`<address>/?firstrun=1` shows the welcome, the game tutorial and the app tour once more on that device**
+  (`takeFirstRunParam` clears `ddp.tutorialSeen` and `ddp.appTourSeen`, then removes only that parameter from the address bar,
+  so a `?join=` link still works). It exists for re-showing them to yourself or testing; the flags are per device, so
+  there is deliberately no way to force it for every player.
+- The "n / total" counter is fixed at start (`tour.counted`), so it does not jump when the player signs up.
+- Verified in the preview at 1024x768 and 667x375: every step finds its target, the card stays on screen and off the target,
+  taps elsewhere are blocked on `click` steps, typing a name through the hole unlocks Next, real tab switches advance the
+  achievements/friends steps, Done/Skip set the flag, the welcome/tutorial exits start it, Skip hides on the account steps
+  and returns when offline. **Not run**: a real signup (authOk) mid-tour (simulated), and on a phone.
+
 ## Not implemented
 - Google Sign-In / account linking (deliberately not built; email + password is enough for the Play Store)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

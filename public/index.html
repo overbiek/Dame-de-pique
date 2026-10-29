@@ -5445,6 +5445,33 @@ html.landscape-mode #tutorial-callout{
   padding:12px 14px;
 }
 
+/* ══ APP TOUR ══
+   The guided walk round the main menu and My Account that follows the tutorial. It is NOT built on
+   .tutorial-target: that is a box-shadow cutout on the target itself, which an ancestor's overflow
+   clips on the scrolling My Account panels. This is body-level: a fixed ring (#tour-hole, its huge
+   box-shadow is the dimming), a fixed click shield (#tour-shield, with a real hole cut in it for the
+   steps where the player has to tap or type into the target) and a fixed card. All measured with
+   getBoundingClientRect, so it works on any screen and in any scroller. */
+#tour-shield{position:fixed;inset:0;z-index:519;display:none;touch-action:none}
+#tour-hole{
+  position:fixed;z-index:520;display:none;pointer-events:none;border-radius:12px;
+  box-shadow:0 0 0 3px rgba(var(--ddp-brass-rgb),.95),0 0 0 9999px rgba(3,3,4,.74);
+}
+#tour-card{
+  position:fixed;z-index:530;display:none;width:min(300px,calc(100vw - 16px));
+  background:var(--ddp-felt-lo);border:1px solid rgba(var(--ddp-brass-rgb),.45);border-radius:14px;
+  padding:13px 15px 14px;box-shadow:0 12px 36px rgba(0,0,0,.55);
+}
+#tour-card .tour-count{font:700 .6rem var(--font-num);letter-spacing:.1em;color:var(--gold-hi);opacity:.85}
+#tour-card .tour-title{font:600 1.05rem 'Playfair Display',serif;color:var(--cream);margin:2px 0 5px}
+#tour-card .tour-text{font-size:.82rem;line-height:1.48;color:var(--cream)}
+#tour-card .tour-text b{color:var(--gold-hi)}
+#tour-card .tour-hint{font-size:.72rem;color:var(--gold-hi);margin-top:7px;font-weight:700}
+#tour-card .tour-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px}
+#tour-card .tour-skip{background:none;border:none;padding:0;font-size:.72rem;color:var(--faint);text-decoration:underline;cursor:pointer}
+#tour-card .tour-next{min-width:96px}
+#tour-card .tour-next:disabled{opacity:.45}
+
 /* ══ CAMPAIGN MODE ("The Hundred Tables") ══
    A 4th distinct landscape layout family (not Table, not Rail, not the
    Daily 50/50 split) — a full-bleed scene with absolutely-positioned
@@ -6624,6 +6651,20 @@ html.scene-on[data-theme="sable"]{
   <button class="tut-skip" onclick="tutorialSkip()">Skip tutorial</button>
   <div class="tut-text"></div>
   <button class="btn btn-primary tut-next" onclick="">Next</button>
+</div>
+
+<!-- ═══ APP TOUR (see the CSS and startAppTour) ═══ -->
+<div id="tour-shield"></div>
+<div id="tour-hole"></div>
+<div id="tour-card" role="dialog" aria-live="polite">
+  <div class="tour-count" id="tour-count"></div>
+  <div class="tour-title" id="tour-title"></div>
+  <div class="tour-text" id="tour-text"></div>
+  <div class="tour-hint" id="tour-hint"></div>
+  <div class="tour-row">
+    <button class="tour-skip" id="tour-skip" onclick="endAppTour()">Skip tour</button>
+    <button class="btn btn-primary btn-sm tour-next" id="tour-next" onclick="tourNext()">Next</button>
+  </div>
 </div>
 
 <!-- ═══ TUTORIAL — Part B concept cards ═══ -->
@@ -11074,6 +11115,7 @@ function toggleAvatarPicker(){
 }
 function goPersonal(){
   show('personal');
+  tourEvent('personal');
   relocateAcctMenuButton();
   const id=identity();
   $('pv-name').value=id.name||'';
@@ -11101,6 +11143,7 @@ function goPersonal(){
   renderHeroCosmetics();
 }
 function switchAccountTab(tab){
+  tourEvent('tab:'+tab);
   document.querySelectorAll('#s-personal .acct-toptab').forEach(b=>
     b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('#s-personal .acct-panel').forEach(p=>
@@ -12475,6 +12518,7 @@ socket.on('profileCosmeticsError',d=>{
 function savePersonal(){
   const n=$('pv-name').value.trim().slice(0,16);
   if(!n){ toast('err-personal','Pick a nickname first.'); $('pv-name').focus(); return; }
+  tourEvent('saved');
   if(account){
     lastAuthAction='update';
     socket.emit('updateProfile',{token:accountToken,nickname:n,avatar:draftAvatar});
@@ -13850,6 +13894,7 @@ socket.on('rejoinFailed',()=>{
 });
 
 socket.on('authOk',d=>{
+  tourEvent('auth');
   accountToken=d.token;
   saveAccountToken(accountToken);
   account=d.account;
@@ -15801,6 +15846,7 @@ function maybeShowWelcome(){
 function dismissWelcome(){
   try{ localStorage.setItem('ddp.tutorialSeen','1'); }catch(e){}
   $('tutorial-welcome').classList.remove('show');
+  setTimeout(maybeStartAppTour,450);   // declined the tutorial: still show where everything is
 }
 function startTutorial(){
   try{ localStorage.setItem('ddp.tutorialSeen','1'); }catch(e){}
@@ -15842,6 +15888,7 @@ function exitTutorial(){
   lastCurrentTrickLen=null;
   show(tutSavedCurrentScreen==='pass'||tutSavedCurrentScreen==='play'?'menu':tutSavedCurrentScreen);
   updateMenuProfileUI();
+  setTimeout(maybeStartAppTour,600);   // back on the menu: walk a first-timer round the app
 }
 function tutorialSkip(){ exitTutorial(); }
 
@@ -16330,6 +16377,212 @@ function tutorialPartBNext(){
   exitTutorial();
 }
 
+/* ══════════ APP TOUR ══════════
+   After the tutorial (or after declining it) a first-time player is walked round the main menu, then
+   into My Account: account, name, avatar, each customisation tab, achievements and friends. Steps are
+   data (TOUR_STEPS); a step is one of:
+     info   - Next button
+     click  - the target is tappable through the shield; `event` (goPersonal / switchAccountTab / ...)
+              advances it (tourEvent)
+     ready  - the target is usable and Next unlocks when `ready()` is true (typing a name)
+   `when` skips a step (e.g. the name step needs an account; guests can't set a name at all).
+   `var`, not `let`: the hooks that call tourEvent (goPersonal, authOk...) can run before this block. */
+var tour={on:false,i:0,steps:[],key:'',counted:[]};
+var TOUR_KEY='ddp.appTourSeen';
+function tourSeenFlag(){ try{ return !!localStorage.getItem(TOUR_KEY); }catch(e){ return true; } }
+var TOUR_STEPS=[
+  {id:'campaign',screen:'menu',target:'#s-menu .menu-tiles>.tile:nth-child(1)',title:'Campaign',
+   text:'<b>The Hundred Tables</b>: a story across four Houses. Every table is a fixed hand with a goal &mdash; clear it, or go for <b>Gold</b>. Beat a House\'s boss to move on. Needs an account.'},
+  {id:'daily',screen:'menu',target:'#s-menu .menu-tiles>.tile:nth-child(2)',title:'Daily Challenge',
+   text:'One hand a day, the <b>same deal for everyone</b>. Your score goes on the daily leaderboard, and the top three win credits.'},
+  {id:'casual',screen:'menu',target:'#s-menu .menu-tiles>.tile:nth-child(3)',title:'Casual Play',
+   text:'A room for you and your friends, or against computers. Pick a match length from <b>4 to 16 hands</b> and share the room code.'},
+  {id:'ranked',screen:'menu',target:'#s-menu .menu-tiles>.tile:nth-child(4)',title:'Ranked Multiplayer',
+   text:'Four humans, no computers. Win games to <b>climb the ladder</b> from Novice to Legend; your first 5 games are placement matches. Needs an account.'},
+  {id:'stats',screen:'menu',target:'#s-menu .menu-tiles>.tile:nth-child(5)',title:'Statistics',
+   text:'Your all-time numbers for casual, ranked and the campaign: best hands, moons shot, streaks and more.'},
+  {id:'inbox',screen:'menu',target:'#s-menu .exit-pair:first-child .btn:nth-child(2)',title:'Inbox',
+   text:'Game invites from friends, friend requests and news about the game all land here. A badge shows when something is waiting.'},
+  {id:'settings',screen:'menu',target:'#s-menu .exit-pair:first-child .btn:nth-child(1)',title:'Settings',
+   text:'Sound and music volume, your recovery email, the privacy policy and deleting your data.'},
+  {id:'shop',screen:'menu',target:'#menu-credits',title:'The Shop',
+   enter:()=>{ const b=$('menu-credits'); if(b) b.style.display='flex'; },
+   leave:()=>{ setCreditBalance(creditBalance); },
+   text:'Your <b>credits</b> live here. You earn them by finishing games and challenges, and spend them in the <b>Shop</b> on themes, scenes, card designs, avatars and music. Tap it any time to open the Shop. (The box shows once you have an account.)'},
+  {id:'account',screen:'menu',target:'#s-menu .menu-tiles>.tile:nth-child(6)',mode:'click',event:'personal',noSkip:true,title:'My Account',
+   text:'This is where you set up who you are: name, avatar, customisation, achievements and friends.',hint:'Tap <b>My Account</b> to go in'},
+  {id:'signup',screen:'personal',when:()=>!account,target:'#acct-guest-gate,#acct-form',mode:'click',event:'auth',title:'Create your account',
+   text:'First you need an account, so your progress, friends and credits follow you. Tap <b>Create account</b> and pick a username and password. An email is optional: it lets you reset a lost password.',
+   noSkip:true,hint:'Create your account to continue'},
+  {id:'name',screen:'personal',when:()=>!!account,target:'#pv-plate',mode:'ready',noSkip:true,ready:()=>$('pv-name').value.trim().length>0,title:'Choose a name',
+   text:'This is the <b>name</b> other players see at the table. Tap the field and type the name you want.',hint:'Type a name to continue'},
+  {id:'avatar',screen:'personal',when:()=>!!account,noSkip:true,target:'#acct-identity-editor',enter:()=>{ const g=$('avatar-grid'); if(g) g.classList.add('open'); },
+   title:'Choose an avatar',text:'Pick a portrait from the list. Some are free; others you earn by beating campaign bosses, or buy in the Shop.'},
+  {id:'save',screen:'personal',when:()=>!!account,target:'#acct-save-row',mode:'click',event:'saved',noSkip:true,title:'Save it',
+   text:'Keep your name and avatar.',hint:'Tap <b>Save</b>'},
+  {id:'cos-intro',screen:'personal',when:()=>!!account,target:'#cos-tabs',title:'Make it yours',
+   text:'These tabs hold everything you can customise. Let\'s look at each one.',enter:()=>switchCosTab('theme')},
+  {id:'cos-theme',screen:'personal',when:()=>!!account,target:'#cos-tabs,#cos-panel-theme',title:'Theme',enter:()=>switchCosTab('theme'),
+   text:'The <b>colours</b> of the whole game. Two are free; the others can be bought in the Shop.'},
+  {id:'cos-scene',screen:'personal',when:()=>!!account,target:'#cos-tabs,#cos-panel-scene',title:'Scenes',enter:()=>switchCosTab('scene'),
+   text:'The <b>background</b> behind your table. Earn them with achievements, buy them in the Shop, or unlock a campaign chapter\'s backdrop by beating its boss.'},
+  {id:'cos-cards',screen:'personal',when:()=>!!account,target:'#cos-tabs,#cos-panel-cards',title:'Cards',enter:()=>switchCosTab('cards'),
+   text:'The <b>look of your playing cards</b>. Some are earned, some are Shop exclusives.'},
+  {id:'cos-crest',screen:'personal',when:()=>!!account,target:'#cos-tabs,#cos-panel-crest',title:'Crests',enter:()=>switchCosTab('crest'),
+   text:'<b>Emblems</b> you earn from achievements. Wear two next to your avatar; other players can tap them to look closer.'},
+  {id:'cos-title',screen:'personal',when:()=>!!account,target:'#cos-tabs,#cos-panel-title',title:'Titles',enter:()=>switchCosTab('title'),
+   text:'A <b>line under your name</b>, earned through achievements and ranks.'},
+  {id:'cos-rank',screen:'personal',when:()=>!!account,target:'#cos-tabs,#cos-panel-rank',title:'Banners',enter:()=>switchCosTab('rank'),
+   text:'The <b>frame and nameplate</b> for your ranked tier. You earn one by reaching each tier, and the highest is worn automatically.'},
+  {id:'ach-tab',screen:'personal',when:()=>!!account,target:'#s-personal .acct-toptab[data-tab="achievements"]',mode:'click',event:'tab:achievements',title:'Achievements',
+   text:'Everything you can earn, with your progress.',hint:'Tap <b>Achievements</b>'},
+  {id:'ach-list',screen:'personal',when:()=>!!account,target:'#acct-panel-achievements',title:'Your achievements',
+   text:'Each achievement is a <b>ladder of up to four tiers</b>, with your progress. <b>Tap one</b> to see its crest big. New unlocks pop up right after a game.'},
+  {id:'friends-tab',screen:'personal',when:()=>!!account,target:'#s-personal .acct-toptab[data-tab="friends"]',mode:'click',event:'tab:friends',title:'Friends',
+   text:'Play together, and see who is online.',hint:'Tap <b>Friends</b>'},
+  {id:'friends',screen:'personal',when:()=>!!account,target:'#friends-content',title:'Adding friends',
+   text:'Your <b>friend code</b> is at the top: share it, or type a friend\'s code and press <b>Add</b>. Friends show up online here, and in a casual lobby you can <b>invite</b> them with one tap.'},
+  {id:'end',screen:'personal',target:null,title:'You\'re all set',final:true,
+   text:'That\'s the tour. Have fun!'},
+];
+function tourStep(){ return tour.steps[tour.i]; }
+function maybeStartAppTour(){
+  if(tour.on||tutorialActive||tourSeenFlag()||currentScreenId!=='menu') return;
+  startAppTour();
+}
+function startAppTour(){
+  if(tour.on) return;
+  tour.on=true; tour.i=-1; tour.steps=TOUR_STEPS; tour.key='';
+  // The "n / total" counter is fixed for the whole tour (the guest and logged-in paths differ in length,
+  // so counting the live list made the total jump when the player signed up).
+  tour.counted=TOUR_STEPS.filter(s=>!s.final&&!(s.id==='signup'&&account));
+  $('tour-shield').style.display='block';
+  tourNext();
+  tourFrame();
+}
+function endAppTour(){
+  const cur=tourStep();
+  if(tour.on&&cur&&cur.leave) cur.leave();
+  tour.on=false;
+  try{ localStorage.setItem(TOUR_KEY,'1'); }catch(e){}
+  ['tour-shield','tour-hole','tour-card'].forEach(id=>{ $(id).style.display='none'; });
+  if(currentScreenId==='personal') show('menu');
+}
+function tourNext(){
+  const prev=tourStep();
+  if(prev&&prev.leave) prev.leave();
+  let i=tour.i+1;
+  while(i<tour.steps.length&&tour.steps[i].when&&!tour.steps[i].when()) i++;
+  if(i>=tour.steps.length){ endAppTour(); return; }
+  tour.i=i; tour.key='';
+  const st=tour.steps[i];
+  if(st.screen==='menu'&&currentScreenId!=='menu') show('menu');
+  if(st.screen==='personal'&&currentScreenId!=='personal') goPersonal();
+  if(st.enter) setTimeout(()=>{ if(tour.on&&tourStep()===st) st.enter(); },60);
+  tourRenderCard();
+  // bring the target into view inside whatever scroller holds it
+  setTimeout(()=>{ if(!tour.on||tourStep()!==st) return;
+    const el=st.target?document.querySelector(st.target.split(',')[0]):null;
+    if(el&&el.scrollIntoView) el.scrollIntoView({block:'nearest',inline:'nearest'}); },120);
+}
+function tourEvent(name){
+  const st=tourStep();
+  if(!tour.on||!st||st.event!==name) return;
+  setTimeout(()=>{ if(tour.on&&tourStep()===st) tourNext(); },600);
+}
+function tourRenderCard(){
+  const st=tourStep(); if(!st) return;
+  const n=tour.counted.indexOf(st)+1;
+  $('tour-count').textContent=n?(n+' / '+tour.counted.length):'';
+  $('tour-title').textContent=st.title;
+  $('tour-text').innerHTML=st.text;
+  $('tour-hint').innerHTML=st.hint||'';
+  $('tour-hint').style.display=st.hint?'block':'none';
+  const next=$('tour-next');
+  const mode=st.mode||'info';
+  next.style.display=(mode==='click')?'none':'';
+  next.textContent=st.final?'Done':'Next';
+  next.disabled=(mode==='ready');
+  tourSyncSkip(st);
+  $('tour-card').style.display='block';
+}
+// Skip is hidden from "tap My Account" through Save: the player is meant to create their account and set
+// their name and avatar. The one exception is a server that cannot be reached, where they would otherwise
+// be trapped behind the shield.
+function tourSyncSkip(st){
+  const hide=st.final||(st.noSkip&&socket.connected);
+  $('tour-skip').style.display=hide?'none':'';
+}
+function tourTargetRect(st){
+  if(!st.target) return null;
+  let l=1e9,t=1e9,r=-1e9,b=-1e9,found=false;
+  document.querySelectorAll(st.target).forEach(el=>{
+    const q=el.getBoundingClientRect();
+    if(!q.width||!q.height) return;
+    found=true; l=Math.min(l,q.left); t=Math.min(t,q.top); r=Math.max(r,q.right); b=Math.max(b,q.bottom);
+  });
+  return found?{l:l,t:t,r:r,b:b}:null;
+}
+function tourFrame(){
+  if(!tour.on) return;
+  const st=tourStep();
+  if(st){
+    const rect=tourTargetRect(st);
+    const key=rect?[rect.l,rect.t,rect.r,rect.b].map(Math.round).join(','):'none';
+    if(key!==tour.key){
+      tour.key=key;
+      const hole=$('tour-hole'), shield=$('tour-shield');
+      const W=innerWidth,H=innerHeight;
+      if(rect){
+        const pad=6, x1=Math.max(0,rect.l-pad), y1=Math.max(0,rect.t-pad), x2=Math.min(W,rect.r+pad), y2=Math.min(H,rect.b+pad);
+        hole.style.cssText='display:block;left:'+x1+'px;top:'+y1+'px;width:'+(x2-x1)+'px;height:'+(y2-y1)+'px';
+        // taps and typing go through the hole on interactive steps; everywhere else the shield eats them
+        const interactive=(st.mode==='click'||st.mode==='ready');
+        shield.style.background='transparent';
+        shield.style.clipPath=interactive
+          ?'polygon(evenodd,0 0,100% 0,100% 100%,0 100%,0 0,'+x1+'px '+y1+'px,'+x1+'px '+y2+'px,'+x2+'px '+y2+'px,'+x2+'px '+y1+'px,'+x1+'px '+y1+'px)'
+          :'none';
+        tourPlaceCard({l:x1,t:y1,r:x2,b:y2});
+      }else{
+        hole.style.display='none';
+        shield.style.clipPath='none';
+        shield.style.background='rgba(3,3,4,.74)';
+        tourPlaceCard(null);
+      }
+    }
+    if((st.mode||'info')==='ready') $('tour-next').disabled=!(st.ready&&st.ready());
+    tourSyncSkip(st);
+  }
+  setTimeout(tourFrame,100);   // a timer, not rAF: frames stop in a hidden tab, and 10 checks a second is plenty
+}
+// The card goes beside the highlighted thing (right, left, below, above); if none of those fit it takes the
+// corner that overlaps the target least. No target: centred.
+function tourPlaceCard(rect){
+  const card=$('tour-card'), W=innerWidth, H=innerHeight, m=10;
+  card.style.width='';                      // back to the default width before measuring
+  let cw=card.offsetWidth, ch=card.offsetHeight;
+  // A target that fills most of the screen (the avatar list) leaves only a strip beside it: use the strip,
+  // narrower, rather than sitting on top of what the player has to tap.
+  if(rect){
+    const left=rect.l-14-m, right=W-rect.r-14-m;
+    const strip=Math.max(left,right);
+    if(strip>=190&&strip<cw){
+      card.style.width=Math.floor(strip)+'px'; cw=card.offsetWidth; ch=card.offsetHeight;
+    }
+  }
+  const put=(x,y)=>{ card.style.left=Math.max(m,Math.min(W-cw-m,x))+'px'; card.style.top=Math.max(m,Math.min(H-ch-m,y))+'px'; };
+  if(!rect){ put((W-cw)/2,(H-ch)/2); return; }
+  const cy=(rect.t+rect.b)/2-ch/2, cx=(rect.l+rect.r)/2-cw/2, g=14;
+  if(rect.r+g+cw<=W-m) return put(rect.r+g,cy);
+  if(rect.l-g-cw>=m) return put(rect.l-g-cw,cy);
+  if(rect.b+g+ch<=H-m) return put(cx,rect.b+g);
+  if(rect.t-g-ch>=m) return put(cx,rect.t-g-ch);
+  const corners=[[m,m],[W-cw-m,m],[m,H-ch-m],[W-cw-m,H-ch-m]];
+  const overlap=function(c){ return Math.max(0,Math.min(c[0]+cw,rect.r)-Math.max(c[0],rect.l))*Math.max(0,Math.min(c[1]+ch,rect.b)-Math.max(c[1],rect.t)); };
+  corners.sort(function(a,b){ return overlap(a)-overlap(b); });
+  put(corners[0][0],corners[0][1]);
+}
+
 /* ── Joining from a shared link ──
    The link is <origin>/?join=CODE. It used to open the Casual screen with the
    code typed in, which (1) said "log in first" because the saved login had not
@@ -16341,6 +16594,19 @@ function tutorialPartBNext(){
    removed from the address bar at once so a reload cannot re-join. var, not
    let: the handlers that call these can run before the boot lines below. */
 var pendingJoinCode='', pendingJoinAt=0, autoJoinInFlight=false, autoJoinTimer=null;
+// <address>/?firstrun=1 shows the welcome, the tutorial and the app tour once more on this device: it clears the
+// two "seen" flags, then drops the parameter from the address bar (a reload must not repeat it). For re-showing
+// them to yourself or testing; ordinary players never see it.
+function takeFirstRunParam(){
+  try{
+    const q=new URLSearchParams(location.search);
+    if(q.get('firstrun')!=='1') return;
+    localStorage.removeItem('ddp.tutorialSeen'); localStorage.removeItem(TOUR_KEY);
+    q.delete('firstrun');
+    const rest=q.toString();
+    history.replaceState(null,'',location.pathname+(rest?'?'+rest:'')+location.hash);
+  }catch(e){}
+}
 function takeJoinParam(){
   let c='';
   try{ c=(new URLSearchParams(location.search).get('join')||'').trim().toUpperCase(); }catch(e){}
@@ -16391,6 +16657,7 @@ function tryAutoJoin(){
   refreshDailyBadge();
   // A shared link (?join=CODE) joins that room by itself as soon as the saved
   // login has been restored - see tryAutoJoin.
+  takeFirstRunParam();
   pendingJoinCode=takeJoinParam();
   if(pendingJoinCode){
     pendingJoinAt=Date.now();

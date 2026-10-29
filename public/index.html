@@ -2133,22 +2133,25 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
    account screen (the moment the collection loads after a game), and a
    modal there would block the very pickers it's telling you about. */
 .unlock-pop{
-  position:fixed;left:50%;transform:translateX(-50%) translateY(-140%);
+  position:fixed;left:50%;transform:translateX(-50%) translateY(-160%);
   top:calc(env(safe-area-inset-top) + 10px);z-index:400;
-  display:flex;align-items:center;gap:11px;max-width:min(92vw,420px);
-  padding:11px 15px;border-radius:16px;
-  background:linear-gradient(160deg,rgba(var(--ddp-brass-rgb),.30),rgba(var(--ddp-bg-rgb),.94));
+  display:flex;align-items:center;gap:14px;width:max-content;max-width:min(92vw,440px);
+  padding:12px 18px 12px 12px;border-radius:18px;text-align:left;
+  background:linear-gradient(160deg,rgba(var(--ddp-brass-rgb),.30),rgba(var(--ddp-bg-rgb),.96));
   border:1px solid rgba(var(--ddp-brass-rgb),.6);
   box-shadow:0 10px 34px rgba(var(--ddp-scrim-rgb),.55);
   transition:transform .45s cubic-bezier(.2,.9,.3,1.25);
-  pointer-events:none;
+  pointer-events:none;cursor:pointer;touch-action:manipulation;
 }
-.unlock-pop.show{transform:translateX(-50%) translateY(0)}
-.unlock-pop .up-crest{flex:0 0 auto;width:38px;height:38px}
+/* It is a button while it is on screen: tapping it opens the Achievements tab. */
+.unlock-pop.show{transform:translateX(-50%) translateY(0);pointer-events:auto}
+/* The achievement's own picture, big enough to actually see (was 38px, a thumbnail). */
+.unlock-pop .up-crest.crest-art{flex:0 0 auto;width:84px;height:84px}
 .unlock-pop .up-kicker{font-size:.6rem;font-weight:700;letter-spacing:.14em;
   text-transform:uppercase;color:var(--gold-hi)}
-.unlock-pop .up-name{font-family:'Playfair Display',serif;font-size:1rem;font-weight:600;color:var(--cream)}
-.unlock-pop .up-sub{font-size:.66rem;color:var(--muted);margin-top:1px}
+.unlock-pop .up-name{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:600;color:var(--cream)}
+.unlock-pop .up-sub{font-size:.68rem;color:var(--muted);margin-top:1px}
+.unlock-pop .up-go{font-size:.66rem;font-weight:700;letter-spacing:.06em;color:var(--gold-hi);margin-top:6px}
 
 /* ══════════════════════════════════════════════════════════════
    CREDITS — the chip mark and its surfaces
@@ -6378,12 +6381,13 @@ html.scene-on[data-theme="sable"]{
 <!-- Achievement unlock banner (see .unlock-pop). Populated and shown by
      showUnlockPop(); starts off-screen via transform, never display:none,
      so the slide-in transition has something to animate from. -->
-<div id="unlock-pop" class="unlock-pop" role="status" aria-live="polite">
+<div id="unlock-pop" class="unlock-pop" role="status" aria-live="polite" onclick="openUnlockedAchievement()">
   <div class="up-crest crest-art" id="unlock-crest"></div>
   <div>
     <div class="up-kicker">Achievement unlocked</div>
     <div class="up-name" id="unlock-name"></div>
     <div class="up-sub" id="unlock-sub"></div>
+    <div class="up-go" id="unlock-go">View achievements &rsaquo;</div>
   </div>
 </div>
 
@@ -9560,6 +9564,7 @@ socket.on('dailyError',d=>{
 
 let lastDailyResult=null;
 socket.on('dailyResult',d=>{
+  checkUnlocksSoon();
   // Credits are banked server-side from the server's own copy of the
   // score (see submitDailyResult); this only reports what was paid.
   if(d.credits) queueCreditTally(d.credits);
@@ -10890,6 +10895,7 @@ function campaignStartLevel(levelId){
 
 let lastCampaignResult=null;
 socket.on('campaignResult',d=>{
+  checkUnlocksSoon();
   SFX.play(d.cleared?'gameWin':'gameLose');   // passed the objective, not "highest score"
   if(d.creditsAwarded) queueCreditTally(d.creditsAwarded);
   lastCampaignResult=d;
@@ -11873,6 +11879,7 @@ socket.on('shopError',d=>{
 let cosState=null;
 let cosTab='theme';
 let cosPending=false;      // a request is in flight (drives the loading line)
+var unlockCelebrated=new Set();   // 'id:level' already put in the banner queue this session
 let unlockQueue=[];        // achievements waiting to be celebrated, one at a time
 let activeCrestSlot='crest';   // which of the two crest slots the picker is editing — 'crest' (right) or 'crest2' (left)
 
@@ -12359,23 +12366,50 @@ function renderHeroCosmetics(){
    queue is handed over, not per banner — if the app is closed halfway
    through the queue the remaining ones are simply not re-celebrated,
    which is the right failure direction for a purely decorative event. */
+function onTableScreen(){ return ['draw','pass','play'].indexOf(currentScreenId)>=0; }
 function showUnlockPop(ach){
   const pop=$('unlock-pop');
   if(!pop) return;
-  $('unlock-crest').innerHTML=crestHTML(ach.crest,ach.level||1);
-  $('unlock-name').textContent=ach.name;
-  $('unlock-sub').textContent='Crest and title unlocked';
+  // Never over a hand in progress: hold it back and try again shortly (it is already marked seen).
+  if(onTableScreen()||tutorialActive){
+    unlockQueue.unshift(ach);
+    clearTimeout(pop._t); pop._t=setTimeout(drainUnlockQueue,5000);
+    return;
+  }
+  const lvl=ach.level||1, max=ach.maxLevel||1;
+  $('unlock-crest').innerHTML=crestHTML(ach.crest,lvl);
+  $('unlock-name').textContent=ach.name+(max>1?' '+ROMAN_POP[lvl]:'');
+  $('unlock-sub').textContent=max>1?`Tier ${ROMAN_POP[lvl]} of ${ROMAN_POP[max]}`:'Crest and title unlocked';
   pop.classList.add('show');
   SFX.play('gameWin');
   clearTimeout(pop._t);
   pop._t=setTimeout(()=>{
     pop.classList.remove('show');
     setTimeout(drainUnlockQueue,600);
-  },3600);
+  },6500);
+}
+// Tapping the banner takes you straight to My Account > Achievements.
+function openUnlockedAchievement(){
+  const pop=$('unlock-pop');
+  clearTimeout(pop._t); pop.classList.remove('show');
+  if(onTableScreen()||tutorialActive||!account) return;
+  goPersonal();
+  switchAccountTab('achievements');
+  setTimeout(drainUnlockQueue,600);
 }
 function drainUnlockQueue(){
   const next=unlockQueue.shift();
   if(next) showUnlockPop(next);
+}
+// An achievement is earned when a game / campaign table / daily FINISHES, but the collection used to be
+// fetched only when My Account opened or on login. Ask again shortly after each result lands (the
+// server writes the counters first), so the banner appears when you actually unlock it.
+var unlockCheckT=null;
+function checkUnlocksSoon(){
+  if(!account||!accountToken) return;
+  // Debounced: the final screen and the credits event both ask for the same game; one request is enough.
+  clearTimeout(unlockCheckT);
+  unlockCheckT=setTimeout(requestCosmetics,2500);
 }
 
 socket.on('profileCosmeticsOk',d=>{
@@ -12400,7 +12434,10 @@ socket.on('profileCosmeticsOk',d=>{
   const shopLoad=$('shop-loading');
   if(shopLoad) shopLoad.style.display='none';
   if(d.fresh&&d.fresh.length){
-    const fresh=cosState.achievements.filter(a=>d.fresh.includes(a.id));
+    // The same unlock can be in two responses that crossed before the server had it marked seen.
+    const fresh=cosState.achievements.filter(a=>d.fresh.includes(a.id)
+      &&!unlockCelebrated.has(a.id+':'+(a.level||1)));
+    fresh.forEach(a=>unlockCelebrated.add(a.id+':'+(a.level||1)));
     socket.emit('markAchievementsSeen',{token:accountToken,ids:d.fresh});
     unlockQueue=unlockQueue.concat(fresh);
     if(!$('unlock-pop').classList.contains('show')) drainUnlockQueue();
@@ -12587,7 +12624,7 @@ function doLogout(skipEmit){
   // the loaded catalog and the cached look, rather than leaving the
   // previous player's scene and card front painted for the next one.
   cosState=null;
-  unlockQueue=[];
+  unlockQueue=[]; unlockCelebrated.clear(); clearTimeout(unlockCheckT);
   resetCosmeticLook();
   // A balance belongs to the account too — leaving the previous player's
   // figure on the menu would be the same class of leak as leaving their
@@ -15368,6 +15405,7 @@ function applyFinalCredits(){
   });
 }
 socket.on('finalCreditsOk',d=>{
+  checkUnlocksSoon();
   // A stale response landing after the player has already left the final
   // screen (new game, back to menu) must not write into whatever's there
   // now — same screen-liveness guard the friend-profile/ranked-profile
@@ -15379,6 +15417,7 @@ socket.on('finalCreditsOk',d=>{
 });
 function renderFinal(G){
   show('final');
+  checkUnlocksSoon();   // the game just finished: anything it unlocked pops up in a moment
   const isDaily=!!G.daily;
   const isCampaign=!!G.campaign;
   const rows=G.players.map((p,i)=>({...p,i})).sort((a,b)=>b.score-a.score);

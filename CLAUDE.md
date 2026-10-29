@@ -4736,6 +4736,25 @@ before pushing.
 - Verified on PGlite (varied accounts: rating reset, statistics intact, backup written, a second boot is a no-op).
   Not run against Railway's Postgres: first real run is the deploy, watch the log for `Migration: reset ranked rating`.
 
+## Achievement unlock banner (big picture, tappable, shown when you unlock)
+- **`#unlock-pop` now shows the achievement's own crest at 84px** (was a 38px thumbnail), the name with its roman numeral
+  ("Perfectionist II"), the tier line and "View achievements". **Tapping it opens My Account > Achievements**
+  (`openUnlockedAchievement()`: `goPersonal()` then `switchAccountTab('achievements')`). It stays up 6.5s (was 3.6s)
+  and is `pointer-events:auto` only while `.show`.
+- **Never over a hand**: on the draw/pass/play screens (or in the tutorial) `showUnlockPop` puts the achievement back
+  on `unlockQueue` and retries after 5s; a tap there does nothing. It is already marked seen server-side.
+- **It used to appear only when My Account opened or on login** (the collection was fetched then). `checkUnlocksSoon()`
+  now re-requests the collection 2.5s after a game finishes, so the banner comes right after the game. Triggers:
+  `renderFinal` (every mode; this one also reaches a player who already left the room, who never receives the room's
+  `finalCreditsOk`), `finalCreditsOk`, `dailyResult` and `campaignResult`. The server writes the counters before those
+  events, hence the delay. **Debounced** (`unlockCheckT`) so one game = one request, and **deduped** by
+  `unlockCelebrated` ('id:level') so two crossed responses cannot show the same unlock twice (cleared on logout, or
+  another account on the same device would be suppressed). Only for logged-in accounts; an early-ended game banks no
+  achievements, so nothing pops after one.
+- Verified in the preview with injected events: banner, crest file, tap -> Achievements tab, table-screen hold-back,
+  one request for final screen + credits event together, a duplicated response showing one banner. A real game on a
+  live account was not run.
+
 ## Not implemented
 - Google Sign-In / account linking (deliberately not built; email + password is enough for the Play Store)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

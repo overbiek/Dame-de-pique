@@ -4710,9 +4710,11 @@ before pushing.
   and popup), so they read Perfectionist I, II, III, IV. Do NOT put numerals in the `names` array: they would
   show twice. The title `title_perfectionist` ("The Perfectionist") is granted only at the TOP rung (`unlockLevel: 4`,
   all 400 tables at Gold), like House Master.
-- **Art**: the crest has an inline-SVG placeholder (a gold star in a ring, `crest_perfectionist` in `CREST_ART`);
-  the real art goes in `public/crests/perfectionist/1.webp`..`4.webp` and layers over it with no code change, like
-  every other crest.
+- **Art is in** (`public/crests/perfectionist/1.webp`..`4.webp`, from `afbeeldingen/Achievements/Perfectionist 1-4.png`):
+  512px RGBA, same close-then-flood-fill cut as the Four Houses crests (gold closed with a radius-10 disk so the
+  filigree seals, then the border-connected black removed; interior transparency 0.00% on all four, checked on a
+  light backdrop). The inline-SVG gold star in `CREST_ART` is only the fallback while a file is missing. New
+  filenames, so no `sw.js` CACHE bump.
 - Verified: the SQL against PGlite (130 of 250 cleared levels counted as 130), and the thresholds
   (99 -> locked, 100 -> I, 200 -> II, 300 -> III, 400 -> IV). Not run against Railway's Postgres.
 

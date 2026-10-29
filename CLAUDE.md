@@ -4803,6 +4803,12 @@ before pushing.
   (padding 21px 33px, 1.2rem; 75% of the row in landscape) and "No thanks, I know what I'm doing" is about half
   (.72rem, 25% of the row in landscape, half width centred in portrait). Scoped to `#tutorial-welcome`; the install and
   re-open cards share the `.tutorial-welcome-*` classes and keep equal buttons.
+- **Skipped the menu overview? The My Account half still runs the first time they open My Account** (owner's call):
+  `goPersonal` calls `maybeStartAccountTour()`, which starts the tour from the `signup` step (`startAppTour('signup')`; the
+  counter counts only that half). Flag `ddp.acctTourDone` is set when the tour ends at or after the My Account steps, or
+  finishes; it is NOT set by a skip in the menu overview. It only starts when the tour has been seen/skipped
+  (`ddp.appTourSeen`; otherwise the normal first-run flow covers it) and never during a password reset or the tutorial.
+  Anyone who finished the full tour before this existed has no `ddp.acctTourDone`, so they see the My Account half once more.
 - The "n / total" counter is fixed at start (`tour.counted`), so it does not jump when the player signs up.
 - Verified in the preview at 1024x768 and 667x375: every step finds its target, the card stays on screen and off the target,
   taps elsewhere are blocked on `click` steps, typing a name through the hole unlocks Next, real tab switches advance the

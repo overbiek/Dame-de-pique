@@ -11125,6 +11125,7 @@ function toggleAvatarPicker(){
 function goPersonal(){
   show('personal');
   tourEvent('personal');
+  setTimeout(maybeStartAccountTour,500);
   relocateAcctMenuButton();
   const id=identity();
   $('pv-name').value=id.name||'';
@@ -16398,6 +16399,7 @@ function tutorialPartBNext(){
    `var`, not `let`: the hooks that call tourEvent (goPersonal, authOk...) can run before this block. */
 var tour={on:false,i:0,steps:[],key:'',counted:[]};
 var TOUR_KEY='ddp.appTourSeen';
+var TOUR_ACCT_KEY='ddp.acctTourDone';   // the My Account half of the tour has been delivered (or finished)
 function tourSeenFlag(){ try{ return !!localStorage.getItem(TOUR_KEY); }catch(e){ return true; } }
 var TOUR_STEPS=[
   {id:'campaign',screen:'menu',target:'#s-menu .menu-tiles>.tile:nth-child(1)',title:'Campaign',
@@ -16455,16 +16457,27 @@ var TOUR_STEPS=[
    text:'That\'s the tour. Have fun!'},
 ];
 function tourStep(){ return tour.steps[tour.i]; }
+// Skipped the tour before reaching My Account? The first time they open it, give them the account half so they are
+// still helped to set up (account, name, avatar, customisation, achievements, friends).
+function maybeStartAccountTour(){
+  if(tour.on||tutorialActive||resetToken||currentScreenId!=='personal') return;
+  let done=true, seen=false;
+  try{ done=!!localStorage.getItem(TOUR_ACCT_KEY); seen=!!localStorage.getItem(TOUR_KEY); }catch(e){}
+  if(done||!seen) return;           // never saw the tour at all: the normal first-run flow covers it
+  startAppTour('signup');
+}
 function maybeStartAppTour(){
   if(tour.on||tutorialActive||tourSeenFlag()||currentScreenId!=='menu') return;
   startAppTour();
 }
-function startAppTour(){
+function startAppTour(fromId){
   if(tour.on) return;
-  tour.on=true; tour.i=-1; tour.steps=TOUR_STEPS; tour.key='';
+  // fromId: start part-way (the My Account half, for someone who skipped the menu overview)
+  const from=fromId?TOUR_STEPS.findIndex(x=>x.id===fromId):0;
+  tour.on=true; tour.i=-1; tour.steps=TOUR_STEPS.slice(from>0?from:0); tour.key='';
   // The "n / total" counter is fixed for the whole tour (the guest and logged-in paths differ in length,
   // so counting the live list made the total jump when the player signed up).
-  tour.counted=TOUR_STEPS.filter(s=>!s.final&&!(s.id==='signup'&&account));
+  tour.counted=tour.steps.filter(s=>!s.final&&!(s.id==='signup'&&account));
   $('tour-shield').style.display='block';
   tourNext();
   tourFrame();
@@ -16472,6 +16485,12 @@ function startAppTour(){
 function endAppTour(){
   const cur=tourStep();
   if(tour.on&&cur&&cur.leave) cur.leave();
+  // Reached My Account (the step after it can no longer be skipped before Save) or finished: the account half is
+  // done. Skipped in the menu overview: it is NOT, and entering My Account the first time starts it (below).
+  const idxs=tour.steps.map(x=>x.id);
+  if(cur&&(cur.final||idxs.indexOf(cur.id)>=idxs.indexOf('signup')||tour.steps[0].id==='signup')){
+    try{ localStorage.setItem(TOUR_ACCT_KEY,'1'); }catch(e){}
+  }
   tour.on=false;
   try{ localStorage.setItem(TOUR_KEY,'1'); }catch(e){}
   ['tour-shield','tour-hole','tour-card'].forEach(id=>{ $(id).style.display='none'; });

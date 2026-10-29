@@ -1381,7 +1381,11 @@ async function getAchievementStats(accountId) {
             -- Clubs, 301-400 Diamonds, so the finals are 100/200/300/400.
             (SELECT COUNT(*) FROM campaign_level_results c
               WHERE c.account_id = k.account_id AND c.cleared
-                AND c.level_id IN (100, 200, 300, 400)) AS houses_completed
+                AND c.level_id IN (100, 200, 300, 400)) AS houses_completed,
+            -- Perfectionist: campaign tables cleared at GOLD (one row per level,
+            -- so this is a count of distinct levels, never of attempts).
+            (SELECT COUNT(*) FROM campaign_level_results c2
+              WHERE c2.account_id = k.account_id AND c2.gold) AS gold_levels
      FROM (SELECT $1::int AS account_id) k
      LEFT JOIN achievement_stats a ON a.account_id = k.account_id
      LEFT JOIN ranked_stats r ON r.account_id = k.account_id`,
@@ -1407,6 +1411,7 @@ async function getAchievementStats(accountId) {
     worstGame: s.worst_game || 0,
     mmrPeak: s.mmr_highest || 0,
     housesCompleted: Number(s.houses_completed) || 0,
+    goldLevels: Number(s.gold_levels) || 0,
     // Steady Hand — how many of the 4 match lengths have ever been
     // finished naturally with no round going negative. Summed here
     // rather than stored as its own counter so the 4 flags stay the

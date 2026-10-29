@@ -1532,6 +1532,16 @@ const ACHIEVEMENTS = [
     desc: 'Finish a House of the campaign: Spades, Hearts, Clubs, then Diamonds.',
     crest: 'crest_four_houses',     title: 'title_house_master' },
 
+  // One rung per 100 campaign tables cleared at GOLD (db.getAchievementStats's goldLevels,
+  // a count of distinct levels across all four Houses: 400 is every table in the game).
+  // Rung names are placeholders (display strings only); the client appends the roman
+  // numeral, so the rungs read Perfectionist I-IV (do NOT put numerals in the names: they would double).
+  // Art goes in public/crests/perfectionist/1-4.webp.
+  { id: 'ach_perfectionist',  stat: 'goldLevels',         tiers: [100, 200, 300, 400],
+    names: ['Perfectionist', 'Perfectionist', 'Perfectionist', 'Perfectionist'],
+    desc: 'Clear campaign tables at Gold: 100, 200, 300, then all 400.',
+    crest: 'crest_perfectionist',   title: 'title_perfectionist' },
+
   // -- secret --
   // Hidden until earned, and both read a stat that moves DOWNWARD, hence
   // cmp:'lte'. A hand's floor is about -88 (the queen plus twelve hearts
@@ -1812,6 +1822,8 @@ const COSMETICS = {
     // Unlike every other title (granted at rung 1), House Master is only
     // granted at the TOP rung of its ladder: all four Houses finished.
     { id: 'title_house_master',      name: 'House Master',        unlock: 'ach_four_houses', unlockLevel: 4 },
+    // Only at the TOP rung (all 400 tables at Gold), like House Master.
+    { id: 'title_perfectionist',     name: 'The Perfectionist',   unlock: 'ach_perfectionist', unlockLevel: 4 },
     // rankTier is a SLUG, not a display name — tierReached compares
     // against RANK_TABLE's slug, so a capitalised tier name here would
     // silently never match and lock every rank title forever.

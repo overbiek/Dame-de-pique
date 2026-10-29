@@ -4700,6 +4700,22 @@ before pushing.
   chip's text was overwritten). Renamed to `cp-pop-name`. Duplicate ids are silent here: check `$('x')` targets when a
   popup "shows nothing".
 
+## Perfectionist achievement (campaign gold clears)
+- **`ach_perfectionist`: a 4-rung ladder on `goldLevels`: 100 / 200 / 300 / 400 campaign tables cleared at Gold**
+  (400 is every table in the game). `db.getAchievementStats` returns `goldLevels`, a subselect COUNT of
+  `campaign_level_results` rows with `gold` (one row per level, so it counts distinct tables, never attempts).
+  Like every achievement it is re-derived on read, so accounts that already hold gold clears get their rungs the
+  first time they open My Account.
+- **Rung names are all "Perfectionist" in the registry, and the screens append the roman numeral** (list row
+  and popup), so they read Perfectionist I, II, III, IV. Do NOT put numerals in the `names` array: they would
+  show twice. The title `title_perfectionist` ("The Perfectionist") is granted only at the TOP rung (`unlockLevel: 4`,
+  all 400 tables at Gold), like House Master.
+- **Art**: the crest has an inline-SVG placeholder (a gold star in a ring, `crest_perfectionist` in `CREST_ART`);
+  the real art goes in `public/crests/perfectionist/1.webp`..`4.webp` and layers over it with no code change, like
+  every other crest.
+- Verified: the SQL against PGlite (130 of 250 cleared levels counted as 130), and the thresholds
+  (99 -> locked, 100 -> I, 200 -> II, 300 -> III, 400 -> IV). Not run against Railway's Postgres.
+
 ## Not implemented
 - Google Sign-In / account linking (deliberately not built; email + password is enough for the Play Store)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

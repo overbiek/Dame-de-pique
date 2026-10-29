@@ -4793,6 +4793,12 @@ before pushing.
   (`takeFirstRunParam` clears `ddp.tutorialSeen` and `ddp.appTourSeen`, then removes only that parameter from the address bar,
   so a `?join=` link still works). It exists for re-showing them to yourself or testing; the flags are per device, so
   there is deliberately no way to force it for every player.
+- **TEMPORARY: the welcome, tutorial and tour are forced ONCE on every device, existing players included** (owner's call,
+  2026-10-29, to test the tour): `forceOnboardingOnce()` clears `ddp.tutorialSeen` and `ddp.appTourSeen` the first time this
+  build loads and records `ddp.onboardForced = ONBOARDING_FORCE_ID`. It is skipped (retried next visit) when there is a game to
+  rejoin (the welcome would cover the table), a `?join=` link, or a password reset in progress. Logged-in players skip the
+  create-account step on their own. **To force it again, change `ONBOARDING_FORCE_ID`; to stop forcing it, delete the function
+  and its one call in the boot block** (it is meant to be removed once the tour has been tested).
 - The "n / total" counter is fixed at start (`tour.counted`), so it does not jump when the player signs up.
 - Verified in the preview at 1024x768 and 667x375: every step finds its target, the card stays on screen and off the target,
   taps elsewhere are blocked on `click` steps, typing a name through the hole unlocks Next, real tab switches advance the

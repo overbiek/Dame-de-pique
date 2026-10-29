@@ -16594,6 +16594,20 @@ function tourPlaceCard(rect){
    removed from the address bar at once so a reload cannot re-join. var, not
    let: the handlers that call these can run before the boot lines below. */
 var pendingJoinCode='', pendingJoinAt=0, autoJoinInFlight=false, autoJoinTimer=null;
+// TEMPORARY, on request (2026-10-29): show the welcome, the tutorial and the app tour ONCE to everyone, existing
+// players included, so the new tour can be tested in the wild. Per device, the first time this build loads
+// (`ddp.onboardForced` holds the id of the round that was forced). Skipped, to be retried next visit, when there is a game
+// to rejoin (the welcome would sit on top of the table), a share link to join, or a password reset in progress.
+// To force it again, change ONBOARDING_FORCE_ID. To stop forcing it, delete this function and its one call in the boot block.
+var ONBOARDING_FORCE_ID='2026-10-29';
+function forceOnboardingOnce(){
+  try{
+    if(localStorage.getItem('ddp.onboardForced')===ONBOARDING_FORCE_ID) return;
+    if(room) return;
+    localStorage.removeItem('ddp.tutorialSeen'); localStorage.removeItem(TOUR_KEY);
+    localStorage.setItem('ddp.onboardForced',ONBOARDING_FORCE_ID);
+  }catch(e){}
+}
 // <address>/?firstrun=1 shows the welcome, the tutorial and the app tour once more on this device: it clears the
 // two "seen" flags, then drops the parameter from the address bar (a reload must not repeat it). For re-showing
 // them to yourself or testing; ordinary players never see it.
@@ -16665,6 +16679,7 @@ function tryAutoJoin(){
   }
   const s=loadSession();
   if(s&&s.room){ room=s.room; token=s.token; }
+  if(!resetToken&&!pendingJoinCode) forceOnboardingOnce();
   if(resetToken){ goPersonal(); openResetNewPasswordForm(); }
   else maybeShowOrientHint();
 })();

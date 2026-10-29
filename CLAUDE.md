@@ -4686,6 +4686,20 @@ before pushing.
 - Verified at 1024x768 in Clair: picture rect 0,0,1024,768, attribute obsidienne on map/hub/campaign table,
   clair again on menu and on a casual table.
 
+## Enlarging achievements (other players) and the campaign boss
+- **Another player's profile card: tapping a crest opens the SAME `#crest-popup` your own Achievements tab
+  uses** (`openFriendCrestPopup(i)`, list kept in `fpCrestList` by `friendProfileOk`). The server's
+  `emitProfileCard` now also sends `desc` for each unlocked crest, but **blank for a secret achievement** (its
+  condition is the secret, and seeing a friend's earned one must not reveal it). Progress numbers are not sent,
+  so the popup shows tier and description only.
+- **Campaign: tapping the boss in the map's top-right corner opens `#portrait-popup`** (`openBossPortrait()`:
+  the portrait at min(52vh,300px) plus name and "Boss of <chapter>"). Does nothing until the boss has been glimpsed
+  (the teaser is empty). Fits at 667x375 (17px to 358px of 375).
+- **Fixed on the way: the crest popup's name was never shown.** Its element had `id="cp-name"`, the same as the
+  Casual screen's profile-chip name, so `$('cp-name')` hit the chip and the popup's name stayed blank (and the
+  chip's text was overwritten). Renamed to `cp-pop-name`. Duplicate ids are silent here: check `$('x')` targets when a
+  popup "shows nothing".
+
 ## Not implemented
 - Google Sign-In / account linking (deliberately not built; email + password is enough for the Play Store)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

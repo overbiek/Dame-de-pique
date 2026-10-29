@@ -1416,6 +1416,19 @@ html.landscape-mode #s-menu #menu-friends{grid-column:1;grid-row:5;align-self:st
   margin-top:12px;
 }
 
+/* The campaign boss portrait, enlarged: same overlay and card as #crest-popup. Sized against the
+   viewport height as well, because landscape is only ~375px tall. */
+#portrait-popup{
+  display:none;position:fixed;inset:0;z-index:230;
+  background:rgba(3,16,11,.78);backdrop-filter:blur(3px);
+  padding:calc(env(safe-area-inset-top) + 14px) 12px calc(env(safe-area-inset-bottom) + 14px);
+}
+#portrait-popup.on{display:flex;align-items:center;justify-content:center}
+.portrait-pop-art{width:min(52vh,300px);height:min(52vh,300px);margin-bottom:12px}
+.portrait-pop-art .camp-portrait{width:100%;height:100%;display:block}
+.fp-crest-item[role=button]{cursor:pointer;touch-action:manipulation}
+#camp-boss-teaser{cursor:pointer}
+
 /* ══ Friend invite popup — a full modal, not a dismissible-looking
    banner. It used to be a small bottom-anchored pill (easy to miss
    entirely, especially with the game's own bottom-anchored #votebox
@@ -7033,7 +7046,7 @@ html.scene-on[data-theme="sable"]{
       <div class="camp-progress-bar"><div class="camp-progress-fill" id="camp-progress-fill" style="width:0%"></div></div>
     </div>
 
-    <div class="camp-corner-tr deco-box" id="camp-boss-teaser"></div>
+    <div class="camp-corner-tr deco-box" id="camp-boss-teaser" onclick="openBossPortrait()"></div>
 
     <div class="camp-attempts deco-box" id="camp-attempts"></div>
 
@@ -8179,10 +8192,19 @@ html.scene-on[data-theme="sable"]{
   <div class="crest-pop-card">
     <button class="rulex" onclick="closeCrestPopup()" aria-label="Close">&#10005;</button>
     <div class="crest-pop-art crest-art" id="cp-art"></div>
-    <div class="crest-pop-name" id="cp-name"></div>
+    <div class="crest-pop-name" id="cp-pop-name"></div>
     <div class="crest-pop-tier" id="cp-tier"></div>
     <div class="crest-pop-desc" id="cp-desc"></div>
     <div class="crest-pop-prog" id="cp-prog"></div>
+  </div>
+</div>
+
+<div id="portrait-popup" onclick="if(event.target===this)closeBossPortrait()">
+  <div class="crest-pop-card">
+    <button class="rulex" onclick="closeBossPortrait()" aria-label="Close">&#10005;</button>
+    <div class="portrait-pop-art" id="bp-art"></div>
+    <div class="crest-pop-name" id="bp-name"></div>
+    <div class="crest-pop-tier" id="bp-sub"></div>
   </div>
 </div>
 
@@ -12219,13 +12241,39 @@ function openCrestPopup(achId){
   const lvl=a.level||0, max=a.maxLevel||1;
   $('cp-art').innerHTML=a.crest?crestHTML(a.crest,lvl||1):'';
   $('cp-art').classList.toggle('locked',lvl<=0);
-  $('cp-name').textContent=a.name+(max>1&&lvl>0?' '+ROMAN_POP[lvl]:'');
+  $("cp-pop-name").textContent=a.name+(max>1&&lvl>0?' '+ROMAN_POP[lvl]:'');
   $('cp-tier').textContent=max>1?`Tier ${ROMAN_POP[Math.max(1,lvl)]} of ${ROMAN_POP[max]}`:'';
   $('cp-desc').textContent=a.desc||'';
   $('cp-prog').textContent=lvl>=max?'Complete':`${a.progress}/${a.threshold}`;
   pop.classList.add('on');
 }
+// Same popup, opened from another player's profile card (their unlocked crests only; the
+// server sends name, tier and, for non-secret ones, the description - not progress numbers).
+function openFriendCrestPopup(i){
+  const c=fpCrestList[i], pop=$('crest-popup');
+  if(!c||!pop) return;
+  const lvl=c.level||1, max=c.maxLevel||1;
+  $('cp-art').innerHTML=c.crest?crestHTML(c.crest,lvl):'';
+  $('cp-art').classList.remove('locked');
+  $("cp-pop-name").textContent=c.name+(max>1?' '+ROMAN_POP[lvl]:'');
+  $('cp-tier').textContent=max>1?`Tier ${ROMAN_POP[lvl]} of ${ROMAN_POP[max]}`:'';
+  $('cp-desc').textContent=c.desc||'';
+  $('cp-prog').textContent=lvl>=max?'Complete':'';
+  pop.classList.add('on');
+}
 function closeCrestPopup(){ $('crest-popup').classList.remove('on'); }
+// The campaign boss in the map's top-right corner, enlarged.
+function openBossPortrait(){
+  const d=campaignData; if(!d) return;
+  const ch=d.chapters.find(c=>c.id===campaignViewChapterId);
+  const boss=ch&&ch.bossId&&CAMPAIGN_CHARACTERS[ch.bossId];
+  if(!boss||!$('camp-boss-teaser').innerHTML) return;   // not glimpsed yet: nothing to show
+  $('bp-art').innerHTML=campaignPortraitHTML(ch.bossId);
+  $('bp-name').textContent=boss.name;
+  $('bp-sub').textContent='Boss of '+ch.title;
+  $('portrait-popup').classList.add('on');
+}
+function closeBossPortrait(){ $('portrait-popup').classList.remove('on'); }
 
 // The equipped crest's ladder LEVEL isn't in `equipped` itself (just the
 // id, which doesn't change between tiers) — looked up from the catalog
@@ -13009,6 +13057,7 @@ socket.on('friendRequestAccepted',d=>{
 // Friend/Request Sent/Accept button in place, without knowing anything
 // else about the currently-open payload.
 let fpTargetId=null;
+var fpCrestList=[];
 function openProfileCard(evt,payload){
   if(!account) return;
   fpTargetId=null;
@@ -13187,8 +13236,9 @@ socket.on('friendProfileOk',d=>{
   if(d.crests&&d.crests.length){
     $('fp-crest-empty').style.display='none';
     $('fp-crest-grid').style.display='grid';
-    $('fp-crest-grid').innerHTML=d.crests.map(c=>
-      `<div class="fp-crest-item" title="${esc(c.name)}">`+
+    fpCrestList=d.crests;
+    $('fp-crest-grid').innerHTML=d.crests.map((c,i)=>
+      `<div class="fp-crest-item" title="${esc(c.name)}" role="button" tabindex="0" onclick="openFriendCrestPopup(${i})">`+
       `<span class="crest-art">${crestHTML(c.crest,c.level||1)}</span>`+
       `<div class="fp-crest-name">${esc(c.name)}</div>`+
       `<div class="fp-crest-lv">Lv ${c.level}/${c.maxLevel}</div>`+
@@ -13211,7 +13261,7 @@ socket.on('friendProfileError',d=>{
   $('fp-error').style.display='block';
   $('fp-error-msg').textContent=d.msg;
 });
-document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeFriendProfile(); closeInbox(); closeInviteModal(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeCrestPopup(); closeBossPortrait(); closeFriendProfile(); closeInbox(); closeInviteModal(); } });
 
 /* ══════════ INBOX ══════════
    Three filters: News (nothing sends any yet), Invites (game invites, held

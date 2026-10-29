@@ -12189,6 +12189,9 @@ io.on('connection', (socket) => {
       // to hand another player's client the locked half at all.
       crests: cos.achievements.filter(a => a.unlocked).map(a => ({
         id: a.id, name: a.name, crest: a.crest, level: a.level, maxLevel: a.maxLevel,
+        // For the enlarged view. Never for a secret: its condition is the secret, and being
+        // shown a friend's earned one must not give it away.
+        desc: a.secret ? '' : (a.desc || ''),
       })),
       // Drives the Add Friend / Request Sent / Accept-Decline button on
       // the card — always 'friends' on the getFriendProfile path below

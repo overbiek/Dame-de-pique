@@ -4666,6 +4666,26 @@ before pushing.
   `node --check` and the client (driven with injected events in the preview) were
   exercised. Test a real invite between two accounts before trusting it.
 
+## Campaign is always Obsidienne, and its background is full screen
+- **`syncCampaignTheme()` (called from `show()` and `applyTableTheme`) puts `data-theme="obsidienne"` on `<html>`
+  whenever the campaign map/hub is showing, and on the table/lobby/summary/final screens of a campaign
+  game (`S.campaign`).** Only the attribute changes: `currentThemeKey` and `ddp.tableTheme` keep the player's
+  real choice, and it is back on `<html>` the moment they leave campaign (and the `theme-color` meta with it).
+  Reason: campaign sits on dark photographs; a light or coloured theme gave pale chrome on a dark picture
+  and a coloured border round it (Clair measured badly). Any NEW screen that belongs to campaign must be added
+  to `campaignThemeActive()`.
+- **`.camp-bg` is `position:fixed` in landscape** (`html.landscape-mode #s-campaign .camp-bg`). It used to fill
+  `.camp-scene`, which sits inside `#app`'s padding (safe-area insets + 8px), leaving a strip of page colour
+  round the picture (8px left/right, 4px top/bottom at 1024x768). Fixed, it covers the whole viewport and
+  paints under the notch; the chrome stays inside the padding. The hub uses the same element, so it got the same fix.
+- **The campaign RESULT screen (`#s-final` when `S.campaign`) shows the chapter picture too**
+  (`updateSceneLayer`'s `campResult`, which reuses the scene layer and its chapter art; never an equipped
+  scene). Bare text landed on the chandelier, so `#s-final.camp-final>.center-wrap` is a 380px scrim card with a
+  brass hairline, 14vh from the top (class toggled in `renderFinal`). Fits at 667x375 (bottom 264 of 375).
+  Only the final screen: campaign summary/lobby/draw are not part of a campaign hand's flow.
+- Verified at 1024x768 in Clair: picture rect 0,0,1024,768, attribute obsidienne on map/hub/campaign table,
+  clair again on menu and on a casual table.
+
 ## Not implemented
 - Google Sign-In / account linking (deliberately not built; email + password is enough for the Play Store)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

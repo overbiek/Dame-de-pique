@@ -5002,6 +5002,19 @@ html.landscape-mode #s-lobby>.center-wrap>.tagline,
 html.landscape-mode #s-draw>.center-wrap>.tagline,
 html.landscape-mode #s-summary>.center-wrap>.tagline,
 html.landscape-mode #s-final>.center-wrap>.tagline{margin:4px 0 10px}
+/* A campaign hand's result sits on the chapter picture (see updateSceneLayer), so it needs a
+   backing panel: bare text landed on the chandelier and was unreadable. Same scrim + fine brass
+   border the campaign map's corner panels use. Placed low enough to sit on the calm middle of the
+   picture rather than the ceiling. Specificity (1,3,1) beats the shared #s-final block above. */
+html.landscape-mode #s-final.camp-final>.center-wrap{
+  max-width:380px !important;height:auto;margin:14vh auto 0;
+  padding:16px 24px 18px !important;overflow:visible;
+  border-radius:16px;
+  background:rgba(var(--ddp-scrim-rgb),.72);
+  border:1px solid rgba(var(--ddp-brass-rgb),.32);
+  box-shadow:0 10px 40px rgba(var(--ddp-scrim-rgb),.5);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+}
 html.landscape-mode #s-lobby .exit-row,
 html.landscape-mode #s-draw .exit-row,
 html.landscape-mode #s-summary .exit-row,
@@ -5444,6 +5457,11 @@ html.landscape-mode #s-campaign .camp-scene{
 html.landscape-mode #s-campaign .camp-portrait-notice{display:none}
 
 .camp-bg{position:absolute;inset:0;z-index:0;opacity:.9}
+/* The chapter picture (and the hub still) runs edge to edge, like the table's scene layer.
+   .camp-scene sits INSIDE #app's padding (safe-area insets + 8px), so an absolute fill left a
+   border of page colour all round it. Fixed to the viewport, it also paints under the notch;
+   the chrome stays inside the padding, so nothing can be hidden by it. */
+html.landscape-mode #s-campaign .camp-bg{position:fixed}
 /* Placeholder chapter art: a Deco gradient composition built from the
    SAME tokens the rest of the app's felt/brass system already uses, so
    it re-tints per theme for free. A real photographed/illustrated
@@ -8456,8 +8474,23 @@ let currentThemeKey=DDP_DEFAULT_THEME;
 function applyTableTheme(key){
   if(!DDP_THEMES.includes(key)) key=DDP_DEFAULT_THEME;
   currentThemeKey=key;
-  document.documentElement.setAttribute('data-theme',key);
   try{ localStorage.setItem(DDP_THEME_KEY,key); }catch(e){}
+  syncCampaignTheme();
+}
+// Campaign is ALWAYS Obsidienne, whatever table theme the player picked. Its screens sit on
+// dark photographs (chapter backgrounds, the hub still), and a light or coloured theme put
+// pale chrome and a coloured border round them. Only the attribute on <html> changes: the
+// player's choice (currentThemeKey, localStorage) is untouched and comes back the moment
+// they leave campaign. Called from applyTableTheme and show().
+function campaignThemeActive(){
+  if(currentScreenId==='campaign') return true;
+  return !!(S&&S.campaign&&['lobby','draw','pass','play','summary','final'].indexOf(currentScreenId)>=0);
+}
+function syncCampaignTheme(){
+  const key=campaignThemeActive()?'obsidienne':currentThemeKey;
+  const root=document.documentElement;
+  if(root.getAttribute('data-theme')===key) return;
+  root.setAttribute('data-theme',key);
   const meta=document.querySelector('meta[name="theme-color"]');
   if(meta) meta.setAttribute('content',DDP_THEME_BG[key]);
 }
@@ -8638,7 +8671,10 @@ function applyCardFront(id,persist){
 // would fight all of it. Called from show(), same as
 // applyOrientationLock/updateLandscapeMode.
 function updateSceneLayer(){
-  const onTable=currentScreenId==='pass'||currentScreenId==='play';
+  // A campaign hand's result screen keeps the chapter picture too, so the level does not
+  // end on a plain felt (only ever the campaign chapter art, never an equipped scene).
+  const campResult=!!(S&&S.campaign&&currentScreenId==='final');
+  const onTable=currentScreenId==='pass'||currentScreenId==='play'||campResult;
   document.documentElement.classList.toggle('scene-on',onTable);
   const el=$('scene-layer');
   if(!el) return;
@@ -8830,6 +8866,7 @@ function show(id){
   if(id!=='final') finalFxPlayed=false;   // re-arm the finish sound for the next game
   applyOrientationLock(id);
   updateLandscapeMode();
+  syncCampaignTheme();
   updateSceneLayer();
   syncCampaignAudio();
   if(id==='menu') maybeShowDailyRewards();
@@ -15299,6 +15336,7 @@ function renderFinal(G){
   $('f-title').style.display=(isDaily||isCampaign)?'none':'block';
   $('f-newgame').style.display=(isDaily||isCampaign)?'none':'block';
   $('s-final').classList.toggle('ranked-final',!!G.ranked);
+  $('s-final').classList.toggle('camp-final',isCampaign);
   if(G.ranked){
     if(lastRankedResult) renderRankedResult();           // the server answered before this screen was up
     else if(!rankedResultShown) renderRankedPending();

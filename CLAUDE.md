@@ -4799,6 +4799,10 @@ before pushing.
   rejoin (the welcome would cover the table), a `?join=` link, or a password reset in progress. Logged-in players skip the
   create-account step on their own. **To force it again, change `ONBOARDING_FORCE_ID`; to stop forcing it, delete the function
   and its one call in the boot block** (it is meant to be removed once the tour has been tested).
+- **The first-run welcome card steers towards the tutorial** (owner's call): "Yes, I want to learn!" is 1.5x its old size
+  (padding 21px 33px, 1.2rem; 75% of the row in landscape) and "No thanks, I know what I'm doing" is about half
+  (.72rem, 25% of the row in landscape, half width centred in portrait). Scoped to `#tutorial-welcome`; the install and
+  re-open cards share the `.tutorial-welcome-*` classes and keep equal buttons.
 - The "n / total" counter is fixed at start (`tour.counted`), so it does not jump when the player signs up.
 - Verified in the preview at 1024x768 and 667x375: every step finds its target, the card stays on screen and off the target,
   taps elsewhere are blocked on `click` steps, typing a name through the hole unlocks Next, real tab switches advance the

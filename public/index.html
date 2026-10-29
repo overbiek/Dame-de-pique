@@ -5437,6 +5437,15 @@ html.landscape-mode .tutorial-welcome-card,
 html.landscape-mode .tutorial-partb-card{max-width:min(86vw,480px);padding:18px 22px}
 html.landscape-mode .tutorial-welcome-actions{flex-direction:row}
 html.landscape-mode .tutorial-welcome-actions .btn{flex:1}
+/* First-run welcome only: the learn button is 1.5x its old size and the "I know what I'm doing" button half of
+   it, so the tutorial is the obvious thing to tap. Scoped to #tutorial-welcome: the install and re-open cards
+   share these classes and keep their equal buttons. Portrait stacks (big button full width, small one half
+   width, centred); landscape is a row, 75% / 25% (was 50% / 50%). */
+#tutorial-welcome .tutorial-welcome-actions{align-items:center}
+#tutorial-welcome .btn-primary{padding:21px 33px;font-size:1.2rem}
+#tutorial-welcome .btn-ghost{width:50%;padding:7px 11px;font-size:.72rem;line-height:1.25}
+html.landscape-mode #tutorial-welcome .tutorial-welcome-actions .btn-primary{flex:3 1 0;width:auto}
+html.landscape-mode #tutorial-welcome .tutorial-welcome-actions .btn-ghost{flex:1 1 0;width:auto}
 /* Still top-left, but the landscape home button already lives at
    left:8px/top:8px (44px, see html.landscape-mode .corner-lt) — sitting
    directly under it instead of on top of it. */

@@ -4718,6 +4718,24 @@ before pushing.
 - Verified: the SQL against PGlite (130 of 250 cleared levels counted as 130), and the thresholds
   (99 -> locked, 100 -> I, 200 -> II, 300 -> III, 400 -> IV). Not run against Railway's Postgres.
 
+## Ranked rating reset (one-time migration, 2026-10-29)
+- **Everyone's ranked rating goes back to the start, once, on the first boot after deploy**, because the
+  2026-08-18..2026-10-28 bug (see "Ranked results were silently dropped") left every account's MMR frozen and
+  unequal. `runOneTimeMigrations` (`db.js`) guards it with the `reset_ranked_rating_v1` row in `app_migrations`, in
+  the same transaction as the work, so it can never run twice and a failure retries on the next boot.
+- **What it changes**: `ranked_stats.mmr`, `placement_games_played` (back to 0/5), `mmr_highest` and `mmr_lowest`,
+  all to `RANKED_STARTING_MMR` (250). **What it keeps**: every ranked GAME statistic (games played, best/worst game,
+  moons, Queen takes, totals): history, not rating.
+- **Peak was reset on purpose (owner's "full clean slate")**: rank frames/titles and the Climbing the Ranks rungs are
+  derived from `mmr_highest` on read, so anyone who earned them from a high peak loses them until they climb again;
+  `filterEquipped` quietly drops an equipped rank set that is no longer earned.
+- **Undo**: the old values are copied first to `ranked_rating_backup_v1` (account_id, mmr, placement_games_played,
+  mmr_highest, mmr_lowest, backed_up_at). Restoring is one UPDATE ... FROM that table. Delete the
+  `reset_ranked_rating_v1` row only if you want the reset to run AGAIN (it would back up again - drop the old backup first).
+- Ranked games in progress at deploy are lost anyway (rooms are in memory), so none straddles the reset.
+- Verified on PGlite (varied accounts: rating reset, statistics intact, backup written, a second boot is a no-op).
+  Not run against Railway's Postgres: first real run is the deploy, watch the log for `Migration: reset ranked rating`.
+
 ## Not implemented
 - Google Sign-In / account linking (deliberately not built; email + password is enough for the Play Store)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across

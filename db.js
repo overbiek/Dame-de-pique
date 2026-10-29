@@ -533,6 +533,30 @@ async function runOneTimeMigrations() {
       );
       console.log(`Migration: kept the original House Regular avatars for existing accounts (${res.rowCount} rows)`);
     }
+
+    // Ranked reset (owner's call, after the 2026-08-18..2026-10-28 bug that silently dropped every
+    // ranked result - see applyRankedMmr): everyone starts equal again. Only the RATING fields are
+    // touched (mmr, placement games, peak and lowest); ranked game statistics are history and stay.
+    // Peak is reset too, so rank frames/titles and the Climbing the Ranks rungs (all derived from
+    // mmr_highest on read) are earned again. The previous values are copied to ranked_rating_backup_v1
+    // first, in the same transaction, so this can be undone by hand. Runs once (marker below).
+    const reset = await client.query(
+      `INSERT INTO app_migrations (name) VALUES ('reset_ranked_rating_v1')
+       ON CONFLICT (name) DO NOTHING RETURNING name`
+    );
+    if (reset.rows.length) {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS ranked_rating_backup_v1 AS
+        SELECT account_id, mmr, placement_games_played, mmr_highest, mmr_lowest, now() AS backed_up_at
+        FROM ranked_stats`);
+      const res = await client.query(
+        `UPDATE ranked_stats
+            SET mmr = $1::int, placement_games_played = 0,
+                mmr_highest = $1::int, mmr_lowest = $1::int, updated_at = now()`,
+        [RANKED_STARTING_MMR]
+      );
+      console.log(`Migration: reset ranked rating for ${res.rowCount} accounts to ${RANKED_STARTING_MMR} (old values in ranked_rating_backup_v1)`);
+    }
     await client.query('COMMIT');
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch (_) {}

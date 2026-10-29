@@ -2077,7 +2077,7 @@ input.hero-name-input::placeholder{color:var(--faint);font-style:italic;font-wei
 }
 .hero-crest-right{right:-5px}
 .hero-crest-left{left:-5px}
-.hero-crest.on{display:grid}
+.hero-crest.on{display:grid;cursor:pointer;touch-action:manipulation}
 .hero-avatar-wrap{position:relative;display:inline-block}
 /* Wraps .hero-avatar-wrap on My Account's own hero only (not the shared
    friend-profile popup markup). display:contents everywhere by default,
@@ -12302,6 +12302,26 @@ function renderCrestBadge(el,crestId,level){
   el.innerHTML=crestId?crestHTML(crestId,level||1):'';
   el.classList.toggle('on',!!crestId);
 }
+// Tapping an equipped crest next to an avatar (My Account's hero or another player's profile card)
+// opens the same big popup the Achievements tab uses. The badge is only 32px, so this is the way to
+// actually look at it. stopPropagation: the badge sits on top of the avatar, which has its own tap.
+function zoomEquippedCrest(slot,fromProfile,ev){
+  if(ev) ev.stopPropagation();
+  if(fromProfile){
+    const crestId=slot==='crest2'?fpEquipped.crest2:fpEquipped.crest;
+    const i=fpCrestList.findIndex(c=>c.crest===crestId);
+    if(i>=0) openFriendCrestPopup(i);
+  }else if(cosState){
+    const crestId=slot==='crest2'?cosState.equipped.crest2:cosState.equipped.crest;
+    const a=cosState.achievements.find(x=>x.crest===crestId);
+    if(a) openCrestPopup(a.id);
+  }
+}
+[['pv-crest','crest',false],['pv-crest-left','crest2',false],['fp-crest','crest',true],['fp-crest-left','crest2',true]]
+  .forEach(([id,slot,prof])=>{
+    const el=document.getElementById(id);
+    if(el){ el.setAttribute('role','button'); el.addEventListener('click',ev=>zoomEquippedCrest(slot,prof,ev)); }
+  });
 
 // The hero's title line and two crest badges. All read the equipped set,
 // so they show the same thing another player sees.
@@ -13100,6 +13120,7 @@ socket.on('friendRequestAccepted',d=>{
 // else about the currently-open payload.
 let fpTargetId=null;
 var fpCrestList=[];
+var fpEquipped={};
 function openProfileCard(evt,payload){
   if(!account) return;
   fpTargetId=null;
@@ -13224,6 +13245,7 @@ socket.on('friendProfileOk',d=>{
   // same reasoning as the ranked-profile/account-rank listeners.
   if(!$('friend-profile').classList.contains('on')) return;
   fpTargetId=d.id;
+  fpEquipped=d.equipped||{};
   $('fp-loading').style.display='none';
   $('fp-error').style.display='none';
   $('fp-body').style.display='block';

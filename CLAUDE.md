@@ -4692,6 +4692,12 @@ before pushing.
   `emitProfileCard` now also sends `desc` for each unlocked crest, but **blank for a secret achievement** (its
   condition is the secret, and seeing a friend's earned one must not reveal it). Progress numbers are not sent,
   so the popup shows tier and description only.
+- **The equipped crest badges beside an avatar are tappable too** (`zoomEquippedCrest`): both slots on My Account's hero
+  (`#pv-crest`, `#pv-crest-left`) and on another player's profile card (`#fp-crest`, `#fp-crest-left`) open the same
+  `#crest-popup`. Own badges look the achievement up in `cosState.achievements` by crest id; a profile card's in
+  `fpCrestList` (`fpEquipped` keeps the card's equipped ids). Handlers are bound once at load and call
+  `stopPropagation`, because the 32px badge sits on top of the avatar. Not covered: the small crests on lobby seats and
+  final-standings rows (the server only sends crest id and level there, no name or description).
 - **Campaign: tapping the boss in the map's top-right corner opens `#portrait-popup`** (`openBossPortrait()`:
   the portrait at min(52vh,300px) plus name and "Boss of <chapter>"). Does nothing until the boss has been glimpsed
   (the teaser is empty). Fits at 667x375 (17px to 358px of 375).

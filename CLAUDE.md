@@ -4815,6 +4815,21 @@ before pushing.
   achievements/friends steps, Done/Skip set the flag, the welcome/tutorial exits start it, Skip hides on the account steps
   and returns when offline. **Not run**: a real signup (authOk) mid-tour (simulated), and on a phone.
 
+## Campaign story choice (Hundred Tables or World Tour), 2026-10-31
+- **Once Table 400 is cleared (`highestUnlockedLevel>400`), Campaign opens on a two-tile choice instead of the hub**
+  (`renderCampaignChoice`, `.choice-mode` on `.camp-scene`, markup `#camp-choice`, same full-bleed prologue/1.webp scene
+  as the hub). Below 401 nothing changes. Tile 1, **The Hundred Tables**, shows the app icon (`/icon-512.png`, the black
+  envelope with the gold spade) and opens the existing hub (`choiceEnterHundred`). Tile 2, **The Great Eight / World Tour**,
+  shows a rotating NASA Earth on black (canvas, `startChoiceGlobe`, texture `public/campaign/hub/earth.webp`, equirectangular,
+  made by `campaign-design/worldtour-map/make_earth_texture.py`) with a SOON badge, and **its click does nothing yet**
+  (`choiceEnterWorldTour` is empty): the first tap is meant to start the World Tour epilogue/prologue, which is not wired.
+- Both titles live in `.choice-txt`, pinned 16px from the tile bottom, so they line up (measured: same y in both tiles).
+- Navigation: ‹ from the choice leaves campaign; ‹ from the hub goes up to the choice when >400 (`campaignHomeClick`);
+  `renderCampaignHub`/`renderCampaignMap` clear `.choice-mode`; `syncCampaignAudio` treats the choice as silent like the hub.
+- A returning-from-a-table visit (`campaignReturnLevelId`) still goes straight to the map, as for the hub.
+- Verified in the preview with a stubbed socket and fake `campaignData` (915x412): layout, tile alignment, hub <-> choice <-> menu
+  navigation. **Not run against a real account that has cleared Table 400** (needs Postgres).
+
 ## Not implemented
 - Google Sign-In / account linking (deliberately not built; email + password is enough for the Play Store)
 - Ranked Blitz (Blitz is casual-only on purpose — splitting MMR across
@@ -4855,21 +4870,6 @@ before pushing.
   Match / Custom Game split (P1), avatar frames and the epic/legendary
   price tiers they'd fill (P1/P2), campaign unlocks (P2). Cut entirely
   from this phase per the spec: gifting, Weekly Tournament, and Cash
-## Campaign story choice (Hundred Tables or World Tour), 2026-10-31
-- **Once Table 400 is cleared (`highestUnlockedLevel>400`), Campaign opens on a two-tile choice instead of the hub**
-  (`renderCampaignChoice`, `.choice-mode` on `.camp-scene`, markup `#camp-choice`, same full-bleed prologue/1.webp scene
-  as the hub). Below 401 nothing changes. Tile 1, **The Hundred Tables**, shows the app icon (`/icon-512.png`, the black
-  envelope with the gold spade) and opens the existing hub (`choiceEnterHundred`). Tile 2, **The Great Eight / World Tour**,
-  shows a rotating NASA Earth on black (canvas, `startChoiceGlobe`, texture `public/campaign/hub/earth.webp`, equirectangular,
-  made by `campaign-design/worldtour-map/make_earth_texture.py`) with a SOON badge, and **its click does nothing yet**
-  (`choiceEnterWorldTour` is empty): the first tap is meant to start the World Tour epilogue/prologue, which is not wired.
-- Both titles live in `.choice-txt`, pinned 16px from the tile bottom, so they line up (measured: same y in both tiles).
-- Navigation: ‹ from the choice leaves campaign; ‹ from the hub goes up to the choice when >400 (`campaignHomeClick`);
-  `renderCampaignHub`/`renderCampaignMap` clear `.choice-mode`; `syncCampaignAudio` treats the choice as silent like the hub.
-- A returning-from-a-table visit (`campaignReturnLevelId`) still goes straight to the map, as for the hub.
-- Verified in the preview with a stubbed socket and fake `campaignData` (915x412): layout, tile alignment, hub <-> choice <-> menu
-  navigation. **Not run against a real account that has cleared Table 400** (needs Postgres).
-
   Stakes (whose full design is preserved in the spec's appendix —
   `accounts.lifetime_credits_earned` is already recorded and ready to
   resume its mode-unlock role if it returns).

@@ -5937,6 +5937,34 @@ html.landscape-mode #s-campaign .camp-bg{position:fixed}
     url('/campaign/hub/diamonds.webp') center/cover;
 }
 
+/* ── Story choice ("The Hundred Tables" or "The Great Eight: World Tour") ──
+   Shown instead of the hub once Table 400 is cleared (highestUnlockedLevel>400),
+   see renderCampaignChoice. Same switch as the hub: .choice-mode on .camp-scene
+   hides the per-chapter chrome and reveals .camp-choice. Fixed art, not
+   re-themed (the campaign is always Obsidienne anyway). Both titles sit in
+   .choice-txt, pinned the same distance from the tile's bottom, so they line up. */
+.camp-scene.choice-mode .camp-corner-tl,
+.camp-scene.choice-mode .camp-corner-tc,
+.camp-scene.choice-mode .camp-corner-tr,
+.camp-scene.choice-mode .camp-attempts,
+.camp-scene.choice-mode .camp-route-wrap{display:none}
+.camp-choice{display:none;position:absolute;inset:0;z-index:5;isolation:isolate;align-items:center;justify-content:center}
+.camp-scene.choice-mode .camp-choice{display:flex}
+.camp-choice-tiles{display:flex;gap:clamp(10px,2.4vw,24px);justify-content:center;width:100%}
+.choice-tile{position:relative;flex:0 1 300px;min-width:0;height:clamp(150px,42vh,190px);border-radius:18px;overflow:hidden;
+  border:1px solid rgba(var(--ddp-brass-rgb),.45);padding:0;cursor:pointer;color:var(--cream);background:#000;
+  box-shadow:0 10px 40px rgba(0,0,0,.6);font-family:inherit}
+.choice-tile::before{content:"";position:absolute;inset:6px;border:1px solid rgba(var(--ddp-brass-rgb),.35);border-radius:13px;pointer-events:none;z-index:3}
+.choice-tile:active{transform:scale(.98)}
+.choice-hundred{background:linear-gradient(180deg,rgba(2,6,5,0) 58%,rgba(2,6,5,.9) 100%),url('/icon-512.png') center 46%/cover no-repeat #050403}
+.choice-wt{border-color:var(--gold)}
+.choice-wt canvas{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.choice-txt{position:absolute;left:0;right:0;bottom:16px;z-index:2;display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 12px;text-shadow:0 2px 10px #000}
+.choice-txt b{font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+.choice-txt small{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);line-height:1.5}
+.choice-soon{position:absolute;top:10px;right:12px;z-index:3;background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#1c1405;
+  font-size:9px;font-weight:700;letter-spacing:.16em;padding:3px 8px;border-radius:999px}
+
 /* ── Level-detail popup ──
    Centred modal, opened on a map node tap, before any dialogue or the
    hand itself — objective in plain language, who's at the table, and
@@ -7151,6 +7179,26 @@ html.scene-on[data-theme="sable"]{
       <div class="empty-state"><div class="empty-icon">⏳</div><h3>Opening the doors&hellip;</h3></div>
     </div>
   </div>
+
+    <!-- Story choice — shown instead of the hub once Table 400 is cleared
+         (see renderCampaignChoice). The World Tour tile does nothing yet. -->
+    <div class="camp-choice" id="camp-choice">
+      <div class="camp-hub-vignette"></div>
+      <div class="camp-hub-content">
+        <h2 class="camp-hub-title">Campaign</h2>
+        <p class="camp-hub-tagline">Choose your story.</p>
+        <div class="camp-choice-tiles">
+          <button class="choice-tile choice-hundred" onclick="choiceEnterHundred()">
+            <div class="choice-txt"><b>The Hundred Tables</b><small>Choose your house</small></div>
+          </button>
+          <button class="choice-tile choice-wt" onclick="choiceEnterWorldTour()">
+            <canvas id="choice-globe"></canvas>
+            <span class="choice-soon">SOON</span>
+            <div class="choice-txt"><b>The Great Eight</b><small>World Tour</small></div>
+          </button>
+        </div>
+      </div>
+    </div>
 
   <div class="camp-portrait-notice">
     <div class="camp-portrait-notice-icon" aria-hidden="true">⟳</div>
@@ -8462,7 +8510,7 @@ function syncCampaignAudio(){
   let chId=null, slug=null, hub=false;
   if(currentScreenId==='campaign'){
     const scene=$('camp-scene');
-    if(scene&&scene.classList.contains('hub-mode')){
+    if(scene&&(scene.classList.contains('hub-mode')||scene.classList.contains('choice-mode'))){
       hub=true;
     }else if(campaignData){
       const ch=campaignData.chapters.find(c=>c.id===campaignViewChapterId);
@@ -10133,7 +10181,9 @@ socket.on('campaignStateOk',d=>{
   // the menu, we're returning from a table" (set by goCampaignFromTable,
   // consumed by campaignRenderChapterView) — that case must always go
   // straight back to the map, never re-surface the hub mid-replay.
-  if(d.highestUnlockedLevel>100&&!campaignReturnLevelId){
+  if(d.highestUnlockedLevel>400&&!campaignReturnLevelId){
+    renderCampaignChoice(d);
+  }else if(d.highestUnlockedLevel>100&&!campaignReturnLevelId){
     renderCampaignHub(d);
   }else{
     renderCampaignMap(d);
@@ -10539,6 +10589,7 @@ function campaignPrologueTypeText(text){
   },CAMP_TYPE_MS);
 }
 /* "THE SHARP: \"line\"" -> {id, name, body}. Only a prefix that names a
+  $('camp-scene').classList.remove('choice-mode');
    known character (or PLAYER) counts as a speaker with a portrait; any
    other ALL-CAPS prefix (e.g. DIAMOND ATTENDANT, who has no art) still
    becomes a name label, just without a portrait. Anything else is
@@ -10556,6 +10607,74 @@ function campaignProlSpeaker(text){
   // Drop one pair of wrapping quotes: the card is the speech bubble.
   const q=/^"([^"]*)"$/.exec(body);
   if(q) body=q[1];
+// Story choice: once Table 400 is cleared, Campaign opens on two tiles — The
+// Hundred Tables (the hub of four Houses) and The Great Eight: World Tour. The
+// World Tour tile does nothing yet; its first tap will start the epilogue.
+function renderCampaignChoice(d){
+  $('camp-scene').classList.remove('hub-mode');
+  $('camp-scene').classList.add('choice-mode');
+  $('camp-bg').innerHTML='<img class="campaign-bg-img" src="/campaign/prologue/1.webp" alt="" aria-hidden="true"/>';
+  startChoiceGlobe();
+  syncCampaignAudio();
+}
+function choiceEnterHundred(){ renderCampaignHub(campaignData); }
+function choiceEnterWorldTour(){ /* the epilogue and the Europe map come later */ }
+// Rotating Earth on black behind the World Tour tile: the NASA Blue Marble
+// texture (/campaign/hub/earth.webp, equirectangular) drawn per pixel on a canvas.
+let choiceGlobeRAF=0, choiceEarth=null;
+function startChoiceGlobe(){
+  cancelAnimationFrame(choiceGlobeRAF);
+  const cv=$('choice-globe'); if(!cv) return;
+  const dpr=Math.min(2,window.devicePixelRatio||1), R=cv.parentElement.getBoundingClientRect();
+  const w=Math.round((R.width||300)*dpr), h=Math.round((R.height||190)*dpr);
+  cv.width=w; cv.height=h;
+  const ctx=cv.getContext('2d'), r=Math.round(h*0.28), cx=Math.round(w/2), cy=Math.round(h*0.36), S=2*r;
+  const stars=[]; let sd=7; const rnd=()=>{ sd=(sd*16807)%2147483647; return sd/2147483647; };
+  for(let i=0;i<46;i++) stars.push([rnd()*w,rnd()*h,rnd()*1.1+.3,rnd()*.6+.25]);
+  const tilt=23.4*Math.PI/180, L=[-0.55,-0.35,0.76], ln=Math.hypot(L[0],L[1],L[2]);
+  const lat=new Float32Array(S*S), lon0=new Float32Array(S*S), shade=new Float32Array(S*S), ok=new Uint8Array(S*S);
+  for(let j=0;j<S;j++) for(let i=0;i<S;i++){
+    const nx=(i+.5-r)/r, ny=-(j+.5-r)/r, d=nx*nx+ny*ny, k=j*S+i;
+    if(d>=1){ ok[k]=0; continue; }
+    const nz=Math.sqrt(1-d); ok[k]=1;
+    const py=ny*Math.cos(tilt)-nz*Math.sin(tilt), pz=ny*Math.sin(tilt)+nz*Math.cos(tilt);
+    lat[k]=Math.asin(Math.max(-1,Math.min(1,py))); lon0[k]=Math.atan2(nx,pz);
+    shade[k]=.16+.84*Math.max(0,(nx*L[0]+ny*L[1]+nz*L[2])/ln);
+  }
+  const out=ctx.createImageData(S,S), oc=document.createElement('canvas');
+  oc.width=S; oc.height=S; const ocx=oc.getContext('2d');
+  let rot=2.2, last=performance.now();
+  const run=()=>{
+    const tw=choiceEarth.width, th=choiceEarth.height, td=choiceEarth.data, o=out.data;
+    const frame=now=>{
+      const scene=$('camp-scene');
+      if(!cv.isConnected||currentScreenId!=='campaign'||!scene||!scene.classList.contains('choice-mode')) return;
+      rot+=(now-last)/1000*0.22; last=now;
+      for(let k=0;k<S*S;k++){
+        if(!ok[k]){ o[k*4+3]=0; continue; }
+        let u=((lon0[k]+rot)/(2*Math.PI)+.5)%1; if(u<0) u+=1;
+        const v=.5-lat[k]/Math.PI, tx=(u*tw)|0, ty=Math.min(th-1,(v*th)|0), q=(ty*tw+tx)*4, s=shade[k];
+        o[k*4]=td[q]*s; o[k*4+1]=td[q+1]*s; o[k*4+2]=td[q+2]*s; o[k*4+3]=255;
+      }
+      ctx.clearRect(0,0,w,h);
+      for(const s of stars){ ctx.fillStyle='rgba(255,255,255,'+s[3]+')'; ctx.fillRect(s[0],s[1],s[2]*dpr,s[2]*dpr); }
+      const g=ctx.createRadialGradient(cx,cy,r*.96,cx,cy,r*1.22);
+      g.addColorStop(0,'rgba(120,180,255,.5)'); g.addColorStop(1,'rgba(120,180,255,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r*1.22,0,7); ctx.fill();
+      ocx.putImageData(out,0,0); ctx.drawImage(oc,cx-r,cy-r);
+      choiceGlobeRAF=requestAnimationFrame(frame);
+    };
+    choiceGlobeRAF=requestAnimationFrame(frame);
+  };
+  if(choiceEarth){ run(); return; }
+  const img=new Image();
+  img.onload=()=>{
+    const ec=document.createElement('canvas'); ec.width=img.width; ec.height=img.height;
+    const ex=ec.getContext('2d'); ex.drawImage(img,0,0);
+    choiceEarth=ex.getImageData(0,0,img.width,img.height); run();
+  };
+  img.src='/campaign/hub/earth.webp';
+}
   if(m[1]==='PLAYER') return {id:'player',name:identity().name||'You',body};
   const id=campProlNameMap[m[1]];
   const title=m[1].toLowerCase().replace(/(^|[ '-])([a-z])/g,(x,a,b)=>a+b.toUpperCase());
@@ -10568,6 +10687,13 @@ function campaignPrologueStep(){
     const done=campProlOnDone; campProlOnDone=null;
     if(done) done();
     return;
+  // Table 400 cleared: the story choice is campaign's real root. From it ‹ leaves
+  // campaign; from the hub it goes back up to the choice.
+  if(scene.classList.contains('choice-mode')){ show('menu'); return; }
+  if(scene.classList.contains('hub-mode')&&campaignData&&campaignData.highestUnlockedLevel>400){
+    renderCampaignChoice(campaignData);
+    return;
+  }
   }
   const cue=campProlQueue.shift();
   campaignMarkSeen([cue.id]);
@@ -10703,6 +10829,7 @@ function campaignRenderChapterView(){
   const currentId=Math.min(Math.max(scrollTarget,levels[0].id),levels[levels.length-1].id);
   const currentEl=$('camp-node-'+currentId);
   if(currentEl) currentEl.scrollIntoView({inline:'center',block:'nearest'});
+  $('camp-scene').classList.remove('choice-mode');
   // Consumed exactly once — a later plain goCampaign() (from the menu
   // tile, or switching chapters) must go back to showing frontier
   // progress, not get stuck re-centering on a replayed level forever.

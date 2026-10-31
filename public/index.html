@@ -7175,11 +7175,6 @@ html.scene-on[data-theme="sable"]{
       </div>
     </div>
 
-    <div class="camp-loading" id="camp-loading">
-      <div class="empty-state"><div class="empty-icon">⏳</div><h3>Opening the doors&hellip;</h3></div>
-    </div>
-  </div>
-
     <!-- Story choice — shown instead of the hub once Table 400 is cleared
          (see renderCampaignChoice). The World Tour tile does nothing yet. -->
     <div class="camp-choice" id="camp-choice">
@@ -7199,6 +7194,11 @@ html.scene-on[data-theme="sable"]{
         </div>
       </div>
     </div>
+
+    <div class="camp-loading" id="camp-loading">
+      <div class="empty-state"><div class="empty-icon">⏳</div><h3>Opening the doors&hellip;</h3></div>
+    </div>
+  </div>
 
   <div class="camp-portrait-notice">
     <div class="camp-portrait-notice-icon" aria-hidden="true">⟳</div>
@@ -10512,6 +10512,7 @@ function hubEnterChapter1(){
 // sits minutes before /campaign/prologue/1.webp was created), so this
 // reuses that file rather than reprocessing a duplicate.
 function renderCampaignHub(d){
+  $('camp-scene').classList.remove('choice-mode');
   $('camp-scene').classList.add('hub-mode');
   $('camp-bg').innerHTML='<img class="campaign-bg-img" src="/campaign/prologue/1.webp" alt="" aria-hidden="true"/>';
   // House of Clubs' own tile stays hidden until the account has finished
@@ -10529,84 +10530,6 @@ function renderCampaignHub(d){
   $('hub-tile-diamonds-btn').style.display = d.highestUnlockedLevel>300 ? '' : 'none';
   syncCampaignAudio();
 }
-// The top-left ‹ on the campaign screen — .camp-home's one onclick,
-// shared by the hub and every chapter's table overview alike. Once an
-// account has finished the whole House of Spades campaign, the hub is
-// campaign's own "root" (the chapter tiles are how you got here), so
-// backing out of a chapter's map should land there, not drop all the
-// way out to the main menu — ordinary nested-navigation expectations.
-// Only fires that branch when there's actually a hub to return to and
-// we're not already on it: an account still working through the
-// original campaign never gets a hub at all, and pressing ‹ from the
-// hub itself already means "leave campaign", same as before.
-function campaignHomeClick(){
-  const scene=$('camp-scene');
-  if(!scene.classList.contains('hub-mode')&&campaignData&&campaignData.highestUnlockedLevel>100){
-    renderCampaignHub(campaignData);
-    return;
-  }
-  show('menu');
-}
-function campaignRunPrologue(cues,bgMap,done){
-  Object.values(bgMap).forEach(src=>{ new Image().src=src; });
-  campProlQueue=cues.slice();
-  campProlOnDone=done;
-  campProlBgNum=null;
-  campProlBgMap=bgMap;
-  $('camp-prologue').classList.add('show');
-  campaignPrologueStep();
-}
-function campaignPrologueSetBg(n){
-  if(campProlBgNum===n) return;
-  campProlBgNum=n;
-  const img=$('camp-prol-bg');
-  const src=campProlBgMap[n];
-  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){
-    img.src=src; return;
-  }
-  img.classList.add('fading');
-  setTimeout(()=>{ img.src=src; img.classList.remove('fading'); },300);
-}
-// Same typewriter reveal as campaignTypeText (CAMP_TYPE_MS), kept as its
-// own copy rather than a shared helper — that one is hard-wired to
-// #camp-dlg-text and this overlay's tap-to-complete-early behavior
-// (campaignPrologueAdvance) needs its own typing/timer/full-text state
-// anyway, so sharing would mean threading an element through both.
-function campaignPrologueTypeText(text){
-  clearInterval(campProlTypeTimer);
-  campProlFullText=text;
-  const el=$('camp-prol-text');
-  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){
-    el.textContent=text; campProlTyping=false; return;
-  }
-  el.textContent='';
-  campProlTyping=true;
-  let i=0;
-  campProlTypeTimer=setInterval(()=>{
-    i++;
-    el.textContent=text.slice(0,i);
-    if(i>=text.length){ clearInterval(campProlTypeTimer); campProlTyping=false; }
-  },CAMP_TYPE_MS);
-}
-/* "THE SHARP: \"line\"" -> {id, name, body}. Only a prefix that names a
-  $('camp-scene').classList.remove('choice-mode');
-   known character (or PLAYER) counts as a speaker with a portrait; any
-   other ALL-CAPS prefix (e.g. DIAMOND ATTENDANT, who has no art) still
-   becomes a name label, just without a portrait. Anything else is
-   narration and comes back null. Parsed from the RAW text, before the
-   PLAYER -> account-name swap, or "PLAYER:" would no longer be found. */
-let campProlNameMap=null;
-function campaignProlSpeaker(text){
-  const m=/^([A-Z][A-Z0-9 '.-]{1,30}):\s+([\s\S]*)$/.exec(text||'');
-  if(!m) return null;
-  if(!campProlNameMap){
-    campProlNameMap={};
-    Object.keys(CAMPAIGN_CHARACTERS).forEach(id=>{ const n=CAMPAIGN_CHARACTERS[id].name; if(n) campProlNameMap[n.toUpperCase()]=id; });
-  }
-  let body=m[2];
-  // Drop one pair of wrapping quotes: the card is the speech bubble.
-  const q=/^"([^"]*)"$/.exec(body);
-  if(q) body=q[1];
 // Story choice: once Table 400 is cleared, Campaign opens on two tiles — The
 // Hundred Tables (the hub of four Houses) and The Great Eight: World Tour. The
 // World Tour tile does nothing yet; its first tap will start the epilogue.
@@ -10675,6 +10598,90 @@ function startChoiceGlobe(){
   };
   img.src='/campaign/hub/earth.webp';
 }
+// The top-left ‹ on the campaign screen — .camp-home's one onclick,
+// shared by the hub and every chapter's table overview alike. Once an
+// account has finished the whole House of Spades campaign, the hub is
+// campaign's own "root" (the chapter tiles are how you got here), so
+// backing out of a chapter's map should land there, not drop all the
+// way out to the main menu — ordinary nested-navigation expectations.
+// Only fires that branch when there's actually a hub to return to and
+// we're not already on it: an account still working through the
+// original campaign never gets a hub at all, and pressing ‹ from the
+// hub itself already means "leave campaign", same as before.
+function campaignHomeClick(){
+  const scene=$('camp-scene');
+  // Table 400 cleared: the story choice is campaign's real root. From it ‹ leaves
+  // campaign; from the hub it goes back up to the choice.
+  if(scene.classList.contains('choice-mode')){ show('menu'); return; }
+  if(scene.classList.contains('hub-mode')&&campaignData&&campaignData.highestUnlockedLevel>400){
+    renderCampaignChoice(campaignData);
+    return;
+  }
+  if(!scene.classList.contains('hub-mode')&&campaignData&&campaignData.highestUnlockedLevel>100){
+    renderCampaignHub(campaignData);
+    return;
+  }
+  show('menu');
+}
+function campaignRunPrologue(cues,bgMap,done){
+  Object.values(bgMap).forEach(src=>{ new Image().src=src; });
+  campProlQueue=cues.slice();
+  campProlOnDone=done;
+  campProlBgNum=null;
+  campProlBgMap=bgMap;
+  $('camp-prologue').classList.add('show');
+  campaignPrologueStep();
+}
+function campaignPrologueSetBg(n){
+  if(campProlBgNum===n) return;
+  campProlBgNum=n;
+  const img=$('camp-prol-bg');
+  const src=campProlBgMap[n];
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){
+    img.src=src; return;
+  }
+  img.classList.add('fading');
+  setTimeout(()=>{ img.src=src; img.classList.remove('fading'); },300);
+}
+// Same typewriter reveal as campaignTypeText (CAMP_TYPE_MS), kept as its
+// own copy rather than a shared helper — that one is hard-wired to
+// #camp-dlg-text and this overlay's tap-to-complete-early behavior
+// (campaignPrologueAdvance) needs its own typing/timer/full-text state
+// anyway, so sharing would mean threading an element through both.
+function campaignPrologueTypeText(text){
+  clearInterval(campProlTypeTimer);
+  campProlFullText=text;
+  const el=$('camp-prol-text');
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){
+    el.textContent=text; campProlTyping=false; return;
+  }
+  el.textContent='';
+  campProlTyping=true;
+  let i=0;
+  campProlTypeTimer=setInterval(()=>{
+    i++;
+    el.textContent=text.slice(0,i);
+    if(i>=text.length){ clearInterval(campProlTypeTimer); campProlTyping=false; }
+  },CAMP_TYPE_MS);
+}
+/* "THE SHARP: \"line\"" -> {id, name, body}. Only a prefix that names a
+   known character (or PLAYER) counts as a speaker with a portrait; any
+   other ALL-CAPS prefix (e.g. DIAMOND ATTENDANT, who has no art) still
+   becomes a name label, just without a portrait. Anything else is
+   narration and comes back null. Parsed from the RAW text, before the
+   PLAYER -> account-name swap, or "PLAYER:" would no longer be found. */
+let campProlNameMap=null;
+function campaignProlSpeaker(text){
+  const m=/^([A-Z][A-Z0-9 '.-]{1,30}):\s+([\s\S]*)$/.exec(text||'');
+  if(!m) return null;
+  if(!campProlNameMap){
+    campProlNameMap={};
+    Object.keys(CAMPAIGN_CHARACTERS).forEach(id=>{ const n=CAMPAIGN_CHARACTERS[id].name; if(n) campProlNameMap[n.toUpperCase()]=id; });
+  }
+  let body=m[2];
+  // Drop one pair of wrapping quotes: the card is the speech bubble.
+  const q=/^"([^"]*)"$/.exec(body);
+  if(q) body=q[1];
   if(m[1]==='PLAYER') return {id:'player',name:identity().name||'You',body};
   const id=campProlNameMap[m[1]];
   const title=m[1].toLowerCase().replace(/(^|[ '-])([a-z])/g,(x,a,b)=>a+b.toUpperCase());
@@ -10687,13 +10694,6 @@ function campaignPrologueStep(){
     const done=campProlOnDone; campProlOnDone=null;
     if(done) done();
     return;
-  // Table 400 cleared: the story choice is campaign's real root. From it ‹ leaves
-  // campaign; from the hub it goes back up to the choice.
-  if(scene.classList.contains('choice-mode')){ show('menu'); return; }
-  if(scene.classList.contains('hub-mode')&&campaignData&&campaignData.highestUnlockedLevel>400){
-    renderCampaignChoice(campaignData);
-    return;
-  }
   }
   const cue=campProlQueue.shift();
   campaignMarkSeen([cue.id]);
@@ -10752,6 +10752,7 @@ function renderCampaignMap(d){
   // here too means a future call site can't leave the map stuck hidden
   // behind hub CSS.
   $('camp-scene').classList.remove('hub-mode');
+  $('camp-scene').classList.remove('choice-mode');
   // Sets the module-level campaignData itself rather than trusting the
   // caller to have already done so — campaignRenderChapterView (and
   // campaignSwitchChapter, campaignTapNode, etc.) all read the global,
@@ -10829,7 +10830,6 @@ function campaignRenderChapterView(){
   const currentId=Math.min(Math.max(scrollTarget,levels[0].id),levels[levels.length-1].id);
   const currentEl=$('camp-node-'+currentId);
   if(currentEl) currentEl.scrollIntoView({inline:'center',block:'nearest'});
-  $('camp-scene').classList.remove('choice-mode');
   // Consumed exactly once — a later plain goCampaign() (from the menu
   // tile, or switching chapters) must go back to showing frontier
   // progress, not get stuck re-centering on a replayed level forever.

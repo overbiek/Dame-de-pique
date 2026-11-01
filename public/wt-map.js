@@ -648,7 +648,10 @@ function build(){
   document.body.appendChild(root);
   // The shared level popup and the out-of-attempts popup live inside #app (its own stacking context, z-index 1), which would put them
   // UNDER this layer: move them to the body so they open on top of the map.
-  ['camp-level-modal','camp-noattempts-modal'].forEach(id=>{ const e=document.getElementById(id); if(e&&e.parentNode!==document.body)document.body.appendChild(e); });
+  // THE STORY OVERLAY TOO (#camp-prologue): it lives inside #app, so its z-index 2100 only counts inside #app (z-index 1) and every scene played over the
+  // open map (Rome's opening, the scenes after a table, the world-map conversations) rendered UNDER this layer: invisible and untappable, the scene
+  // "running" behind the map. Body-level it sits above the map as intended.
+  ['camp-prologue','camp-level-modal','camp-noattempts-modal'].forEach(id=>{ const e=document.getElementById(id); if(e&&e.parentNode!==document.body)document.body.appendChild(e); });
   svg=$('svg');landG=$('land');routeG=$('route');marksG=$('marks');imgW=$('imgW');imgE=$('imgE');
   $('devbtn').onclick=()=>$('devmenu').classList.toggle('show');
   $('lvlX').addEventListener('click',closeLvlModal);

@@ -4902,6 +4902,11 @@ before pushing.
 - **`?wtdebug=1` shows a small on-screen log** (bottom left: enterCity, playOpening/story start and end, every tap's target, busy/story/city state, errors) so a phone problem can be read
   from a screenshot. The map layer and the city layer are `overflow:clip` (nothing can scroll them programmatically) and the node row is centred by setting its own scrollLeft, not scrollIntoView
   (which scrolls every overflow:hidden ancestor and can shift the whole layer: a suspect for the "dead map" report).
+- **ROOT CAUSE of "I never get the story" (found 2026-11-01): `#camp-prologue` (the story overlay) lives INSIDE `#app`, a z-index:1 stacking context, so its z-index 2100 only counts inside
+  #app and every scene played while the map was open rendered UNDER `#wtmap` (z 2000): invisible and untappable, "running" behind the map.** wt-map.js `build()` now moves `#camp-prologue`
+  (and the two popups) to `<body>`. The earlier tests only checked the overlay's CLASS (`show`), never what is on top at a point: **always test visibility with `document.elementFromPoint`**
+  (the Browser pane also freezes opacity transitions, so screenshots of overlays are blank). Found by running the real server (copy of server.js + db.js on PGlite, public/ copied, signed up
+  through the real socket) and checking the hit element.
 - **Tables are playable (2026-11-01)**: Play -> `wtStartTable(abs)` (index.html) closes the map and emits the existing `startCampaignLevel` with level id 400+abs. On
   the result screen "Back to the Map" (`goCampaignFromTable`, level > 400) sets `wtReturn`, calls `goCampaign()`, and when the fresh `campaignStateOk` arrives it calls
   `WTMAP.afterTable(abs, wasCleared)`: the map reopens on that city and, for a FIRST clear, plays the table's story (progress first, then story, then the next

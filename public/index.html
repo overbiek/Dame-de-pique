@@ -8999,6 +8999,7 @@ function show(id){
   if(next) next.classList.add('active');
   document.querySelectorAll('.screen').forEach(s=>{ if(s!==next) s.classList.remove('active'); });
   currentScreenId=id;
+  if(id!=='campaign'&&typeof WTMAP!=='undefined') WTMAP.release();   // a World Tour table screen is up: park the map held over the Campaign screen
   if(id!=='final') finalFxPlayed=false;   // re-arm the finish sound for the next game
   applyOrientationLock(id);
   updateLandscapeMode();
@@ -10179,6 +10180,7 @@ function goCampaignFromTable(){
   if(played>400){
     wtReturn={abs:played-400,wasCleared:wtStartWasCleared};
     lastCampaignResult=null; campaignLastNewUnlock=null;
+    try{ WTMAP.back(); }catch(e){}   // put the same city screen back on top at once; the Campaign screen loads underneath and is never seen
     goCampaign();
     return;
   }
@@ -10223,7 +10225,12 @@ socket.on('campaignError',d=>{
   campaignStartPending=false;
   if(d&&d.outOfAttempts){ wtStartPending=false; return; }   // the popup (campaignOutOfAttempts) already covers it
   // A World Tour table that could not start: put the player back on the map with the reason.
-  if(wtStartPending){ wtStartPending=false; WTMAP.open().then(()=>WTMAP.notify((d&&d.msg)||'Could not start that table.')); return; }
+  if(wtStartPending){
+    wtStartPending=false;
+    const say=()=>WTMAP.notify((d&&d.msg)||'Could not start that table.');
+    if(WTMAP.isOpen()){ WTMAP.unhold(); say(); } else WTMAP.open().then(say);
+    return;
+  }
   toast('err-campaign',d.msg);
 });
 
@@ -11047,7 +11054,7 @@ function wtStartTable(abs){
   const res=campaignData&&campaignData.wtResults&&campaignData.wtResults[400+abs];
   wtStartWasCleared=!!(res&&res.cleared);
   wtStartPending=true;
-  WTMAP.close();
+  WTMAP.hold();   // the map stays up (frozen) until the table screen appears: show() releases it, so the Campaign screen never flashes
   campaignStartLevel(400+abs);
 }
 /* First tap: the prologue, which ends on "Then let's start there." and drops straight onto the Europe map, flying into
@@ -11614,7 +11621,7 @@ function goShopBoosts(){
   goShop();
   switchShopCat('boosts');
 }
-socket.on('campaignOutOfAttempts',()=>{ campaignStartPending=false; wtStartPending=false; openNoAttemptsModal(); });
+socket.on('campaignOutOfAttempts',()=>{ campaignStartPending=false; wtStartPending=false; try{ WTMAP.unhold(); }catch(e){} openNoAttemptsModal(); });
 // Guards against a double-tap firing two startCampaignLevel requests
 // (which would burn two attempts for one level, or worse, race two room
 // creations for the same account) — reset on either a successful join

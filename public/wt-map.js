@@ -693,7 +693,7 @@ function open(opts){
   build();loadDev();
   return loadData().then(()=>{
     drawBase();
-    W=innerWidth;H=innerHeight;busy=false;
+    W=innerWidth;H=innerHeight;busy=false;parked=false;resumed=false;unhold();
     root.classList.add('on');
     try{ cancelAnimationFrame(choiceGlobeRAF); }catch(e){}
     view=euDone()?{name:'world',k:null,country:null}:{name:'continent',k:'EU',country:null};
@@ -703,15 +703,47 @@ function open(opts){
 }
 function close(){
   if(!root)return;
-  hideCity();hideSheet();anim=null;busy=false;
+  hideCity();hideSheet();anim=null;busy=false;parked=false;resumed=false;unhold();
   $('scrim').classList.remove('show');
   root.classList.remove('on');
   try{ const sc=document.getElementById('camp-scene'); if(sc&&sc.classList.contains('choice-mode')&&typeof startChoiceGlobe==='function')startChoiceGlobe(); }catch(e){}
+}
+/* Starting a table: the map STAYS on screen (frozen) until the game screen is up, so the Campaign choice screen under it never shows for a
+   moment; show() in index.html calls release() when the table screen appears, which hides the map but KEEPS its state (view, city, scroll).
+   Coming back, back() puts that same map on screen at once, before the Campaign screen is even requested, and afterTable() then refreshes it
+   with the new result. Safety: a hold that nothing releases ends after 8 s so the map is never left dead. */
+let held=false,parked=false,resumed=false,holdT=null;
+function hold(){
+  if(!root||!root.classList.contains('on'))return;
+  held=true;root.style.pointerEvents='none';clearTimeout(holdT);holdT=setTimeout(unhold,8000);
+}
+function unhold(){ held=false;clearTimeout(holdT);if(root)root.style.pointerEvents=''; }
+function release(){
+  if(!held||!root)return;
+  unhold();parked=true;
+  closeLvlModal();
+  root.classList.remove('on');
+}
+function back(){
+  if(!parked||!root)return false;
+  parked=false;resumed=true;busy=false;
+  try{ cancelAnimationFrame(choiceGlobeRAF); }catch(e){}
+  root.classList.add('on');
+  return true;
 }
 /* Back from a real game (index.html, campaignStateOk): reopen the map on that table's country and, when the table has just been
    cleared for the first time, play what follows it (progress first, then the story, then the next table opens). A failed
    attempt or a replay just returns to the city. */
 function afterTable(absN,wasCleared){
+  if(resumed&&root&&root.classList.contains('on')){            // the map came straight back from the table (back()): same view, same city, just refresh it
+    resumed=false;
+    try{ cancelAnimationFrame(choiceGlobeRAF); }catch(e){}
+    const i=Math.floor((absN-1)/10),n=absN-i*10,k=EU[i].k;
+    renderAll();renderCityNodes();
+    if(isCleared(absN)&&!wasCleared)afterClear(k,n);
+    return Promise.resolve();
+  }
+  resumed=false;
   return open().then(()=>{
     const i=Math.floor((absN-1)/10),n=absN-i*10,k=EU[i].k,go=()=>{ if(isCleared(absN)&&!wasCleared)afterClear(k,n); };
     goView({name:'country',k:'EU',country:k},{instant:true});
@@ -724,5 +756,5 @@ function playTable(abs){
   if(view.name!=='country'||view.country!==k)view={name:'country',k:'EU',country:k};
   tryPlay(abs-idxOf(k)*10);
 }
-window.WTMAP={open,close,afterTable,playTable,notify:toast,isOpen:()=>!!root&&root.classList.contains('on')};
+window.WTMAP={open,close,hold,unhold,release,back,afterTable,playTable,notify:toast,isOpen:()=>!!root&&root.classList.contains('on')};
 })();

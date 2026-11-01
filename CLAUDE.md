@@ -4912,6 +4912,12 @@ before pushing.
   `WTMAP.afterTable(abs, wasCleared)`: the map reopens on that city and, for a FIRST clear, plays the table's story (progress first, then story, then the next
   table opens; the Keeper's Table then shows the invitation). A failed attempt or a replay just returns to the city. A refused start (`campaignError`) puts the player
   back on the map with the message; out of attempts opens the existing popup. Cleared tables offer "Play again" (gold shown, attempts shown in the table popup).
+- **No screen flashes between the map and a table (2026-11-01).** The map used to close on Play (the Campaign choice screen showed until the table
+  loaded) and, coming back, the choice screen, then the Europe map, then the city showed in turn. Now: Play calls `WTMAP.hold()` (map stays up,
+  frozen, `pointer-events:none`, 8 s safety release); `show()` in index.html calls `WTMAP.release()` for any non-campaign screen, which hides the
+  map but PARKS its state (view, city). Leaving or finishing a table calls `WTMAP.back()` from `goCampaignFromTable` BEFORE `goCampaign()`, so the
+  same city screen is back on top at once; `afterTable` then only refreshes it (`resumed`) and plays the first-clear story. If the page was reloaded
+  mid-table nothing is parked and the old path (`open()` + animated `enterCity`) runs. A refused start calls `WTMAP.unhold()` + toast.
 
 ## World Tour story reset (one-time migration, 2026-11-01)
 - **Every account's World Tour story was reset once, on the first boot after this deploy** (owner's call, to re-test the whole flow): `runOneTimeMigrations` (`db.js`, marker

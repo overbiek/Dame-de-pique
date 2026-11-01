@@ -4894,6 +4894,11 @@ before pushing.
   you cleared that table yourself, the server enforces it), Play / Play Again. It is fed from `campaignData.wtLevels` (server: id, objective, `seats`, result) and Play calls
   `WTMAP.playTable`. `#camp-level-modal` / `#camp-noattempts-modal` are MOVED to `<body>` by wt-map.js: inside `#app` (its own z-index 1 stacking context) they would open under the map.
   World Tour story scenes have a **Skip** button (marks the block seen) and a throwing scene ends itself instead of leaving the overlay on top of the map.
+- **The map must never be left dead (phone bug, 2026-11-01: nodes and the back arrow stopped responding in Rome).** Taps are blocked ONLY while the story overlay is really visible
+  (`blocked()` = `busy && storyOn()`, not the `busy` flag alone); `story()` always resolves (scene end, a throw, or 8 s off screen); the story JSON fetch has an 8 s timeout and a
+  throwing scene is skipped; the back arrow skips a running scene; an error while the map is open shows as a red "Error: ..." toast (so a phone failure is readable); the choice
+  screen's per-pixel globe loop is paused while the map is open (it was burning CPU behind it). The root cause was NOT reproduced (desktop and a touch-emulated viewport both worked), so
+  if it happens again read the Error toast.
 - **Tables are playable (2026-11-01)**: Play -> `wtStartTable(abs)` (index.html) closes the map and emits the existing `startCampaignLevel` with level id 400+abs. On
   the result screen "Back to the Map" (`goCampaignFromTable`, level > 400) sets `wtReturn`, calls `goCampaign()`, and when the fresh `campaignStateOk` arrives it calls
   `WTMAP.afterTable(abs, wasCleared)`: the map reopens on that city and, for a FIRST clear, plays the table's story (progress first, then story, then the next

@@ -10946,7 +10946,9 @@ function wtMarkSeen(id){
 let wtStory=null;
 function wtLoadStory(cb){
   if(wtStory) return cb(wtStory);
-  fetch('/campaign/worldtour/europe-story.json?v='+WT_STORY_VER).then(r=>r.json()).then(j=>{ wtStory=j; cb(j); }).catch(()=>cb(null));
+  // never wait forever: a hung request must not leave a scene (and the map's buttons) waiting for it
+  Promise.race([fetch('/campaign/worldtour/europe-story.json?v='+WT_STORY_VER).then(r=>r.json()),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))])
+    .then(j=>{ wtStory=j; cb(j); }).catch(()=>cb(null));
 }
 function wtStoryBlock(story,id){
   const p=id.split('.');
@@ -11012,11 +11014,13 @@ function wtPlayStory(id,done,force){
   done=done||function(){};
   if(!force&&wtStorySeen(id)) return done();
   wtLoadStory(story=>{
-    const block=story&&wtStoryBlock(story,id);
-    const cues=block?wtBlockToCues(id,block):[];
-    if(!cues.length) return done();
-    wtPreloadPortraits(cues.pairs);
-    campaignRunPrologue(cues,WT_EUROPE_BG,done,true);
+    try{
+      const block=story&&wtStoryBlock(story,id);
+      const cues=block?wtBlockToCues(id,block):[];
+      if(!cues.length) return done();
+      wtPreloadPortraits(cues.pairs);
+      campaignRunPrologue(cues,WT_EUROPE_BG,done,true);
+    }catch(e){ console.error('World Tour scene failed',id,e); $('camp-prologue').classList.remove('show'); done(); }   // a broken scene is skipped, never stuck
   });
 }
 function worldTourPrologueSeen(){ return WORLDTOUR_PROLOGUE_CUES.every(c=>campaignSeenCues.has(c.id)); }

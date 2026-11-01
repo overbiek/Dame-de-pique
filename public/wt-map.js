@@ -248,7 +248,17 @@ function contState(k){
   if(chosen())return chosen()===k?'active':'locked';
   return 'avail';
 }
-const story=id=>new Promise(res=>wtPlayStory(id,res));
+/* A story scene is on screen (the overlay is above this layer and covers it). `busy` alone is NOT trusted to block taps: if a scene ever
+   failed to report that it finished, the whole map (nodes AND the back arrow) would stay dead. So taps are only blocked while the
+   overlay is really visible, and story() always resolves: when the scene ends, throws, or has been off screen for 8 s. */
+const storyOn=()=>{const e=document.getElementById('camp-prologue');return !!(e&&e.classList.contains('show'));};
+const blocked=()=>busy&&storyOn();
+const story=id=>new Promise(res=>{
+  let fin=false;const t0=Date.now();
+  const end=()=>{ if(!fin){ fin=true; clearInterval(w); res(); } };
+  const w=setInterval(()=>{ if(!storyOn()&&Date.now()-t0>8000)end(); },1000);
+  try{ wtPlayStory(id,end); }catch(e){ console.error('story failed',e); end(); }
+});
 
 /* ---------- camera ---------- */
 function setVB(){svg.setAttribute('viewBox',cam.minX+' '+cam.minY+' '+(W*cam.u)+' '+(H*cam.u));imgE.style.opacity=Math.max(0,Math.min(1,(2900-W*cam.u)/1300));updateMarks();}
@@ -476,7 +486,7 @@ function tapCountry(k){
   if(!hasPic(k))setTimeout(()=>playOpening(k),1300);   // with a city picture the opening plays once you step into the city
 }
 async function playOpening(k){
-  if(busy||wtStorySeen(k+'.open'))return;
+  if(blocked()||wtStorySeen(k+'.open'))return;
   busy=true;await story(k+'.open');busy=false;renderPanel();
 }
 
@@ -555,7 +565,7 @@ function renderCityNodes(){
    have cleared it themselves, Play / Play Again): index.html's campaignOpenLevelModal, fed from campaignData.wtLevels. Without that data
    (test mode, no account) it falls back to a plain Play button. */
 function openLvlModal(n){
-  if(busy)return;
+  if(blocked())return;
   const c=curCountry(),abs=idxOf(c.k)*10+n;
   const has=typeof campaignData!=='undefined'&&campaignData&&(campaignData.wtLevels||[]).some(l=>l.id===400+abs);
   if(has&&typeof campaignOpenLevelModal==='function')return campaignOpenLevelModal(400+abs);
@@ -582,7 +592,7 @@ async function tapCity(k){await enterCity(k);playOpening(k);}
 
 /* ---------- dev (open the game with ?wtdev=1) ---------- */
 function devClear(){
-  if(busy)return;
+  if(blocked())return;
   const c=curCountry();
   if(!c||tablesOf(c.k)>=10)return;
   const n=tablesOf(c.k)+1;
@@ -630,7 +640,7 @@ function build(){
   $('lvlX').addEventListener('click',closeLvlModal);
   $('lvlModal').addEventListener('click',e=>{if(e.target.id==='wm-lvlModal')closeLvlModal();});
   $('back').addEventListener('click',()=>{
-    if(busy)return;
+    if(storyOn()){ if(typeof campaignPrologueSkip==='function')campaignPrologueSkip(); return; }   // the back arrow always does something
     if(CITY){hideCity();flyTo(targetCam(view),900);return;}
     if(view.name==='country')return goView({name:'continent',k:'EU'});
     if(view.name==='cont')return goView({name:'world'});
@@ -638,11 +648,14 @@ function build(){
     close();
   });
   landG.addEventListener('click',e=>{
-    if(busy)return;
+    if(blocked())return;
     const p=e.target.closest('path');if(!p)return;const c=p.dataset.c,id=p.dataset.id;
     if(view.name==='world'){if(c!=='XX')tapContinent(c);}
     else if(view.name==='continent'&&c==='EU'&&id in EUID)tapCountry(EU[EUID[id]].k);
   });
+  const showErr=m=>{ if(!root||!root.classList.contains('on'))return; const t=$('toast'); t.textContent='Error: '+m; t.classList.add('show'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('show'),9000); };
+  addEventListener('error',e=>showErr(e.message+(e.filename?' ('+String(e.filename).split('/').pop()+':'+e.lineno+')':'')));
+  addEventListener('unhandledrejection',e=>showErr(String((e.reason&&e.reason.message)||e.reason)));
   addEventListener('resize',()=>{if(!root.classList.contains('on'))return;W=innerWidth;H=innerHeight;anim=null;flyTo(targetCam(view),0);});
 }
 function loadData(){
@@ -664,6 +677,7 @@ function open(opts){
     drawBase();
     W=innerWidth;H=innerHeight;busy=false;
     root.classList.add('on');
+    try{ cancelAnimationFrame(choiceGlobeRAF); }catch(e){}
     view=euDone()?{name:'world',k:null,country:null}:{name:'continent',k:'EU',country:null};
     renderAll();flyTo(targetCam(view),0);
     if(opts.afterPrologue&&!euDone())setTimeout(()=>tapCountry('IT'),900);
@@ -674,6 +688,7 @@ function close(){
   hideCity();hideSheet();anim=null;busy=false;
   $('scrim').classList.remove('show');
   root.classList.remove('on');
+  try{ const sc=document.getElementById('camp-scene'); if(sc&&sc.classList.contains('choice-mode')&&typeof startChoiceGlobe==='function')startChoiceGlobe(); }catch(e){}
 }
 /* Back from a real game (index.html, campaignStateOk): reopen the map on that table's country and, when the table has just been
    cleared for the first time, play what follows it (progress first, then the story, then the next table opens). A failed

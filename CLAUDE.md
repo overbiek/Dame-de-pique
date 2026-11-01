@@ -4900,6 +4900,14 @@ before pushing.
   table opens; the Keeper's Table then shows the invitation). A failed attempt or a replay just returns to the city. A refused start (`campaignError`) puts the player
   back on the map with the message; out of attempts opens the existing popup. Cleared tables offer "Play again" (gold shown, attempts shown in the table popup).
 
+## World Tour story reset (one-time migration, 2026-11-01)
+- **Every account's World Tour story was reset once, on the first boot after this deploy** (owner's call, to re-test the whole flow): `runOneTimeMigrations` (`db.js`, marker
+  `reset_wt_story_v1`, same transaction) removes the ids starting with `wt_` (prologue `wt_pro_*` and every `wt_<block>` scene) from `campaign_progress.story_cues_seen`.
+  Untouched: table results/unlocks/credits, the Hundred Tables cue ids, `wtx_*` (continent chosen/finished) and `wtc_*`. The old lists are in `wt_story_backup_v1`
+  (account_id, story_cues_seen) to undo by hand. Verified on PGlite (mixed lists, all-wt list -> NULL, no wt ids -> untouched, second boot changes nothing). To reset again, delete the
+  `reset_wt_story_v1` row from `app_migrations` (drop `wt_story_backup_v1` first or the backup is not refreshed: it is CREATE ... IF NOT EXISTS).
+- A player who has the app open keeps the old list in memory until the next campaign state load (reopening Campaign).
+
 ## World Tour levels in the server (`server.js`, 2026-11-01)
 - **`// WT-LEVELS-BEGIN ... END` is GENERATED** by `campaign-design/worldtour-levels/make_server_block.py` from `europe-levels.json` (run it after any change to the
   JSON; it keeps server.js's CRLF endings). It fills `CAMPAIGN_LEVELS[401..500]` (so start / deck / result / credits / unlock are the existing code, no new socket

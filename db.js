@@ -557,6 +557,32 @@ async function runOneTimeMigrations() {
       );
       console.log(`Migration: reset ranked rating for ${res.rowCount} accounts to ${RANKED_STARTING_MMR} (old values in ranked_rating_backup_v1)`);
     }
+
+    // World Tour story reset (owner's call, 2026-11-01): every account sees the World Tour story again from the prologue.
+    // Only the SEEN markers of the story scenes (ids starting with wt_) are removed from campaign_progress.story_cues_seen.
+    // Table results, unlocks, credits and the other cue ids (Hundred Tables, wtx_* continent choices) are untouched.
+    // The old lists are copied to wt_story_backup_v1 first, in the same transaction, so it can be undone by hand. Runs once.
+    // (LIKE with ESCAPE '!' so the underscore is literal: 'wt!_%' matches wt_... but not wtx_... or wtc_...)
+    const wtReset = await client.query(
+      `INSERT INTO app_migrations (name) VALUES ('reset_wt_story_v1')
+       ON CONFLICT (name) DO NOTHING RETURNING name`
+    );
+    if (wtReset.rows.length) {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS wt_story_backup_v1 AS
+        SELECT account_id, story_cues_seen, now() AS backed_up_at
+        FROM campaign_progress
+        WHERE story_cues_seen LIKE '%wt!_%' ESCAPE '!'`);
+      const res = await client.query(
+        `UPDATE campaign_progress
+            SET story_cues_seen = NULLIF((
+                  SELECT string_agg(x, ',')
+                  FROM unnest(string_to_array(story_cues_seen, ',')) AS x
+                  WHERE x <> '' AND x NOT LIKE 'wt!_%' ESCAPE '!'), '')
+          WHERE story_cues_seen LIKE '%wt!_%' ESCAPE '!'`
+      );
+      console.log(`Migration: reset the World Tour story for ${res.rowCount} accounts (old lists in wt_story_backup_v1)`);
+    }
     await client.query('COMMIT');
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch (_) {}

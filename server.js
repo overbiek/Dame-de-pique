@@ -12871,6 +12871,21 @@ io.on('connection', (socket) => {
     }
   });
 
+  // World Tour test aid: the player's OWN World Tour story scenes are forgotten so they play again (the app calls this when opened
+  // with ?wtreset=1). Only wt_* ids of the requesting account; results, unlocks and credits are untouched.
+  socket.on('resetWtStory', async ({ accountToken }) => {
+    if (!DB_ENABLED) return socket.emit('wtStoryReset', { ok: false });
+    const acct = await lookupAccountByToken(accountToken);
+    if (!acct) return socket.emit('wtStoryReset', { ok: false });
+    try {
+      const changed = await db.resetWtStory(acct.id);
+      socket.emit('wtStoryReset', { ok: true, changed });
+    } catch (e) {
+      console.error('resetWtStory error:', e.message);
+      socket.emit('wtStoryReset', { ok: false });
+    }
+  });
+
   socket.on('markCampaignCuesSeen', async ({ accountToken, ids }) => {
     if (!DB_ENABLED || !Array.isArray(ids) || !ids.length) return;
     const acct = await lookupAccountByToken(accountToken);

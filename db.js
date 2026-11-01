@@ -1982,6 +1982,23 @@ async function advanceCampaignUnlock(accountId, levelId) {
 
 // Same union-on-write approach as markAchievementsSeen, so two tabs open
 // on the same account can't clobber each other's seen-cue markers.
+// Forget the World Tour story scenes (ids starting with wt_) for ONE account, so they play again. Same filter as the one-time migration
+// reset_wt_story_v1 (LIKE with ESCAPE '!' so the underscore is literal: wt_... but not wtx_... / wtc_...). Returns 1 if anything was removed.
+async function resetWtStory(accountId) {
+  const { rows } = await pool.query(
+    `UPDATE campaign_progress
+        SET story_cues_seen = NULLIF((
+              SELECT string_agg(x, ',')
+              FROM unnest(string_to_array(story_cues_seen, ',')) AS x
+              WHERE x <> '' AND x NOT LIKE 'wt!_%' ESCAPE '!'), ''),
+            updated_at = now()
+      WHERE account_id = $1 AND story_cues_seen LIKE '%wt!_%' ESCAPE '!'
+      RETURNING account_id`,
+    [accountId]
+  );
+  return rows.length;
+}
+
 async function markCampaignCuesSeen(accountId, ids) {
   if (!ids || !ids.length) return;
   await ensureCampaignProgressRow(accountId);
@@ -2061,7 +2078,7 @@ module.exports = {
   getCosmetics, saveCosmetics, markAchievementsSeen,
   grantCredits, getCredits, claimCasualCreditDay, purchaseItem, getPurchases,
   getCampaignState, consumeCampaignAttempt, upsertCampaignLevelResult,
-  advanceCampaignUnlock, markCampaignCuesSeen, getCampaignFriendsResults,
+  advanceCampaignUnlock, markCampaignCuesSeen, resetWtStory, getCampaignFriendsResults,
   recordCampaignHandStats, getCampaignStats,
   getDailyPodiumCounts, getClearedLevelIds, purchaseAttempts, isDailySettled, settleDailyRewards, getPendingDailyRewards, ackDailyRewards,
 };

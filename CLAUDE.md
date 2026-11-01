@@ -4915,6 +4915,9 @@ before pushing.
   (account_id, story_cues_seen) to undo by hand. Verified on PGlite (mixed lists, all-wt list -> NULL, no wt ids -> untouched, second boot changes nothing). To reset again, delete the
   `reset_wt_story_v1` row from `app_migrations` (drop `wt_story_backup_v1` first or the backup is not refreshed: it is CREATE ... IF NOT EXISTS).
 - A player who has the app open keeps the old list in memory until the next campaign state load (reopening Campaign).
+- **Per-account reset for testing: open the game with `?wtreset=1` and tap the World Tour tile** (once per page load): the client emits `resetWtStory`, the server runs
+  `db.resetWtStory(accountId)` (only THAT account's `wt_*` ids; same filter as the migration) and answers `wtStoryReset {ok, changed}`; the client clears its own copy, shows a banner,
+  and the prologue plays again. Needs no deploy per reset (the migration above only runs once).
 
 ## World Tour levels in the server (`server.js`, 2026-11-01)
 - **`// WT-LEVELS-BEGIN ... END` is GENERATED** by `campaign-design/worldtour-levels/make_server_block.py` from `europe-levels.json` (run it after any change to the

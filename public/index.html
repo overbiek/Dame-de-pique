@@ -11049,10 +11049,27 @@ function wtStartTable(abs){
 /* First tap: the prologue, which ends on "Then let's start there." and drops straight onto the Europe map, flying into
    Italy. Later taps open the map where the player left off (public/wt-map.js). */
 function choiceEnterWorldTour(){
-  const hide=()=>{ const b=$('choice-new'); if(b) b.style.display='none'; };
-  if(worldTourPrologueSeen()) return WTMAP.open();
-  wtPreloadPortraits();
-  campaignRunPrologue(WORLDTOUR_PROLOGUE_CUES,CAMPAIGN_PROLOGUEWT_BG,()=>{ hide(); WTMAP.open({afterPrologue:true}); });
+  wtMaybeReset(()=>{
+    const hide=()=>{ const b=$('choice-new'); if(b) b.style.display='none'; };
+    if(worldTourPrologueSeen()) return WTMAP.open();
+    wtPreloadPortraits();
+    campaignRunPrologue(WORLDTOUR_PROLOGUE_CUES,CAMPAIGN_PROLOGUEWT_BG,()=>{ hide(); WTMAP.open({afterPrologue:true}); });
+  });
+}
+/* Open the game with ?wtreset=1 and tap the World Tour tile: this account's World Tour story scenes are forgotten (server + here) first, so the
+   whole story plays again. Once per page load; results, unlocks and credits are untouched. A banner says what happened. */
+var wtResetAsked=false;
+function wtMaybeReset(then){
+  if(wtResetAsked||!/[?&]wtreset=1/.test(location.search)||!accountToken){ then(); return; }
+  wtResetAsked=true;
+  let fin=false,timer=null;
+  const go=(msg)=>{ if(fin) return; fin=true; clearTimeout(timer); if(msg) showBanner(msg,{dot:'info'}); then(); };
+  socket.once('wtStoryReset',d=>{
+    if(d&&d.ok){ Array.from(campaignSeenCues).forEach(id=>{ if(id.indexOf('wt_')===0) campaignSeenCues.delete(id); }); go('World Tour story reset'+(d.changed?'':' (nothing was marked as seen)')); }
+    else go('Could not reset the World Tour story');
+  });
+  socket.emit('resetWtStory',{accountToken});
+  timer=setTimeout(()=>go('World Tour story reset did not answer'),5000);
 }
 // Rotating Earth on black behind the World Tour tile: the NASA Blue Marble
 // texture (/campaign/hub/earth.webp, equirectangular) drawn per pixel on a canvas.

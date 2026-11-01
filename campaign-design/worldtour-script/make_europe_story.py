@@ -87,6 +87,20 @@ SHOW_V = {
 }
 
 
+# Dialogue that is NOT in the script, written for the app (approved by the owner): {block id: (prefix of the 'v' line it follows, cues)}.
+# A spoken cue here is ['s', SPEAKER, text, mood, English translation]; these are not counted in the mood-override indexes
+# (those count only the script's own spoken lines). The 'v' line's own text is cut to the part before CUT so it does not repeat the exchange.
+EXTRA = {
+    'IT.open': ('Rome. Warm evening.', [
+        ['s', 'LOCAL MAN', "Scusi, sa dov'è Piazza Navona?", 'neutral', 'Excuse me, do you know where Piazza Navona is?'],
+        ['s', 'CLOSER', 'Dritto, poi la seconda a destra. Dieci minuti a piedi.', 'neutral', 'Straight on, then the second on the right. Ten minutes on foot.'],
+        ['s', 'LOCAL MAN', 'Grazie mille!', 'neutral', 'Thank you very much!'],
+        ['s', 'CLOSER', 'Prego. Buona serata.', 'smile', "You're welcome. Have a good evening."],
+    ]),
+}
+CUT = ' A local man asks'
+
+
 def convert(bid, cues, spec):
     n_sp = sum(1 for c in cues if c[0] == 's')
     ovr = parse_moods(spec, n_sp) if spec is not None else None
@@ -96,7 +110,11 @@ def convert(bid, cues, spec):
         if k == 'v':
             prev_v = c[1]
             if any(c[1].startswith(pre) for pre in SHOW_V.get(bid, [])):
-                out.append(['b', c[1].replace('CLOSER', 'Closer')])
+                txt = c[1]
+                if bid in EXTRA and CUT in txt: txt = txt.split(CUT)[0]
+                out.append(['b', txt.replace('CLOSER', 'Closer')])
+            if bid in EXTRA and c[1].startswith(EXTRA[bid][0]):
+                out.extend(EXTRA[bid][1])
             continue
         if k == 'sys': continue
         if k == 's':

@@ -5827,6 +5827,8 @@ html.landscape-mode #s-campaign .camp-bg{position:fixed}
   font-family:'Playfair Display',serif;font-style:italic;font-weight:500;
   font-size:17px;line-height:1.5;color:var(--cream);min-height:1.5em;
 }
+.camp-prol-tr{margin-top:5px;font-family:'DM Sans',sans-serif;font-style:normal;font-size:12px;line-height:1.35;color:var(--muted)}
+.camp-prol-tr:empty{display:none}
 .camp-prol-continue{
   position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 20px);
   transform:translateX(-50%);
@@ -7254,6 +7256,7 @@ html.scene-on[data-theme="sable"]{
     <div class="camp-prol-portrait" id="camp-prol-portrait"></div>
     <div class="camp-prol-name" id="camp-prol-name"></div>
     <div class="camp-prol-text" id="camp-prol-text"></div>
+    <div class="camp-prol-tr" id="camp-prol-tr"></div>
   </div>
   <button class="btn btn-primary camp-prol-continue" id="camp-prol-continue" style="display:none" onclick="campaignPrologueAdvance()">Continue</button>
   <button class="camp-prol-skip" id="camp-prol-skip" style="display:none" onclick="event.stopPropagation();campaignPrologueSkip()">Skip &rsaquo;</button>
@@ -10932,7 +10935,7 @@ const WT_BLANK='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAA
 const WT_EUROPE_BG={none:WT_BLANK};
 /* Countries whose three stills are in public/campaign/worldtour/europe/<cc>_<1|2|3>.webp: add a code here when a country's pictures arrive. */
 ['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'].forEach(cc=>[1,2,3].forEach(n=>{ WT_EUROPE_BG[cc+n]='/campaign/worldtour/europe/'+cc.toLowerCase()+'_'+n+'.webp'; }));
-const WT_STORY_VER=3;   // bump when europe-story.json changes (the service worker keeps non-script files)
+const WT_STORY_VER=4;   // bump when europe-story.json changes (the service worker keeps non-script files)
 /* ?wtdev=1 (or ?wtstory=1): World Tour test mode. Story/progress ids are kept on this device only (never sent to the account),
    the map gets a DEV button that clears tables, and the story gallery is available. `var` so wt-map.js sees window.WT_DEV. */
 var WT_DEV=/[?&](wtdev|wtstory)=1\b/.test(location.search);
@@ -10969,6 +10972,7 @@ function wtBlockToCues(id,block){
     if(c[0]==='s'){
       const mid=WT_MEMBER_ID[c[1]];
       cue={text:(mid?'THE '+c[1]:c[1])+': '+c[2]};
+      if(c[4]) cue.tr=c[4];   // translation shown under a line in another language
       if(mid){ cue.mood=c[3]; cue.look=wtLookFor(mid,country); pairs[mid+'|'+cue.look]=[mid,cue.look]; }
     }else if(c[0]==='h'||c[0]==='b'||(c[0]==='u'&&!WT_PROGRESS_UI.test(c[1]))) cue={text:c[1]};
     if(!cue) return;
@@ -11252,6 +11256,7 @@ function campaignPrologueStep(){
     $('camp-prol-portrait').innerHTML=!(sp&&sp.id)?''
       :sp.id==='player'?`<span class="avatar" style="width:100%;height:100%">${avatarHTML(account&&account.avatar,sp.name)}</span>`
       :(wtPortraitHTML(sp.id,cue.mood||WT_PROLOGUE_MOOD[cue.id],cue.look)||campaignPortraitHTML(sp.id));
+    $('camp-prol-tr').textContent=cue.tr||'';
     campaignPrologueTypeText(campaignPlayerText(sp?sp.body:cue.text));
   }
 }

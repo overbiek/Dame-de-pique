@@ -1409,7 +1409,8 @@ async function getAchievementStats(accountId) {
             -- Perfectionist: campaign tables cleared at GOLD (one row per level,
             -- so this is a count of distinct levels, never of attempts).
             (SELECT COUNT(*) FROM campaign_level_results c2
-              WHERE c2.account_id = k.account_id AND c2.gold) AS gold_levels
+              WHERE c2.account_id = k.account_id AND c2.gold
+                AND c2.level_id <= 400) AS gold_levels   -- the Hundred Tables only: 400 stays "every table" (World Tour is 401+)
      FROM (SELECT $1::int AS account_id) k
      LEFT JOIN achievement_stats a ON a.account_id = k.account_id
      LEFT JOIN ranked_stats r ON r.account_id = k.account_id`,

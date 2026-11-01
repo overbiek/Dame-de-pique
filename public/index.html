@@ -5680,6 +5680,9 @@ html.landscape-mode #s-campaign .camp-bg{position:fixed}
 .camp-portrait{position:relative;display:inline-block;border-radius:50%;overflow:hidden;flex:0 0 auto}
 .camp-portrait-svg{display:block;width:100%;height:100%}
 .camp-portrait-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%}
+/* World Tour octagon-ring portraits: the ring's corners and points must not be cut by the round clip. */
+.camp-portrait.wt-oct{border-radius:0;overflow:visible}
+.camp-portrait.wt-oct .camp-portrait-img{border-radius:0;object-fit:contain}
 .camp-corner-tr .camp-portrait{width:90px;height:90px}
 .camp-boss-teaser>.camp-portrait{width:90px;height:90px}
 /* Fills whichever .avatar-classed wrapper it lands in at the actual
@@ -5775,6 +5778,7 @@ html.landscape-mode #s-campaign .camp-bg{position:fixed}
   opacity:0;pointer-events:none;transition:opacity .3s ease;
 }
 .camp-prol-scrim.show{opacity:1;pointer-events:auto}
+.camp-prol-scrim.see-through{background:rgba(2,6,5,.4)}
 .camp-prol-bg{
   position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
   transition:opacity .3s ease;
@@ -8315,6 +8319,7 @@ html.scene-on[data-theme="sable"]{
 <script src="/socket.io/socket.io.js"></script>
 <script src="/sfx.js"></script>
 <script src="/music.js"></script>
+<script src="/wt-map.js"></script>
 <script>
 "use strict";
 
@@ -10008,7 +10013,8 @@ const campaignArtMissing={};
 const CAMPAIGN_BG_SRC={ conservatory:'/scenes/conservatory.webp' };
 function campaignBgImg(slug,eager){
   if(campaignArtMissing['bg:'+slug]) return '';
-  const src=CAMPAIGN_BG_SRC[slug]||`/campaign/chapters/${slug}.webp`;
+  // World Tour tables use their country's location still: slug 'wt_it_2' -> /campaign/worldtour/europe/it_2.webp
+  const src=CAMPAIGN_BG_SRC[slug]||(slug.indexOf('wt_')===0?`/campaign/worldtour/europe/${slug.slice(3)}.webp`:`/campaign/chapters/${slug}.webp`);
   return `<img class="campaign-bg-img" src="${src}" alt="" aria-hidden="true"`+
          ` loading="${eager?'eager':'lazy'}" decoding="sync" onerror="campaignArtFailed('bg:${slug}',this)"/>`;
 }
@@ -10161,6 +10167,14 @@ function goCampaign(){
 // 100 levels each, so "same house" is just "same //100 block".
 function goCampaignFromTable(){
   const played=(S&&S.campaign&&S.campaignLevel)||null;
+  // A World Tour table (401+) goes back onto the Europe map, not the Hundred Tables: wtReturn is picked up by campaignStateOk
+  // once the fresh state (with the new result) has arrived, because the map reads its clears from it.
+  if(played>400){
+    wtReturn={abs:played-400,wasCleared:wtStartWasCleared};
+    lastCampaignResult=null; campaignLastNewUnlock=null;
+    goCampaign();
+    return;
+  }
   const sameHouse=played&&campaignLastNewUnlock&&Math.floor((played-1)/100)===Math.floor((campaignLastNewUnlock-1)/100);
   campaignReturnLevelId=(sameHouse?campaignLastNewUnlock:played)||null;
   campaignLastNewUnlock=null;
@@ -10170,6 +10184,7 @@ function goCampaignFromTable(){
 socket.on('campaignStateOk',d=>{
   campaignData=d;
   campaignSeenCues=new Set(d.storyCuesSeen||[]);
+  if(wtReturn){ const r=wtReturn; wtReturn=null; setTimeout(()=>WTMAP.afterTable(r.abs,r.wasCleared),0); }
   if(!$('s-campaign').classList.contains('active')) return;
   $('camp-loading').style.display='none';
   // Once the whole House of Spades campaign is finished (clearing level
@@ -10197,7 +10212,13 @@ socket.on('campaignStateErr',d=>{
 });
 // outOfAttempts: the server sends this alongside campaignOutOfAttempts for the
 // benefit of older cached copies of the app; the popup already covers it here.
-socket.on('campaignError',d=>{ campaignStartPending=false; if(d&&d.outOfAttempts) return; toast('err-campaign',d.msg); });
+socket.on('campaignError',d=>{
+  campaignStartPending=false;
+  if(d&&d.outOfAttempts){ wtStartPending=false; return; }   // the popup (campaignOutOfAttempts) already covers it
+  // A World Tour table that could not start: put the player back on the map with the reason.
+  if(wtStartPending){ wtStartPending=false; WTMAP.open().then(()=>WTMAP.notify((d&&d.msg)||'Could not start that table.')); return; }
+  toast('err-campaign',d.msg);
+});
 
 function campaignCuesFor(levelId,trigger){
   if(!campaignData) return [];
@@ -10210,7 +10231,7 @@ function campaignCuesFor(levelId,trigger){
 // wraps every id into its own hundred-block. A no-op for ids 1-100 (the same
 // formula happens to return the id unchanged there), so every existing House
 // of Spades call site is unaffected by applying this uniformly.
-function campaignTableLabel(id){ return ((id-1)%100)+1; }
+function campaignTableLabel(id){ return id>400?((id-401)%10)+1:((id-1)%100)+1; }   // World Tour: table 1-10 within its country
 // Shows a (levelId,trigger) bucket if it has content and hasn't been seen
 // before (a "pick:random" bucket, like Level 10's failure lines, counts
 // as seen after any one of its lines has been shown — the screenplay
@@ -10824,15 +10845,206 @@ function renderCampaignChoice(d){
   $('camp-scene').classList.add('choice-mode');
   $('camp-bg').innerHTML='<img class="campaign-bg-img" src="/campaign/prologue/1.webp" alt="" aria-hidden="true"/>';
   startChoiceGlobe();
-  { const b=$('choice-new'); if(b) b.style.display=worldTourPrologueSeen()?'none':''; }
+  { const b=$('choice-new'); if(b) b.style.display=worldTourIntroSeen()?'none':''; }
   syncCampaignAudio();
 }
 function choiceEnterHundred(){ renderCampaignHub(campaignData); }
+/* World Tour character portraits: the new octagon-ring heads, one file per
+   (character, look, mood) at /campaign/worldtour/portraits/<dir>/<look>/<mood>.webp.
+   WT_PORTRAIT_ART lists what exists (dir + looks). A character not listed, or a
+   cue with no mood, falls back to the old campaign portrait, so the three
+   members whose art is still to come (Jester, Charmer, Wildcard) keep working.
+   Add a member here once their four 'house' files are in public/. */
+const WT_PORTRAIT_ART={
+  the_closer:{dir:'closer',looks:['house','eu_it_closer']},
+  the_scholar:{dir:'scholar',looks:['house','eu_de_scholar']},
+  the_sharp:{dir:'sharp',looks:['house','eu_pt_sharp']},
+  the_optimist:{dir:'optimist',looks:['house']},
+};
+const WT_MOODS=['neutral','smile','surprised','serious'];
+/* Mood per spoken line of the prologue's long-table scene (cue id -> mood).
+   Players' lines (wt_pro_30, wt_pro_56) have no entry on purpose. */
+const WT_PROLOGUE_MOOD={
+  wt_pro_16:'smile',wt_pro_17:'smile',wt_pro_18:'smile',wt_pro_19:'smile',
+  wt_pro_20:'serious',wt_pro_21:'neutral',wt_pro_22:'serious',wt_pro_23:'smile',
+  wt_pro_24:'serious',wt_pro_25:'serious',wt_pro_26:'smile',wt_pro_27:'neutral',
+  wt_pro_28:'neutral',wt_pro_29:'surprised',
+  wt_pro_31:'serious',wt_pro_32:'smile',wt_pro_33:'neutral',wt_pro_34:'serious',
+  wt_pro_35:'serious',wt_pro_36:'surprised',wt_pro_37:'smile',wt_pro_38:'serious',
+  wt_pro_39:'serious',wt_pro_40:'serious',wt_pro_41:'serious',wt_pro_42:'smile',
+  wt_pro_43:'neutral',wt_pro_44:'serious',wt_pro_45:'neutral',wt_pro_46:'neutral',
+  wt_pro_47:'smile',wt_pro_48:'neutral',wt_pro_49:'neutral',wt_pro_50:'serious',
+  wt_pro_51:'surprised',wt_pro_52:'smile',wt_pro_53:'smile',wt_pro_54:'serious',
+  wt_pro_55:'serious',
+  wt_pro_57:'neutral',wt_pro_58:'surprised',wt_pro_59:'neutral',wt_pro_60:'smile',
+  wt_pro_61:'serious',wt_pro_62:'smile',wt_pro_63:'smile',wt_pro_64:'neutral',
+  wt_pro_65:'smile',wt_pro_66:'smile',wt_pro_67:'smile',
+};
+function wtPortraitSrc(id,mood,look){
+  const a=WT_PORTRAIT_ART[id]; look=look||'house';
+  if(!a||WT_MOODS.indexOf(mood)<0||a.looks.indexOf(look)<0) return null;
+  return `/campaign/worldtour/portraits/${a.dir}/${look}/${mood}.webp`;
+}
+/* null when there is no new art, so the caller can fall back to the old portrait. */
+function wtPortraitHTML(id,mood,look){
+  const src=wtPortraitSrc(id,mood,look);
+  if(!src) return null;
+  return `<span class="camp-portrait wt-oct"><img class="camp-portrait-img" src="${src}" alt="" aria-hidden="true"`+
+         ` loading="eager" decoding="sync" onerror="wtPortraitFailed(this,'${id}')"/></span>`;
+}
+function wtPortraitFailed(el,id){
+  const box=el&&el.closest('.camp-portrait');
+  if(box) box.outerHTML=campaignPortraitHTML(id);
+}
+/* Every mood of the given (member, look) pairs, so a line never waits on its picture.
+   No argument = the house look of everyone listed (the prologue). */
+function wtPreloadPortraits(pairs){
+  pairs=pairs||Object.keys(WT_PORTRAIT_ART).map(id=>[id,'house']);
+  pairs.forEach(p=>WT_MOODS.forEach(m=>{ const s=wtPortraitSrc(p[0],m,p[1]); if(s){ const i=new Image(); i.src=s; } }));
+}
+
+/* ---- World Tour: the Europe story (public/campaign/worldtour/europe-story.json) ----
+   Built from the movie script by campaign-design/worldtour-script/make_europe_story.py (every spoken line has a
+   hand-set mood). It is played through the same full-screen overlay as the prologue (campaignRunPrologue), so
+   dialogue cards show the ring portrait + name. One "seen" id per BLOCK ('wt_IT.open', 'wt_ES.13' = what plays after
+   table 13...), stored like every story cue, so a replay of a table never replays its story.
+   Block ids: <CC>.open (before the country's first table), <CC>.<n> (after table n, n = 1-100 across the continent),
+   <CC>.handoff, world.preview.<CONTINENT>, world.commit. */
+const WT_ROUTE=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'];
+const WT_MEMBER_ID={CLOSER:'the_closer',OPTIMIST:'the_optimist',SHARP:'the_sharp',CHARMER:'the_charmer',WILDCARD:'the_wildcard',SCHOLAR:'the_scholar',JESTER:'the_jester'};
+/* Lead cast per country (London and the last two countries are group chapters: nobody gets a new look) and the hero look
+   each lead wears from then on, until they lead again. A look with no art yet falls back to the house look. */
+const WT_LEAD={IT:'the_closer',ES:'the_optimist',PT:'the_sharp',NL:'the_charmer',BE:'the_wildcard',DE:'the_scholar',PL:'the_jester'};
+const WT_HERO={IT:'eu_it_closer',ES:'eu_es_optimist',PT:'eu_pt_sharp',NL:'eu_nl_charmer',BE:'eu_be_wildcard',DE:'eu_de_scholar',PL:'eu_pl_jester'};
+function wtLookFor(memberId,cc){
+  const a=WT_PORTRAIT_ART[memberId]; if(!a) return 'house';
+  let look='house';
+  for(let i=0;i<=WT_ROUTE.indexOf(cc);i++){ const c=WT_ROUTE[i]; if(WT_LEAD[c]===memberId&&a.looks.indexOf(WT_HERO[c])>=0) look=WT_HERO[c]; }
+  return look;
+}
+/* Location stills per country: key <CC><1|2|3> (first place, second place, the Keeper's Table venue). Missing ones
+   show black instead of the previous country's picture. */
+const WT_BLANK='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+const WT_EUROPE_BG={none:WT_BLANK};
+/* Countries whose three stills are in public/campaign/worldtour/europe/<cc>_<1|2|3>.webp: add a code here when a country's pictures arrive. */
+['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'].forEach(cc=>[1,2,3].forEach(n=>{ WT_EUROPE_BG[cc+n]='/campaign/worldtour/europe/'+cc.toLowerCase()+'_'+n+'.webp'; }));
+const WT_STORY_VER=1;   // bump when europe-story.json changes (the service worker keeps non-script files)
+/* ?wtdev=1 (or ?wtstory=1): World Tour test mode. Story/progress ids are kept on this device only (never sent to the account),
+   the map gets a DEV button that clears tables, and the story gallery is available. `var` so wt-map.js sees window.WT_DEV. */
+var WT_DEV=/[?&](wtdev|wtstory)=1\b/.test(location.search);
+/* Marks a story/progress cue id as seen: on the account, or in test mode only in memory + localStorage. */
+function wtMarkSeen(id){
+  if(WT_DEV&&/^wt[_cx]/.test(id)){
+    campaignSeenCues.add(id);
+    try{ const a=JSON.parse(localStorage.getItem('ddp.wtDevSeen')||'[]'); if(a.indexOf(id)<0){ a.push(id); localStorage.setItem('ddp.wtDevSeen',JSON.stringify(a)); } }catch(e){}
+  }else campaignMarkSeen([id]);
+}
+let wtStory=null;
+function wtLoadStory(cb){
+  if(wtStory) return cb(wtStory);
+  fetch('/campaign/worldtour/europe-story.json?v='+WT_STORY_VER).then(r=>r.json()).then(j=>{ wtStory=j; cb(j); }).catch(()=>cb(null));
+}
+function wtStoryBlock(story,id){
+  const p=id.split('.');
+  if(p[0]==='world') return (story.world||{})[p.slice(1).join('.')]||null;
+  const c=story[p[0]]; if(!c) return null;
+  return p[1]==='open'?c.open:p[1]==='handoff'?c.handoff:(c.after||{})[p[1]]||null;
+}
+const WT_PROGRESS_UI=/AVAILABLE|\d+\s*\/\s*\d+|CLEARED|COMPLETE\b/;   // banners the real level screen will draw itself
+function wtBlockToCues(id,block){
+  const cc=id.split('.')[0], country=WT_ROUTE.indexOf(cc)>=0?cc:'FR';   // world-map scenes happen after Paris
+  const n=/^[A-Z]{2}\.(\d+)$/.exec(id), m=n?((+n[1]-1)%10)+1:0;
+  const loc0=/\.open$/.test(id)?1:m?(m<=4?1:m<=9?2:3):0;
+  const bgKey=l=>WT_EUROPE_BG[cc+l]?cc+l:'none';
+  let pending=bgKey(loc0), out=[], pairs={};
+  block.forEach(c=>{
+    let cue=null;
+    if(c[0]==='loc'){ pending=bgKey(c[1]); return; }
+    if(c[0]==='s'){
+      const mid=WT_MEMBER_ID[c[1]];
+      cue={text:(mid?'THE '+c[1]:c[1])+': '+c[2]};
+      if(mid){ cue.mood=c[3]; cue.look=wtLookFor(mid,country); pairs[mid+'|'+cue.look]=[mid,cue.look]; }
+    }else if(c[0]==='h'||(c[0]==='u'&&!WT_PROGRESS_UI.test(c[1]))) cue={text:c[1]};
+    if(!cue) return;
+    if(pending){ cue.bg=pending; pending=null; }
+    out.push(cue);
+  });
+  if(out.length) out[out.length-1].id='wt_'+id;
+  out.pairs=Object.keys(pairs).map(k=>pairs[k]);
+  return out;
+}
+function wtStorySeen(id){ return campaignSeenCues.has('wt_'+id); }
+/* Story gallery (open the game with ?wtstory=1): every block of the Europe story, playable on its own, for checking the
+   writing, portraits and moods before the Europe map and level screens exist. Always plays (ignores "seen"). */
+const WT_COUNTRY_NAME={IT:'Rome',ES:'Madrid',PT:'Porto',NL:'Rotterdam',GB:'London',BE:'Brussels',DE:'Berlin',PL:'Warsaw',DK:'Copenhagen',FR:'Paris'};
+function wtStoryGallery(){
+  wtLoadStory(story=>{
+    if(!story) return toast('err-menu','Could not load the Europe story.');
+    let el=$('wt-gallery');
+    if(!el){ el=document.createElement('div'); el.id='wt-gallery'; document.body.appendChild(el); }
+    el.style.cssText='position:fixed;inset:0;z-index:8000;overflow:auto;background:rgba(0,0,0,.94);color:var(--cream);padding:14px 16px;font:14px "DM Sans",sans-serif';
+    const btn='style="margin:2px 4px 2px 0;padding:6px 10px;border-radius:8px;border:1px solid rgba(var(--ddp-brass-rgb),.5);background:var(--felt-1);color:var(--cream);font:inherit;cursor:pointer"';
+    let h='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:17px;color:var(--gold-hi)">Europe story (test gallery)</b><button '+btn+' onclick="document.getElementById(\'wt-gallery\').remove()">Close</button></div>';
+    const b=(id,label)=>'<button '+btn+' onclick="wtGalleryPlay(\''+id+'\')">'+label+'</button>';
+    WT_ROUTE.forEach(cc=>{
+      const c=story[cc]; if(!c) return;
+      h+='<div style="margin-top:10px"><b style="color:var(--gold-hi)">'+WT_COUNTRY_NAME[cc]+'</b><br>';
+      h+=b(cc+'.open','Opening');
+      Object.keys(c.after).sort((x,y)=>x-y).forEach(n=>{ h+=b(cc+'.'+n,'After '+n); });
+      if(c.handoff&&c.handoff.length) h+=b(cc+'.handoff','Handoff');
+      h+='</div>';
+    });
+    const w=story.world||{};
+    h+='<div style="margin-top:10px"><b style="color:var(--gold-hi)">World map</b><br>'+Object.keys(w).filter(k=>w[k].length).map(k=>b('world.'+k,k.replace('preview.','').toLowerCase())).join('')+'</div>';
+    el.innerHTML=h;
+  });
+}
+function wtGalleryPlay(id){
+  const el=$('wt-gallery'); if(el) el.style.display='none';
+  wtPlayStory(id,()=>{ const e=$('wt-gallery'); if(e) e.style.display=''; },true);
+}
+/* Plays one block. force=true plays it even when already seen (the story gallery); otherwise a seen block is skipped. */
+function wtPlayStory(id,done,force){
+  done=done||function(){};
+  if(!force&&wtStorySeen(id)) return done();
+  wtLoadStory(story=>{
+    const block=story&&wtStoryBlock(story,id);
+    const cues=block?wtBlockToCues(id,block):[];
+    if(!cues.length) return done();
+    wtPreloadPortraits(cues.pairs);
+    campaignRunPrologue(cues,WT_EUROPE_BG,done);
+  });
+}
 function worldTourPrologueSeen(){ return WORLDTOUR_PROLOGUE_CUES.every(c=>campaignSeenCues.has(c.id)); }
-// First tap: the prologue. Later taps do nothing yet: the Europe map is not built.
+function worldTourIntroSeen(){ return worldTourPrologueSeen(); }
+/* ---- World Tour tables: start one from the map, and come back to it ---- */
+var wtStartPending=false;         // a World Tour table was requested and not yet answered (campaignError puts the player back on the map)
+var wtReturn=null;                // {abs, wasCleared}: set on leaving a World Tour table, consumed by campaignStateOk
+var wtStartWasCleared=false;      // was the table already cleared when it was started? (a replay never replays its story)
+// The names of the country champions and local players the server seats (wt_champion_<cc>, wt_local_<cc>): same table as server.js's WT_COUNTRIES.
+[['it','Italian'],['es','Spanish'],['pt','Portuguese'],['nl','Dutch'],['gb','British'],['be','Belgian'],['de','German'],['pl','Polish'],['dk','Danish'],['fr','French']].forEach(([cc,adj])=>{
+  CAMPAIGN_CHARACTERS['wt_champion_'+cc]={name:adj+' Champion',initial:cc.toUpperCase()};
+  CAMPAIGN_CHARACTERS['wt_local_'+cc]={name:adj+' Player',initial:cc.toUpperCase()};
+});
+/* Called by wt-map.js when Play is pressed (abs = table 1-100 across Europe). The server does the rest: the same startCampaignLevel the
+   Hundred Tables use (unlock check, attempts, deck, seats), with the level ids 401-500. */
+function wtStartTable(abs){
+  if(campaignStartPending) return;
+  const att=campaignData&&campaignData.attempts;
+  if(att&&!att.unlimited&&att.available<1){ WTMAP.close(); openNoAttemptsModal(); return; }
+  const res=campaignData&&campaignData.wtResults&&campaignData.wtResults[400+abs];
+  wtStartWasCleared=!!(res&&res.cleared);
+  wtStartPending=true;
+  WTMAP.close();
+  campaignStartLevel(400+abs);
+}
+/* First tap: the prologue, which ends on "Then let's start there." and drops straight onto the Europe map, flying into
+   Italy. Later taps open the map where the player left off (public/wt-map.js). */
 function choiceEnterWorldTour(){
-  if(worldTourPrologueSeen()) return;
-  campaignRunPrologue(WORLDTOUR_PROLOGUE_CUES,CAMPAIGN_PROLOGUEWT_BG,()=>{ const b=$('choice-new'); if(b) b.style.display='none'; });
+  const hide=()=>{ const b=$('choice-new'); if(b) b.style.display='none'; };
+  if(worldTourPrologueSeen()) return WTMAP.open();
+  wtPreloadPortraits();
+  campaignRunPrologue(WORLDTOUR_PROLOGUE_CUES,CAMPAIGN_PROLOGUEWT_BG,()=>{ hide(); WTMAP.open({afterPrologue:true}); });
 }
 // Rotating Earth on black behind the World Tour tile: the NASA Blue Marble
 // texture (/campaign/hub/earth.webp, equirectangular) drawn per pixel on a canvas.
@@ -10920,6 +11132,7 @@ function campaignRunPrologue(cues,bgMap,done){
   campProlQueue=cues.slice();
   campProlOnDone=done;
   campProlBgNum=null;
+  $('camp-prologue').classList.remove('see-through');
   campProlBgMap=bgMap;
   $('camp-prologue').classList.add('show');
   campaignPrologueStep();
@@ -10929,6 +11142,8 @@ function campaignPrologueSetBg(n){
   campProlBgNum=n;
   const img=$('camp-prol-bg');
   const src=campProlBgMap[n];
+  // A World Tour scene with no still of its own (WT_BLANK) lets the map behind it show through instead of going black.
+  $('camp-prologue').classList.toggle('see-through',src===WT_BLANK);
   if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches){
     img.src=src; return;
   }
@@ -10988,7 +11203,7 @@ function campaignPrologueStep(){
     return;
   }
   const cue=campProlQueue.shift();
-  campaignMarkSeen([cue.id]);
+  if(cue.id) wtMarkSeen(cue.id);   // World Tour story blocks mark only their last cue
   if(cue.bg) campaignPrologueSetBg(cue.bg);
   if(cue.hold){
     // The letter-reveal beat: no text of its own (still #2 already carries
@@ -11010,7 +11225,7 @@ function campaignPrologueStep(){
     $('camp-prol-name').textContent=sp?sp.name:'';
     $('camp-prol-portrait').innerHTML=!(sp&&sp.id)?''
       :sp.id==='player'?`<span class="avatar" style="width:100%;height:100%">${avatarHTML(account&&account.avatar,sp.name)}</span>`
-      :campaignPortraitHTML(sp.id);
+      :(wtPortraitHTML(sp.id,cue.mood||WT_PROLOGUE_MOOD[cue.id],cue.look)||campaignPortraitHTML(sp.id));
     campaignPrologueTypeText(campaignPlayerText(sp?sp.body:cue.text));
   }
 }
@@ -11231,6 +11446,10 @@ function campaignObjectiveParts(level){
     gold=o.goldScoreBar!=null
       ? `Gold: clean <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`
       : `Gold: clean.`;
+  }else if(o.type==='beatChampion'){
+    // World Tour boss: the country champion (marked at the table) must finish last.
+    main=`Make the <b>champion</b> finish <b>last</b>`+(o.minMargin>0?` by at least <b>${o.minMargin}</b> points`:'')+`.`;
+    gold=`Gold: `+(o.goldMargin>o.minMargin?`champion last by <b>${o.goldMargin}</b> or more <i>and</i> `:'')+`you finish <b>first</b>.`;
   }else if(o.type==='trickCount'){
     main=`Win at least <b>${o.minTricks}</b> tricks.`;
     gold=o.goldMoon
@@ -11348,7 +11567,7 @@ function goShopBoosts(){
   goShop();
   switchShopCat('boosts');
 }
-socket.on('campaignOutOfAttempts',()=>{ campaignStartPending=false; openNoAttemptsModal(); });
+socket.on('campaignOutOfAttempts',()=>{ campaignStartPending=false; wtStartPending=false; openNoAttemptsModal(); });
 // Guards against a double-tap firing two startCampaignLevel requests
 // (which would burn two attempts for one level, or worse, race two room
 // creations for the same account) — reset on either a successful join
@@ -14019,7 +14238,7 @@ socket.on('joined',d=>{
   room=d.code; me=d.playerIndex; host=d.isHost; token=d.token;
   saveSession();
   $('l-code').textContent=room;
-  campaignStartPending=false;
+  campaignStartPending=false; wtStartPending=false;
   if(pendingFriendInvite&&d.isHost){
     socket.emit('inviteFriend',{token:accountToken,friendId:pendingFriendInvite,code:d.code});
     setInviteState(pendingFriendInvite,'sent');
@@ -17119,6 +17338,11 @@ function tryAutoJoin(){
   // A shared link (?join=CODE) joins that room by itself as soon as the saved
   // login has been restored - see tryAutoJoin.
   takeFirstRunParam();
+  try{
+    const q=new URLSearchParams(location.search);
+    if(q.get('wtstory')==='1') setTimeout(wtStoryGallery,600);
+    if(q.get('wtdev')==='1') setTimeout(()=>WTMAP.open(),600);   // test mode: straight onto the World Tour map
+  }catch(e){}
   pendingJoinCode=takeJoinParam();
   if(pendingJoinCode){
     pendingJoinAt=Date.now();

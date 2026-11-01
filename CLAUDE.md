@@ -4920,6 +4920,8 @@ before pushing.
   (account_id, story_cues_seen) to undo by hand. Verified on PGlite (mixed lists, all-wt list -> NULL, no wt ids -> untouched, second boot changes nothing). To reset again, delete the
   `reset_wt_story_v1` row from `app_migrations` (drop `wt_story_backup_v1` first or the backup is not refreshed: it is CREATE ... IF NOT EXISTS).
 - A player who has the app open keeps the old list in memory until the next campaign state load (reopening Campaign).
+- **A second all-accounts reset ran on the next boot (marker `reset_wt_story_v2`, backup `wt_story_backup_v2`)**, after the story-overlay-under-the-map bug was found (scenes played over the map
+  were invisible, so nobody saw them and some were marked seen anyway). Same SQL as v1; v1 is unchanged. To reset again: a NEW marker/backup name, or the per-account `?wtreset=1` below.
 - **Per-account reset for testing: open the game with `?wtreset=1` and tap the World Tour tile** (once per page load): the client emits `resetWtStory`, the server runs
   `db.resetWtStory(accountId)` (only THAT account's `wt_*` ids; same filter as the migration) and answers `wtStoryReset {ok, changed}`; the client clears its own copy, shows a banner,
   and the prologue plays again. Needs no deploy per reset (the migration above only runs once).

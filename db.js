@@ -583,6 +583,29 @@ async function runOneTimeMigrations() {
       );
       console.log(`Migration: reset the World Tour story for ${res.rowCount} accounts (old lists in wt_story_backup_v1)`);
     }
+
+    // Second World Tour story reset (owner's call, 2026-11-01): the first one was followed by the discovery that every scene played while the map was
+    // open rendered UNDER the map (so nobody could see or finish them, and some got marked as seen anyway). Same filter, own marker and backup table.
+    const wtReset2 = await client.query(
+      `INSERT INTO app_migrations (name) VALUES ('reset_wt_story_v2')
+       ON CONFLICT (name) DO NOTHING RETURNING name`
+    );
+    if (wtReset2.rows.length) {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS wt_story_backup_v2 AS
+        SELECT account_id, story_cues_seen, now() AS backed_up_at
+        FROM campaign_progress
+        WHERE story_cues_seen LIKE '%wt!_%' ESCAPE '!'`);
+      const res2 = await client.query(
+        `UPDATE campaign_progress
+            SET story_cues_seen = NULLIF((
+                  SELECT string_agg(x, ',')
+                  FROM unnest(string_to_array(story_cues_seen, ',')) AS x
+                  WHERE x <> '' AND x NOT LIKE 'wt!_%' ESCAPE '!'), '')
+          WHERE story_cues_seen LIKE '%wt!_%' ESCAPE '!'`
+      );
+      console.log(`Migration: second World Tour story reset for ${res2.rowCount} accounts (old lists in wt_story_backup_v2)`);
+    }
     await client.query('COMMIT');
   } catch (e) {
     try { await client.query('ROLLBACK'); } catch (_) {}

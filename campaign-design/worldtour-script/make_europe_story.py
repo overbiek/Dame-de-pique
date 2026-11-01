@@ -8,7 +8,8 @@ Cue shapes in the output (compact, the game reads them):
   ["u", text]                  ON-SCREEN TEXT (the game decides whether it is a banner or a progress UI line)
   ["h", text]                  scene header
   ["loc", n, title]            location change: 1 = first public place, 2 = second, 3 = the Keeper's Table venue
-Dropped on purpose: ["v"] visual/action direction (never shown) and ["sys"] implementation notes. The 'v' line right before a
+["b", text]                  narration card (a few scene-setting 'v' lines, see SHOW_V)
+Dropped on purpose: the other ["v"] visual/action direction (never shown) and ["sys"] implementation notes. The 'v' line right before a
 spoken line is still read here, to help pick the mood ("smiles", "stops", ...).
 
 Moods are set BY HAND in mood_overrides.json, one string per block listing only the non-neutral lines:
@@ -79,13 +80,24 @@ def parse_moods(spec, n):
     return moods
 
 
+# Scene-setting lines of the script that are normally NOT shown (VISUAL / ACTION text) but that the player needs to follow the next lines:
+# {block id: [prefixes of the 'v' lines to show as a narration card]}. The names are written in plain case ("Closer", not "CLOSER").
+SHOW_V = {
+    'IT.open': ['Rome. Warm evening.'],   # the local man who asks CLOSER something in Italian, which the Jester's "No." reacts to
+}
+
+
 def convert(bid, cues, spec):
     n_sp = sum(1 for c in cues if c[0] == 's')
     ovr = parse_moods(spec, n_sp) if spec is not None else None
     out, prev_v, si = [], '', 0
     for c in cues:
         k = c[0]
-        if k == 'v': prev_v = c[1]; continue
+        if k == 'v':
+            prev_v = c[1]
+            if any(c[1].startswith(pre) for pre in SHOW_V.get(bid, [])):
+                out.append(['b', c[1].replace('CLOSER', 'Closer')])
+            continue
         if k == 'sys': continue
         if k == 's':
             mood = ovr[si] if ovr is not None else heuristic(c[2], prev_v)

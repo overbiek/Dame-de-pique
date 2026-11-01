@@ -4899,6 +4899,9 @@ before pushing.
   throwing scene is skipped; the back arrow skips a running scene; an error while the map is open shows as a red "Error: ..." toast (so a phone failure is readable); the choice
   screen's per-pixel globe loop is paused while the map is open (it was burning CPU behind it). The root cause was NOT reproduced (desktop and a touch-emulated viewport both worked), so
   if it happens again read the Error toast.
+- **`?wtdebug=1` shows a small on-screen log** (bottom left: enterCity, playOpening/story start and end, every tap's target, busy/story/city state, errors) so a phone problem can be read
+  from a screenshot. The map layer and the city layer are `overflow:clip` (nothing can scroll them programmatically) and the node row is centred by setting its own scrollLeft, not scrollIntoView
+  (which scrolls every overflow:hidden ancestor and can shift the whole layer: a suspect for the "dead map" report).
 - **Tables are playable (2026-11-01)**: Play -> `wtStartTable(abs)` (index.html) closes the map and emits the existing `startCampaignLevel` with level id 400+abs. On
   the result screen "Back to the Map" (`goCampaignFromTable`, level > 400) sets `wtReturn`, calls `goCampaign()`, and when the fresh `campaignStateOk` arrives it calls
   `WTMAP.afterTable(abs, wasCleared)`: the map reopens on that city and, for a FIRST clear, plays the table's story (progress first, then story, then the next

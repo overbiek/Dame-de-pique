@@ -122,7 +122,7 @@ const CSS=`#wtmap{
 @keyframes wmpring{0%{transform:scale(.3);opacity:.95}100%{transform:scale(3.2);opacity:0}}
 #wtmap .lead-img{width:46px;height:46px;display:block;margin:0 auto 1px}
 #wtmap .land.w-avail-lit{fill:rgba(var(--brass-rgb),.16);stroke:rgba(var(--brass-rgb),.75)}
-#wtmap #wm-lvl{position:absolute;inset:0;z-index:6;opacity:0;pointer-events:none;overflow:hidden;background:#050403;transition:opacity 1s ease}
+#wtmap #wm-lvl{position:absolute;inset:0;z-index:6;opacity:0;pointer-events:none;overflow:hidden;overflow:clip;background:#050403;transition:opacity 1s ease}
 #wtmap #wm-lvl.on{opacity:1;pointer-events:auto}
 #wtmap #wm-lvlBg{position:absolute;inset:0;background:radial-gradient(90% 80% at 50% 40%,#3a2c1d,#120d08 75%);transform:scale(1.08);transition:transform 1.6s cubic-bezier(.2,.75,.2,1)}
 #wtmap #wm-lvl.on #wm-lvlBg{transform:none}
@@ -216,6 +216,15 @@ const CTINT={IT:'#c07a45',ES:'#d9772b',PT:'#3d8fbf',NL:'#5a7fa0',GB:'#5a6672',BE
 let root=null,D=null,dataLoading=null,svg,landG,routeG,marksG,imgW,imgE,paths=[];
 let view={name:'continent',k:'EU',country:null},W=innerWidth,H=innerHeight,cam={minX:0,minY:0,u:1},anim=null;
 let selNode=null,CITY=false,busy=false,devCleared=new Set();
+/* ?wtdebug=1: a small on-screen log (bottom left) of what the map is doing, for diagnosing a phone problem from a screenshot. */
+const DBG=/[?&]wtdebug=1/.test(location.search),dbgLines=[];
+function dbg(m){
+  if(!DBG)return;
+  dbgLines.push(new Date().toISOString().slice(14,22)+' '+m);if(dbgLines.length>16)dbgLines.shift();
+  let d=document.getElementById('wm-dbg');
+  if(!d){d=document.createElement('pre');d.id='wm-dbg';d.style.cssText='position:fixed;left:4px;bottom:4px;z-index:2300;max-width:72vw;margin:0;padding:4px 6px;background:rgba(0,0,0,.82);color:#9f9;font:9px/1.25 monospace;pointer-events:none;white-space:pre-wrap';document.body.appendChild(d);}
+  d.textContent=dbgLines.join(String.fromCharCode(10));
+}
 /* Countries whose level-select picture exists (public/campaign/worldtour/map/<cc>_select.webp): their tables are chosen on the city screen, the
    others on the side panel. Add a code when its picture arrives. */
 const LVLPIC=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'];
@@ -257,7 +266,8 @@ const story=id=>new Promise(res=>{
   let fin=false;const t0=Date.now();
   const end=()=>{ if(!fin){ fin=true; clearInterval(w); res(); } };
   const w=setInterval(()=>{ if(!storyOn()&&Date.now()-t0>8000)end(); },1000);
-  try{ wtPlayStory(id,end); }catch(e){ console.error('story failed',e); end(); }
+  dbg('story '+id);
+  try{ wtPlayStory(id,()=>{ dbg('story done '+id); end(); }); }catch(e){ console.error('story failed',e); dbg('story threw '+e.message); end(); }
 });
 
 /* ---------- camera ---------- */
@@ -486,6 +496,7 @@ function tapCountry(k){
   if(!hasPic(k))setTimeout(()=>playOpening(k),1300);   // with a city picture the opening plays once you step into the city
 }
 async function playOpening(k){
+  dbg('playOpening '+k+' blocked='+blocked()+' seen='+wtStorySeen(k+'.open'));
   if(blocked()||wtStorySeen(k+'.open'))return;
   busy=true;await story(k+'.open');busy=false;renderPanel();
 }
@@ -559,7 +570,9 @@ function renderCityNodes(){
   }
   $('lvlRoute').innerHTML=h;
   $('lvlRoute').querySelectorAll('.lnode').forEach(b=>b.addEventListener('click',()=>{if(!b.disabled)openLvlModal(+b.dataset.n);}));
-  const cur=$('lnode'+Math.min(10,n+1));if(cur&&cur.scrollIntoView)cur.scrollIntoView({inline:'center',block:'nearest'});
+  // centre the current node by scrolling ONLY the node row (scrollIntoView also scrolls every overflow:hidden ancestor, which can shift the whole layer)
+  const cur=$('lnode'+Math.min(10,n+1)),wrap=$('lvlWrap');
+  if(cur&&wrap){ wrap.scrollLeft=Math.max(0,cur.offsetLeft+cur.offsetWidth/2-wrap.clientWidth/2); }
 }
 /* Tapping a table opens the SAME popup as the Hundred Tables (objective, who sits at the table, best scores with friends' results once you
    have cleared it themselves, Play / Play Again): index.html's campaignOpenLevelModal, fed from campaignData.wtLevels. Without that data
@@ -578,6 +591,7 @@ function openLvlModal(n){
 }
 function closeLvlModal(){$('lvlModal').classList.remove('show');}
 function enterCity(k){
+  dbg('enterCity '+k+' CITY='+CITY+' pic='+hasPic(k));
   return new Promise(res=>{
     if(!hasPic(k)||CITY){res();return;}
     $('lvlBg').innerHTML='<img alt="" src="/campaign/worldtour/map/'+k.toLowerCase()+'_select.webp">';
@@ -621,7 +635,7 @@ function renderDev(){
 /* ---------- build, open, close ---------- */
 function build(){
   if(root)return;
-  const st=document.createElement('style');st.id='wm-css';st.textContent=CSS+'\n#wtmap{position:fixed;inset:0;z-index:2000;display:none;overflow:hidden;color:var(--cream);font-family:var(--sans);background:radial-gradient(120% 90% at 50% 45%,#0d3a2d 0%,#071A15 55%,#020605 100%)}\n#wtmap.on{display:block}\n#wtmap::before{content:"";position:absolute;inset:0;z-index:8;pointer-events:none;background:radial-gradient(130% 110% at 50% 48%,transparent 55%,rgba(2,6,5,.42) 100%)}\n#wtmap::after{content:"";position:absolute;inset:6px;border:1px solid var(--line);border-radius:14px;pointer-events:none;z-index:9}';
+  const st=document.createElement('style');st.id='wm-css';st.textContent=CSS+'\n#wtmap{position:fixed;inset:0;z-index:2000;display:none;overflow:hidden;overflow:clip;color:var(--cream);font-family:var(--sans);background:radial-gradient(120% 90% at 50% 45%,#0d3a2d 0%,#071A15 55%,#020605 100%)}\n#wtmap.on{display:block}\n#wtmap::before{content:"";position:absolute;inset:0;z-index:8;pointer-events:none;background:radial-gradient(130% 110% at 50% 48%,transparent 55%,rgba(2,6,5,.42) 100%)}\n#wtmap::after{content:"";position:absolute;inset:6px;border:1px solid var(--line);border-radius:14px;pointer-events:none;z-index:9}';
   document.head.appendChild(st);
   root=document.createElement('div');root.id='wtmap';
   root.innerHTML='<svg id="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="wmBrassG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EED08E"/><stop offset=".55" stop-color="#C49E58"/><stop offset="1" stop-color="#806436"/></linearGradient></defs>'
@@ -653,10 +667,11 @@ function build(){
     if(view.name==='world'){if(c!=='XX')tapContinent(c);}
     else if(view.name==='continent'&&c==='EU'&&id in EUID)tapCountry(EU[EUID[id]].k);
   });
-  const showErr=m=>{ if(!root||!root.classList.contains('on'))return; const t=$('toast'); t.textContent='Error: '+m; t.classList.add('show'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('show'),9000); };
+  const showErr=m=>{ dbg('ERR '+m); if(!root||!root.classList.contains('on'))return; const t=$('toast'); t.textContent='Error: '+m; t.classList.add('show'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('show'),9000); };
   addEventListener('error',e=>showErr(e.message+(e.filename?' ('+String(e.filename).split('/').pop()+':'+e.lineno+')':'')));
   addEventListener('unhandledrejection',e=>showErr(String((e.reason&&e.reason.message)||e.reason)));
-  addEventListener('resize',()=>{if(!root.classList.contains('on'))return;W=innerWidth;H=innerHeight;anim=null;flyTo(targetCam(view),0);});
+  document.addEventListener('click',e=>{ if(DBG&&root&&root.classList.contains('on')){ const x=e.target; dbg('tap '+(x.id||x.className&&x.className.baseVal||x.className||x.tagName)+' busy='+busy+' story='+storyOn()+' city='+CITY); } },true);
+  addEventListener('resize',()=>{if(!root.classList.contains('on'))return;dbg('resize '+innerWidth+'x'+innerHeight);W=innerWidth;H=innerHeight;anim=null;flyTo(targetCam(view),0);});
 }
 function loadData(){
   if(D)return Promise.resolve(D);

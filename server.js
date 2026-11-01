@@ -10892,8 +10892,15 @@ async function buildCampaignMapPayload(accountId) {
     storyCues: CAMPAIGN_STORY_CUES,
     characters: CAMPAIGN_CHARACTERS,
     highestUnlockedLevel: state.highestUnlockedLevel,
-    // World Tour (tables 401+) results, for the Europe map: id -> { cleared, gold, bestScore }. Kept apart from `levels`, which is
-    // the Hundred Tables map and must not list them.
+    // World Tour (tables 401+), for the Europe map's level popup (the same popup the Hundred Tables use): kept apart from `levels`,
+    // which is the Hundred Tables map and must not list them. `seats` = who sits at the table (character ids, seats 1-3).
+    wtLevels: CAMPAIGN_LEVEL_LIST.filter(l => l.worldTour).map(l => ({
+      id: l.id, chapter: l.chapter, type: l.type, bossId: l.bossId || null,
+      objective: l.objective, hands: l.hands, forcePassDir: l.forcePassDir,
+      seats: campaignSeatCharacters(l),
+      result: resultsByLevel[l.id] || null,
+    })),
+    // World Tour (tables 401+) results, for the Europe map: id -> { cleared, gold, bestScore }.
     wtResults: Object.fromEntries(state.results.filter(r => r.levelId > 400)
       .map(r => [r.levelId, { cleared: !!r.cleared, gold: !!r.gold, bestScore: r.bestScore }])),
     // While the playtest flag is on, the pool is reported as unlimited

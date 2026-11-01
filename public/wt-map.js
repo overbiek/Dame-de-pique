@@ -218,7 +218,7 @@ let view={name:'continent',k:'EU',country:null},W=innerWidth,H=innerHeight,cam={
 let selNode=null,CITY=false,busy=false,devCleared=new Set();
 /* Countries whose level-select picture exists (public/campaign/worldtour/map/<cc>_select.webp): their tables are chosen on the city screen, the
    others on the side panel. Add a code when its picture arrives. */
-const LVLPIC=['IT','ES','PT','NL','GB','BE','DE','PL','DK'];
+const LVLPIC=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'];
 const hasPic=k=>LVLPIC.indexOf(k)>=0;
 
 /* ---------- progress (see the header) ---------- */
@@ -444,13 +444,17 @@ function tapContinent(k){
   if(st==='locked')return toast('Finish '+CONT[chosen()]+' first — a continent is played to the end before the next.');
   if(st==='done')return goView({name:'cont',k});
   flyTo(fitBox(D.vb[k],{t:56,b:140,l:16,r:16}),1100);
-  previewContinent(k).then(()=>showSheet(k,st==='active'));
+  // Only a continent that has not been chosen yet has conversations. The one in progress goes straight to its sheet; a finished
+  // continent (handled above) and Europe never play story again.
+  (st==='avail'?previewContinent(k):Promise.resolve()).then(()=>showSheet(k,st==='active'));
 }
-/* World Map previews: the first time a continent is tapped its advocates argue for it; later taps go straight to the sheet
-   (the script's short "revisit" callbacks are not built). */
+/* World Map previews, before a continent is chosen: the 1st tap plays the full preview conversation, the 2nd tap the script's short
+   "revisit" lines, and from the 3rd tap on nothing (straight to Begin / Not yet). `wt_world.preview.<X>` / `wt_world.revisit.<X>`
+   are the seen markers. A chosen continent can only be left for one that is completely finished (contState: 'locked' otherwise). */
 async function previewContinent(k){
-  const id='world.preview.'+PREVIEW_KEY[k];
-  if(wtStorySeen(id))return;
+  const name=PREVIEW_KEY[k],pre='world.preview.'+name,rev='world.revisit.'+name;
+  const id=!wtStorySeen(pre)?pre:!wtStorySeen(rev)?rev:null;
+  if(!id)return;
   busy=true;await story(id);busy=false;
 }
 function showSheet(k,resume){
@@ -547,16 +551,17 @@ function renderCityNodes(){
   $('lvlRoute').querySelectorAll('.lnode').forEach(b=>b.addEventListener('click',()=>{if(!b.disabled)openLvlModal(+b.dataset.n);}));
   const cur=$('lnode'+Math.min(10,n+1));if(cur&&cur.scrollIntoView)cur.scrollIntoView({inline:'center',block:'nearest'});
 }
+/* Tapping a table opens the SAME popup as the Hundred Tables (objective, who sits at the table, best scores with friends' results once you
+   have cleared it themselves, Play / Play Again): index.html's campaignOpenLevelModal, fed from campaignData.wtLevels. Without that data
+   (test mode, no account) it falls back to a plain Play button. */
 function openLvlModal(n){
   if(busy)return;
-  const c=curCountry(),done=tablesOf(c.k),st=n<=done?'done':(n===done+1?'cur':'lock');
-  const sg=STAGE.find(s=>n>=s[0]&&n<=s[1]),ln=GE[c.lead][0];
-  let h='<small>'+c.city+' · '+(n===10?'Boss table':'Table '+n)+'</small><h3>'+(n===10?'The Keeper\'s Table':'Table '+n+' · '+sg[2])+'</h3><p>'+sg[3]+'</p>';
-  if(n===10)h+='<div class="seats" style="margin-bottom:10px"><span class="you">You</span><span>Champion of '+c.name+'</span><span>'+ln+'</span><span>+1 Great Eight</span></div>';
-  const res=resultOf(idxOf(c.k)*10+n),att=(typeof campaignData!=='undefined'&&campaignData&&campaignData.attempts)||null;
-  if(st==='done')h+='<p style="margin-bottom:6px">'+(res&&res.gold?'<b style="color:var(--brass-hi)">&#9733; Gold</b> · ':'Cleared &#10003; · ')+'best score '+(res&&res.bestScore!=null?res.bestScore:'-')+'</p>';
-  if(st!=='lock'&&att)h+='<p style="font-size:11px;margin-bottom:8px">Attempts: '+(att.unlimited?'unlimited':att.available+' / '+att.max)+'</p>';
-  h+=st==='cur'?'<button class="cta" id="wm-lvlPlay">Play table '+n+'</button>':st==='done'?'<button class="cta" id="wm-lvlPlay">Play again</button><button class="cta ghost" id="wm-lvlClose2">Close</button>':'';
+  const c=curCountry(),abs=idxOf(c.k)*10+n;
+  const has=typeof campaignData!=='undefined'&&campaignData&&(campaignData.wtLevels||[]).some(l=>l.id===400+abs);
+  if(has&&typeof campaignOpenLevelModal==='function')return campaignOpenLevelModal(400+abs);
+  const done=tablesOf(c.k),st=n<=done?'done':(n===done+1?'cur':'lock'),sg=STAGE.find(s=>n>=s[0]&&n<=s[1]);
+  let h='<small>'+c.city+' · '+(n===10?'Boss table':'Table '+n)+'</small><h3>'+(n===10?"The Keeper's Table":'Table '+n+' · '+sg[2])+'</h3><p>'+sg[3]+'</p>';
+  h+=st==='cur'?'<button class="cta" id="wm-lvlPlay">Play table '+n+'</button>':'<button class="cta" id="wm-lvlPlay">Play again</button><button class="cta ghost" id="wm-lvlClose2">Close</button>';
   $('lvlMBody').innerHTML=h;$('lvlModal').classList.add('show');
   const pl=$('lvlPlay');if(pl)pl.onclick=()=>{closeLvlModal();tryPlay(n);};
   const c2=$('lvlClose2');if(c2)c2.onclick=closeLvlModal;
@@ -617,6 +622,9 @@ function build(){
    +'<aside id="wm-panel"></aside><div id="wm-note"></div><div id="wm-sheet"></div><div id="wm-scrim"><div id="wm-modal"></div></div><div id="wm-toast"></div>'
    +'<div id="wm-devwrap" style="display:none"><div id="wm-devmenu"></div><div id="wm-devbtn">DEV</div></div>';
   document.body.appendChild(root);
+  // The shared level popup and the out-of-attempts popup live inside #app (its own stacking context, z-index 1), which would put them
+  // UNDER this layer: move them to the body so they open on top of the map.
+  ['camp-level-modal','camp-noattempts-modal'].forEach(id=>{ const e=document.getElementById(id); if(e&&e.parentNode!==document.body)document.body.appendChild(e); });
   svg=$('svg');landG=$('land');routeG=$('route');marksG=$('marks');imgW=$('imgW');imgE=$('imgE');
   $('devbtn').onclick=()=>$('devmenu').classList.toggle('show');
   $('lvlX').addEventListener('click',closeLvlModal);
@@ -626,6 +634,7 @@ function build(){
     if(CITY){hideCity();flyTo(targetCam(view),900);return;}
     if(view.name==='country')return goView({name:'continent',k:'EU'});
     if(view.name==='cont')return goView({name:'world'});
+    if(view.name==='continent'&&euDone())return goView({name:'world'});   // Europe finished: back to the world map, not out of the layer
     close();
   });
   landG.addEventListener('click',e=>{
@@ -676,5 +685,11 @@ function afterTable(absN,wasCleared){
     if(hasPic(k))enterCity(k).then(go);else go();
   });
 }
-window.WTMAP={open,close,afterTable,notify:toast,isOpen:()=>!!root&&root.classList.contains('on')};
+/* Play pressed in the shared level popup (abs = table 1-100 across Europe). */
+function playTable(abs){
+  const k=EU[Math.floor((abs-1)/10)].k;
+  if(view.name!=='country'||view.country!==k)view={name:'country',k:'EU',country:k};
+  tryPlay(abs-idxOf(k)*10);
+}
+window.WTMAP={open,close,afterTable,playTable,notify:toast,isOpen:()=>!!root&&root.classList.contains('on')};
 })();

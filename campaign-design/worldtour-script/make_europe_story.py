@@ -58,6 +58,11 @@ def blocks(d):
     if w:
         yield 'world.return', w['return']
         for k, v in w['previews'].items(): yield 'world.preview.' + k, v
+        # the script's "Short revisit callback" (a SYSTEM note inside each preview): played on the SECOND tap of an unplayed continent
+        for k, v in w['previews'].items():
+            for c in v:
+                if c[0] == 'sys' and c[1].startswith('Short revisit callback'):
+                    yield 'world.revisit.' + k, [['s', sp, tx] for sp, tx in re.findall(r'([A-Z]+): “([^”]*)”', c[1])]
         yield 'world.commit', w['commit']
 
 

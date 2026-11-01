@@ -4883,12 +4883,17 @@ before pushing.
   the world map once Europe is done). The back arrow steps out of city -> country -> Europe -> closes the layer (back to the choice screen).
 - **Flow, from the script's legend**: a country's opening plays before table 1 (Rome: when you step into the city, others: on arriving); a clear updates
   the map first, then plays `<CC>.<n>`; table 10 -> the invitation modal -> the country's handoff scene -> the route marker travels to the next country;
-  after Paris the Europe-complete modal, then the world map: first tap on an unplayed continent plays its preview, then Begin/Not yet; Begin plays
-  `world.commit` and locks that continent (the continents' own maps are NOT built: they show a placeholder note). Replays never replay a story
-  (`wtStorySeen`).
+  after Paris the Europe-complete modal, then the world map. **An unplayed continent: 1st tap = its full preview, 2nd tap = the script's short revisit lines
+  (`world.revisit.<NAME>`, generated from the "Short revisit callback" SYSTEM notes), 3rd tap on = nothing, straight to Begin / Not yet.** Begin plays `world.commit` and
+  locks that continent: until it is finished the other unplayed continents are locked (toast), but any FINISHED continent (and Europe) can be reopened, with no story, to
+  replay tables. The continent in progress opens straight onto its "in progress" sheet. (The continents' own maps are NOT built: placeholder note.) A story never replays (`wtStorySeen`).
 - **Progress**: a table is cleared when the account's server result says so (`campaignData.wtResults`, from `campaign_level_results`, tables 401-500: the SAME
   tables, attempts, credits and unlock the Hundred Tables use). Stories seen are `wt_<block>` story-cue ids, a continent begun `wtx_cont_<K>`, finished
   `wtx_done_<K>` (nothing writes the last one yet: the other continents are not built).
+- **The table popup is the Hundred Tables one** (`campaignOpenLevelModal`): objective, who sits at the table, "Best scores" with the friends' results (they show only after
+  you cleared that table yourself, the server enforces it), Play / Play Again. It is fed from `campaignData.wtLevels` (server: id, objective, `seats`, result) and Play calls
+  `WTMAP.playTable`. `#camp-level-modal` / `#camp-noattempts-modal` are MOVED to `<body>` by wt-map.js: inside `#app` (its own z-index 1 stacking context) they would open under the map.
+  World Tour story scenes have a **Skip** button (marks the block seen) and a throwing scene ends itself instead of leaving the overlay on top of the map.
 - **Tables are playable (2026-11-01)**: Play -> `wtStartTable(abs)` (index.html) closes the map and emits the existing `startCampaignLevel` with level id 400+abs. On
   the result screen "Back to the Map" (`goCampaignFromTable`, level > 400) sets `wtReturn`, calls `goCampaign()`, and when the fresh `campaignStateOk` arrives it calls
   `WTMAP.afterTable(abs, wasCleared)`: the map reopens on that city and, for a FIRST clear, plays the table's story (progress first, then story, then the next
@@ -4916,11 +4921,11 @@ before pushing.
 - **`?wtdev=1` is the test mode** (`var WT_DEV`, also on for `?wtstory=1`): opens the map directly, shows a DEV button (clear next table, skip Europe,
   world map, reset), and keeps progress/story ids in `localStorage` only (`ddp.wtDevCleared`, `ddp.wtDevSeen`), never on the account (`wtMarkSeen`).
 - **City level-select pictures** (`public/campaign/worldtour/map/<cc>_select.webp`, from `afbeeldingen/World Tour/Europe/<City> level select.png`) exist
-  for Rome, Madrid, Porto, Rotterdam, London, Brussels, Berlin, Warsaw, Copenhagen (`LVLPIC` in wt-map.js; prompts in
-  `worldtour-art/prompts-europe-level-select.md`). Those countries get an "Enter <city>" button, the city screen with the ten nodes, and their opening
-  plays inside the city; a country without one (**Paris**, picture not delivered yet) uses the side panel and plays its opening on arrival.
-- **Still to do for Europe**: Paris's
-  level-select picture, hero-look portraits for Optimist/Charmer/Wildcard/Jester (+ house looks for Charmer/Wildcard/Jester), the continents' own maps.
+  for all ten countries (`LVLPIC` in wt-map.js; prompts in `worldtour-art/prompts-europe-level-select.md`). Each gets an "Enter <city>" button, the city
+  screen with the ten nodes, and its opening plays inside the city; a country NOT in `LVLPIC` would use the side panel and play its opening on arrival.
+- **Still to do for Europe**: hero-look portraits for Optimist/Charmer/Wildcard/Jester (+ house looks for Charmer/Wildcard/Jester), the continents' own maps.
+- **Attempts** are the shared 15-attempt pool of the Hundred Tables (Robin, 2026-11-01); the seats at the Keeper's Table (second Great Eight member per country,
+  `WT_COUNTRIES` in the generated server block) are accepted for now.
 - Verified in the preview at 915x412 and 667x375 with the DEV menu: Europe, Italy, Rome opening + all ten Rome tables + invitation, travel to Madrid,
   Madrid opening, Europe complete, world map, Asia preview + begin + commit. Not verified: on a phone, offline, a real (non-dev) account.
 - Verified in the preview: 121 blocks convert, Rome stills and the Closer's Rome suit show, Sharp's Porto look follows from Porto on, a seen block

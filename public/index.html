@@ -5779,6 +5779,9 @@ html.landscape-mode #s-campaign .camp-bg{position:fixed}
 }
 .camp-prol-scrim.show{opacity:1;pointer-events:auto}
 .camp-prol-scrim.see-through{background:rgba(2,6,5,.4)}
+/* World Tour story scenes can be skipped (they are marked seen, so they do not come back). */
+.camp-prol-skip{position:absolute;top:max(10px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));z-index:3;padding:7px 14px;border-radius:999px;
+  border:1px solid rgba(var(--ddp-brass-rgb),.5);background:rgba(2,6,5,.6);color:var(--cream);font:600 12px 'DM Sans',sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
 .camp-prol-bg{
   position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
   transition:opacity .3s ease;
@@ -7253,6 +7256,7 @@ html.scene-on[data-theme="sable"]{
     <div class="camp-prol-text" id="camp-prol-text"></div>
   </div>
   <button class="btn btn-primary camp-prol-continue" id="camp-prol-continue" style="display:none" onclick="campaignPrologueAdvance()">Continue</button>
+  <button class="camp-prol-skip" id="camp-prol-skip" style="display:none" onclick="event.stopPropagation();campaignPrologueSkip()">Skip &rsaquo;</button>
 </div>
 
 <!-- Level-detail popup — opens on a map node tap, BEFORE any dialogue or
@@ -10928,7 +10932,7 @@ const WT_BLANK='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAA
 const WT_EUROPE_BG={none:WT_BLANK};
 /* Countries whose three stills are in public/campaign/worldtour/europe/<cc>_<1|2|3>.webp: add a code here when a country's pictures arrive. */
 ['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'].forEach(cc=>[1,2,3].forEach(n=>{ WT_EUROPE_BG[cc+n]='/campaign/worldtour/europe/'+cc.toLowerCase()+'_'+n+'.webp'; }));
-const WT_STORY_VER=1;   // bump when europe-story.json changes (the service worker keeps non-script files)
+const WT_STORY_VER=2;   // bump when europe-story.json changes (the service worker keeps non-script files)
 /* ?wtdev=1 (or ?wtstory=1): World Tour test mode. Story/progress ids are kept on this device only (never sent to the account),
    the map gets a DEV button that clears tables, and the story gallery is available. `var` so wt-map.js sees window.WT_DEV. */
 var WT_DEV=/[?&](wtdev|wtstory)=1\b/.test(location.search);
@@ -11012,7 +11016,7 @@ function wtPlayStory(id,done,force){
     const cues=block?wtBlockToCues(id,block):[];
     if(!cues.length) return done();
     wtPreloadPortraits(cues.pairs);
-    campaignRunPrologue(cues,WT_EUROPE_BG,done);
+    campaignRunPrologue(cues,WT_EUROPE_BG,done,true);
   });
 }
 function worldTourPrologueSeen(){ return WORLDTOUR_PROLOGUE_CUES.every(c=>campaignSeenCues.has(c.id)); }
@@ -11127,7 +11131,8 @@ function campaignHomeClick(){
   }
   show('menu');
 }
-function campaignRunPrologue(cues,bgMap,done){
+function campaignRunPrologue(cues,bgMap,done,skippable){
+  $('camp-prol-skip').style.display=skippable?'block':'none';
   Object.values(bgMap).forEach(src=>{ new Image().src=src; });
   campProlQueue=cues.slice();
   campProlOnDone=done;
@@ -11237,7 +11242,17 @@ function campaignPrologueAdvance(){
     campProlTyping=false;
     return;
   }
-  campaignPrologueStep();
+  // A scene that throws must never leave the overlay stuck on screen (it covers the map and its buttons): end it instead.
+  try{ campaignPrologueStep(); }catch(e){ console.error('story step failed',e); campaignPrologueSkip(); }
+}
+/* Skip the rest of a scene: its last cue carries the block's seen marker, so it is recorded as seen and does not replay. */
+function campaignPrologueSkip(){
+  const last=campProlQueue[campProlQueue.length-1];
+  if(last&&last.id) wtMarkSeen(last.id);
+  campProlQueue=[]; clearInterval(campProlTypeTimer); campProlTyping=false; campProlHolding=false;
+  $('camp-prologue').classList.remove('show');
+  const done=campProlOnDone; campProlOnDone=null;
+  if(done) done();
 }
 // Tapping the button fires its own onclick AND bubbles here — the
 // closest() check is what stops that from double-advancing.
@@ -11472,9 +11487,13 @@ const CAMP_PASS_DIR_TEXT={left:'Pass 2 cards left',right:'Pass 2 cards right',ac
 // chapter isn't in the table yet (shouldn't happen, but degrades to
 // something sensible rather than an empty popup).
 function campaignOpponentsHTML(level){
-  const roster=CAMPAIGN_CHAPTER_ROSTER[level&&level.chapter]||CAMPAIGN_CHAPTER_ROSTER[1];
-  const ids=(typeof roster.regulars==='function'?roster.regulars(level&&level.id):roster.regulars).slice();
-  if(level&&level.type==='BOSS'&&level.bossId) ids[roster.bossSeat]=level.bossId;
+  let ids;
+  if(level&&level.seats) ids=level.seats.slice();          // World Tour: the server sends who sits at the table
+  else{
+    const roster=CAMPAIGN_CHAPTER_ROSTER[level&&level.chapter]||CAMPAIGN_CHAPTER_ROSTER[1];
+    ids=(typeof roster.regulars==='function'?roster.regulars(level&&level.id):roster.regulars).slice();
+    if(level&&level.type==='BOSS'&&level.bossId) ids[roster.bossSeat]=level.bossId;
+  }
   return ids.map(id=>{
     const ch=CAMPAIGN_CHARACTERS[id]||{name:'?'};
     return `<div class="camp-modal-opp">${campaignPortraitHTML(id)}<span>${esc(ch.name)}</span></div>`;
@@ -11517,11 +11536,12 @@ function campaignFriendsRowsHTML(rows,locked){
   return rows.map(r=>campaignResultRowHTML(r)).join('');
 }
 function campaignOpenLevelModal(levelId){
-  const level=(campaignData&&campaignData.levels||[]).find(l=>l.id===levelId);
+  // World Tour tables (401+) come in campaignData.wtLevels and use the very same popup
+  const level=(campaignData&&campaignData.levels||[]).find(l=>l.id===levelId)||(campaignData&&campaignData.wtLevels||[]).find(l=>l.id===levelId);
   if(!level) return;
   campaignModalLevelId=levelId;
   const bossName=level.bossId&&CAMPAIGN_CHARACTERS[level.bossId]?CAMPAIGN_CHARACTERS[level.bossId].name:'';
-  $('camp-modal-title').textContent=level.type==='BOSS'?'Boss Table':('Table '+campaignTableLabel(levelId));
+  $('camp-modal-title').textContent=level.type==='BOSS'?(levelId>400?"Keeper's Table":'Boss Table'):('Table '+campaignTableLabel(levelId));
   $('camp-modal-sub').textContent=level.type==='BOSS'?bossName:(level.type==='Harder'?'A harder hand':'');
   const obj=campaignObjectiveParts(level);
   $('camp-modal-goal-main').innerHTML=obj.main;
@@ -11551,6 +11571,7 @@ function campaignModalPlay(){
   const levelId=campaignModalLevelId;
   if(levelId==null) return;
   campaignCloseLevelModal();
+  if(levelId>400){ WTMAP.playTable(levelId-400); return; }   // World Tour: the map decides (real start, or the test-mode fake clear)
   // No point playing the intro dialogue just to be refused at the end. The
   // server re-checks (and is the authority) — this only saves the detour.
   const att=campaignData&&campaignData.attempts;

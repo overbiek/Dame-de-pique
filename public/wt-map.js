@@ -63,6 +63,9 @@ const CSS=`#wtmap{
 #wtmap #wm-crumb{flex:1;min-width:0;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 6px #000}
 #wtmap #wm-crumb b{color:var(--brass-hi);font-weight:700}
 #wtmap #wm-seat{flex:0 0 auto;text-align:right;background:rgba(2,6,5,.72);border:1px solid var(--line);border-radius:12px;padding:5px 10px 6px;min-width:128px}
+#wtmap #wm-credit{position:absolute;left:50%;transform:translateX(-50%);bottom:max(6px,env(safe-area-inset-bottom));z-index:9;background:none;border:0;color:var(--muted);opacity:.7;font-family:var(--sans);font-size:9px;letter-spacing:.14em;text-transform:uppercase;padding:6px 10px;cursor:pointer;text-shadow:0 1px 6px #000}
+#wtmap #wm-credit:active{opacity:1}
+#wtmap #wm-lvl.on~#wm-credit{display:none}
 #wtmap #wm-att{flex:0 0 auto;display:flex;align-items:center;gap:6px;background:rgba(2,6,5,.72);border:1px solid var(--line);border-radius:999px;padding:4px 11px 4px 8px;white-space:nowrap}
 #wtmap #wm-att .n{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;color:var(--cream)}
 #wtmap #wm-att .r{font-size:9px;letter-spacing:.04em;color:var(--muted)}
@@ -360,16 +363,17 @@ function renderMarks(){
     const g=el('g',{transform:'translate('+off[0]+' '+off[1]+')'},g0);
     el('circle',{r:26,fill:'transparent'},g);
     if(st==='done'){
-      el('circle',{r:19,fill:'#0D2E25',stroke:'#EED08E','stroke-width':2},g);
+      el('polygon',{points:octPts(19,22.5),fill:'#0D2E25',stroke:'#EED08E','stroke-width':2},g);
       const t=el('text',{y:1,class:'num',fill:'#EED08E'},g);t.textContent=c.k;t.setAttribute('style','font-size:11px');
-      el('circle',{cx:14,cy:-14,r:6.5,fill:'url(#wmBrassG)',stroke:'#5a4520'},g);
-      el('path',{d:'M11 -14l2.2 2.2 4-4.4',fill:'none',stroke:'#2a1e08','stroke-width':1.8,'stroke-linecap':'round'},g);
+      const bd=el('g',{transform:'translate(14 -14)'},g);
+      el('polygon',{points:octPts(7,22.5),fill:'url(#wmBrassG)',stroke:'#5a4520'},bd);
+      el('path',{d:'M-3 0l2.2 2.2 4-4.4',fill:'none',stroke:'#2a1e08','stroke-width':1.8,'stroke-linecap':'round'},bd);
     }else if(st==='active'){
-      el('circle',{r:17,class:'pulse',fill:'none',stroke:'#EED08E','stroke-width':1.6},g);
-      el('circle',{r:15,fill:'url(#wmBrassG)',stroke:'#5a4520','stroke-width':1.2},g);
+      el('polygon',{points:octPts(18,22.5),class:'pulse',fill:'none',stroke:'#EED08E','stroke-width':1.6},g);
+      el('polygon',{points:octPts(16,22.5),fill:'url(#wmBrassG)',stroke:'#5a4520','stroke-width':1.2},g);
       const t=el('text',{class:'num',fill:'#1c1405'},g);t.textContent=i+1;
     }else{
-      el('circle',{r:11,fill:'#071A15',stroke:'rgba(176,202,190,.5)','stroke-width':1.3},g);
+      el('polygon',{points:octPts(12,22.5),fill:'#071A15',stroke:'rgba(176,202,190,.5)','stroke-width':1.3},g);
       const t=el('text',{class:'num',fill:'rgba(176,202,190,.8)',style:'font-size:10px'},g);t.textContent=i+1;
     }
     if(st!=='locked'||v.name==='country'){const l=el('text',{class:'lbl',y:(st==='done'?35:30)},g);l.textContent=c.city;}
@@ -552,6 +556,18 @@ async function afterClear(k,n){
   if(CITY)renderCityNodes();
   if(n===10&&first)setTimeout(()=>showInvite(c),250);
 }
+/* Attribution for the map imagery (also on /credits.html, linked from Settings). Wording follows what NASA GIBS and Terrain Tiles ask for. */
+function showCredits(){
+  const m=$('modal');
+  m.innerHTML='<small>World Tour</small><h2>Map credits</h2>'
+   +'<p style="text-align:left"><b>Imagery:</b> NASA Earth Observatory, Blue Marble: Next Generation (Reto Stöckli, NASA Goddard), via NASA GIBS. <i>We acknowledge the use of imagery provided by services from NASA\'s Global Imagery Browse Services (GIBS), part of NASA\'s Earth Science Data and Information System (ESDIS).</i></p>'
+   +'<p style="text-align:left"><b>Elevation:</b> Terrain Tiles on AWS (Tilezen / Mapzen): ETOPO1 (NOAA), GMTED2010 and SRTM (USGS), EU-DEM (Copernicus, EEA) and national datasets.</p>'
+   +'<p style="text-align:left"><b>Country outlines:</b> Natural Earth.</p>'
+   +'<div style="display:flex;gap:8px;margin-top:8px;height:40px"><button class="cta" id="wm-mcont" style="flex:1;margin:0;height:40px;padding:0 10px">Close</button><button class="cta ghost" id="wm-mfull" style="flex:1;margin:0;height:40px;padding:0 10px">Full credits</button></div>';
+  $('scrim').classList.add('show');
+  $('mcont').onclick=()=>$('scrim').classList.remove('show');
+  $('mfull').onclick=()=>{ try{window.open('/credits.html','_blank','noopener');}catch(e){} };
+}
 function showInvite(c){
   const m=$('modal');
   m.innerHTML='<small>The Keeper\'s Table · won</small><h2>'+c.name+' has its champion</h2>'
@@ -676,9 +692,11 @@ function build(){
    +'<div id="wm-top" class="hud"><button class="hbtn" id="wm-back" aria-label="Back">&#8249;</button><div id="wm-crumb"></div><div id="wm-att" aria-label="Attempts" style="display:none"></div><div id="wm-seat"><small>World Championship</small><strong id="wm-seatn">10<span> / 60 seats</span></strong><div id="wm-segs"></div></div></div>'
    +'<div id="wm-prog" class="hud" style="display:none"><small id="wm-progk">Europe</small><strong id="wm-progt"></strong><div id="wm-pips"></div></div>'
    +'<div id="wm-lvl"><div id="wm-lvlBg"></div><div id="wm-lvlShade"></div><div id="wm-lvlHead"><small id="wm-lvlSub"></small><h2 id="wm-lvlTitle"></h2><div class="bar"><i id="wm-lvlBar"></i></div></div><div id="wm-lvlWrap"><div id="wm-lvlRoute"></div></div><div id="wm-lvlModal"><div class="card"><button class="x" id="wm-lvlX" aria-label="Close">&times;</button><div id="wm-lvlMBody"></div></div></div></div>'
+   +'<button id="wm-credit" type="button">Map credits</button>'
    +'<aside id="wm-panel"></aside><div id="wm-note"></div><div id="wm-sheet"></div><div id="wm-scrim"><div id="wm-modal"></div></div><div id="wm-toast"></div>'
    +'<div id="wm-devwrap" style="display:none"><div id="wm-devmenu"></div><div id="wm-devbtn">DEV</div></div>';
   document.body.appendChild(root);
+  $('credit').onclick=showCredits;
   // The shared level popup and the out-of-attempts popup live inside #app (its own stacking context, z-index 1), which would put them
   // UNDER this layer: move them to the body so they open on top of the map.
   // THE STORY OVERLAY TOO (#camp-prologue): it lives inside #app, so its z-index 2100 only counts inside #app (z-index 1) and every scene played over the
@@ -789,5 +807,5 @@ function playTable(abs){
   if(view.name!=='country'||view.country!==k)view={name:'country',k:'EU',country:k};
   tryPlay(abs-idxOf(k)*10);
 }
-window.WTMAP={open,close,hold,unhold,release,back,afterTable,playTable,notify:toast,isOpen:()=>!!root&&root.classList.contains('on')};
+window.WTMAP={open,close,hold,unhold,release,back,afterTable,playTable,refreshAttempts:renderAttempts,notify:toast,isOpen:()=>!!root&&root.classList.contains('on')};
 })();

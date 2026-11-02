@@ -4942,6 +4942,19 @@ before pushing.
 - **Attempts pill on the World Tour map** (`wt-map.js` `renderAttempts`/`tickAttempts`): the same shared pool as the Hundred Tables (`campaignData.attempts`) as chip + n/max + "Next in m:ss",
   in the top bar between the breadcrumb and the seats box, so it shows on the world, continent, country and city views. It redraws on every `renderAll` and on `campaignStateOk`.
 
+## World Tour: buy attempts in place, octagon country markers, map credits (2026-11-02)
+- **The out-of-attempts popup now sells attempts instead of pointing at the Shop**: `openNoAttemptsModal` asks the server for the Boosts payload (`getCampaignShop` -> `campaignShopOk`: pack size,
+  price, your credit balance) and `renderNoAttempts` shows "Buy 10 attempts · <chip> 50" (disabled with "You have N credits - a pack costs M" when short). `buyAttemptsHere` emits the existing
+  `buyCampaignItem` (the server still decides price and funds); on `campaignShopOk` with `bought` the popup closes, a banner says "+10 attempts bought" and both counters repaint
+  (`refreshAttemptsEverywhere`: Hundred Tables chip via the new `campaignRenderAttempts`, World Tour pill via `WTMAP.refreshAttempts`). `shopError` while buying shows inside the popup.
+  **`wtStartTable` no longer closes the World Tour map before opening it**, so after buying the player is still on the level select. The "Go to Shop" button is gone from this popup (Shop > Boosts is
+  still there from the menu). Verified on a real server (PGlite): 0 attempts / 0 credits -> disabled with the hint; 200 credits -> bought, 10/15, credits 150, popup closed, still on Rome's level select.
+- **Country markers on the Europe map are octagons** (polygon via `octPts(r,22.5)`, like the table nodes) instead of circles: locked, active (with the pulse) and done (with an octagon check badge).
+  The owner wrote "hectagons"; read as octagons because the whole World Tour UI is octagons (nodes, seals, rings). The continent markers on the WORLD view are unchanged.
+- **Map credits**: `public/credits.html` (NASA Blue Marble via GIBS with its requested acknowledgement, Terrain Tiles on AWS elevation sources, Natural Earth outlines), a "Map credits" link at the bottom of
+  the World Tour map (`#wm-credit`, hidden over a city level select) opening a short card with a link to the page, and a Credits button in Settings > About. **Unverified**: the Natural Earth credit for
+  the outlines (the source file `c50.json` is not in the repo; its country names match Natural Earth) and the continent grouping data (`wc.json`, source unknown, not credited).
+
 ## World Tour story reset (one-time migration, 2026-11-01)
 - **Every account's World Tour story was reset once, on the first boot after this deploy** (owner's call, to re-test the whole flow): `runOneTimeMigrations` (`db.js`, marker
   `reset_wt_story_v1`, same transaction) removes the ids starting with `wt_` (prologue `wt_pro_*` and every `wt_<block>` scene) from `campaign_progress.story_cues_seen`.

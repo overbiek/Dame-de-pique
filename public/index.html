@@ -6931,6 +6931,7 @@ html.scene-on[data-theme="sable"]{
         <div class="set-title">About</div>
         <button class="btn btn-ghost btn-block" onclick="openPrivacy()">Privacy policy</button>
         <button class="btn btn-ghost btn-block" onclick="openDeletionInfo()" style="margin-top:10px">How to delete your data</button>
+        <button class="btn btn-ghost btn-block" onclick="openCredits()" style="margin-top:10px">Credits</button>
       </div>
     </div>
 
@@ -7332,8 +7333,8 @@ html.scene-on[data-theme="sable"]{
   <div class="camp-modal-card" style="max-width:380px;text-align:center">
     <button class="camp-modal-close" onclick="closeNoAttemptsModal()" aria-label="Close">&#10005;</button>
     <div class="camp-modal-title">Out of attempts</div>
-    <div class="note gold" style="margin-top:10px">You're out of attempts. You can buy some in the Shop to continue!</div>
-    <button class="btn btn-primary btn-block" style="margin-top:18px" onclick="goShopBoosts()">Go to Shop</button>
+    <div class="note gold" style="margin-top:10px">You're out of attempts. Buy some right here to keep playing.</div>
+    <div id="noatt-buy" style="margin-top:18px"></div>
   </div>
 </div>
 
@@ -11066,7 +11067,7 @@ var wtStartWasCleared=false;      // was the table already cleared when it was s
 function wtStartTable(abs){
   if(campaignStartPending) return;
   const att=campaignData&&campaignData.attempts;
-  if(att&&!att.unlimited&&att.available<1){ WTMAP.close(); openNoAttemptsModal(); return; }
+  if(att&&!att.unlimited&&att.available<1){ openNoAttemptsModal(); return; }   // the map stays up under the popup: buying attempts leaves you on the level select
   const res=campaignData&&campaignData.wtResults&&campaignData.wtResults[400+abs];
   wtStartWasCleared=!!(res&&res.cleared);
   wtStartPending=true;
@@ -11350,15 +11351,7 @@ function renderCampaignMap(d){
   // A numeric pool (24 by default), not a small row of hearts — same
   // gold-chip visual language as the credits box, since attempts are
   // presented as a currency/counter rather than lives-as-icons.
-  const a=d.attempts;
-  $('camp-attempts').innerHTML=
-    creditChipHTML(20)
-    // a.unlimited is the temporary playtest mode (see
-    // CAMPAIGN_UNLIMITED_ATTEMPTS server-side) — shown as ∞ rather than
-    // a full bar so it never reads as a normal full pool.
-    +`<span class="camp-attempts-num">${a.unlimited?'&infin;':a.available+'/'+a.max}</span>`
-    +`<span class="camp-refill" id="camp-refill-timer"${a.nextRefillAt?` data-until="${a.nextRefillAt}"`:''}></span>`;
-  campaignUpdateRefillTimer();
+  campaignRenderAttempts();
 
   campaignRenderChapterView();
 }
@@ -11458,6 +11451,18 @@ function campaignNodeHTML(l,highestUnlocked){
     +`</button>`;
 }
 let campaignRefillTimerHandle=null;
+// The attempts chip on the Hundred Tables map (also repainted after buying attempts from the out-of-attempts popup).
+function campaignRenderAttempts(){
+  const a=campaignData&&campaignData.attempts; if(!a||!$('camp-attempts')) return;
+  $('camp-attempts').innerHTML=
+    creditChipHTML(20)
+    // a.unlimited is the temporary playtest mode (see
+    // CAMPAIGN_UNLIMITED_ATTEMPTS server-side) — shown as ∞ rather than
+    // a full bar so it never reads as a normal full pool.
+    +`<span class="camp-attempts-num">${a.unlimited?'&infin;':a.available+'/'+a.max}</span>`
+    +`<span class="camp-refill" id="camp-refill-timer"${a.nextRefillAt?` data-until="${a.nextRefillAt}"`:''}></span>`;
+  campaignUpdateRefillTimer();
+}
 function campaignUpdateRefillTimer(){
   clearTimeout(campaignRefillTimerHandle);
   const el=$('camp-refill-timer'); if(!el) return;
@@ -11629,8 +11634,38 @@ function campaignModalPlay(){
   const trigger=level&&level.type==='BOSS'?'bossIntro':'preLevel';
   campaignMaybeShow(levelId,trigger,()=>campaignStartLevel(levelId));
 }
-function openNoAttemptsModal(){ $('camp-noattempts-modal').classList.add('show'); }
+function openNoAttemptsModal(){
+  noAttBuying=false; noAttMsg='';
+  $('camp-noattempts-modal').classList.add('show');
+  renderNoAttempts();
+  // price, pack size and your credit balance come from the server (the same payload as the Shop's Boosts tab)
+  if(account&&accountToken) socket.emit('getCampaignShop',{token:accountToken});
+}
 function closeNoAttemptsModal(){ $('camp-noattempts-modal').classList.remove('show'); }
+// The buy button inside the out-of-attempts popup: buys the attempts pack in place and leaves you where you were (the level select).
+var noAttBuying=false, noAttMsg='';
+function renderNoAttempts(){
+  const box=$('noatt-buy'); if(!box) return;
+  if(!account){ box.innerHTML=`<div class="note">Log in to buy attempts.</div>`; return; }
+  const item=campaignShop&&(campaignShop.items||[]).find(i=>i.kind==='attempts');
+  if(!item){ box.innerHTML=`<button class="btn btn-primary btn-block" disabled>Loading…</button>`; return; }
+  const afford=creditBalance>=item.price;
+  box.innerHTML=`<button class="btn btn-primary btn-block" id="noatt-btn"${(afford&&!noAttBuying)?'':' disabled'} onclick="buyAttemptsHere('${item.id}')">`
+      +(noAttBuying?'Buying…':`Buy ${item.amount} attempts &middot; ${creditChipHTML(16)} ${fmtCredits(item.price)}`)+`</button>`
+    +(afford?'':`<p class="pick-hint" style="margin-top:8px">You have ${fmtCredits(creditBalance)} credits &mdash; a pack costs ${fmtCredits(item.price)}.</p>`)
+    +(noAttMsg?`<p class="pick-hint" style="margin-top:8px;color:var(--ddp-neg,#e07a7a)">${esc(noAttMsg)}</p>`:'');
+}
+function buyAttemptsHere(itemId){
+  if(noAttBuying||!account||!accountToken) return;
+  SFX.play('click');
+  noAttBuying=true; noAttMsg=''; renderNoAttempts();
+  socket.emit('buyCampaignItem',{token:accountToken,itemId});
+}
+// Repaint whichever attempts counter is on screen (Hundred Tables map chip, World Tour map pill) after the pool changed.
+function refreshAttemptsEverywhere(){
+  try{ if($('s-campaign').classList.contains('active')&&campaignData) campaignRenderAttempts(); }catch(e){}
+  try{ WTMAP.refreshAttempts(); }catch(e){}
+}
 // Straight to the Shop's Boosts tab, where the attempt packs are.
 function goShopBoosts(){
   closeNoAttemptsModal();
@@ -12537,7 +12572,18 @@ socket.on('campaignShopOk',d=>{
   if(shopCat==='boosts'&&$('s-shop').classList.contains('active')) renderShop();
   // Keep the campaign map's counter honest if it's what's behind this screen.
   if(campaignData&&d.attempts){ campaignData.attempts=d.attempts; }
+  if(noAttBuying&&d.bought){
+    // bought from the out-of-attempts popup: close it and leave the player on the level select they were on
+    noAttBuying=false; closeNoAttemptsModal();
+    const it=(d.items||[]).find(i=>i.id===d.bought);
+    showBanner(`+${it?it.amount:''} attempts bought`,{dot:'gold',ms:3500});
+    refreshAttemptsEverywhere();
+  }else if($('camp-noattempts-modal').classList.contains('show')){
+    renderNoAttempts(); refreshAttemptsEverywhere();
+  }
 });
+// A refused purchase from the popup (not enough credits, session expired...) is shown inside it.
+socket.on('shopError',d=>{ if(noAttBuying){ noAttBuying=false; noAttMsg=(d&&d.msg)||'Could not complete that purchase.'; renderNoAttempts(); } });
 function renderBoostsShop(){
   const wrap=$('shop-panels');
   if(!campaignShop){ wrap.innerHTML=`<div class="cos-empty">Loading…</div>`; return; }
@@ -13384,6 +13430,7 @@ function confirmDeleteAccount(){
 }
 function openPrivacy(){ window.open('/privacy.html','_blank','noopener'); }
 function openDeletionInfo(){ window.open('/delete-account.html','_blank','noopener'); }
+function openCredits(){ window.open('/credits.html','_blank','noopener'); }
 // A neutral confirmation on the menu, as a banner (the red #err-menu note under
 // the tiles resizes the rail, which is why leaving a game stopped using it too).
 function menuNotice(msg){

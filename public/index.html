@@ -10920,6 +10920,9 @@ const WT_PORTRAIT_ART={
   the_sharp:{dir:'sharp',looks:['house','eu_pt_sharp']},
   the_optimist:{dir:'optimist',looks:['house']},
   the_charmer:{dir:'charmer',looks:['house','eu_nl_charmer']},
+  /* Wildcard: only the Brussels look so far; his house set is on hold until the 'serious' shot is redone (it came back with different hair). Until then he keeps the old portrait before Brussels. */
+  the_wildcard:{dir:'wildcard',looks:['eu_be_wildcard']},
+  the_jester:{dir:'jester',looks:['house']},   // house look only; his Warsaw look is still to come
 };
 const WT_MOODS=['neutral','smile','surprised','serious'];
 /* Mood per spoken line of the prologue's long-table scene (cue id -> mood).
@@ -10988,8 +10991,8 @@ const WT_BLANK='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAA
 const WT_EUROPE_BG={none:WT_BLANK};
 /* Countries whose three stills are in public/campaign/worldtour/europe/<cc>_<1|2|3>.webp: add a code here when a country's pictures arrive. */
 ['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'].forEach(cc=>[1,2,3].forEach(n=>{ WT_EUROPE_BG[cc+n]='/campaign/worldtour/europe/'+cc.toLowerCase()+'_'+n+'.webp'; }));
-/* Asia's location stills that exist so far (public/campaign/worldtour/asia/<cc>_<1|2|3>.webp, 3 = the Keeper's Table); the others show the map behind the scene. Add a key when its file arrives. */
-['SAU1','SAU3','IND1','IND2','IND3','THA1','THA2'].forEach(k=>{ WT_EUROPE_BG[k]='/campaign/worldtour/asia/'+k.slice(0,3).toLowerCase()+'_'+k.slice(3)+'.webp'; });
+/* Asia's location stills (public/campaign/worldtour/asia/<cc>_<1|2|3>.webp, 3 = the Keeper's Table), all 30 present since 2026-11-02; a missing one would show the map behind the scene. Add a key when a file arrives. */
+['SAU','IND','THA','VNM','PHL','IDN','TWN','CHN','KOR','JPN'].reduce((a,c)=>a.concat([c+'1',c+'2',c+'3']),[]).forEach(k=>{ WT_EUROPE_BG[k]='/campaign/worldtour/asia/'+k.slice(0,3).toLowerCase()+'_'+k.slice(3)+'.webp'; });
 const WT_STORY_VER=7;  // bump when europe-story.json changes (the service worker keeps non-script files)
 /* ?wtdev=1 (or ?wtstory=1): World Tour test mode. Story/progress ids are kept on this device only (never sent to the account),
    the map gets a DEV button that clears tables, and the story gallery is available. `var` so wt-map.js sees window.WT_DEV. */

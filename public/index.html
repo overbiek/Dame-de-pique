@@ -5031,6 +5031,15 @@ html.landscape-mode #s-final.camp-final>.center-wrap{
   box-shadow:0 10px 40px rgba(var(--ddp-scrim-rgb),.5);
   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
 }
+/* Same idea for a campaign hand's round summary: the chapter picture shows behind it, so the
+   scoresheet column sits on a scrim card instead of bare text. */
+html.landscape-mode #s-summary.camp-summary>.center-wrap{
+  height:auto;margin-top:0;padding:12px 18px 14px !important;border-radius:16px;
+  background:rgba(var(--ddp-scrim-rgb),.72);
+  border:1px solid rgba(var(--ddp-brass-rgb),.32);
+  box-shadow:0 10px 40px rgba(var(--ddp-scrim-rgb),.5);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+}
 html.landscape-mode #s-lobby .exit-row,
 html.landscape-mode #s-draw .exit-row,
 html.landscape-mode #s-summary .exit-row,
@@ -8809,7 +8818,9 @@ function applyCardFront(id,persist){
 function updateSceneLayer(){
   // A campaign hand's result screen keeps the chapter picture too, so the level does not
   // end on a plain felt (only ever the campaign chapter art, never an equipped scene).
-  const campResult=!!(S&&S.campaign&&currentScreenId==='final');
+  // The round summary (the scoresheet every hand passes through before its result) counts too: it
+  // used to drop to plain felt for a moment between the table and the result.
+  const campResult=!!(S&&S.campaign&&(currentScreenId==='final'||currentScreenId==='summary'));
   const onTable=currentScreenId==='pass'||currentScreenId==='play'||campResult;
   document.documentElement.classList.toggle('scene-on',onTable);
   const el=$('scene-layer');
@@ -16089,6 +16100,7 @@ function confirmRoundClick(){
 }
 function renderSummary(G){
   show('summary');
+  $('s-summary').classList.toggle('camp-summary',!!G.campaign);
   $('r-title').textContent=`Round ${G.round} of ${G.totalRounds} complete`;
   let h='';
   if(G.moonShooter>=0){

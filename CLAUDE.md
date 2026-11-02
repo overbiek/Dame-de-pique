@@ -4918,6 +4918,10 @@ before pushing.
   map but PARKS its state (view, city). Leaving or finishing a table calls `WTMAP.back()` from `goCampaignFromTable` BEFORE `goCampaign()`, so the
   same city screen is back on top at once; `afterTable` then only refreshes it (`resumed`) and plays the first-clear story. If the page was reloaded
   mid-table nothing is parked and the old path (`open()` + animated `enterCity`) runs. A refused start calls `WTMAP.unhold()` + toast.
+- **A campaign hand's ROUND SUMMARY also shows the chapter/location picture (2026-11-02).** Every hand ends `roundSummary` -> `final` (server `endRound`
+  "always show a summary for the final round too"), and the summary used to be plain felt, so the picture dropped away for a moment between the table
+  and the result (reported as "the background is suddenly not the campaign's"). `updateSceneLayer`'s `campResult` now covers `summary` as well as
+  `final`; `renderSummary` toggles `.camp-summary`, which puts the scoresheet on the same scrim card as `.camp-final`. Verified at 915x412 only.
 
 ## World Tour story reset (one-time migration, 2026-11-01)
 - **Every account's World Tour story was reset once, on the first boot after this deploy** (owner's call, to re-test the whole flow): `runOneTimeMigrations` (`db.js`, marker
@@ -5362,3 +5366,5 @@ Rules:
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
 - Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
 - After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+- **Levels 501-600 (continent 2, NOT wired into the game):** `campaign-design/worldtour-levels/levels-501-600.json` (+ `.csv`), list in `campaign-design/worldtour-levels-501-600-list.md`, built with `BASE=500` like Europe (see `worldtour-missions.md` section 6). Every hand is new: `worldtour-levels/check_hands.py <resultsdir>` checks a block against all hands used in earlier levels (Europe + server.js `parseHand`) and must be run before any new block is assembled.

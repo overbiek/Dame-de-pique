@@ -10958,7 +10958,7 @@ const WT_BLANK='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAA
 const WT_EUROPE_BG={none:WT_BLANK};
 /* Countries whose three stills are in public/campaign/worldtour/europe/<cc>_<1|2|3>.webp: add a code here when a country's pictures arrive. */
 ['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'].forEach(cc=>[1,2,3].forEach(n=>{ WT_EUROPE_BG[cc+n]='/campaign/worldtour/europe/'+cc.toLowerCase()+'_'+n+'.webp'; }));
-const WT_STORY_VER=4;   // bump when europe-story.json changes (the service worker keeps non-script files)
+const WT_STORY_VER=5;   // bump when europe-story.json changes (the service worker keeps non-script files)
 /* ?wtdev=1 (or ?wtstory=1): World Tour test mode. Story/progress ids are kept on this device only (never sent to the account),
    the map gets a DEV button that clears tables, and the story gallery is available. `var` so wt-map.js sees window.WT_DEV. */
 var WT_DEV=/[?&](wtdev|wtstory)=1\b/.test(location.search);
@@ -11516,7 +11516,9 @@ function campaignObjectiveParts(level){
     gold=`Gold: `+(o.goldMargin>o.minMargin?`champion last by <b>${o.goldMargin}</b> or more <i>and</i> `:'')+`you finish <b>first</b>.`;
   }else if(o.type==='trickCount'){
     main=`Win at least <b>${o.minTricks}</b> tricks.`;
-    gold=o.goldMoon
+    gold=o.goldOrMoon
+      ? `Gold: win <b>${o.goldTricks}</b> or more <i>or</i> <b>shoot the moon</b>.`
+      : o.goldMoon
       ? `Gold: win <b>${o.goldTricks}</b> or more <i>and</i> <b>shoot the moon</b>.`
       : o.goldScoreBar
       ? `Gold: win <b>${o.goldTricks}</b> or more <i>and</i> score <b>${signed(o.goldScoreBar)}</b> or higher.`

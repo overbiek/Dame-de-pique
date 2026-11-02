@@ -3363,7 +3363,7 @@ const CAMPAIGN_CHAPTERS = [
 //   { type:'suitVoid', suit, voidByTrick, goldByTrick, goldScoreBar? }
 //   { type:'avoidQueen', goldScoreBar }
 //   { type:'cleanHand', goldScoreBar }
-//   { type:'trickCount', minTricks, goldTricks, goldMoon?, goldScoreBar? }
+//   { type:'trickCount', minTricks, goldTricks, goldMoon?, goldOrMoon?, goldScoreBar? }   (goldOrMoon: gold = goldTricks OR a moon; World Tour Madrid 3)
 // goldScoreBar is optional on suitVoid/trickCount (added for Levels 29/32
 // — "void by trick N AND score X+", "win N tricks AND score X+") and
 // AND-composes with the type's own base gold condition, exactly the same
@@ -5552,7 +5552,7 @@ const WT_EUROPE_DATA = [
   {"id":410,"k":"boss","s":"ddp-eu-L410-boss-a2c1","o":{"type":"beatChampion","championSeat":2,"minMargin":18,"goldMargin":18,"goldFirst":true},"hl":["4♠ 5♠ 7♠ 8♠ 9♠ K♠ A♠ 2♥ 3♦ Q♦ 5♣ Q♣ K♣","7♠ 8♠ 9♠ 10♠ K♠ Q♥ 2♦ 10♦ Q♦ 4♣ 6♣ 7♣ Q♣","7♠ Q♠ 5♥ 7♥ 9♥ A♥ 2♦ 7♦ 10♦ Q♦ 2♣ 3♣ J♣","3♠ 4♠ 4♥ J♥ 2♦ 4♦ 8♦ 9♦ 10♦ 2♣ 6♣ 7♣ J♣","4♠ 8♠ 9♠ J♠ A♠ 9♥ K♥ 5♦ 6♦ 7♦ J♦ 10♣ Q♣","2♠ 3♠ 6♠ 7♠ 9♠ 10♠ 5♥ 8♥ 10♥ K♥ A♥ 6♦ J♣","5♠ 10♠ J♠ 2♥ 3♥ Q♥ 4♦ 6♦ 10♦ J♦ 6♣ 8♣ Q♣","4♠ 5♠ 7♠ 9♠ 3♥ 6♥ 8♥ 3♦ K♦ 4♣ 6♣ 7♣ 10♣"]},
   {"id":411,"k":"score","s":"ddp-eu-L429-score-a1c0","o":{"type":"score","min":9,"gold":11},"p":"left","h":"3♠ A♠ 2♥ 7♥ A♥ 2♦ 3♦ 7♦ 9♦ K♦ 3♣ 7♣ J♣"},
   {"id":412,"k":"score","s":"ddp-eu-L462-score-a3c0","o":{"type":"score","min":12,"gold":23},"p":"right","h":"4♠ 5♠ 8♠ J♠ K♠ 4♥ 9♥ 5♦ 7♦ 8♦ 10♦ J♦ K♦"},
-  {"id":413,"k":"trickCount","s":"ddp-eu-L443-tricks-a1c0","o":{"type":"trickCount","minTricks":6,"goldTricks":7},"p":"across","h":"9♠ A♠ 5♥ 7♥ 10♥ J♥ 4♦ 10♦ J♦ Q♦ 3♣ J♣ A♣"},
+  {"id":413,"k":"trickCount","s":"ddp-eu-L443-tricks-a1c0","o":{"type":"trickCount","minTricks":6,"goldTricks":8,"goldOrMoon":true},"p":"across","h":"9♠ A♠ 5♥ 7♥ 10♥ J♥ 4♦ 10♦ J♦ Q♦ 3♣ J♣ A♣"},
   {"id":414,"k":"score","s":"ddp-eu-L488-score-c0","o":{"type":"score","min":31,"gold":36},"p":"keep","h":"2♠ 7♠ 9♠ J♠ 4♥ 7♥ 9♥ 9♦ A♦ 5♣ 8♣ 10♣ K♣"},
   {"id":415,"k":"score","s":"ddp-eu-L401-score-a2c0","o":{"type":"score","min":-2,"gold":35},"p":"left","h":"8♠ 9♠ 5♥ 6♥ 10♥ J♥ Q♥ 2♦ 3♦ 6♦ 8♦ 10♦ 10♣"},
   {"id":416,"k":"cleanHand","s":"ddp-eu-L416-cleanHand-c13","o":{"type":"cleanHand","goldScoreBar":20},"p":"right","h":"4♠ 6♠ 8♠ 5♥ 10♥ A♥ 5♦ 7♦ 10♦ K♦ 7♣ 8♣ K♣"},
@@ -10774,7 +10774,14 @@ function evaluateCampaignObjective(G) {
     // Optional goldScoreBar, same AND-composition as avoidQueen/cleanHand/
     // suitVoid: gold can require the trick count AND a score floor, not
     // just the trick count, alongside the pre-existing goldMoon flag.
-    const gold = tricksWon >= obj.goldTricks && (!obj.goldMoon || G.moonShooter === 0)
+    // goldOrMoon is the OTHER composition: gold if you win goldTricks OR shoot the moon (a moon ends the hand the moment it is
+    // locked, so the tricks counted then can be few). A moon also clears the level, since gold implies clear.
+    const moon = G.moonShooter === 0;
+    if (obj.goldOrMoon) {
+      const gold = tricksWon >= obj.goldTricks || moon;
+      return { cleared: tricksWon >= obj.minTricks || moon, gold, metric: tricksWon };
+    }
+    const gold = tricksWon >= obj.goldTricks && (!obj.goldMoon || moon)
       && (!obj.goldScoreBar || score >= obj.goldScoreBar);
     return { cleared: tricksWon >= obj.minTricks, gold, metric: tricksWon };
   }

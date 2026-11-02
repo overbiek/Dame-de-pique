@@ -63,6 +63,10 @@ const CSS=`#wtmap{
 #wtmap #wm-crumb{flex:1;min-width:0;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 6px #000}
 #wtmap #wm-crumb b{color:var(--brass-hi);font-weight:700}
 #wtmap #wm-seat{flex:0 0 auto;text-align:right;background:rgba(2,6,5,.72);border:1px solid var(--line);border-radius:12px;padding:5px 10px 6px;min-width:128px}
+#wtmap #wm-att{flex:0 0 auto;display:flex;align-items:center;gap:6px;background:rgba(2,6,5,.72);border:1px solid var(--line);border-radius:999px;padding:4px 11px 4px 8px;white-space:nowrap}
+#wtmap #wm-att .n{font-family:var(--num);font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;color:var(--cream)}
+#wtmap #wm-att .r{font-size:9px;letter-spacing:.04em;color:var(--muted)}
+#wtmap #wm-att .r:empty{display:none}
 #wtmap #wm-seat small{display:block;font-size:8.5px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase}
 #wtmap #wm-seat strong{font-family:var(--num);font-size:17px;color:var(--brass-hi);font-weight:600}
 #wtmap #wm-seat strong span{font-size:11px;color:var(--muted);font-weight:500}
@@ -446,7 +450,36 @@ function renderNote(){
     n.innerHTML='<b>'+CONT[view.k]+'</b>Ten countries and 100 tables will go here, drawn exactly like Europe. Not built yet.';
   }else n.style.display='none';
 }
-function renderAll(){paintLand();renderMarks();renderSeat();renderCrumb();renderProg();renderPanel();renderNote();renderDev();root.classList.toggle('in-country',view.name==='country');}
+/* The shared attempts pool of the Hundred Tables (campaignData.attempts: available / max / next refill), shown on every view of the
+   map (world, continent, country, city) like the Hundred Tables map does: chip + n/max + "Next in m:ss" while it is refilling. */
+let attT=null;
+function renderAttempts(){
+  clearTimeout(attT);
+  const el=$('att'); if(!el) return;
+  const a=typeof campaignData!=='undefined'&&campaignData&&campaignData.attempts;
+  if(!a){el.style.display='none';return;}
+  el.style.display='';
+  el.innerHTML=(typeof creditChipHTML==='function'?creditChipHTML(16):'')+'<span class="n">'+(a.unlimited?'∞':a.available+'/'+a.max)+'</span>'
+    +'<span class="r" id="wm-attr"'+(a.nextRefillAt?' data-until="'+a.nextRefillAt+'"':'')+'></span>';
+  tickAttempts();
+}
+function tickAttempts(){
+  clearTimeout(attT);
+  const r=document.getElementById('wm-attr'); if(!r||!root||!root.classList.contains('on'))return;
+  const until=Number(r.dataset.until||0);
+  if(!until){r.textContent='';return;}
+  const left=Math.max(0,until-Date.now());
+  if(left<=0){r.textContent='Refilling…';try{socket.emit('getCampaignState',{accountToken:accountToken||''});}catch(e){} return;}
+  const m=Math.floor(left/60000),s=Math.floor((left%60000)/1000);
+  r.textContent='Next in '+m+':'+String(s).padStart(2,'0');
+  attT=setTimeout(tickAttempts,1000);
+}
+let attBound=false;
+function bindAttempts(){
+  if(attBound||typeof socket==='undefined')return; attBound=true;
+  socket.on('campaignStateOk',()=>{ if(root&&root.classList.contains('on')) renderAttempts(); });
+}
+function renderAll(){paintLand();renderMarks();renderSeat();renderCrumb();renderAttempts();bindAttempts();renderProg();renderPanel();renderNote();renderDev();root.classList.toggle('in-country',view.name==='country');}
 
 /* ---------- navigation ---------- */
 function hideSheet(){$('sheet').classList.remove('show');}
@@ -640,7 +673,7 @@ function build(){
   root=document.createElement('div');root.id='wtmap';
   root.innerHTML='<svg id="wm-svg" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="wmBrassG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EED08E"/><stop offset=".55" stop-color="#C49E58"/><stop offset="1" stop-color="#806436"/></linearGradient></defs>'
    +'<image id="wm-imgW" preserveAspectRatio="none"/><image id="wm-imgE" preserveAspectRatio="none" style="opacity:0"/><path id="wm-grat" class="grat"/><g id="wm-land"></g><g id="wm-route" class="route"></g><g id="wm-marks"></g></svg>'
-   +'<div id="wm-top" class="hud"><button class="hbtn" id="wm-back" aria-label="Back">&#8249;</button><div id="wm-crumb"></div><div id="wm-seat"><small>World Championship</small><strong id="wm-seatn">10<span> / 60 seats</span></strong><div id="wm-segs"></div></div></div>'
+   +'<div id="wm-top" class="hud"><button class="hbtn" id="wm-back" aria-label="Back">&#8249;</button><div id="wm-crumb"></div><div id="wm-att" aria-label="Attempts" style="display:none"></div><div id="wm-seat"><small>World Championship</small><strong id="wm-seatn">10<span> / 60 seats</span></strong><div id="wm-segs"></div></div></div>'
    +'<div id="wm-prog" class="hud" style="display:none"><small id="wm-progk">Europe</small><strong id="wm-progt"></strong><div id="wm-pips"></div></div>'
    +'<div id="wm-lvl"><div id="wm-lvlBg"></div><div id="wm-lvlShade"></div><div id="wm-lvlHead"><small id="wm-lvlSub"></small><h2 id="wm-lvlTitle"></h2><div class="bar"><i id="wm-lvlBar"></i></div></div><div id="wm-lvlWrap"><div id="wm-lvlRoute"></div></div><div id="wm-lvlModal"><div class="card"><button class="x" id="wm-lvlX" aria-label="Close">&times;</button><div id="wm-lvlMBody"></div></div></div></div>'
    +'<aside id="wm-panel"></aside><div id="wm-note"></div><div id="wm-sheet"></div><div id="wm-scrim"><div id="wm-modal"></div></div><div id="wm-toast"></div>'

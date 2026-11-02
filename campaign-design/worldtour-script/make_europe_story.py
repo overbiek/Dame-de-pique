@@ -84,21 +84,51 @@ def parse_moods(spec, n):
 # {block id: [prefixes of the 'v' lines to show as a narration card]}. The names are written in plain case ("Closer", not "CLOSER").
 SHOW_V = {
     'IT.open': ['Rome. Warm evening.'],   # the local man who asks CLOSER something in Italian, which the Jester's "No." reacts to
+    'ES.open': ['They continue. OPTIMIST turns left'],   # the shopkeeper OPTIMIST greets in Spanish, which the Jester's "No." reacts to
 }
 
 
-# Dialogue that is NOT in the script, written for the app (approved by the owner): {block id: (prefix of the 'v' line it follows, cues)}.
-# A spoken cue here is ['s', SPEAKER, text, mood, English translation]; these are not counted in the mood-override indexes
-# (those count only the script's own spoken lines). The 'v' line's own text is cut to the part before CUT so it does not repeat the exchange.
+# Dialogue that is NOT in the script, written for the app (approved by the owner): {block id: (prefix of the 'v' line it follows, cues, cut)}.
+# A spoken cue here is ['s', SPEAKER, text, mood, English translation] (the translation is left out when the line is already English);
+# ['b', text] is a narration card. These are not counted in the mood-override indexes (those count only the script's own spoken lines).
+# `cut`: the SHOW_V narration of that 'v' line is cut at this text so it does not repeat the exchange; None = the 'v' line is not shown at all
+# (the extra cues carry their own narration cards). Names in the extra cues that are not a Great Eight member become plain name labels.
 EXTRA = {
+    # The script only says "a local man asks CLOSER something in Italian. CLOSER answers naturally", and the Jester reacts to it.
     'IT.open': ('Rome. Warm evening.', [
         ['s', 'LOCAL MAN', "Scusi, sa dov'è Piazza Navona?", 'neutral', 'Excuse me, do you know where Piazza Navona is?'],
         ['s', 'CLOSER', 'Dritto, poi la seconda a destra. Dieci minuti a piedi.', 'neutral', 'Straight on, then the second on the right. Ten minutes on foot.'],
         ['s', 'LOCAL MAN', 'Grazie mille!', 'neutral', 'Thank you very much!'],
         ['s', 'CLOSER', 'Prego. Buona serata.', 'smile', "You're welcome. Have a good evening."],
-    ]),
+    ], ' A local man asks'),
+    # "OPTIMIST ... greets a shopkeeper in Spanish. The shopkeeper replies. OPTIMIST answers naturally and keeps walking."
+    'ES.open': ('They continue. OPTIMIST turns left', [
+        ['s', 'OPTIMIST', 'Buenas tardes. ¿Qué tal el día?', 'smile', "Good afternoon. How's the day going?"],
+        ['s', 'SHOPKEEPER', 'Largo y con mucho calor, pero aquí seguimos.', 'neutral', 'Long and very hot, but here we are.'],
+        ['s', 'OPTIMIST', 'Aquí seguimos. Que le vaya bien.', 'smile', 'Here we are. Take care.'],
+        ['s', 'SHOPKEEPER', 'Igualmente. ¡Hasta luego!', 'smile', 'You too. See you later!'],
+    ], ' The shopkeeper replies'),
+    # "A local calls to WILDCARD in French. He answers. Another speaks Dutch. He switches. A tourist asks in English. WILDCARD answers that too."
+    'BE.open': ('A local calls to WILDCARD in French.', [
+        ['b', 'A local calls to Wildcard in French.'],
+        ['s', 'LOCAL MAN', 'Excusez-moi, monsieur ! Vous avez laissé tomber quelque chose.', 'neutral', 'Excuse me, sir! You dropped something.'],
+        ['s', 'WILDCARD', 'Ah, merci beaucoup. Très aimable.', 'smile', 'Ah, thank you very much. Very kind.'],
+        ['b', 'Another speaks Dutch. He switches.'],
+        ['s', 'PASSER-BY', 'Hoi, weet je hier ergens een goed café?', 'neutral', 'Hi, do you know a good café around here?'],
+        ['s', 'WILDCARD', 'Tweede straat rechts, naast de tramhalte.', 'neutral', 'Second street on the right, next to the tram stop.'],
+        ['s', 'PASSER-BY', 'Bedankt!', 'neutral', 'Thanks!'],
+        ['b', 'A tourist asks in English. Wildcard answers that too.'],
+        ['s', 'TOURIST', 'Sorry, is this the way to the Grand Place?', 'neutral'],
+        ['s', 'WILDCARD', "Straight ahead, then follow the crowd. You can't miss it.", 'smile'],
+    ], None),
 }
-CUT = ' A local man asks'
+NAMES = ('CLOSER', 'OPTIMIST', 'SHARP', 'CHARMER', 'WILDCARD', 'SCHOLAR', 'JESTER', 'PLAYER')
+
+
+def nice(txt):
+    """CLOSER -> Closer in a narration card."""
+    for n in NAMES: txt = txt.replace(n, n.capitalize())
+    return txt
 
 
 def convert(bid, cues, spec):
@@ -111,8 +141,9 @@ def convert(bid, cues, spec):
             prev_v = c[1]
             if any(c[1].startswith(pre) for pre in SHOW_V.get(bid, [])):
                 txt = c[1]
-                if bid in EXTRA and CUT in txt: txt = txt.split(CUT)[0]
-                out.append(['b', txt.replace('CLOSER', 'Closer')])
+                cut = EXTRA[bid][2] if bid in EXTRA else None
+                if cut and cut in txt: txt = txt.split(cut)[0]
+                out.append(['b', nice(txt)])
             if bid in EXTRA and c[1].startswith(EXTRA[bid][0]):
                 out.extend(EXTRA[bid][1])
             continue

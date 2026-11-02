@@ -4930,6 +4930,18 @@ before pushing.
   (map held -> play -> summary -> final -> Back to the Map -> Rome city) keeps `it_1.webp` and shows no stray screen. The first-clear story was NOT exercised there (the
   throwaway bot lost, score -43).
 
+## World Tour: local-language exchanges, Madrid table 3, attempts pill (2026-11-02)
+- **Script check: two scenes were missing their spoken exchange (the script only had a 'v' action line)**: `ES.open` (the Optimist greets a shopkeeper in Spanish) and `BE.open` (the Wildcard
+  answers a local in French, another in Dutch and a tourist in English). Both written like Rome's (`EXTRA` in `make_europe_story.py`, speakers `SHOPKEEPER` / `LOCAL MAN` / `PASSER-BY` /
+  `TOURIST` as plain name labels, an English translation line under each foreign line via the 5th cue element, none for the already-English tourist). `EXTRA` entries are now
+  `(prefix of the 'v' line, cues, cut)`; `cut=None` hides the original 'v' line (Belgium carries its own narration cards). Scanned every country's `open`/`after`/`handoff` 'v' lines for
+  language/speaks/asks/replies: no other scene needs one (the rest only mention a language in passing). Bumped `WT_STORY_VER` to 5. Same rule as Rome: new foreign lines are mine, not the script's.
+- **Madrid table 3 (id 413)**: gold is now "win 8 or more tricks OR shoot the moon" (`goldTricks:8, goldOrMoon:true`; clear stays 6 tricks, a moon also clears). The owner first asked for AND (`goldMoon`, the Hundred Tables semantics), measured 0/90, and chose OR; `goldOrMoon` is a new flag in `evaluateCampaignObjective` + `campaignObjectiveParts`, the old `goldMoon` AND is untouched, changed in `europe-levels.json` and regenerated into
+  `server.js` with `make_server_block.py`. `m413.js` (in `worldtour-levels/`) measures one single-hand level with the normal AI at seat 0: 90 runs gave clear (>=6 tricks) 24%, >=8 tricks 2%, moon 0%, so "8+ AND moon" was
+  0/90 for the AI (it never aims for the moon; the hand's own ceiling was 8 tricks). The chosen "8+ OR moon" is ~2% for the AI (a human aiming for the moon may do better).
+- **Attempts pill on the World Tour map** (`wt-map.js` `renderAttempts`/`tickAttempts`): the same shared pool as the Hundred Tables (`campaignData.attempts`) as chip + n/max + "Next in m:ss",
+  in the top bar between the breadcrumb and the seats box, so it shows on the world, continent, country and city views. It redraws on every `renderAll` and on `campaignStateOk`.
+
 ## World Tour story reset (one-time migration, 2026-11-01)
 - **Every account's World Tour story was reset once, on the first boot after this deploy** (owner's call, to re-test the whole flow): `runOneTimeMigrations` (`db.js`, marker
   `reset_wt_story_v1`, same transaction) removes the ids starting with `wt_` (prologue `wt_pro_*` and every `wt_<block>` scene) from `campaign_progress.story_cues_seen`.

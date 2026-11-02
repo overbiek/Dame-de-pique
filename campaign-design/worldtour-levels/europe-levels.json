@@ -284,7 +284,8 @@
   "objective": {
    "type": "trickCount",
    "minTricks": 6,
-   "goldTricks": 7
+   "goldTricks": 8,
+   "goldOrMoon": true
   },
   "hand": "9♠ A♠ 5♥ 7♥ 10♥ J♥ 4♦ 10♦ J♦ Q♦ 3♣ J♣ A♣",
   "ceiling": 8,

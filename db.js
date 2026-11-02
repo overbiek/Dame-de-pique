@@ -446,6 +446,21 @@ async function ensureSchema() {
   // recordCampaignHandStats, called once per level from
   // submitCampaignLevelResult under that function's existing one-shot
   // guard — same safe-under-retry reasoning as times_played above.
+  // A campaign hand in progress, so it survives a redeploy/restart (rooms live in memory only). One row per
+  // player token (seat 0's token), written on every state change and deleted when the hand ends or the player
+  // leaves. `state` is the whole room serialised by server.js (a TEXT blob, never queried by field). `epoch`
+  // fences two server instances during a deploy overlap: a restore bumps it, and an older instance's later
+  // writes are refused (see saveCampaignSnapshot). Cascades with the account like every per-account table.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS campaign_room_snapshots (
+      token TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      epoch INTEGER NOT NULL DEFAULT 0,
+      state TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
   await pool.query(`ALTER TABLE campaign_progress ADD COLUMN IF NOT EXISTS moons_total INTEGER NOT NULL DEFAULT 0;`);
   await pool.query(`ALTER TABLE campaign_progress ADD COLUMN IF NOT EXISTS queen_spades_taken INTEGER NOT NULL DEFAULT 0;`);
   await pool.query(`ALTER TABLE campaign_progress ADD COLUMN IF NOT EXISTS best_hand INTEGER;`);
@@ -2080,8 +2095,40 @@ async function getCampaignFriendsResults(accountId, levelId) {
   };
 }
 
+// ── Campaign hand snapshots (survive a redeploy) ─────────────────
+// Returns true when the row was written, false when a newer instance already owns it (epoch fence).
+async function saveCampaignSnapshot(token, code, accountId, epoch, state) {
+  // RETURNING (not rowCount) so "was it written" reads the same on every driver; an upsert refused by the
+  // WHERE returns no row.
+  const { rows } = await pool.query(
+    `INSERT INTO campaign_room_snapshots (token, code, account_id, epoch, state, updated_at)
+     VALUES ($1::text, $2::text, $3::int, $4::int, $5::text, now())
+     ON CONFLICT (token) DO UPDATE
+       SET code = EXCLUDED.code, epoch = EXCLUDED.epoch, state = EXCLUDED.state, updated_at = now()
+       WHERE campaign_room_snapshots.epoch <= EXCLUDED.epoch
+     RETURNING epoch`,
+    [token, code, accountId, epoch, state]
+  );
+  return rows.length > 0;
+}
+async function loadCampaignSnapshot(code, token) {
+  const { rows } = await pool.query(
+    `SELECT state, epoch FROM campaign_room_snapshots WHERE token = $1::text AND code = $2::text`, [token, code]);
+  return rows[0] || null;
+}
+async function deleteCampaignSnapshot(token) {
+  await pool.query(`DELETE FROM campaign_room_snapshots WHERE token = $1::text`, [token]);
+}
+// Snapshots nobody came back for (a hand abandoned for weeks). Run once at boot.
+async function purgeCampaignSnapshots(days) {
+  const { rows } = await pool.query(
+    `DELETE FROM campaign_room_snapshots WHERE updated_at < now() - ($1::int * interval '1 day') RETURNING token`, [days]);
+  return rows.length;
+}
+
 module.exports = {
   pool, ensureSchema, toPublic,
+  saveCampaignSnapshot, loadCampaignSnapshot, deleteCampaignSnapshot, purgeCampaignSnapshots,
   createAccount, findAccountByUsername, findAccountById,
   createSession, findAccountByToken, deleteSession, updateProfile,
   setAccountEmail, findAccountByEmail, createPasswordReset, findValidPasswordReset,

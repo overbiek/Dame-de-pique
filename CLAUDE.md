@@ -5236,6 +5236,28 @@ before pushing.
   nobody starts, not a real hand in progress. `EMPTY_CLOSE_MS` (nobody
   connected at all) is untouched and still applies to every phase.
 
+## Campaign hands survive a redeploy (2026-11-02)
+- **A campaign hand in progress is saved to Postgres on every state change and brought back when its player reconnects**, so pushing to `main` no longer ends it.
+  Campaign only (solo against the computer; casual, ranked and daily rooms are still lost on a restart, as before). Table `campaign_room_snapshots` (`db.js`):
+  one row per seat-0 token with the whole room as a TEXT blob, `epoch`, `updated_at`; cascades with the account.
+- **Save**: `broadcastRoom` calls `persistCampaignRoom(G)` for campaign rooms. `snapSerialize` is `JSON.stringify` minus the timer handles (`autoTimer`, `voteTimer`,
+  `rankedTimers`) and `restoredPending`. Writes per room are chained and coalesced (`snapState`), so a burst of AI moves is a few writes and an older state never lands after a newer
+  one. The row is deleted when the hand reaches `final` (the result is banked separately) and in `closeRoom` (leave / forfeit). Rows untouched for 30 days are purged at boot.
+- **Restore is ON DEMAND, at `rejoin`, never at boot**: the client already sends `rejoin {code, token}` on every reconnect; if the room is not in memory, `restoreCampaignRoom` loads the
+  snapshot for exactly that code+token. Boot-time loading was rejected on purpose: during a deploy the old instance is still writing until it stops, so a boot-time copy can be stale,
+  and rooms nobody returns to would sit in memory with live timers. Restoring clears the human seat's socket and sets `restoredPending`; after the normal `joined` + `broadcastRoom`,
+  `resumeRestoredRoom` restarts what the dead process's `setTimeout`s were waiting on, by phase (`pass`: AI picks + auto timer + `checkAllPassed`; `passReveal`: start tricks;
+  `play`: resolve a full trick / end the round / `scheduleAI`; `roundSummary`: auto-advance timer). Nothing replays visually (a moon-shot effect in flight is simply skipped).
+- **`epoch` fences two instances during a deploy overlap**: a restore saves with `epoch+1`; the upsert only writes when the stored epoch is <= the writer's, so the OLD instance's late
+  writes are refused (and it stops writing that hand). `saveCampaignSnapshot` reads `RETURNING` rather than `rowCount`: PGlite does not report `rowCount`, and the first version of this
+  switched itself off after one write on it (caught by the test below).
+- `SIGTERM` (what a deploy sends) flushes every campaign hand's latest state (4 s cap) and exits. Without it the per-broadcast writes still cover everything but, at worst, the very last move.
+- **Attempts are not spent again** (the level start is not repeated) and the result is not submitted twice (`campaignResultSubmitted` is part of the snapshot).
+- **The deploy that FIRST ships this cannot save hands from the older process** (it never wrote snapshots): hands running during that one deploy are still lost.
+- **Verified** (real `server.js` + PGlite on disk, signed up on localhost, driven through the real socket): killed the server hard mid-hand (trick 6), restarted, the open page reconnected
+  with the identical hand and scores, no reconnect banner, and played on to the result; same in the pass phase; the snapshot row is gone after the hand ends; the SIGTERM handler runs and
+  exits 0. NOT run: real Postgres via `pg` (the SQL is plain upsert/select/delete with explicit casts), a mid-trick (4 cards on the table) or round-summary restore, two instances at once.
+
 ## Ranked results were silently dropped from 2026-08-18 to 2026-10-28 (FIXED)
 - **Symptom (reported 2026-10-28):** a full 4-human ranked game finished, the final
   scores and credits showed, but no MMR box appeared and placement stayed 0/5.

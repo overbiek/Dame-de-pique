@@ -17,8 +17,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 const DB_ENABLED = !!process.env.DATABASE_URL;
 const db = DB_ENABLED ? require('./db') : null;
 const bcrypt = DB_ENABLED ? require('bcryptjs') : null;
+let dbReady = Promise.resolve();
 if (DB_ENABLED) {
-  db.ensureSchema()
+  dbReady = db.ensureSchema()
     .then(() => console.log('Accounts: database schema ready'))
     .catch(err => console.error('Accounts: schema setup failed —', err.message));
 } else {
@@ -11002,6 +11003,7 @@ function closeRoom(G, reason) {
   // campaign/daily flags for the same reason leaveRoom sends them — they
   // decide where the client lands and what it tells the player.
   io.to(G.code).emit('roomClosed', { reason, campaign: !!G.campaign, daily: wasUnfinishedDaily });
+  if (G.campaign) dropCampaignSnapshot(G);
   delete rooms[G.code];
 }
 
@@ -11403,8 +11405,114 @@ function publicState(G) {
   };
 }
 
+// ── Campaign hands survive a redeploy ────────────────────────────
+// Rooms live in memory, so every push to main used to end any hand in progress. A campaign hand is solo against
+// the computer (no one else's game depends on it), so it is saved to Postgres on every state change and brought
+// back when its player reconnects: the client already re-sends `rejoin` with its saved code + token on every
+// reconnect, so after a restart that request finds no room, restores it from the snapshot and carries on where
+// it left off. Deliberately restored ON DEMAND at rejoin, not at boot: during a deploy the old instance is still
+// writing right up to its end, so a boot-time load could pick up a stale copy, and rooms nobody comes back to
+// would sit in memory with live timers.
+// The snapshot is the room object minus its timer handles (autoTimer/voteTimer/rankedTimers, and restoredPending).
+const SNAP_SKIP = new Set(['autoTimer', 'voteTimer', 'rankedTimers', 'restoredPending']);
+const SNAP_PURGE_DAYS = 30;
+const snapState = new Map();   // token -> { chain, queued, text, code, acct, epoch, gone }
+function snapSerialize(G) { return JSON.stringify(G, (k, v) => SNAP_SKIP.has(k) ? undefined : v); }
+function snapEntry(tok) {
+  let st = snapState.get(tok);
+  if (!st) { st = { chain: Promise.resolve(), queued: false, text: null, code: null, acct: null, epoch: 0, gone: false }; snapState.set(tok, st); }
+  return st;
+}
+function persistCampaignRoom(G) {
+  if (!DB_ENABLED || !G.campaign) return;
+  const p0 = G.players[0];
+  if (!p0 || !p0.token || !p0.accountId) return;
+  if (G.phase === 'final') { dropCampaignSnapshot(G); return; }   // the hand is over: its result is banked separately
+  const st = snapEntry(p0.token);
+  if (st.gone) return;
+  try { st.text = snapSerialize(G); } catch (e) { console.error('campaign snapshot serialise failed:', e.message); return; }
+  st.code = G.code; st.acct = p0.accountId; st.epoch = G.snapEpoch || 0;
+  if (st.queued) return;       // a write is already waiting: it will pick up this newer text
+  st.queued = true;
+  // Writes for one room run strictly one after another and coalesce, so a burst of AI moves is a few writes,
+  // never an unbounded pile, and an older state can never land after a newer one.
+  st.chain = st.chain.then(async () => {
+    st.queued = false;
+    if (st.gone || st.text == null) return;
+    const text = st.text;
+    const ok = await db.saveCampaignSnapshot(p0.token, st.code, st.acct, st.epoch, text);
+    if (!ok) st.gone = true;   // a newer instance took this hand over: stop writing
+  }).catch(e => { st.queued = false; console.error('campaign snapshot save failed:', e.message); });
+}
+function dropCampaignSnapshot(G) {
+  if (!DB_ENABLED) return;
+  const p0 = G.players[0];
+  if (!p0 || !p0.token) return;
+  const st = snapEntry(p0.token);
+  if (st.gone) return;
+  st.gone = true; st.text = null;
+  st.chain = st.chain
+    .then(() => db.deleteCampaignSnapshot(p0.token))
+    .catch(e => console.error('campaign snapshot delete failed:', e.message))
+    .then(() => { snapState.delete(p0.token); });
+}
+const snapRestoring = new Map();   // code:token -> Promise (two rejoins at once must restore once)
+async function restoreCampaignRoom(code, token) {
+  if (!DB_ENABLED || !code || !token) return null;
+  code = String(code).toUpperCase(); token = String(token);
+  const key = code + ':' + token;
+  if (snapRestoring.has(key)) return snapRestoring.get(key);
+  const work = (async () => {
+    await dbReady;
+    const row = await db.loadCampaignSnapshot(code, token);
+    if (!row) return null;
+    // Lost a race with a rejoin that already restored it, or the code was reused by a brand-new room.
+    if (rooms[code]) return rooms[code].players.some(p => p.token === token) ? rooms[code] : null;
+    let G;
+    try { G = JSON.parse(row.state); } catch (e) { console.error('campaign snapshot unreadable:', e.message); return null; }
+    if (!G || !G.campaign || G.code !== code || !campaignLevelById(G.campaignLevelId) || !Array.isArray(G.players) || G.players.length !== 4) return null;
+    G.autoTimer = null; G.voteTimer = null; G.rankedTimers = [null, null, null, null];
+    for (const p of G.players) if (!p.isAI) { p.socketId = null; p.connected = false; }
+    G.hostSocket = null; G.emptySince = null; G.lastActivity = Date.now();
+    G.snapEpoch = (row.epoch || 0) + 1;   // fences out the old instance's late writes
+    G.restoredPending = true;
+    rooms[code] = G;
+    console.log(`Restored campaign hand ${code} (level ${G.campaignLevelId}, phase ${G.phase}, round ${G.round}) from its snapshot`);
+    return G;
+  })().catch(e => { console.error('campaign restore failed:', e.stack || e.message); return null; });
+  snapRestoring.set(key, work);
+  try { return await work; } finally { snapRestoring.delete(key); }
+}
+// The old process held these as setTimeouts; a restored room has none, so start whatever its phase was waiting on.
+function resumeRestoredRoom(G) {
+  if (!G.restoredPending) return;
+  G.restoredPending = false;
+  if (G.phase === 'pass') {
+    for (let i = 0; i < 4; i++) {
+      if (G.players[i].isAI && !G.passSelected[i]) { G.passSelected[i] = aiSelectPass(G, i); G.players[i].hasPassed = true; }
+    }
+    rearmAuto(G);
+    checkAllPassed(G);
+  } else if (G.phase === 'passReveal') {
+    setTimeout(() => { if (rooms[G.code] && G.phase === 'passReveal') startTricks(G); }, 1500);
+  } else if (G.phase === 'play') {
+    if (G.currentTrick.length === 4) setTimeout(() => resolveTrick(G), 800);
+    else if (G.trickNum > 13 || checkMoon(G) >= 0) setTimeout(() => endRound(G), 1200);
+    else scheduleAI(G);
+  } else if (G.phase === 'roundSummary') {
+    rearmAuto(G);
+    checkRoundReady(G);
+  }
+}
+// SIGTERM is what a deploy sends the old instance: write every campaign hand's latest state before exiting.
+async function flushCampaignSnapshots() {
+  for (const code in rooms) { const G = rooms[code]; if (G.campaign) persistCampaignRoom(G); }
+  await Promise.all([...snapState.values()].map(st => st.chain));
+}
+
 function broadcastRoom(G) {
   G.lastActivity = Date.now();
+  if (G.campaign) persistCampaignRoom(G);   // every state change is saved, so a redeploy can pick the hand up again
   const pub = publicState(G);
   for (let i = 0; i < 4; i++) {
     const p = G.players[i];
@@ -13015,8 +13123,11 @@ io.on('connection', (socket) => {
   });
 
   // Reconnect after the phone backgrounds / network blips
-  socket.on('rejoin', ({ code, token }) => {
-    const G = findRoom(code);
+  socket.on('rejoin', async ({ code, token }) => {
+    let G = findRoom(code);
+    // Not in memory: after a redeploy/restart a CAMPAIGN hand is brought back from its snapshot, on demand and
+    // only for the player who holds its token (see restoreCampaignRoom).
+    if (!G) G = await restoreCampaignRoom(code, token);
     if (!G) return socket.emit('rejoinFailed');
     const idx = G.players.findIndex(p => p.token && p.token === token);
     if (idx === -1) return socket.emit('rejoinFailed');
@@ -13028,6 +13139,7 @@ io.on('connection', (socket) => {
     socket.join(G.code);
     socket.emit('joined', { code: G.code, playerIndex: idx, token, isHost: host });
     broadcastRoom(G);
+    resumeRestoredRoom(G);   // a no-op unless this room was just restored: restarts the timers the old process held
   });
 
   socket.on('setAI', ({ code, slotIndex, isAI }) => {
@@ -13253,9 +13365,10 @@ setInterval(() => {
     // an in-progress level must survive the player closing the app,
     // backgrounding it, or losing connection, and must only be lost when
     // they deliberately leave (the home button, which closes the room via
-    // leaveRoom). So no idle/empty timer may reap it. The known limit is
-    // the same one solo casual has: rooms are in-memory, so a server
-    // restart/redeploy still loses it — see CLAUDE.md.
+    // leaveRoom). So no idle/empty timer may reap it. (A server restart/
+    // redeploy does NOT lose it either: campaign hands are snapshotted to
+    // Postgres and restored when the player reconnects — see
+    // persistCampaignRoom / restoreCampaignRoom.)
     if (!G.ranked && !G.daily && G.players.filter(p => !p.isAI).length === 1) {
       G.emptySince = null;
       continue;
@@ -13316,6 +13429,18 @@ process.on('unhandledRejection', (err) => {
 if (DB_ENABLED) {
   setTimeout(settleRecentDailyRewards, 15 * 1000);
   setInterval(settleRecentDailyRewards, 10 * 60 * 1000);
+}
+
+if (DB_ENABLED) {
+  dbReady.then(() => db.purgeCampaignSnapshots(SNAP_PURGE_DAYS))
+    .then(n => { if (n) console.log(`Campaign snapshots: removed ${n} untouched for ${SNAP_PURGE_DAYS}+ days`); })
+    .catch(e => console.error('campaign snapshot purge failed:', e.message));
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM: saving campaign hands before exit');
+    Promise.race([flushCampaignSnapshots(), new Promise(r => setTimeout(r, 4000))])
+      .catch(e => console.error('flush on SIGTERM failed:', e.message))
+      .finally(() => process.exit(0));
+  });
 }
 
 const PORT = process.env.PORT || 3000;

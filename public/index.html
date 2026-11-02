@@ -5662,6 +5662,23 @@ html.landscape-mode #s-campaign .camp-bg{position:fixed}
 .camp-node.has-gold-art .camp-node-inner{
   border-color:transparent;background:none;box-shadow:none;padding:0;overflow:hidden;
 }
+/* The gold crest on the campaign RESULT screen (replaces the plain star): the level's own medallion (Hundred Tables) or its country's seal (World Tour). It pops in,
+   a glint sweeps across it (masked to the crest's own shape) and a few sparks twinkle round it. Off for prefers-reduced-motion. */
+.camp-crest{position:relative;width:clamp(64px,19vh,104px);height:clamp(64px,19vh,104px);margin:0 auto 8px;display:grid;place-items:center}
+.camp-crest::before{content:"";position:absolute;inset:-18%;border-radius:50%;background:radial-gradient(circle,rgba(238,208,142,.55),rgba(238,208,142,0) 66%);animation:crestGlow 2.6s ease-in-out .5s infinite}
+.camp-crest img{position:relative;width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,.55));animation:crestIn .95s cubic-bezier(.2,1.5,.35,1) both}
+.camp-crest .crest-shine{position:absolute;inset:0;background:linear-gradient(105deg,transparent 38%,rgba(255,246,214,.95) 50%,transparent 62%) 150% 0/260% 100% no-repeat;-webkit-mask:var(--crest) center/contain no-repeat;mask:var(--crest) center/contain no-repeat;animation:crestShine 1.5s .75s ease-out both}
+.camp-crest b{position:absolute;left:0;right:0;top:50%;transform:translateY(-52%);text-align:center;font-family:var(--font-num);font-weight:700;font-size:clamp(.95rem,3.6vh,1.5rem);line-height:1;color:#FFF3D0;-webkit-text-stroke:3px #160e02;paint-order:stroke fill;animation:crestIn .95s .1s cubic-bezier(.2,1.5,.35,1) both}
+.camp-crest i{position:absolute;font-style:normal;color:#FFF3D0;text-shadow:0 0 6px #EED08E;font-size:.8rem;opacity:0;animation:crestSpark 1.8s ease-in-out infinite}
+.camp-crest i:nth-of-type(1){left:-14%;top:6%;animation-delay:.9s}
+.camp-crest i:nth-of-type(2){right:-12%;top:18%;animation-delay:1.35s;font-size:.65rem}
+.camp-crest i:nth-of-type(3){left:-8%;bottom:6%;animation-delay:1.8s;font-size:.6rem}
+.camp-crest i:nth-of-type(4){right:-10%;bottom:2%;animation-delay:1.1s}
+@keyframes crestIn{0%{transform:scale(.15) rotate(-14deg);opacity:0}60%{transform:scale(1.12) rotate(3deg);opacity:1}100%{transform:scale(1) rotate(0)}}
+@keyframes crestShine{from{background-position:150% 0}to{background-position:-50% 0}}
+@keyframes crestGlow{0%,100%{opacity:.45;transform:scale(.92)}50%{opacity:.9;transform:scale(1.06)}}
+@keyframes crestSpark{0%,100%{opacity:0;transform:scale(.4) rotate(0)}40%{opacity:1;transform:scale(1) rotate(45deg)}70%{opacity:0;transform:scale(.5) rotate(90deg)}}
+@media (prefers-reduced-motion:reduce){.camp-crest::before,.camp-crest img,.camp-crest b,.camp-crest i,.camp-crest .crest-shine{animation:none}.camp-crest i{display:none}.camp-crest .crest-shine{display:none}}
 .camp-gold-img{width:100%;height:100%;object-fit:contain;display:block;
   filter:drop-shadow(0 2px 6px rgba(var(--ddp-scrim-rgb),.55))}
 /* The current-node pulse rings the medallion instead of the (now
@@ -10102,6 +10119,18 @@ function campaignGoldImg(levelId){
 }
 // Unlike the other art hooks, a failed gold medallion has to restore the
 // star it replaced — the node would otherwise be empty.
+/* The gold crest for the result screen: Hundred Tables (levels 1-400) = that level's own medallion (/campaign/gold/<id>.webp); World Tour (401+) = its country's seal
+   (/campaign/worldtour/seals/<cc>.webp, with the table number on it like the map). If the picture is missing it turns back into the plain star. */
+const WT_SEAL_CC=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR','SAU','IND','THA','VNM','PHL','IDN','TWN','CHN','KOR','JPN'];
+function campaignCrestHTML(levelId){
+  let src,num='';
+  if(levelId>400){
+    const cc=WT_SEAL_CC[Math.floor((levelId-401)/10)]; if(!cc) return '&#9733;';
+    src='/campaign/worldtour/seals/'+cc.toLowerCase()+'.webp'; num='<b>'+(((levelId-401)%10)+1)+'</b>';
+  }else src='/campaign/gold/'+levelId+'.webp';
+  return `<div class="camp-crest" style="--crest:url('${src}')"><img src="${src}" alt="Gold" loading="eager" onerror="this.parentNode.outerHTML='&#9733;'"/>`
+    +`<span class="crest-shine"></span>${num}<i>&#10022;</i><i>&#10022;</i><i>&#10022;</i><i>&#10022;</i></div>`;
+}
 function campaignGoldFailed(levelId,el){
   campaignArtMissing['gold:'+levelId]=true;
   const node=el&&el.closest('.camp-node');
@@ -10959,6 +10988,8 @@ const WT_BLANK='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAA
 const WT_EUROPE_BG={none:WT_BLANK};
 /* Countries whose three stills are in public/campaign/worldtour/europe/<cc>_<1|2|3>.webp: add a code here when a country's pictures arrive. */
 ['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'].forEach(cc=>[1,2,3].forEach(n=>{ WT_EUROPE_BG[cc+n]='/campaign/worldtour/europe/'+cc.toLowerCase()+'_'+n+'.webp'; }));
+/* Asia's location stills that exist so far (public/campaign/worldtour/asia/<cc>_<1|2|3>.webp, 3 = the Keeper's Table); the others show the map behind the scene. Add a key when its file arrives. */
+['SAU1','SAU3','IND1','IND2','IND3','THA1','THA2'].forEach(k=>{ WT_EUROPE_BG[k]='/campaign/worldtour/asia/'+k.slice(0,3).toLowerCase()+'_'+k.slice(3)+'.webp'; });
 const WT_STORY_VER=7;  // bump when europe-story.json changes (the service worker keeps non-script files)
 /* ?wtdev=1 (or ?wtstory=1): World Tour test mode. Story/progress ids are kept on this device only (never sent to the account),
    the map gets a DEV button that clears tables, and the story gallery is available. `var` so wt-map.js sees window.WT_DEV. */
@@ -11747,7 +11778,7 @@ function renderCampaignResult(){
   // an older cached client that predates the server sending `type`.
   const isBoss=(d.type||'Normal')==='BOSS';
   let h='<div class="empty-state" style="padding-top:14px">';
-  h+=`<div class="empty-icon">${d.gold?'★':d.cleared?'✓':'↻'}</div>`;
+  h+=d.gold?`<div class="empty-icon" style="opacity:1;font-size:inherit">${campaignCrestHTML(d.levelId)}</div>`:`<div class="empty-icon">${d.cleared?'✓':'↻'}</div>`;
   h+=`<h3>Table ${campaignTableLabel(d.levelId)}${isBoss?' — Boss Cleared':''} ${d.gold?'— Gold':d.cleared?'— Cleared':'— Not this time'}</h3>`;
   h+=`<p>Score <span class="cb-figure" id="camp-result-score">0</span>`
     +(d.creditsAwarded?` &middot; +<span class="cb-figure" id="camp-result-credits">0</span> credits`:'')+'</p>';

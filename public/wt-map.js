@@ -266,7 +266,7 @@ function dbg(m){
 }
 /* Countries whose level-select picture exists (public/campaign/worldtour/map/<cc>_select.webp): their tables are chosen on the city screen, the
    others on the side panel. Add a code when its picture arrives. */
-const LVLPIC=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'];
+const LVLPIC=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR','SAU','IND','THA','VNM','PHL','IDN','TWN','CHN','KOR','JPN'];
 const hasPic=k=>LVLPIC.indexOf(k)>=0;
 /* One gold seal per country (public/campaign/worldtour/seals/<cc>.webp; Europe's ten exist, the other continents' come later). A table cleared at GOLD
    shows its country's seal with the table number drawn on top; a plain clear keeps the brass check / brass octagon. A country without a seal keeps the plain look. */

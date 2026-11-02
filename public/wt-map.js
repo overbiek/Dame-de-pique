@@ -158,6 +158,13 @@ const CSS=`#wtmap{
 @keyframes wmlpulse{0%,100%{box-shadow:0 0 0 4px rgba(var(--brass-rgb),.22),0 4px 14px rgba(0,0,0,.55)}50%{box-shadow:0 0 0 9px rgba(var(--brass-rgb),.1),0 4px 14px rgba(0,0,0,.55)}}
 #wtmap .lnode.boss .in{width:66px;height:66px;font-size:22px;background:radial-gradient(120% 120% at 35% 25%,rgba(var(--brass-rgb),.32),#0D2E25 70%)}
 #wtmap .lnode.boss .lb{color:var(--brass-hi)}
+#wtmap .lnode.sealed .in{position:relative;width:62px;height:62px;border:0;border-radius:0;background:none;box-shadow:none;overflow:visible}
+#wtmap .lnode.sealed.boss .in{width:74px;height:74px}
+#wtmap .lnode.sealed .in img.seal{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.6));pointer-events:none}
+#wtmap .lnode.sealed .in b{position:relative;margin-top:-3px;font-family:var(--serif);font-weight:700;font-size:20px;line-height:1;color:#FFF3D0;-webkit-text-stroke:3px #160e02;paint-order:stroke fill;text-shadow:0 1px 3px rgba(0,0,0,.7)}
+#wtmap .lnode.sealed.boss .in b{font-size:24px}
+#wtmap .lnode.sealed .in i.gp{position:absolute;top:-3px;right:-3px;width:19px;height:19px;display:grid;place-items:center;font-style:normal;font-size:11px;line-height:1;color:#5a4520;background:var(--brass-hi);border:1px solid #5a4520;clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)}
+#wtmap .lnode.sealed:active .in{transform:scale(.94)}
 #wtmap #wm-lvlModal{position:absolute;inset:0;z-index:8;background:rgba(2,6,5,.5);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
 #wtmap #wm-lvlModal.show{opacity:1;pointer-events:auto}
 #wtmap #wm-lvlModal .card{position:relative;width:min(440px,calc(100% - 32px));max-height:calc(100% - 24px);overflow:auto;background:linear-gradient(180deg,rgba(13,46,37,.97),rgba(7,26,21,.98));border:1px solid var(--brass);border-radius:16px;padding:16px 18px;box-shadow:0 14px 50px rgba(0,0,0,.7)}
@@ -236,6 +243,11 @@ function dbg(m){
    others on the side panel. Add a code when its picture arrives. */
 const LVLPIC=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'];
 const hasPic=k=>LVLPIC.indexOf(k)>=0;
+/* One gold seal per country (public/campaign/worldtour/seals/<cc>.webp; Europe's ten exist, the other continents' come later). A cleared table shows
+   its country's seal with the table number drawn on top, and a small star when it was cleared at Gold. A country without a seal keeps the plain look. */
+const SEALS=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'];
+const sealSrc=k=>SEALS.indexOf(k)>=0?'/campaign/worldtour/seals/'+k.toLowerCase()+'.webp':null;
+const goldAt=abs=>!!(resultOf(abs)&&resultOf(abs).gold);
 
 /* ---------- progress (see the header) ---------- */
 function loadDev(){
@@ -404,13 +416,17 @@ function renderProg(){
   }else p.style.display='none';
 }
 const crown=c=>'<path d="M-7 -4l2.4 -6 4.6 4.4 4.6 -4.4 2.4 6z" fill="'+c+'" transform="translate(0 -3)"/>';
-function nodeSVG(n,state){
-  const w=n===9,k=n===10;
+function nodeSVG(n,state,cc,gold){
+  const w=n===9,k=n===10,seal=state==='done'&&cc?sealSrc(cc):null;
   let s='<svg viewBox="-26 -26 52 52">';
   if(k)s+='<polygon points="'+starPts(25,19)+'" fill="'+(state==='done'?'#806436':'none')+'" stroke="'+(state==='lock'?'rgba(196,158,88,.3)':'#EED08E')+'" stroke-width="1.2"/>';
   const num=(fill,weight)=>w?crown(fill)+'<text y="8" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+weight+' font-size="14" fill="'+fill+'">9</text>'
     :'<text y="1" dominant-baseline="central" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+weight+' font-size="'+(n>9?13:15)+'" fill="'+fill+'">'+n+'</text>';
-  if(state==='done'){
+  if(seal){
+    s+='<image href="'+seal+'" x="-24" y="-24" width="48" height="48"/>'
+      +'<text y="-1" dominant-baseline="central" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-weight="700" font-size="'+(n>9?14:17)+'" fill="#FFF3D0" stroke="#160e02" stroke-width="3" paint-order="stroke" stroke-linejoin="round">'+n+'</text>';
+    if(gold)s+='<g transform="translate(17 -17)"><polygon points="'+octPts(7.5,22.5)+'" fill="#EED08E" stroke="#5a4520" stroke-width="1"/><text y="1" dominant-baseline="central" text-anchor="middle" font-size="9" fill="#5a4520">&#9733;</text></g>';
+  }else if(state==='done'){
     s+='<polygon points="'+octPts(21,22.5)+'" fill="url(#wmBrassG)" stroke="#5a4520" stroke-width="1.2"/><polygon points="'+octPts(16.5,22.5)+'" fill="none" stroke="#5a4520" stroke-width=".9"/>'+num('#2a1e08','font-weight="600"');
   }else if(state==='cur'){
     s+='<polygon points="'+octPts(23,22.5)+'" fill="none" stroke="#EED08E" stroke-width="1.4" class="pulse"/><polygon points="'+octPts(21,22.5)+'" fill="#0D2E25" stroke="#EED08E" stroke-width="2"/>'+num('#EED08E','font-weight="600"');
@@ -431,7 +447,7 @@ function renderPanel(){
   const ln=GE[c.lead][0];
   let h='<div class="ph"><div class="t"><small>'+c.name+'</small><h2>'+c.city+'</h2></div><div class="lead">'+leadBadge(c)+'lead cast</div></div>';
   h+='<div class="games">'+c.games+'</div><div class="grid">';
-  for(let t=1;t<=10;t++){const st=t<=n?'done':(t===n+1?'cur':'lock');h+='<button class="nd'+(t===sel?' sel':'')+'" data-n="'+t+'" aria-label="Table '+t+'">'+nodeSVG(t,st)+'</button>';}
+  for(let t=1;t<=10;t++){const st=t<=n?'done':(t===n+1?'cur':'lock');h+='<button class="nd'+(t===sel?' sel':'')+'" data-n="'+t+'" aria-label="Table '+t+'">'+nodeSVG(t,st,c.k,goldAt(idxOf(c.k)*10+t))+'</button>';}
   h+='</div>';
   const sg=STAGE.find(s=>sel>=s[0]&&sel<=s[1]);
   h+='<div class="cap"><b>Table '+sel+' · '+sg[2]+'</b><p>'+sg[3]+'</p>';
@@ -614,8 +630,9 @@ function renderCityNodes(){
   let h='';
   for(let i=1;i<=10;i++){
     const st=i<=n?'done':(i===n+1?'cur':'lock'),boss=i===10;
-    const inner=st==='lock'?'&#128274;':st==='done'?(boss?'&#9733;':'&#10003;'):String(i);
-    h+='<button class="lnode '+st+(boss?' boss':'')+'" id="wm-lnode'+i+'" data-n="'+i+'" '+(st==='lock'?'disabled':'')+'><span class="in">'+inner+'</span><span class="lb">'+(boss?'Keeper\'s Table':'Table '+i)+'</span></button>';
+    const seal=st==='done'?sealSrc(c.k):null;
+    const inner=st==='lock'?'&#128274;':seal?'<img class="seal" alt="" src="'+seal+'"><b>'+i+'</b>'+(goldAt(idxOf(c.k)*10+i)?'<i class="gp">&#9733;</i>':''):st==='done'?(boss?'&#9733;':'&#10003;'):String(i);
+    h+='<button class="lnode '+st+(boss?' boss':'')+(seal?' sealed':'')+'" id="wm-lnode'+i+'" data-n="'+i+'" '+(st==='lock'?'disabled':'')+'><span class="in">'+inner+'</span><span class="lb">'+(boss?'Keeper\'s Table':'Table '+i)+'</span></button>';
   }
   $('lvlRoute').innerHTML=h;
   $('lvlRoute').querySelectorAll('.lnode').forEach(b=>b.addEventListener('click',()=>{if(!b.disabled)openLvlModal(+b.dataset.n);}));

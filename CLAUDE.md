@@ -4955,6 +4955,16 @@ before pushing.
   the World Tour map (`#wm-credit`, hidden over a city level select) opening a short card with a link to the page, and a Credits button in Settings > About. **Unverified**: the Natural Earth credit for
   the outlines (the source file `c50.json` is not in the repo; its country names match Natural Earth) and the continent grouping data (`wc.json`, source unknown, not credited).
 
+## World Tour gold seals (2026-11-02)
+- **The ten Europe seals are in** (`public/campaign/worldtour/seals/<cc>.webp`, 320px RGBA, ~33KB each), cut from `afbeeldingen/World Tour/Europe/Gold medaillons/*.png` (1254px, pure black page):
+  flood-fill of the near-black border (`scipy.ndimage.label`, keeping components that touch an edge, then 1px dilation), trim, pad square, 320px. The rims are closed, so the black enamel of Belgium and
+  Germany did not leak (interior transparency 0.0% on all ten; checked on a light backdrop). File names are the country codes (`it es pt nl gb be de pl dk fr`); `engeland gold.png` = `gb`.
+- **Where they show** (`wt-map.js`, `SEALS`/`sealSrc`/`goldAt`): a CLEARED table in the level select (`.lnode.sealed`, 62px, Keeper's Table 74px) and in the country panel's small node grid
+  (`nodeSVG(n,state,cc,gold)` draws an `<image>`) shows its country's seal with the table number drawn on top in cream with a dark outline (the seal art has no number, by design). **A Gold clear gets a small
+  octagonal star pip** (`resultOf(abs).gold`), because the seal itself marks "cleared" (WORLDTOUR.md), not Gold. A country with no seal (the other continents until their art exists) keeps the old brass octagon / check.
+  Add a country by dropping its `<cc>.webp` in the folder and adding its code to `SEALS`. Locked and current tables are unchanged.
+- Verified in the preview at 915x412 (Rome, tables 1-10 cleared, 3 and 10 at Gold). Not checked on a phone. The prompts doc (`prompts-gold-seals.md`) says 60 seals; 50 are still to be made.
+
 ## World Tour story reset (one-time migration, 2026-11-01)
 - **Every account's World Tour story was reset once, on the first boot after this deploy** (owner's call, to re-test the whole flow): `runOneTimeMigrations` (`db.js`, marker
   `reset_wt_story_v1`, same transaction) removes the ids starting with `wt_` (prologue `wt_pro_*` and every `wt_<block>` scene) from `campaign_progress.story_cues_seen`.

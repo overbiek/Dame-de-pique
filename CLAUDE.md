@@ -4863,7 +4863,8 @@ before pushing.
 - **Look per speaker is derived from the route** (`wtLookFor`): a member wears `house` until the country they lead (`WT_LEAD`/`WT_HERO`: Rome
   Closer, Madrid Optimist, Porto Sharp, Rotterdam Charmer, Brussels Wildcard, Berlin Scholar, Warsaw Jester; London, Copenhagen, Paris have no
   new look), then keeps it. A look with no art yet falls back to `house`; a member with no art at all (Jester, Charmer, Wildcard) falls back to
-  the old campaign portrait. Art in `WT_PORTRAIT_ART`: Closer house+Rome, Scholar house+Berlin, Sharp house+Porto, Optimist house.
+  the old campaign portrait. Art in `WT_PORTRAIT_ART`: Closer house+Rome, Scholar house+Berlin, Sharp house+Porto, Optimist house, **Charmer house+Rotterdam (2026-11-02)**.
+  The Charmer's raw files were named `charmer_<mood>_eu.jpg` (= house coat) and `charmer_dutch_<mood>.jpg` (= Rotterdam orange suit); they were copied to the pipeline's `<look>__<mood>` names and run through `art_pack.py`. His house backdrop is warm TAUPE (~rgb 97,88,81, saturation 42), which the cutout's `S<40` band missed (grey patches left beside the head), so `make_portrait.py` has a `WT_CUT_SAT` env var (default 40; the house set was made with 62). Use it for any new warm-backdrop batch.
 - **Backgrounds**: `loc` cues in the script pick the location still (`WT_EUROPE_BG`, key `<CC><1|2|3>`); Rome, Madrid, Porto and Rotterdam have their
   three (`public/campaign/worldtour/europe/<cc>_<1|2|3>.webp`, made from `afbeeldingen/World Tour/Cities/c0N_<city>_...`; all ten countries now; add a code
   to the list next to `WT_EUROPE_BG` for a new one); a country without stills shows the map behind the scene (`see-through`), not the previous country's picture. London's
@@ -4965,7 +4966,7 @@ before pushing.
 - **City level-select pictures** (`public/campaign/worldtour/map/<cc>_select.webp`, from `afbeeldingen/World Tour/Europe/<City> level select.png`) exist
   for all ten countries (`LVLPIC` in wt-map.js; prompts in `worldtour-art/prompts-europe-level-select.md`). Each gets an "Enter <city>" button, the city
   screen with the ten nodes, and its opening plays inside the city; a country NOT in `LVLPIC` would use the side panel and play its opening on arrival.
-- **Still to do for Europe**: hero-look portraits for Optimist/Charmer/Wildcard/Jester (+ house looks for Charmer/Wildcard/Jester), the continents' own maps.
+- **Still to do for Europe**: hero-look portraits for Optimist/Wildcard/Jester (+ house looks for Wildcard/Jester), the continents' own maps.
 - **Attempts** are the shared 15-attempt pool of the Hundred Tables (Robin, 2026-11-01); the seats at the Keeper's Table (second Great Eight member per country,
   `WT_COUNTRIES` in the generated server block) are accepted for now.
 - Verified in the preview at 915x412 and 667x375 with the DEV menu: Europe, Italy, Rome opening + all ten Rome tables + invitation, travel to Madrid,

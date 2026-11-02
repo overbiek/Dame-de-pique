@@ -8796,6 +8796,10 @@ function applyScene(id,persist){
     // something else, so make the next show() re-evaluate (and re-apply the
     // campaign background if that's what should be showing).
     sceneLayerHtml='';
+    // ...but on a screen that does not re-render (a campaign result: the cosmetics reload ~2.5s after the
+    // game and land here) no show() follows, so the equipped scene would stay on top of the chapter picture.
+    // Re-evaluate now. try/catch: at boot this runs before S / currentScreenId exist.
+    try{ updateSceneLayer(); }catch(e){}
   }
   if(persist!==false){ try{ localStorage.setItem(SCENE_KEY,equippedScene); }catch(e){} }
 }

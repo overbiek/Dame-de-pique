@@ -4922,6 +4922,12 @@ before pushing.
   "always show a summary for the final round too"), and the summary used to be plain felt, so the picture dropped away for a moment between the table
   and the result (reported as "the background is suddenly not the campaign's"). `updateSceneLayer`'s `campResult` now covers `summary` as well as
   `final`; `renderSummary` toggles `.camp-summary`, which puts the scoresheet on the same scrim card as `.camp-final`. Verified at 915x412 only.
+  **The real cause of the reported flip was different, and found only by playing a real table through the real socket** (real server.js on PGlite, signed up on
+  localhost): ~2.5 s after the result, `checkUnlocksSoon` reloads the cosmetics and `profileCosmeticsOk` calls `applyScene`, which wrote the player's EQUIPPED scene
+  straight into `#scene-layer` and relied on "the next show()" to put the chapter picture back. The final screen does not re-render, so the equipped scene (moulin_rouge
+  in the test) stayed on top of the Rome picture. `applyScene` now calls `updateSceneLayer()` itself (try/catch: at boot `S` does not exist yet). Re-run: the whole hand
+  (map held -> play -> summary -> final -> Back to the Map -> Rome city) keeps `it_1.webp` and shows no stray screen. The first-clear story was NOT exercised there (the
+  throwaway bot lost, score -43).
 
 ## World Tour story reset (one-time migration, 2026-11-01)
 - **Every account's World Tour story was reset once, on the first boot after this deploy** (owner's call, to re-test the whole flow): `runOneTimeMigrations` (`db.js`, marker

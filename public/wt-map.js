@@ -221,7 +221,25 @@ const EU=[
  {k:'DK',id:'208',name:'Denmark',city:'Copenhagen',games:'Hjerterfri',lead:'group'},
  {k:'FR',id:'250',name:'France',city:'Paris',games:'Belote · Tarot · Dame de Pique',lead:'group'}
 ];
-const EUID={};EU.forEach((c,i)=>{EUID[c.id]=i;});
+/* ASIA (tables 101-200 on this layer's numbering, levels 501-600): the route is fixed, west to east, as the script says. Country codes are ISO alpha-3 (a code like SA would
+   clash with the continent key SA = South America). `games` are the local card games named in my own words, not from the script. */
+const ASIA=[
+ {k:'SAU',id:'682',name:'Saudi Arabia',city:'Riyadh',games:'Baloot · Hand',lead:'closer'},
+ {k:'IND',id:'356',name:'India',city:'Mumbai',games:'Teen Patti · Rummy · Twenty-Eight',lead:'optimist'},
+ {k:'THA',id:'764',name:'Thailand',city:'Bangkok',games:'Pok Deng · Gin Rummy',lead:'charmer',off:[-12,-4]},
+ {k:'VNM',id:'704',name:'Vietnam',city:'Ho Chi Minh City',games:'Tiến lên · Phỏm',lead:'wildcard',off:[6,10]},
+ {k:'PHL',id:'608',name:'Philippines',city:'Manila',games:'Pusoy · Tong-its',lead:'jester'},
+ {k:'IDN',id:'360',name:'Indonesia',city:'Jakarta',games:'Remi · Cangkulan',lead:'player'},
+ {k:'TWN',id:'158',name:'Taiwan',city:'Taipei',games:'Big Two · Chinese Poker',lead:'group'},
+ {k:'CHN',id:'156',name:'China',city:'Shanghai',games:'Dou Dizhu · Guandan · Zheng Shangyou',lead:'scholar'},
+ {k:'KOR',id:'410',name:'South Korea',city:'Seoul',games:'Go-Stop · Poker',lead:'scholar'},
+ {k:'JPN',id:'392',name:'Japan',city:'Tokyo',games:'Daifugō · Hanafuda',lead:'sharp'}
+];
+const ALL=EU.concat(ASIA);                       // global country index: Europe 0-9, Asia 10-19 (a table's number on this layer = index*10 + 1..10; its level id = 400 + that)
+const CID={};ALL.forEach((c,i)=>{CID[c.id]=i;});
+const contOf=i=>i<10?'EU':'AS';
+const listOf=k=>k==='EU'?EU:ASIA;
+const BUILT={EU:1,AS:1};                         // continents that have a map, countries and tables; the other four are still the "not built yet" placeholder
 const CONT={EU:'Europe',AF:'Africa',AS:'Asia',NA:'North America',SA:'South America',OC:'Oceania'};
 const CORDER=['EU','AF','AS','NA','SA','OC'];
 const PREVIEW_KEY={NA:'NORTH AMERICA',SA:'SOUTH AMERICA',AF:'AFRICA',AS:'ASIA',OC:'OCEANIA'};
@@ -268,14 +286,14 @@ function saveDevCleared(){ try{ localStorage.setItem('ddp.wtDevCleared',JSON.str
 const resultOf=n=>(typeof campaignData!=='undefined'&&campaignData&&campaignData.wtResults&&campaignData.wtResults[400+n])||null;
 const isCleared=n=>!!(resultOf(n)&&resultOf(n).cleared)||(window.WT_DEV&&devCleared.has(n));
 function tablesDone(i){let n=0;for(let t=1;t<=10;t++){if(isCleared(i*10+t))n=t;else break;}return n;}
-const idxOf=k=>EU.findIndex(c=>c.k===k);
+const idxOf=k=>ALL.findIndex(c=>c.k===k);
 const tablesOf=k=>tablesDone(idxOf(k));
-const doneCount=()=>EU.filter((c,i)=>tablesDone(i)>=10).length;
-const euDone=()=>doneCount()===10;
+const doneCount=k=>ALL.filter((c,i)=>contOf(i)===(k||'EU')&&tablesDone(i)>=10).length;
+const euDone=()=>doneCount('EU')===10;
 const contDone=k=>campaignSeenCues.has('wtx_done_'+k);
 const chosen=()=>CORDER.find(k=>k!=='EU'&&campaignSeenCues.has('wtx_cont_'+k)&&!contDone(k))||null;
-const seats=()=>doneCount()+CORDER.filter(k=>k!=='EU'&&contDone(k)).length*10;
-function cstate(i){if(tablesDone(i)>=10)return 'done';const f=EU.findIndex((x,j)=>tablesDone(j)<10);return i===f?'active':'locked';}
+const seats=()=>doneCount('EU')+doneCount('AS')+CORDER.filter(k=>!BUILT[k]&&contDone(k)).length*10;
+function cstate(i){if(tablesDone(i)>=10)return 'done';for(let j=(i<10?0:10);j<i;j++)if(tablesDone(j)<10)return 'locked';return 'active';}   // the first unfinished country of its continent
 function contState(k){
   if(k==='EU')return euDone()?'done':'active';
   if(!euDone())return 'locked';
@@ -321,7 +339,7 @@ function targetCam(v){
   if(v.name==='world')return fitBox(D.vb.WORLD,{t:0,b:0,l:0,r:0});
   if(v.name==='continent'||v.name==='cont')return clampCam(fitBox(D.vb[v.k],base));
   if(v.name==='country'){
-    const b=D.cb[EU[idxOf(v.country)].id],pw=(b[2]-b[0])*.35,ph=(b[3]-b[1])*.35,m=Math.max(pw,ph);
+    const b=D.cb[ALL[idxOf(v.country)].id],pw=(b[2]-b[0])*.35,ph=(b[3]-b[1])*.35,m=Math.max(pw,ph);
     return fitBox([b[0]-m,b[1]-m,b[2]+m,b[3]+m],{t:58,b:22,l:16,r:panelW()+10});
   }
 }
@@ -355,8 +373,8 @@ function paintLand(){
     const c=p.dataset.c,id=p.dataset.id;let cls='land';
     if(v.name==='world'){cls+=' w-'+(c==='XX'?'x':contState(c));}
     else if(v.name==='continent'||v.name==='country'){
-      if(c==='EU'&&id in EUID){const i=EUID[id];cls+=' k-'+cstate(i);if(v.country===EU[i].k)cls+=' k-sel';}
-      else if(c==='EU')cls+=' nbr';else cls+=' far';
+      if(c===v.k&&id in CID&&contOf(CID[id])===v.k){const i=CID[id];cls+=' k-'+cstate(i);if(v.country===ALL[i].k)cls+=' k-sel';}
+      else if(c===v.k)cls+=' nbr';else cls+=' far';
     }else if(v.name==='cont'){cls+=c===v.k?' k-pending':' far';}
     p.setAttribute('class',cls);
   });
@@ -376,17 +394,18 @@ function renderMarks(){
       else{el('circle',{r:11,class:'pulse',fill:'none',stroke:'#EED08E','stroke-width':1.5},g);el('circle',{r:7,fill:st==='active'?'#EED08E':'rgba(196,158,88,.5)',stroke:'#EED08E'},g);}
       const t=el('text',{class:'lbl',y:30},g);t.textContent=CONT[k];
       const s=el('text',{class:'sub',y:42},g);
-      s.textContent=k==='EU'?doneCount()+' / 10 champions':contDone(k)?'10 / 10 champions':(st==='active'?'in progress':st==='locked'?(euDone()?'finish '+CONT[chosen()]+' first':'after Europe'):'tap to begin');
+      s.textContent=BUILT[k]&&(k==='EU'||st==='active')?doneCount(k)+' / 10 champions':contDone(k)?'10 / 10 champions':(st==='active'?'in progress':st==='locked'?(euDone()?'finish '+CONT[chosen()]+' first':'after Europe'):'tap to begin');
     });
     return;
   }
   if(v.name==='cont')return;
-  const pts=EU.map(c=>D.cities[c.k]);
+  const LST=listOf(v.k),G0=v.k==='EU'?0:10;
+  const pts=LST.map(c=>D.cities[c.k]);
   for(let i=0;i<pts.length-1;i++){
-    el('path',{d:'M'+pts[i][0]+' '+pts[i][1]+'L'+pts[i+1][0]+' '+pts[i+1][1],class:tablesDone(i)>=10?'done':'todo'},routeG);
+    el('path',{d:'M'+pts[i][0]+' '+pts[i][1]+'L'+pts[i+1][0]+' '+pts[i+1][1],class:tablesDone(G0+i)>=10?'done':'todo'},routeG);
   }
-  EU.forEach((c,i)=>{
-    const st=cstate(i);
+  LST.forEach((c,i)=>{
+    const st=cstate(G0+i);
     if(v.name==='country'&&v.country!==c.k)return;
     const [x,y]=D.cities[c.k];
     const g0=mkG(x,y,st,()=>{if(v.name==='country'&&v.country===c.k&&hasPic(c.k)){tapCity(c.k);}else tapCountry(c.k);});
@@ -417,18 +436,18 @@ function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show')
 function renderSeat(){
   $('seatn').innerHTML=seats()+'<span> / 60 seats</span>';
   const s=$('segs');s.innerHTML='';
-  CORDER.forEach(k=>{const n=k==='EU'?doneCount():(contDone(k)?10:0);const i=document.createElement('i');const b=document.createElement('b');b.style.width=(n*10)+'%';i.appendChild(b);s.appendChild(i);});
+  CORDER.forEach(k=>{const n=BUILT[k]?doneCount(k):(contDone(k)?10:0);const i=document.createElement('i');const b=document.createElement('b');b.style.width=(n*10)+'%';i.appendChild(b);s.appendChild(i);});
 }
 function renderCrumb(){
   const v=view;let h='<b>World Tour</b>';
   if(v.name==='continent'||v.name==='cont')h+=' › <b>'+CONT[v.k]+'</b>';
-  if(v.name==='country'){const c=EU[idxOf(v.country)];h='<b>Europe</b> › <b>'+c.name+'</b> · '+c.city;}
+  if(v.name==='country'){const c=ALL[idxOf(v.country)];h='<b>'+CONT[v.k]+'</b> › <b>'+c.name+'</b> · '+c.city;}
   $('crumb').innerHTML=h;
 }
 function renderProg(){
   const p=$('prog');
   if(view.name==='continent'||view.name==='cont'){
-    p.style.display='block';const n=view.k==='EU'?doneCount():(contDone(view.k)?10:0);
+    p.style.display='block';const n=BUILT[view.k]?doneCount(view.k):(contDone(view.k)?10:0);
     $('progk').textContent=CONT[view.k];
     $('progt').innerHTML='<b>'+n+' / 10</b> champions found';
     $('pips').innerHTML=Array.from({length:10},(_,i)=>'<i class="'+(i<n?'on':'')+'"></i>').join('');
@@ -461,7 +480,7 @@ function leadBadge(c){
 function renderPanel(){
   const p=$('panel');
   if(view.name!=='country'){p.classList.remove('show');return;}
-  const c=EU[idxOf(view.country)],n=tablesOf(c.k),cur=Math.min(n+1,10),sel=selNode||cur;
+  const c=ALL[idxOf(view.country)],n=tablesOf(c.k),cur=Math.min(n+1,10),sel=selNode||cur;
   const ln=GE[c.lead][0];
   let h='<div class="ph"><div class="t"><small>'+c.name+'</small><h2>'+c.city+'</h2></div><div class="lead">'+leadBadge(c)+'lead cast</div></div>';
   h+='<div class="games">'+c.games+'</div><div class="grid">';
@@ -473,11 +492,11 @@ function renderPanel(){
   h+='</div>';
   if(hasPic(c.k))h+='<button class="cta" id="wm-playbtn">'+(n<10?'Enter '+c.city:'Enter '+c.city+' (cleared)')+'</button>';
   else if(n<10)h+='<button class="cta" id="wm-playbtn">Play table '+cur+'</button>';
-  else h+='<button class="cta ghost" id="wm-backbtn">Back to Europe</button>';
+  else h+='<button class="cta ghost" id="wm-backbtn">Back to '+CONT[view.k]+'</button>';
   p.innerHTML=h;p.style.setProperty('--ct',CTINT[c.k]||'#C49E58');
   p.querySelectorAll('.nd').forEach(b=>b.addEventListener('click',()=>{selNode=+b.dataset.n;renderPanel();}));
   const pb=$('playbtn');if(pb)pb.addEventListener('click',()=>{if(hasPic(c.k))tapCity(c.k);else tryPlay(cur);});
-  const bb=$('backbtn');if(bb)bb.addEventListener('click',()=>goView({name:'continent',k:'EU'}));
+  const bb=$('backbtn');if(bb)bb.addEventListener('click',()=>goView({name:'continent',k:view.k}));
   p.classList.add('show');
   if(CITY)renderCityNodes();
 }
@@ -533,7 +552,7 @@ function tapContinent(k){
   if(!euDone()&&k!=='EU')return toast('Europe comes first — the tour starts in Rome.');
   if(k==='EU')return goView({name:'continent',k:'EU'});
   if(st==='locked')return toast('Finish '+CONT[chosen()]+' first — a continent is played to the end before the next.');
-  if(st==='done')return goView({name:'cont',k});
+  if(st==='done')return goView({name:BUILT[k]?'continent':'cont',k});
   flyTo(clampCam(fitBox(D.vb[k],{t:56,b:140,l:16,r:16})),1100);   // zoom in on the tapped continent (kept inside the picture); "Not yet" zooms back out to the world
   // Only a continent that has not been chosen yet has conversations. The one in progress goes straight to its sheet; a finished
   // continent (handled above) and Europe never play story again.
@@ -556,14 +575,22 @@ function showSheet(k,resume){
   $('shno').onclick=()=>{hideSheet();flyTo(targetCam({name:'world'}),900);};
   $('shyes').onclick=async()=>{
     hideSheet();
-    if(!resume){wtMarkSeen('wtx_cont_'+k);busy=true;await story('world.commit');busy=false;}
-    goView({name:'cont',k});
+    if(!resume){
+      // remember the ORDER continents are chosen in (wtx_seq_<n>_<K>): Asia is "the second continent" when it has n=1, and a continent's callbacks come from the one chosen right before it
+      wtMarkSeen('wtx_cont_'+k);wtMarkSeen('wtx_seq_'+(CORDER.filter(x=>x!=='EU'&&wtSeqOf(x)>0).length+1)+'_'+k);
+      busy=true;
+      await new Promise(r=>wtLoadStory(r));          // a continent can have its own commit scene (Asia's "START ASIA" conversation: world.commit.ASIA)
+      const own='world.commit.'+PREVIEW_KEY[k];
+      await story(wtStory&&wtStoryBlock(wtStory,own)?own:'world.commit');
+      busy=false;
+    }
+    goView({name:BUILT[k]?'continent':'cont',k});
   };
 }
 function tapCountry(k){
   const i=idxOf(k),st=cstate(i);
-  if(st==='locked'){const f=EU.findIndex((x,j)=>tablesDone(j)<10);return toast('Finish '+EU[f].city+' first.');}
-  goView({name:'country',k:'EU',country:k});
+  if(st==='locked'){const s0=i<10?0:10,f=ALL.findIndex((x,j)=>j>=s0&&tablesDone(j)<10);return toast('Finish '+ALL[f].city+' first.');}
+  goView({name:'country',k:contOf(i),country:k});
   if(!hasPic(k))setTimeout(()=>playOpening(k),1300);   // with a city picture the opening plays once you step into the city
 }
 async function playOpening(k){
@@ -573,7 +600,7 @@ async function playOpening(k){
 }
 
 /* ---------- playing a table ---------- */
-const curCountry=()=>EU[idxOf(view.country||'IT')];
+const curCountry=()=>ALL[idxOf(view.country||'IT')];
 /* The real thing: wtStartTable(absN) (defined once the World Tour levels are in server.js) starts the game; its result
    handler calls WTMAP.onTableCleared(absN). Until then only the DEV menu can clear a table. */
 function tryPlay(n){
@@ -583,7 +610,8 @@ function tryPlay(n){
   wtStartTable(abs);
 }
 async function afterClear(k,n){
-  const c=EU[idxOf(k)],block=k+'.'+(idxOf(k)*10+n),first=!wtStorySeen(block);   // a replayed table shows neither its story nor the invitation again
+  const c=ALL[idxOf(k)],block=k+'.'+((idxOf(k)%10)*10+n),first=!wtStorySeen(block);   // story blocks are numbered within the continent (Riyadh 1-10 ... Tokyo 91-100)
+    // a replayed table shows neither its story nor the invitation again
   selNode=null;
   renderAll();
   busy=true;await story(block);busy=false;
@@ -611,24 +639,33 @@ function showInvite(c){
   $('scrim').classList.add('show');
   $('mcont').onclick=()=>{
     $('scrim').classList.remove('show');
-    const idx=EU.indexOf(c);
-    goView({name:'continent',k:'EU'},{done:async()=>{
+    const idx=ALL.indexOf(c),ck=contOf(idx);
+    goView({name:'continent',k:ck},{done:async()=>{
       busy=true;await story(c.k+'.handoff');busy=false;
-      if(euDone())return setTimeout(showEuropeDone,250);
+      if(idx%10===9)return setTimeout(ck==='EU'?showEuropeDone:showAsiaDone,250);   // the last country of the continent
       travel(idx);
     }});
   };
 }
 function travel(idx){
-  const a=D.cities[EU[idx].k],b=D.cities[EU[idx+1].k];
+  const a=D.cities[ALL[idx].k],b=D.cities[ALL[idx+1].k];
   const g=el('g',{class:'trav'},marksG);const t=el('text',{'text-anchor':'middle','dominant-baseline':'central',fill:'#EED08E','font-size':20},g);t.textContent='♠';
   const t0=performance.now(),dur=1100;
   (function step(now){
     const p=Math.min(1,(now-t0)/dur),e=p*p*(3-2*p);
     const x=a[0]+(b[0]-a[0])*e,y=a[1]+(b[1]-a[1])*e-Math.sin(Math.PI*p)*cam.u*18;
     g.setAttribute('transform','translate('+x+' '+y+') scale('+cam.u+')');
-    if(p<1)requestAnimationFrame(step);else{g.remove();toast(EU[idx+1].city+' is next.');}
+    if(p<1)requestAnimationFrame(step);else{g.remove();toast(ALL[idx+1].city+' is next.');}
   })(t0);
+}
+function showAsiaDone(){
+  wtMarkSeen('wtx_done_AS');
+  const m=$('modal');
+  m.innerHTML='<small>Asia complete</small><h2>10 champions found</h2><div class="meds">'
+   +ASIA.map(c=>'<div class="med"><div class="mono">'+c.k+'</div>'+c.city+'</div>').join('')+'</div>'
+   +'<p>'+seats()+' / 60 seats filled.</p><button class="cta" id="wm-mcont">Back to the world map</button>';
+  $('scrim').classList.add('show');
+  $('mcont').onclick=()=>{$('scrim').classList.remove('show');goView({name:'world'},{dur:1800,done:()=>toast('ASIA COMPLETE — 100 / 100 • WORLD CHAMPIONSHIP — '+seats()+' / 60')});};
 }
 function showEuropeDone(){
   const m=$('modal');
@@ -731,6 +768,7 @@ function renderDev(){
   const items=[['Clear next table',()=>{if(view.name==='country')devClear();else toast('Open a country first.');}],
    ['Skip: Europe done',()=>{for(let t=1;t<=100;t++)devCleared.add(t);saveDevCleared();goView({name:'continent',k:'EU'},{instant:true});setTimeout(showEuropeDone,200);}],
    ['World map',()=>{if(!euDone())return toast('Finish Europe first (use Skip).');goView({name:'world'});}],
+   ['Open Asia (dev)',()=>{for(let t=1;t<=100;t++)devCleared.add(t);saveDevCleared();if(!wtSeqOf('AS')){wtMarkSeen('wtx_cont_AS');wtMarkSeen('wtx_seq_1_AS');}goView({name:'continent',k:'AS'},{instant:true});}],
    ['Reset (dev)',devReset],['Close',close]];
   if(view.name==='cont')items.splice(1,0,['Finish continent',()=>{wtMarkSeen('wtx_done_'+view.k);toast(CONT[view.k]+' complete — '+seats()+' / 60 seats filled.');goView({name:'world'},{dur:1800});}]);
   const m=$('devmenu');m.innerHTML='';
@@ -766,16 +804,16 @@ function build(){
   $('back').addEventListener('click',()=>{
     if(storyOn()){ if(typeof campaignPrologueSkip==='function')campaignPrologueSkip(); return; }   // the back arrow always does something
     if(CITY){hideCity();flyTo(targetCam(view),900);return;}
-    if(view.name==='country')return goView({name:'continent',k:'EU'});
+    if(view.name==='country')return goView({name:'continent',k:view.k});
     if(view.name==='cont')return goView({name:'world'});
-    if(view.name==='continent'&&euDone())return goView({name:'world'});   // Europe finished: back to the world map, not out of the layer
+    if(view.name==='continent'&&(euDone()||view.k!=='EU'))return goView({name:'world'});   // Europe finished: back to the world map, not out of the layer
     close();
   });
   landG.addEventListener('click',e=>{
     if(blocked())return;
     const p=e.target.closest('path');if(!p)return;const c=p.dataset.c,id=p.dataset.id;
     if(view.name==='world'){if(c!=='XX')tapContinent(c);}
-    else if(view.name==='continent'&&c==='EU'&&id in EUID)tapCountry(EU[EUID[id]].k);
+    else if(view.name==='continent'&&c===view.k&&id in CID&&contOf(CID[id])===view.k)tapCountry(ALL[CID[id]].k);
   });
   const showErr=m=>{ dbg('ERR '+m); if(!root||!root.classList.contains('on'))return; const t=$('toast'); t.textContent='Error: '+m; t.classList.add('show'); clearTimeout(toast.h); toast.h=setTimeout(()=>t.classList.remove('show'),9000); };
   addEventListener('error',e=>showErr(e.message+(e.filename?' ('+String(e.filename).split('/').pop()+':'+e.lineno+')':'')));
@@ -785,7 +823,7 @@ function build(){
 }
 function loadData(){
   if(D)return Promise.resolve(D);
-  if(!dataLoading)dataLoading=fetch('/campaign/worldtour/map-data.json?v=1').then(r=>r.json()).then(j=>{D=j;return j;}).catch(e=>{dataLoading=null;throw e;});
+  if(!dataLoading)dataLoading=fetch('/campaign/worldtour/map-data.json?v=2').then(r=>r.json()).then(j=>{D=j;return j;}).catch(e=>{dataLoading=null;throw e;});
   return dataLoading;
 }
 function drawBase(){
@@ -846,22 +884,22 @@ function afterTable(absN,wasCleared){
   if(resumed&&root&&root.classList.contains('on')){            // the map came straight back from the table (back()): same view, same city, just refresh it
     resumed=false;
     try{ cancelAnimationFrame(choiceGlobeRAF); }catch(e){}
-    const i=Math.floor((absN-1)/10),n=absN-i*10,k=EU[i].k;
+    const i=Math.floor((absN-1)/10),n=absN-i*10,k=ALL[i].k;
     renderAll();renderCityNodes();
     if(isCleared(absN)&&!wasCleared)afterClear(k,n);
     return Promise.resolve();
   }
   resumed=false;
   return open().then(()=>{
-    const i=Math.floor((absN-1)/10),n=absN-i*10,k=EU[i].k,go=()=>{ if(isCleared(absN)&&!wasCleared)afterClear(k,n); };
-    goView({name:'country',k:'EU',country:k},{instant:true});
+    const i=Math.floor((absN-1)/10),n=absN-i*10,k=ALL[i].k,go=()=>{ if(isCleared(absN)&&!wasCleared)afterClear(k,n); };
+    goView({name:'country',k:contOf(i),country:k},{instant:true});
     if(hasPic(k))enterCity(k).then(go);else go();
   });
 }
 /* Play pressed in the shared level popup (abs = table 1-100 across Europe). */
 function playTable(abs){
-  const k=EU[Math.floor((abs-1)/10)].k;
-  if(view.name!=='country'||view.country!==k)view={name:'country',k:'EU',country:k};
+  const k=ALL[Math.floor((abs-1)/10)].k;
+  if(view.name!=='country'||view.country!==k)view={name:'country',k:contOf(Math.floor((abs-1)/10)),country:k};
   tryPlay(abs-idxOf(k)*10);
 }
 window.WTMAP={open,close,hold,unhold,release,back,afterTable,playTable,refreshAttempts:renderAttempts,notify:toast,isOpen:()=>!!root&&root.classList.contains('on')};

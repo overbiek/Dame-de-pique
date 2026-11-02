@@ -10038,7 +10038,7 @@ const CAMPAIGN_BG_SRC={ conservatory:'/scenes/conservatory.webp' };
 function campaignBgImg(slug,eager){
   if(campaignArtMissing['bg:'+slug]) return '';
   // World Tour tables use their country's location still: slug 'wt_it_2' -> /campaign/worldtour/europe/it_2.webp
-  const src=CAMPAIGN_BG_SRC[slug]||(slug.indexOf('wt_')===0?`/campaign/worldtour/europe/${slug.slice(3)}.webp`:`/campaign/chapters/${slug}.webp`);
+  const src=CAMPAIGN_BG_SRC[slug]||(slug.indexOf('wt_')===0?`/campaign/worldtour/${/^wt_(sau|ind|tha|vnm|phl|idn|twn|chn|kor|jpn)_/.test(slug)?'asia':'europe'}/${slug.slice(3)}.webp`:`/campaign/chapters/${slug}.webp`);   // Europe's stills in europe/, Asia's in asia/
   return `<img class="campaign-bg-img" src="${src}" alt="" aria-hidden="true"`+
          ` loading="${eager?'eager':'lazy'}" decoding="sync" onerror="campaignArtFailed('bg:${slug}',this)"/>`;
 }
@@ -10959,7 +10959,7 @@ const WT_BLANK='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAA
 const WT_EUROPE_BG={none:WT_BLANK};
 /* Countries whose three stills are in public/campaign/worldtour/europe/<cc>_<1|2|3>.webp: add a code here when a country's pictures arrive. */
 ['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'].forEach(cc=>[1,2,3].forEach(n=>{ WT_EUROPE_BG[cc+n]='/campaign/worldtour/europe/'+cc.toLowerCase()+'_'+n+'.webp'; }));
-const WT_STORY_VER=6;  // bump when europe-story.json changes (the service worker keeps non-script files)
+const WT_STORY_VER=7;  // bump when europe-story.json changes (the service worker keeps non-script files)
 /* ?wtdev=1 (or ?wtstory=1): World Tour test mode. Story/progress ids are kept on this device only (never sent to the account),
    the map gets a DEV button that clears tables, and the story gallery is available. `var` so wt-map.js sees window.WT_DEV. */
 var WT_DEV=/[?&](wtdev|wtstory)=1\b/.test(location.search);
@@ -10974,8 +10974,10 @@ let wtStory=null;
 function wtLoadStory(cb){
   if(wtStory) return cb(wtStory);
   // never wait forever: a hung request must not leave a scene (and the map's buttons) waiting for it
-  Promise.race([fetch('/campaign/worldtour/europe-story.json?v='+WT_STORY_VER).then(r=>r.json()),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))])
-    .then(j=>{ wtStory=j; cb(j); }).catch(()=>cb(null));
+  // Europe's story and Asia's (asia-story.json: ten more countries and the world.* blocks of Asia) are one story object. A missing Asia file only loses Asia.
+  const get=u=>fetch(u+'?v='+WT_STORY_VER).then(r=>r.json());
+  Promise.race([Promise.all([get('/campaign/worldtour/europe-story.json'),get('/campaign/worldtour/asia-story.json').catch(()=>null)]),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))])
+    .then(([j,a])=>{ if(a){ const w=Object.assign({},j.world||{},a.world||{}); Object.assign(j,a); j.world=w; } wtStory=j; cb(j); }).catch(()=>cb(null));
 }
 function wtStoryBlock(story,id){
   const p=id.split('.');
@@ -10984,9 +10986,36 @@ function wtStoryBlock(story,id){
   return p[1]==='open'?c.open:p[1]==='handoff'?c.handoff:(c.after||{})[p[1]]||null;
 }
 const WT_PROGRESS_UI=/AVAILABLE|\d+\s*\/\s*\d+|CLEARED|COMPLETE\b/;   // banners the real level screen will draw itself
+/* The order continents are chosen in is kept in the account's seen ids: wtx_seq_<n>_<K> (n = 1 for the first continent after Europe). Europe is always
+   first. "Asia is the second continent" = Asia has n 1; a continent's callbacks come from the one chosen immediately before it (wtPrevCont). */
+function wtSeqOf(k){ let r=0; campaignSeenCues.forEach(i=>{ const m=/^wtx_seq_(\d+)_([A-Z]{2})$/.exec(i); if(m&&m[2]===k) r=+m[1]; }); return r; }
+function wtPrevCont(k){
+  const n=wtSeqOf(k); if(!n) return null;      // not chosen (yet)
+  if(n===1) return 'EU';
+  let r=null; campaignSeenCues.forEach(i=>{ const m=/^wtx_seq_(\d+)_([A-Z]{2})$/.exec(i); if(m&&+m[1]===n-1) r=m[2]; });
+  return r;
+}
+/* Conditions of ["if",cond,[cues]] sections of the story: euas = Asia is the second continent (EUROPE -> ASIA callbacks); !euas = it is a later one.
+   Asia's own callback bank (world "callbacks.ASIA") is for the continent chosen right after Asia: wtCallbackBank(k) returns it, or null. */
+function wtCondOk(c){
+  const asiaN=wtSeqOf('AS'), second=asiaN===1||(asiaN===0&&!['NA','SA','AF','OC'].some(k=>wtSeqOf(k)>0||campaignSeenCues.has('wtx_cont_'+k)));
+  if(c==='euas') return second;
+  if(c==='!euas') return !second;
+  return true;
+}
+const WT_CONT_NAME={EU:'EUROPE',AS:'ASIA',NA:'NORTH AMERICA',SA:'SOUTH AMERICA',AF:'AFRICA',OC:'OCEANIA'};
+function wtCallbackBank(k){
+  const prev=wtPrevCont(k); if(!prev||!wtStory||!wtStory.world) return null;
+  return wtStory.world['callbacks.'+WT_CONT_NAME[prev]]||null;
+}
+function wtFlatten(block){
+  const out=[]; (block||[]).forEach(c=>{ if(c[0]==='if'){ if(wtCondOk(c[1])) wtFlatten(c[2]).forEach(x=>out.push(x)); } else out.push(c); });
+  return out;
+}
 function wtBlockToCues(id,block){
-  const cc=id.split('.')[0], country=WT_ROUTE.indexOf(cc)>=0?cc:'FR';   // world-map scenes happen after Paris
-  const n=/^[A-Z]{2}\.(\d+)$/.exec(id), m=n?((+n[1]-1)%10)+1:0;
+  block=wtFlatten(block);
+  const cc=id.split('.')[0], country=WT_ROUTE.indexOf(cc)>=0?cc:'FR';   // world-map scenes happen after Paris; Asia's too (the Europe looks carry on)
+  const n=/^[A-Z]{2,3}\.(\d+)$/.exec(id), m=n?((+n[1]-1)%10)+1:0;
   const loc0=/\.open$/.test(id)?1:m?(m<=4?1:m<=9?2:3):0;
   const bgKey=l=>WT_EUROPE_BG[cc+l]?cc+l:'none';
   let pending=bgKey(loc0), out=[], pairs={};
@@ -11058,7 +11087,8 @@ var wtStartPending=false;         // a World Tour table was requested and not ye
 var wtReturn=null;                // {abs, wasCleared}: set on leaving a World Tour table, consumed by campaignStateOk
 var wtStartWasCleared=false;      // was the table already cleared when it was started? (a replay never replays its story)
 // The names of the country champions and local players the server seats (wt_champion_<cc>, wt_local_<cc>): same table as server.js's WT_COUNTRIES.
-[['it','Italian'],['es','Spanish'],['pt','Portuguese'],['nl','Dutch'],['gb','British'],['be','Belgian'],['de','German'],['pl','Polish'],['dk','Danish'],['fr','French']].forEach(([cc,adj])=>{
+[['it','Italian'],['es','Spanish'],['pt','Portuguese'],['nl','Dutch'],['gb','British'],['be','Belgian'],['de','German'],['pl','Polish'],['dk','Danish'],['fr','French'],
+ ['sau','Saudi'],['ind','Indian'],['tha','Thai'],['vnm','Vietnamese'],['phl','Filipino'],['idn','Indonesian'],['twn','Taiwanese'],['chn','Chinese'],['kor','Korean'],['jpn','Japanese']].forEach(([cc,adj])=>{
   CAMPAIGN_CHARACTERS['wt_champion_'+cc]={name:adj+' Champion',initial:cc.toUpperCase()};
   CAMPAIGN_CHARACTERS['wt_local_'+cc]={name:adj+' Player',initial:cc.toUpperCase()};
 });

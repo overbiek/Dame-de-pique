@@ -122,6 +122,25 @@ EXTRA = {
         ['s', 'WILDCARD', "Straight ahead, then follow the crowd. You can't miss it.", 'smile'],
     ], None),
 }
+# Written for the app (not in the script): the first time the world map opens after Paris, the Great Eight look at it together and hand the choice to the player.
+# Block id world.first; played once (the seen marker is wt_world.first). Moods are set here directly.
+FIRST_WORLD = [
+    ['b', 'The world map lies open across the table. Ten seats filled. Fifty to go.'],
+    ['s', 'JESTER', 'Well. That was Europe. And look at it now: it is a postage stamp.', 'smile'],
+    ['s', 'SHARP', 'Five continents left. A hundred tables each.', 'serious'],
+    ['s', 'SCHOLAR', 'North America, South America, Africa, Asia, Oceania. Five different schools of play, and not one of them is a lesser one.', 'smile'],
+    ['s', 'OPTIMIST', 'They all sound wonderful to me. Honestly, pick any!', 'smile'],
+    ['s', 'CHARMER', 'I have a favourite, naturally. But I would lose that argument to every one of you, so I will keep it to myself.', 'smile'],
+    ['s', 'WILDCARD', 'We could throw a card at the map and go where it lands.', 'smile'],
+    ['s', 'SCHOLAR', 'That is not a method.', 'serious'],
+    ['s', 'WILDCARD', 'It is a method with a bad reputation.', 'smile'],
+    ['s', 'CLOSER', 'So, which one do we do next?', 'neutral'],
+    ['s', 'SHARP', 'We have argued about the route since Rome. The numbers do not say. They are all the same size.', 'neutral'],
+    ['s', 'OPTIMIST', 'Then there is no wrong first choice.', 'smile'],
+    ['s', 'CLOSER', 'There is one thing. Whichever you start, you play to the end. All hundred tables, before the next.', 'serious'],
+    ['s', 'JESTER', 'And none of us gets a vote on which. Look who is sitting at the head of the table.', 'smile'],
+    ['s', 'CLOSER', 'It is not ours to decide. It is yours.', 'neutral'],
+]
 NAMES = ('CLOSER', 'OPTIMIST', 'SHARP', 'CHARMER', 'WILDCARD', 'SCHOLAR', 'JESTER', 'PLAYER')
 
 
@@ -173,6 +192,7 @@ def build():
             elif rest == 'handoff': e['handoff'] = conv
             else: e['after'][rest] = conv
     build.missing = missing
+    story.setdefault('world', {})['first'] = FIRST_WORLD
     return story
 
 

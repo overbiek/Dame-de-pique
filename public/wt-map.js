@@ -303,11 +303,23 @@ function fitBox(b,ins){
   const u=Math.max(bw/aw,bh/ah),cx=(b[0]+b[2])/2,cy=(b[1]+b[3])/2;
   return {u,minX:cx-(ins.l+aw/2)*u,minY:cy-(ins.t+ah/2)*u};
 }
+/* Keep the camera inside the world picture: zooming in on a continent that sits near the map's edge (Asia, Oceania, the Americas) used to
+   centre on the continent and show the black page beyond the picture on one side. When the view is smaller than the picture it is slid back in. */
+function clampCam(t){
+  const b=D.img.world;
+  // never zoomed out further than the picture allows, and always a real zoom: at most 72% of the picture's width on screen. A tall continent on a
+  // short, wide phone would otherwise ask for a view wider than the picture (black sides) or one no closer than the world view (Asia, North America).
+  const u=Math.min(t.u,b[2]*.72/W,b[3]/H),cx=t.minX+W*t.u/2,cy=t.minY+H*t.u/2;
+  const vw=W*u,vh=H*u;
+  return {u,
+    minX:Math.max(b[0],Math.min(b[0]+b[2]-vw,cx-vw/2)),
+    minY:Math.max(b[1],Math.min(b[1]+b[3]-vh,cy-vh/2))};
+}
 const panelW=()=>Math.min(300,W*.42)+14;
 function targetCam(v){
   const base={t:58,b:62,l:16,r:16};
   if(v.name==='world')return fitBox(D.vb.WORLD,{t:0,b:0,l:0,r:0});
-  if(v.name==='continent'||v.name==='cont')return fitBox(D.vb[v.k],base);
+  if(v.name==='continent'||v.name==='cont')return clampCam(fitBox(D.vb[v.k],base));
   if(v.name==='country'){
     const b=D.cb[EU[idxOf(v.country)].id],pw=(b[2]-b[0])*.35,ph=(b[3]-b[1])*.35,m=Math.max(pw,ph);
     return fitBox([b[0]-m,b[1]-m,b[2]+m,b[3]+m],{t:58,b:22,l:16,r:panelW()+10});
@@ -522,7 +534,7 @@ function tapContinent(k){
   if(k==='EU')return goView({name:'continent',k:'EU'});
   if(st==='locked')return toast('Finish '+CONT[chosen()]+' first — a continent is played to the end before the next.');
   if(st==='done')return goView({name:'cont',k});
-  flyTo(fitBox(D.vb[k],{t:56,b:140,l:16,r:16}),1100);
+  flyTo(clampCam(fitBox(D.vb[k],{t:56,b:140,l:16,r:16})),1100);   // zoom in on the tapped continent (kept inside the picture); "Not yet" zooms back out to the world
   // Only a continent that has not been chosen yet has conversations. The one in progress goes straight to its sheet; a finished
   // continent (handled above) and Europe never play story again.
   (st==='avail'?previewContinent(k):Promise.resolve()).then(()=>showSheet(k,st==='active'));
@@ -624,7 +636,28 @@ function showEuropeDone(){
    +EU.map(c=>'<div class="med"><div class="mono">'+c.k+'</div>'+c.city+'</div>').join('')+'</div>'
    +'<p>10 / 60 seats filled. The tour is bigger than it looked.</p><button class="cta" id="wm-mcont">Open the world map</button>';
   $('scrim').classList.add('show');
-  $('mcont').onclick=()=>{$('scrim').classList.remove('show');goView({name:'world'},{dur:2200,done:()=>toast('EUROPE COMPLETE — 100 / 100 • WORLD CHAMPIONSHIP — 10 / 60')});};
+  $('mcont').onclick=()=>{$('scrim').classList.remove('show');goView({name:'world'},{dur:2200,done:()=>{toast('EUROPE COMPLETE — 100 / 100 • WORLD CHAMPIONSHIP — 10 / 60');setTimeout(firstWorld,1200);}});};
+}
+/* The first time the world map is on screen after Paris: the Great Eight look at it together ("which one do we do next?") and hand the choice to the
+   player (block world.first, written for the app), then a small card shows how choosing works. Each part is shown once (wt_world.first, wtx_howto). */
+async function firstWorld(){
+  if(view.name!=='world'||busy||blocked())return;
+  const storyDone=wtStorySeen('world.first'),howDone=campaignSeenCues.has('wtx_howto');
+  if(storyDone&&howDone)return;
+  if(!storyDone){busy=true;await story('world.first');busy=false;}
+  if(view.name==='world'&&!howDone)showHowTo();
+}
+function showHowTo(){
+  const m=$('modal');
+  m.innerHTML='<small>The world map</small><h2>How to choose</h2>'
+   +'<ol style="text-align:left;margin:6px 0 10px 18px;padding:0;line-height:1.45">'
+   +'<li><b>Tap a continent</b> to fly there and hear what the Great Eight think of it. Tap it again for a short reminder.</li>'
+   +'<li><b>Begin</b> locks it in: its 100 tables are played to the end before you can pick another.</li>'
+   +'<li><b>Not yet</b> commits nothing. Look at as many as you like.</li>'
+   +'<li>Europe, and every continent you finish, can be reopened to replay tables.</li></ol>'
+   +'<button class="cta" id="wm-mcont">Got it</button>';
+  $('scrim').classList.add('show');
+  $('mcont').onclick=()=>{$('scrim').classList.remove('show');wtMarkSeen('wtx_howto');};
 }
 
 /* ---------- city level select: the map zooms into the city, then fades into its picture with the tables as nodes ---------- */
@@ -773,6 +806,7 @@ function open(opts){
     view=euDone()?{name:'world',k:null,country:null}:{name:'continent',k:'EU',country:null};
     renderAll();flyTo(targetCam(view),0);
     if(opts.afterPrologue&&!euDone())setTimeout(()=>tapCountry('IT'),900);
+    else if(view.name==='world')setTimeout(firstWorld,900);   // Europe was finished earlier but the first conversation / how-to was never seen
   }).catch(()=>{ window.toast('err-menu','Could not load the World Tour map.'); });
 }
 function close(){

@@ -147,23 +147,30 @@ const CSS=`#wtmap{
 #wtmap #wm-lvlRoute{display:flex;align-items:flex-end;gap:22px;padding:6px max(16px,calc(50vw - 330px));min-width:max-content;position:relative}
 #wtmap #wm-lvlRoute::before{content:"";position:absolute;left:0;right:0;bottom:36px;height:3px;background:linear-gradient(90deg,transparent,rgba(var(--brass-rgb),.35) 8%,rgba(var(--brass-rgb),.35) 92%,transparent);z-index:0}
 #wtmap .lnode{position:relative;z-index:1;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:0;padding:0;cursor:pointer;touch-action:manipulation;font-family:inherit}
-#wtmap .lnode .in{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:18px;color:var(--cream);background:radial-gradient(120% 120% at 35% 25%,rgba(var(--brass-rgb),.22),#0D2E25 70%);border:2px solid rgba(var(--brass-rgb),.4);box-shadow:0 4px 10px rgba(0,0,0,.55);transition:transform .15s}
+#wtmap .lnode .in{position:relative;isolation:isolate;width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:18px;color:var(--cream);background:none;border:0;filter:drop-shadow(0 4px 6px rgba(0,0,0,.55));transition:transform .15s}
+#wtmap .lnode .in::before{content:"";position:absolute;inset:0;z-index:-2;background:rgba(var(--brass-rgb),.4);clip-path:polygon(29.3% 0,70.7% 0,100% 29.3%,100% 70.7%,70.7% 100%,29.3% 100%,0 70.7%,0 29.3%)}
+#wtmap .lnode .in::after{content:"";position:absolute;inset:2px;z-index:-1;background:radial-gradient(120% 120% at 35% 25%,rgba(var(--brass-rgb),.22),#0D2E25 70%);clip-path:polygon(29.3% 0,70.7% 0,100% 29.3%,100% 70.7%,70.7% 100%,29.3% 100%,0 70.7%,0 29.3%)}
 #wtmap .lnode:active .in{transform:scale(.94)}
 #wtmap .lnode .lb{font-size:8px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream);text-shadow:0 1px 4px #000,0 0 3px #000}
 #wtmap .lnode.lock{cursor:default}
-#wtmap .lnode.lock .in{border-color:rgba(0,0,0,.5);color:var(--faint);background:#071A15;box-shadow:none}
+#wtmap .lnode.lock .in{color:var(--faint);filter:none}
+#wtmap .lnode.lock .in::before{background:rgba(0,0,0,.5)}
+#wtmap .lnode.lock .in::after{background:#071A15}
 #wtmap .lnode.lock .lb{color:var(--muted)}
-#wtmap .lnode.done .in{border-color:var(--brass);color:var(--brass-hi)}
-#wtmap .lnode.cur .in{border-color:var(--brass-hi);box-shadow:0 0 0 4px rgba(var(--brass-rgb),.22),0 4px 14px rgba(0,0,0,.55);animation:wmlpulse 2.2s ease-in-out infinite}
-@keyframes wmlpulse{0%,100%{box-shadow:0 0 0 4px rgba(var(--brass-rgb),.22),0 4px 14px rgba(0,0,0,.55)}50%{box-shadow:0 0 0 9px rgba(var(--brass-rgb),.1),0 4px 14px rgba(0,0,0,.55)}}
-#wtmap .lnode.boss .in{width:66px;height:66px;font-size:22px;background:radial-gradient(120% 120% at 35% 25%,rgba(var(--brass-rgb),.32),#0D2E25 70%)}
+#wtmap .lnode.done .in{color:var(--brass-hi)}
+#wtmap .lnode.done .in::before{background:var(--brass)}
+#wtmap .lnode.cur .in{animation:wmlpulse 2.2s ease-in-out infinite}
+#wtmap .lnode.cur .in::before{background:var(--brass-hi)}
+@keyframes wmlpulse{0%,100%{filter:drop-shadow(0 0 5px rgba(var(--brass-rgb),.6)) drop-shadow(0 4px 8px rgba(0,0,0,.55))}50%{filter:drop-shadow(0 0 11px rgba(var(--brass-rgb),.3)) drop-shadow(0 4px 8px rgba(0,0,0,.55))}}
+#wtmap .lnode.boss .in{width:66px;height:66px;font-size:22px}
+#wtmap .lnode.boss .in::after{background:radial-gradient(120% 120% at 35% 25%,rgba(var(--brass-rgb),.32),#0D2E25 70%)}
 #wtmap .lnode.boss .lb{color:var(--brass-hi)}
-#wtmap .lnode.sealed .in{position:relative;width:62px;height:62px;border:0;border-radius:0;background:none;box-shadow:none;overflow:visible}
+#wtmap .lnode.sealed .in{width:62px;height:62px;filter:none}
+#wtmap .lnode.sealed .in::before,#wtmap .lnode.sealed .in::after{display:none}
 #wtmap .lnode.sealed.boss .in{width:74px;height:74px}
 #wtmap .lnode.sealed .in img.seal{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.6));pointer-events:none}
 #wtmap .lnode.sealed .in b{position:relative;margin-top:-3px;font-family:var(--serif);font-weight:700;font-size:20px;line-height:1;color:#FFF3D0;-webkit-text-stroke:3px #160e02;paint-order:stroke fill;text-shadow:0 1px 3px rgba(0,0,0,.7)}
 #wtmap .lnode.sealed.boss .in b{font-size:24px}
-#wtmap .lnode.sealed .in i.gp{position:absolute;top:-3px;right:-3px;width:19px;height:19px;display:grid;place-items:center;font-style:normal;font-size:11px;line-height:1;color:#5a4520;background:var(--brass-hi);border:1px solid #5a4520;clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%)}
 #wtmap .lnode.sealed:active .in{transform:scale(.94)}
 #wtmap #wm-lvlModal{position:absolute;inset:0;z-index:8;background:rgba(2,6,5,.5);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
 #wtmap #wm-lvlModal.show{opacity:1;pointer-events:auto}
@@ -243,8 +250,8 @@ function dbg(m){
    others on the side panel. Add a code when its picture arrives. */
 const LVLPIC=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'];
 const hasPic=k=>LVLPIC.indexOf(k)>=0;
-/* One gold seal per country (public/campaign/worldtour/seals/<cc>.webp; Europe's ten exist, the other continents' come later). A cleared table shows
-   its country's seal with the table number drawn on top, and a small star when it was cleared at Gold. A country without a seal keeps the plain look. */
+/* One gold seal per country (public/campaign/worldtour/seals/<cc>.webp; Europe's ten exist, the other continents' come later). A table cleared at GOLD
+   shows its country's seal with the table number drawn on top; a plain clear keeps the brass check / brass octagon. A country without a seal keeps the plain look. */
 const SEALS=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'];
 const sealSrc=k=>SEALS.indexOf(k)>=0?'/campaign/worldtour/seals/'+k.toLowerCase()+'.webp':null;
 const goldAt=abs=>!!(resultOf(abs)&&resultOf(abs).gold);
@@ -417,7 +424,7 @@ function renderProg(){
 }
 const crown=c=>'<path d="M-7 -4l2.4 -6 4.6 4.4 4.6 -4.4 2.4 6z" fill="'+c+'" transform="translate(0 -3)"/>';
 function nodeSVG(n,state,cc,gold){
-  const w=n===9,k=n===10,seal=state==='done'&&cc?sealSrc(cc):null;
+  const w=n===9,k=n===10,seal=state==='done'&&cc&&gold?sealSrc(cc):null;
   let s='<svg viewBox="-26 -26 52 52">';
   if(k)s+='<polygon points="'+starPts(25,19)+'" fill="'+(state==='done'?'#806436':'none')+'" stroke="'+(state==='lock'?'rgba(196,158,88,.3)':'#EED08E')+'" stroke-width="1.2"/>';
   const num=(fill,weight)=>w?crown(fill)+'<text y="8" text-anchor="middle" font-family="IBM Plex Mono,monospace" '+weight+' font-size="14" fill="'+fill+'">9</text>'
@@ -425,7 +432,6 @@ function nodeSVG(n,state,cc,gold){
   if(seal){
     s+='<image href="'+seal+'" x="-24" y="-24" width="48" height="48"/>'
       +'<text y="-1" dominant-baseline="central" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-weight="700" font-size="'+(n>9?14:17)+'" fill="#FFF3D0" stroke="#160e02" stroke-width="3" paint-order="stroke" stroke-linejoin="round">'+n+'</text>';
-    if(gold)s+='<g transform="translate(17 -17)"><polygon points="'+octPts(7.5,22.5)+'" fill="#EED08E" stroke="#5a4520" stroke-width="1"/><text y="1" dominant-baseline="central" text-anchor="middle" font-size="9" fill="#5a4520">&#9733;</text></g>';
   }else if(state==='done'){
     s+='<polygon points="'+octPts(21,22.5)+'" fill="url(#wmBrassG)" stroke="#5a4520" stroke-width="1.2"/><polygon points="'+octPts(16.5,22.5)+'" fill="none" stroke="#5a4520" stroke-width=".9"/>'+num('#2a1e08','font-weight="600"');
   }else if(state==='cur'){
@@ -630,8 +636,8 @@ function renderCityNodes(){
   let h='';
   for(let i=1;i<=10;i++){
     const st=i<=n?'done':(i===n+1?'cur':'lock'),boss=i===10;
-    const seal=st==='done'?sealSrc(c.k):null;
-    const inner=st==='lock'?'&#128274;':seal?'<img class="seal" alt="" src="'+seal+'"><b>'+i+'</b>'+(goldAt(idxOf(c.k)*10+i)?'<i class="gp">&#9733;</i>':''):st==='done'?(boss?'&#9733;':'&#10003;'):String(i);
+    const seal=st==='done'&&goldAt(idxOf(c.k)*10+i)?sealSrc(c.k):null;   // the gold seal marks a GOLD clear; a plain clear keeps the check
+    const inner=st==='lock'?'&#128274;':seal?'<img class="seal" alt="" src="'+seal+'"><b>'+i+'</b>':st==='done'?(boss?'&#9733;':'&#10003;'):String(i);
     h+='<button class="lnode '+st+(boss?' boss':'')+(seal?' sealed':'')+'" id="wm-lnode'+i+'" data-n="'+i+'" '+(st==='lock'?'disabled':'')+'><span class="in">'+inner+'</span><span class="lb">'+(boss?'Keeper\'s Table':'Table '+i)+'</span></button>';
   }
   $('lvlRoute').innerHTML=h;

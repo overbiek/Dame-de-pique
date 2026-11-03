@@ -10065,6 +10065,9 @@ function campaignBgImg(slug,eager){
 // Regulars, so the two should never be able to drift apart. Anyone not
 // listed here uses the normal per-character path.
 const CAMPAIGN_PORTRAIT_SRC={
+  // World Tour country champions (Europe): the portrait in that country's own gold seal, made by campaign-design/worldtour-art/make_champion.py.
+  // Asia's ten have no art yet and fall back to the monogram.
+  wt_champion_it:'/campaign/worldtour/champions/it.webp',wt_champion_es:'/campaign/worldtour/champions/es.webp',wt_champion_pt:'/campaign/worldtour/champions/pt.webp',wt_champion_nl:'/campaign/worldtour/champions/nl.webp',wt_champion_gb:'/campaign/worldtour/champions/gb.webp',wt_champion_be:'/campaign/worldtour/champions/be.webp',wt_champion_de:'/campaign/worldtour/champions/de.webp',wt_champion_pl:'/campaign/worldtour/champions/pl.webp',wt_champion_dk:'/campaign/worldtour/champions/dk.webp',wt_champion_fr:'/campaign/worldtour/champions/fr.webp',
   the_sharp:'/avatars/house-regulars/sharp.webp',
   the_scholar:'/avatars/house-regulars/scholar.webp',
   the_wildcard:'/avatars/house-regulars/wildcard.webp',
@@ -10142,9 +10145,6 @@ function campaignGoldFailed(levelId,el){
 }
 function campaignArtFailed(key,el){ campaignArtMissing[key]=true; if(el&&el.remove) el.remove(); }
 
-  // World Tour country champions (Europe): the portrait in that country's own gold seal, made by campaign-design/worldtour-art/make_champion.py.
-  // Asia's ten have no art yet and fall back to the monogram.
-  wt_champion_it:'/campaign/worldtour/champions/it.webp',wt_champion_es:'/campaign/worldtour/champions/es.webp',wt_champion_pt:'/campaign/worldtour/champions/pt.webp',wt_champion_nl:'/campaign/worldtour/champions/nl.webp',wt_champion_gb:'/campaign/worldtour/champions/gb.webp',wt_champion_be:'/campaign/worldtour/champions/be.webp',wt_champion_de:'/campaign/worldtour/champions/de.webp',wt_champion_pl:'/campaign/worldtour/champions/pl.webp',wt_champion_dk:'/campaign/worldtour/champions/dk.webp',wt_champion_fr:'/campaign/worldtour/champions/fr.webp',
 // Inline SVG monogram badge — the placeholder for every character
 // portrait until real art exists. Built from the shared gold tokens,
 // same technique as creditChipSVG/CREST_ART, so it re-tints per theme
@@ -11014,6 +11014,7 @@ function wtLoadStory(cb){
   if(wtStory) return cb(wtStory);
   // never wait forever: a hung request must not leave a scene (and the map's buttons) waiting for it
   // Europe's story and Asia's (asia-story.json: ten more countries and the world.* blocks of Asia) are one story object. A missing Asia file only loses Asia.
+  // Africa's (africa-story.json) is merged the same way. A missing Asia/Africa file only loses that continent.
   const get=u=>fetch(u+'?v='+WT_STORY_VER).then(r=>r.json());
   Promise.race([Promise.all([get('/campaign/worldtour/europe-story.json'),get('/campaign/worldtour/asia-story.json').catch(()=>null),get('/campaign/worldtour/africa-story.json').catch(()=>null)]),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))])
     .then(([j,a,f])=>{ [a,f].forEach(x=>{ if(x){ const w=Object.assign({},j.world||{},x.world||{}); Object.assign(j,x); j.world=w; } }); wtStory=j; cb(j); }).catch(()=>cb(null));
@@ -11091,7 +11092,6 @@ function wtStoryGallery(){
     WT_ROUTE.forEach(cc=>{
       const c=story[cc]; if(!c) return;
       h+='<div style="margin-top:10px"><b style="color:var(--gold-hi)">'+WT_COUNTRY_NAME[cc]+'</b><br>';
-  // Africa's (africa-story.json) is merged the same way. A missing Asia/Africa file only loses that continent.
       h+=b(cc+'.open','Opening');
       Object.keys(c.after).sort((x,y)=>x-y).forEach(n=>{ h+=b(cc+'.'+n,'After '+n); });
       if(c.handoff&&c.handoff.length) h+=b(cc+'.handoff','Handoff');

@@ -22,6 +22,11 @@ SEAL_FILE = {'it': 'Italy gold.png', 'es': 'spain gold.png', 'pt': 'portugal gol
              'be': 'belgium gold.png', 'de': 'germany gold.png', 'pl': 'poland gold.png', 'dk': 'denmark gold.png', 'fr': 'france gold.png'}
 S = 1024
 MARGIN = 6   # px of transparent border round the seal (before the final 512 resize)
+TOL = {'pt': 62, 'nl': 75, 'dk': 75}   # colour tolerance of the plate flood (default 38); these plates have a darker vignette the default stops short of
+                                       # (Spain must stay at 38: its red plate touches a red band and leaks above ~60)
+RAW = {'it': 'Italian Champion.png', 'es': 'Spanish champion.png', 'pt': 'portugese champion.png', 'nl': 'dutch champion.png',
+       'gb': 'british champion.png', 'be': 'belgian champion.png', 'de': 'German champion.png', 'pl': 'polish champion.png',
+       'dk': 'denmark champion.png', 'fr': 'french champion.png'}
 
 
 def build_ring(cc):
@@ -44,7 +49,7 @@ def build_ring(cc):
     rgb = ring.convert('RGB')
     ref = np.median(np.asarray(rgb)[S // 2 - 60:S // 2 + 60, S // 2 - 60:S // 2 + 60].reshape(-1, 3), axis=0)
     arr = np.asarray(rgb).astype(np.int16)
-    close = (np.abs(arr - ref[None, None, :]).max(axis=2) < 38) & (np.asarray(ring.getchannel('A')) > 200)
+    close = (np.abs(arr - ref[None, None, :]).max(axis=2) < TOL.get(cc, 38)) & (np.asarray(ring.getchannel('A')) > 200)
     cm = Image.fromarray(np.where(close, 255, 0).astype(np.uint8), 'L').copy()
     ImageDraw.floodfill(cm, (S // 2, S // 2), 128)
     pm = np.asarray(cm) == 128
@@ -55,6 +60,16 @@ def build_ring(cc):
     hull = pts[ConvexHull(pts).vertices]
     plate = Image.new('L', (S, S), 0)
     ImageDraw.Draw(plate).polygon([tuple(map(int, q)) for q in hull], fill=255)
+    # ...but every seal has a gold emblem (bull, Colosseum, Big Ben...) that rises INTO the plate. Inside the hull but not plate-coloured
+    # = thin enamel slivers (leave them in the window) or that emblem (thick: keep it, in front of the portrait). An opening finds the
+    # thick parts; a few small geodesic dilations bring back their thin tips (horns, mast, spire) without growing along the slivers.
+    cand = ImageChops.multiply(plate, Image.fromarray(np.where(pm, 0, 255).astype(np.uint8), 'L'))
+    # (A gold-colour test for "emblem" was tried and is too strict: highlights and shadows on the metal are not saturated gold, so
+    # the tops of Big Ben and the Eiffel Tower were lost. Plates whose vignette the flood misses get a wider TOL instead.)
+    prot = cand.filter(ImageFilter.MinFilter(15)).filter(ImageFilter.MaxFilter(15))
+    for _ in range(3):
+        prot = ImageChops.multiply(prot.filter(ImageFilter.MaxFilter(21)), cand)
+    plate = ImageChops.subtract(plate, prot)
     plate = plate.filter(ImageFilter.MinFilter(3))                                       # pull the edge back a hair
     a = ring.getchannel('A')
     ring.putalpha(ImageChops.multiply(a, ImageChops.invert(plate.filter(ImageFilter.GaussianBlur(0.8)))))
@@ -74,7 +89,8 @@ def main():
     sys.path.insert(0, HERE)
     import make_portrait as mp
     os.makedirs(OUT_DIR, exist_ok=True)
-    src = args[1] if os.path.isabs(args[1]) else os.path.join(CHAMP_DIR, args[1])
+    raw = args[1] if len(args) > 1 else RAW[cc]
+    src = raw if os.path.isabs(raw) else os.path.join(CHAMP_DIR, raw)
     dst = os.path.join(OUT_DIR, cc + '.webp')
     mp.make(src, dst, tint='#8a4a30', ring_path=rp)
     print('wrote', dst)

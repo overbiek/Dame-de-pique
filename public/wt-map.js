@@ -119,6 +119,7 @@ const CSS=`#wtmap{
 #wtmap #wm-modal h2{margin:2px 0 4px;font-family:var(--serif);font-size:1.5rem;color:var(--brass-hi);letter-spacing:.02em}
 #wtmap #wm-modal p{margin:4px 0;font-size:12px;color:var(--cream)}
 #wtmap #wm-modal .seal{width:92px;height:92px;margin:4px auto}
+#wtmap #wm-modal img.champ{display:block;width:108px;height:108px;margin:2px auto;object-fit:contain;filter:drop-shadow(0 3px 6px rgba(0,0,0,.55))}
 #wtmap .meds{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}
 #wtmap .med{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 #wtmap .med .mono{width:38px;height:38px;font-size:12px;position:relative}
@@ -645,12 +646,25 @@ function showCredits(){
   $('mcont').onclick=()=>$('scrim').classList.remove('show');
   $('mfull').onclick=()=>{ try{window.open('/credits.html','_blank','noopener');}catch(e){} };
 }
+/* The champion's own picture (in their country's gold seal) for the ten Europe countries; the brass seal with the country letters
+   stays as the stand-in for a country whose champion has no picture yet (Asia and Africa), and if the picture fails to load. */
+function champSeal(c){
+  return '<svg class="seal" viewBox="-50 -50 100 100"><polygon points="'+starPts(48,37)+'" fill="#806436"/><polygon points="'+octPts(34,22.5)+'" fill="url(#wmBrassG)" stroke="#5a4520"/><polygon points="'+octPts(27,22.5)+'" fill="none" stroke="#5a4520"/><text y="2" text-anchor="middle" dominant-baseline="central" font-family="Playfair Display,serif" font-weight="700" font-size="22" fill="#2a1e08">'+c.k+'</text></svg>';
+}
 function showInvite(c){
   const m=$('modal');
   m.innerHTML='<small>The Keeper\'s Table · won</small><h2>'+c.name+' has its champion</h2>'
-   +'<svg class="seal" viewBox="-50 -50 100 100"><polygon points="'+starPts(48,37)+'" fill="#806436"/><polygon points="'+octPts(34,22.5)+'" fill="url(#wmBrassG)" stroke="#5a4520"/><polygon points="'+octPts(27,22.5)+'" fill="none" stroke="#5a4520"/><text y="2" text-anchor="middle" dominant-baseline="central" font-family="Playfair Display,serif" font-weight="700" font-size="22" fill="#2a1e08">'+c.k+'</text></svg>'
+   +'<div id="wm-champ" class="champwrap"></div>'
    +'<p style="font-family:var(--serif);color:var(--brass-hi);letter-spacing:.06em">DAME DE PIQUE — WORLD TABLE INVITATION</p><p>National Champion: <b>'+c.name+'</b></p><p><i>Your seat is reserved.</i></p>'
    +'<button class="cta" id="wm-mcont">Continue</button>';
+  const holder=m.querySelector('#wm-champ');
+  if(EU.indexOf(c)>=0){
+    const img=new Image();
+    img.className='champ'; img.alt=''; img.decoding='sync';
+    img.onerror=()=>{ holder.innerHTML=champSeal(c); };
+    img.src='/campaign/worldtour/champions/'+c.k.toLowerCase()+'.webp?v=2';
+    holder.appendChild(img);
+  }else holder.innerHTML=champSeal(c);
   $('scrim').classList.add('show');
   $('mcont').onclick=()=>{
     $('scrim').classList.remove('show');

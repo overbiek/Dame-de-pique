@@ -85,6 +85,22 @@ def parse_moods(spec, n):
 SHOW_V = {
     'IT.open': ['Rome. Warm evening.'],   # the local man who asks CLOSER something in Italian, which the Jester's "No." reacts to
     'ES.open': ['They continue. OPTIMIST turns left'],   # the shopkeeper OPTIMIST greets in Spanish, which the Jester's "No." reacts to
+    # Porto: every scene line is shown (owner, 2026-11-03: "it looks like some is missing, or at least the pull-ups"). They are Sharp's
+    # character beats (the pull-ups, the glass of port) and the dialogue refers back to them ("JESTER catches it").
+    'PT.open': ['Morning. Porto:', 'The first four public tables', 'SHARP drops down'],
+    'PT.22': ['SHARP hides a smile.'],
+    'PT.23': ['A waiter passes carrying glasses of port.'],
+    'PT.24': ['They cross the Lu', 'Five public tables sit above the river'],
+    'PT.25': ['Drinks arrive.', 'SHARP tastes the port'],
+    'PT.26': ['A focused Portuguese contender'],
+    'PT.27': ['The contender wins again'],
+    'PT.28': ['The contender approaches.', 'PLAYER clears Level 29.'],
+    'PT.29': ['CLOSER hands over the Keeper', 'Night. Rows of barrels'],
+    'PT.30': ['CLOSER places the World Championship invitation', 'The Netherlands begins to glow'],
+}
+# {block id: {prefix of the 'v' line: text to cut the card off at}}: production notes inside a scene line that are not for the player.
+V_CUT = {
+    'PT.open': {'Morning. Porto:': ' SHARP arrives in'},   # the outfit description (the look is in the portrait)
 }
 
 
@@ -162,7 +178,10 @@ def convert(bid, cues, spec):
                 txt = c[1]
                 cut = EXTRA[bid][2] if bid in EXTRA else None
                 if cut and cut in txt: txt = txt.split(cut)[0]
-                out.append(['b', nice(txt)])
+                for pre, at in V_CUT.get(bid, {}).items():
+                    if txt.startswith(pre) and at in txt: txt = txt.split(at)[0]
+                txt = re.sub(r'^PLAYER clears Level \d+\.\s*', '', txt)   # a system sentence at the start of a scene line
+                out.append(['b', nice(txt.strip())])
             if bid in EXTRA and c[1].startswith(EXTRA[bid][0]):
                 out.extend(EXTRA[bid][1])
             continue

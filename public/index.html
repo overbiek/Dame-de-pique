@@ -1156,7 +1156,7 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
    themed (fixed dark panel, cream/brass text): it floats over every screen
    and every theme, and on Clair the themed ink/gold tokens would invert. */
 #credit-tally{
-  position:fixed;left:calc(8px + env(safe-area-inset-left));top:36%;z-index:1800;
+  position:fixed;left:calc(8px + env(safe-area-inset-left));top:36%;z-index:2600;   /* above the World Tour map layer (2000) and its story overlay (2100) */
   display:flex;align-items:center;gap:10px;padding:8px 14px 8px 10px;border-radius:14px;
   background:rgba(20,16,10,.92);border:1px solid rgba(212,175,95,.5);
   box-shadow:0 8px 22px rgba(0,0,0,.5),inset 0 0 0 1px rgba(0,0,0,.35);
@@ -1172,7 +1172,9 @@ input[type=text]::placeholder,input[type=password]::placeholder,input[type=email
 #credit-tally .ct-n.pop{animation:ct-pop .32s ease}
 @keyframes ct-pop{50%{transform:scale(1.16)}}
 #credit-tally .ct-d{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:.82rem;font-weight:700;color:#7FE0B4}
-.ct-fly{position:fixed;left:0;top:0;z-index:1801;pointer-events:none;opacity:0}
+/* Spending (a purchase): the change reads as a cost, in the warm red the app already uses on dark panels. */
+#credit-tally.spend .ct-d{color:#FF9C8A}
+.ct-fly{position:fixed;left:0;top:0;z-index:2601;pointer-events:none;opacity:0}
 
 /* ══ Friends chip (menu rail) + friends sheet + online toast ══
    The chip sits in the menu's identity rail (row 5, the 1fr spacer's top),
@@ -10067,7 +10069,7 @@ function campaignBgImg(slug,eager){
 const CAMPAIGN_PORTRAIT_SRC={
   // World Tour country champions (Europe): the portrait in that country's own gold seal, made by campaign-design/worldtour-art/make_champion.py.
   // Asia's ten have no art yet and fall back to the monogram.
-  wt_champion_it:'/campaign/worldtour/champions/it.webp',wt_champion_es:'/campaign/worldtour/champions/es.webp',wt_champion_pt:'/campaign/worldtour/champions/pt.webp',wt_champion_nl:'/campaign/worldtour/champions/nl.webp',wt_champion_gb:'/campaign/worldtour/champions/gb.webp',wt_champion_be:'/campaign/worldtour/champions/be.webp',wt_champion_de:'/campaign/worldtour/champions/de.webp',wt_champion_pl:'/campaign/worldtour/champions/pl.webp',wt_champion_dk:'/campaign/worldtour/champions/dk.webp',wt_champion_fr:'/campaign/worldtour/champions/fr.webp',
+  wt_champion_it:'/campaign/worldtour/champions/it.webp?v=2',wt_champion_es:'/campaign/worldtour/champions/es.webp?v=2',wt_champion_pt:'/campaign/worldtour/champions/pt.webp?v=2',wt_champion_nl:'/campaign/worldtour/champions/nl.webp?v=2',wt_champion_gb:'/campaign/worldtour/champions/gb.webp?v=2',wt_champion_be:'/campaign/worldtour/champions/be.webp?v=2',wt_champion_de:'/campaign/worldtour/champions/de.webp?v=2',wt_champion_pl:'/campaign/worldtour/champions/pl.webp?v=2',wt_champion_dk:'/campaign/worldtour/champions/dk.webp?v=2',wt_champion_fr:'/campaign/worldtour/champions/fr.webp?v=2',
   the_sharp:'/avatars/house-regulars/sharp.webp',
   the_scholar:'/avatars/house-regulars/scholar.webp',
   the_wildcard:'/avatars/house-regulars/wildcard.webp',
@@ -10998,7 +11000,7 @@ const WT_EUROPE_BG={none:WT_BLANK};
 ['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'].forEach(cc=>[1,2,3].forEach(n=>{ WT_EUROPE_BG[cc+n]='/campaign/worldtour/europe/'+cc.toLowerCase()+'_'+n+'.webp'; }));
 /* Asia's location stills (public/campaign/worldtour/asia/<cc>_<1|2|3>.webp, 3 = the Keeper's Table), all 30 present since 2026-11-02; a missing one would show the map behind the scene. Add a key when a file arrives. */
 ['SAU','IND','THA','VNM','PHL','IDN','TWN','CHN','KOR','JPN'].reduce((a,c)=>a.concat([c+'1',c+'2',c+'3']),[]).forEach(k=>{ WT_EUROPE_BG[k]='/campaign/worldtour/asia/'+k.slice(0,3).toLowerCase()+'_'+k.slice(3)+'.webp'; });
-const WT_STORY_VER=8;  // bump when europe-story.json changes (the service worker keeps non-script files)
+const WT_STORY_VER=9;  // bump when europe-story.json changes (the service worker keeps non-script files)
 /* ?wtdev=1 (or ?wtstory=1): World Tour test mode. Story/progress ids are kept on this device only (never sent to the account),
    the map gets a DEV button that clears tables, and the story gallery is available. `var` so wt-map.js sees window.WT_DEV. */
 var WT_DEV=/[?&](wtdev|wtstory)=1\b/.test(location.search);
@@ -12529,22 +12531,29 @@ function queueCreditTally(amount){
   creditTallyPending+=amount;
   requestCredits();
 }
-function runCreditTally(from,to){
+/* Spending: the same box, counting DOWN. Used when credits are paid for something (attempts, from the campaign
+   popup or the Shop) so the player sees what the purchase cost and what is left, without leaving the screen
+   they are on. `spend` = true: red "-N", no flying chips, a falling tick, a short stay. */
+function runCreditTally(from,to,spend){
   const box=$('credit-tally'); if(!box) return;
-  if(creditTallyBusy){ setTimeout(()=>runCreditTally(from,to),700); return; }
+  // Inside #app (a z-index:1 stacking context) its own z-index would only count among the app's screens, i.e. UNDER the
+  // World Tour map layer (body level, z 2000). On <body> it floats over everything, like #camp-prologue after wt-map moves it.
+  if(box.parentElement!==document.body) document.body.appendChild(box);
+  if(creditTallyBusy){ setTimeout(()=>runCreditTally(from,to,spend),700); return; }
   creditTallyBusy=true;
-  const amount=Math.max(0,to-from);
+  const amount=Math.abs(to-from);
   const nEl=$('ct-n'), dEl=$('ct-d');
   if(!$('ct-chip').firstChild) $('ct-chip').innerHTML=creditChipHTML(28);
-  nEl.textContent=fmtCredits(from); dEl.textContent='+'+fmtCredits(amount);
+  box.classList.toggle('spend',!!spend);
+  nEl.textContent=fmtCredits(from); dEl.textContent=(spend?'−':'+')+fmtCredits(amount);
   nEl.classList.remove('pop');
   const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches;
 
-  setTimeout(()=>box.classList.add('show'),300);
+  setTimeout(()=>box.classList.add('show'),spend?80:300);
 
   // Chips fly from the middle of the screen into the box.
   const flyAt=reduce?0:750;
-  if(!reduce) setTimeout(()=>{
+  if(!reduce&&!spend) setTimeout(()=>{
     const tx=box.offsetLeft+box.offsetWidth/2-11, ty=box.offsetTop+box.offsetHeight/2-11;
     const sx=innerWidth/2-11, sy=innerHeight*0.45;
     const n=Math.min(10,Math.max(3,Math.ceil(amount/10)));
@@ -12567,25 +12576,25 @@ function runCreditTally(from,to){
     }
   },700);
 
-  // Count up once the first chips have landed.
-  const D=Math.min(2400,Math.max(900,500+amount*9));
+  // Count up once the first chips have landed (a spend starts counting down as soon as the box is in).
+  const D=spend?Math.min(1500,Math.max(700,400+amount*6)):Math.min(2400,Math.max(900,500+amount*9));
   setTimeout(()=>{
     const t0=Date.now(); let lastTick=0;
     const iv=setInterval(()=>{
       const t=Math.min(1,(Date.now()-t0)/D);
       const eased=1-Math.pow(1-t,3);
-      nEl.textContent=fmtCredits(Math.round(from+amount*eased));
-      if(Date.now()-lastTick>=70&&t<1){ lastTick=Date.now(); SFX.play('creditTick',t); }
+      nEl.textContent=fmtCredits(Math.round(from+(to-from)*eased));
+      if(Date.now()-lastTick>=70&&t<1){ lastTick=Date.now(); SFX.play('creditTick',spend?1-t:t); }
       if(t>=1){
         clearInterval(iv);
         nEl.textContent=fmtCredits(to);
         nEl.classList.add('pop');
-        SFX.play('creditTally');
-        setTimeout(()=>{ box.classList.remove('show'); },1200);
-        setTimeout(()=>{ creditTallyBusy=false; },1700);
+        SFX.play(spend?'confirm':'creditTally');
+        setTimeout(()=>{ box.classList.remove('show'); },spend?1300:1200);
+        setTimeout(()=>{ creditTallyBusy=false; },spend?1800:1700);
       }
     },40);
-  },(reduce?500:flyAt+450));
+  },(spend?450:(reduce?500:flyAt+450)));
 }
 
 // Which of the four top-row boxes is open. Reset to Themes every time the
@@ -12651,6 +12660,11 @@ socket.on('campaignShopOk',d=>{
     refreshAttemptsEverywhere();
   }else if($('camp-noattempts-modal').classList.contains('show')){
     renderNoAttempts(); refreshAttemptsEverywhere();
+  }
+  // Show what it cost and what is left: the credit box slides in on the left, counts down, slides away.
+  if(d.bought&&account){
+    const bit=(d.items||[]).find(i=>i.id===d.bought);
+    if(bit&&bit.price>0) runCreditTally(d.balance+bit.price,d.balance,true);
   }
 });
 // A refused purchase from the popup (not enough credits, session expired...) is shown inside it.

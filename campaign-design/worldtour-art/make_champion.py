@@ -24,13 +24,20 @@ S = 1024
 MARGIN = 6   # px of transparent border round the seal (before the final 512 resize)
 TOL = {'pt': 62, 'nl': 75, 'dk': 75}   # colour tolerance of the plate flood (default 38); these plates have a darker vignette the default stops short of
                                        # (Spain must stay at 38: its red plate touches a red band and leaks above ~60)
+ASIA_DIR = os.path.join(ROOT, 'afbeeldingen', 'World Tour', 'Asia', 'champions')   # Asia: seal and raw portrait sit side by side
+ASIA_SEAL = {'sau': 'saudi arabia gold seal.png', 'ind': 'india gold seal.png', 'tha': 'thailand gold seal.png', 'vnm': 'vietnam gold seal.png',
+             'phl': 'philipines gold seal.png', 'idn': 'indonesia gold seal.png', 'twn': 'taiwan gold seal.png', 'chn': 'chna gold seal.png',
+             'kor': 'korea gold seal.png', 'jpn': 'japan gold seal.png'}
+ASIA_RAW = {'sau': 'saudi arabia champion.png', 'ind': 'india champion.png', 'tha': 'thailand champion.png', 'vnm': 'vietnam champion.png',
+            'phl': 'manila champion.png', 'idn': 'Indonesia champion.png', 'twn': 'Taiwan champion.png', 'chn': 'china champion.png',
+            'kor': 'korea champion.png', 'jpn': 'japan champion.png'}
 RAW = {'it': 'Italian Champion.png', 'es': 'Spanish champion.png', 'pt': 'portugese champion.png', 'nl': 'dutch champion.png',
        'gb': 'british champion.png', 'be': 'belgian champion.png', 'de': 'German champion.png', 'pl': 'polish champion.png',
        'dk': 'denmark champion.png', 'fr': 'french champion.png'}
 
 
 def build_ring(cc):
-    img = Image.open(os.path.join(SEAL_DIR, SEAL_FILE[cc])).convert('RGB')
+    img = Image.open(os.path.join(ASIA_DIR, ASIA_SEAL[cc]) if cc in ASIA_SEAL else os.path.join(SEAL_DIR, SEAL_FILE[cc])).convert('RGB')
     v = np.asarray(img.convert('HSV'))[..., 2]
     m = Image.fromarray(np.where(v < 34, 255, 0).astype(np.uint8), 'L').copy()
     w, h = img.size
@@ -49,10 +56,28 @@ def build_ring(cc):
     rgb = ring.convert('RGB')
     ref = np.median(np.asarray(rgb)[S // 2 - 60:S // 2 + 60, S // 2 - 60:S // 2 + 60].reshape(-1, 3), axis=0)
     arr = np.asarray(rgb).astype(np.int16)
-    close = (np.abs(arr - ref[None, None, :]).max(axis=2) < TOL.get(cc, 38)) & (np.asarray(ring.getchannel('A')) > 200)
-    cm = Image.fromarray(np.where(close, 255, 0).astype(np.uint8), 'L').copy()
-    ImageDraw.floodfill(cm, (S // 2, S // 2), 128)
-    pm = np.asarray(cm) == 128
+    alpha_ok = np.asarray(ring.getchannel('A')) > 200
+    dist = np.abs(arr - ref[None, None, :]).max(axis=2)
+
+    def flood(tol):
+        cm = Image.fromarray(np.where((dist < tol) & alpha_ok, 255, 0).astype(np.uint8), 'L').copy()
+        ImageDraw.floodfill(cm, (S // 2, S // 2), 128)
+        return np.asarray(cm) == 128
+    if cc in ASIA_SEAL:
+        # Asia's thin-rim seals: widen the colour tolerance until the flooded area stops growing (the plate is full, the hairline band holds it back),
+        # so a strong vignette or a bright damask does not leave bits of enamel in the portrait window.
+        pm = flood(38); prev = pm.sum(); best = None
+        for tol in (50, 62, 74, 86, 98, 110, 122):
+            q = flood(tol); area = q.sum(); ratio = area / prev
+            if os.environ.get('CHAMP_DEBUG'): print(cc, tol, int(area), round(ratio, 3))
+            if best is None or ratio < best[0]:
+                best = (ratio, q)
+            if ratio <= 1.02:           # converged: the whole enamel plate is in, and the hairline band still holds it back
+                break
+            prev = area
+        pm = best[1]
+    else:
+        pm = flood(TOL.get(cc, 38))
     # the window is convex: the hull of the flooded plate also covers the corner bits the colour flood misses (bright enamel reflections)
     from scipy.spatial import ConvexHull
     ys, xs = np.nonzero(pm)
@@ -64,6 +89,10 @@ def build_ring(cc):
     # = thin enamel slivers (leave them in the window) or that emblem (thick: keep it, in front of the portrait). An opening finds the
     # thick parts; a few small geodesic dilations bring back their thin tips (horns, mast, spire) without growing along the slivers.
     cand = ImageChops.multiply(plate, Image.fromarray(np.where(pm, 0, 255).astype(np.uint8), 'L'))
+    if cc in ASIA_SEAL:
+        # the Asian emblems are small and sit bottom-centre: keep the emblem exception to that box, anything else inside the hull is enamel
+        box = Image.new('L', (S, S), 0); ImageDraw.Draw(box).rectangle([int(S * .28), int(S * .80), int(S * .72), S], fill=255)
+        cand = ImageChops.multiply(cand, box)
     # (A gold-colour test for "emblem" was tried and is too strict: highlights and shadows on the metal are not saturated gold, so
     # the tops of Big Ben and the Eiffel Tower were lost. Plates whose vignette the flood misses get a wider TOL instead.)
     prot = cand.filter(ImageFilter.MinFilter(15)).filter(ImageFilter.MaxFilter(15))
@@ -89,8 +118,8 @@ def main():
     sys.path.insert(0, HERE)
     import make_portrait as mp
     os.makedirs(OUT_DIR, exist_ok=True)
-    raw = args[1] if len(args) > 1 else RAW[cc]
-    src = raw if os.path.isabs(raw) else os.path.join(CHAMP_DIR, raw)
+    raw = args[1] if len(args) > 1 else (ASIA_RAW[cc] if cc in ASIA_RAW else RAW[cc])
+    src = raw if os.path.isabs(raw) else os.path.join(ASIA_DIR if cc in ASIA_RAW else CHAMP_DIR, raw)
     dst = os.path.join(OUT_DIR, cc + '.webp')
     mp.make(src, dst, tint='#8a4a30', ring_path=rp)
     print('wrote', dst)

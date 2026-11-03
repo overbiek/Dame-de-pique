@@ -300,7 +300,7 @@ const LVLPIC=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR','SAU','IND','THA
 const hasPic=k=>LVLPIC.indexOf(k)>=0;
 /* One gold seal per country (public/campaign/worldtour/seals/<cc>.webp; Europe's ten exist, the other continents' come later). A table cleared at GOLD
    shows its country's seal with the table number drawn on top; a plain clear keeps the brass check / brass octagon. A country without a seal keeps the plain look. */
-const SEALS=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'];
+const SEALS=['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR','SAU','IND','THA','VNM','PHL','IDN','TWN','CHN','KOR','JPN'];
 const sealSrc=k=>SEALS.indexOf(k)>=0?'/campaign/worldtour/seals/'+k.toLowerCase()+'.webp':null;
 const goldAt=abs=>!!(resultOf(abs)&&resultOf(abs).gold);
 
@@ -660,8 +660,8 @@ function showCredits(){
   $('mcont').onclick=()=>$('scrim').classList.remove('show');
   $('mfull').onclick=()=>{ try{window.open('/credits.html','_blank','noopener');}catch(e){} };
 }
-/* The champion's own picture (in their country's gold seal) for the ten Europe countries; the brass seal with the country letters
-   stays as the stand-in for a country whose champion has no picture yet (Asia and Africa), and if the picture fails to load. */
+/* The champion's own picture (in their country's gold seal) for Europe and Asia; the brass seal with the country letters
+   stays as the stand-in for a country whose champion has no picture yet (Africa and South America), and if the picture fails to load. */
 function champSeal(c){
   return '<svg class="seal" viewBox="-50 -50 100 100"><polygon points="'+starPts(48,37)+'" fill="#806436"/><polygon points="'+octPts(34,22.5)+'" fill="url(#wmBrassG)" stroke="#5a4520"/><polygon points="'+octPts(27,22.5)+'" fill="none" stroke="#5a4520"/><text y="2" text-anchor="middle" dominant-baseline="central" font-family="Playfair Display,serif" font-weight="700" font-size="22" fill="#2a1e08">'+c.k+'</text></svg>';
 }
@@ -672,7 +672,7 @@ function showInvite(c){
    +'<p style="font-family:var(--serif);color:var(--brass-hi);letter-spacing:.06em">DAME DE PIQUE — WORLD TABLE INVITATION</p><p>National Champion: <b>'+c.name+'</b></p><p><i>Your seat is reserved.</i></p>'
    +'<button class="cta" id="wm-mcont">Continue</button>';
   const holder=m.querySelector('#wm-champ');
-  if(EU.indexOf(c)>=0){
+  if(EU.indexOf(c)>=0||ASIA.indexOf(c)>=0){
     const img=new Image();
     img.className='champ'; img.alt=''; img.decoding='sync';
     img.onerror=()=>{ holder.innerHTML=champSeal(c); };

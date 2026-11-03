@@ -19,7 +19,7 @@ _CUT = [
     re.compile(r'\s*Five unplayed regions remain selectable:[^.]*\.'),
     re.compile(r'\s*The room evokes classic Paris nightlife without reproducing any specific protected show\.'),   # a legal remark
     re.compile(r'\s*The screens display only pre-match public statistics and decorative visuals\.( No live hidden-hand information is shown\.)?'),   # a game-design remark
-    re.compile(r'\s*(Asia|Africa|Europe) is highlighted because PLAYER (has )?selected it from the continent preview\.', re.I),   # describes the app's own screen
+    re.compile(r'\s*(Asia|Africa|Europe|South America|North America|Oceania) is highlighted because PLAYER (has )?selected it from the continent preview\.', re.I),   # describes the app's own screen
 ]
 _VENUE_NOTE = re.compile(r'\bIt is deliberately not a named real-world venue:\s*(\w)')
 

@@ -10142,6 +10142,9 @@ function campaignGoldFailed(levelId,el){
 }
 function campaignArtFailed(key,el){ campaignArtMissing[key]=true; if(el&&el.remove) el.remove(); }
 
+  // World Tour country champions (Europe): the portrait in that country's own gold seal, made by campaign-design/worldtour-art/make_champion.py.
+  // Asia's ten have no art yet and fall back to the monogram.
+  wt_champion_it:'/campaign/worldtour/champions/it.webp',wt_champion_es:'/campaign/worldtour/champions/es.webp',wt_champion_pt:'/campaign/worldtour/champions/pt.webp',wt_champion_nl:'/campaign/worldtour/champions/nl.webp',wt_champion_gb:'/campaign/worldtour/champions/gb.webp',wt_champion_be:'/campaign/worldtour/champions/be.webp',wt_champion_de:'/campaign/worldtour/champions/de.webp',wt_champion_pl:'/campaign/worldtour/champions/pl.webp',wt_champion_dk:'/campaign/worldtour/champions/dk.webp',wt_champion_fr:'/campaign/worldtour/champions/fr.webp',
 // Inline SVG monogram badge — the placeholder for every character
 // portrait until real art exists. Built from the shared gold tokens,
 // same technique as creditChipSVG/CREST_ART, so it re-tints per theme
@@ -10163,7 +10166,9 @@ function campaignPortraitSVG(id){
   </svg>`;
 }
 function campaignPortraitHTML(id){
-  return `<span class="camp-portrait">${campaignPortraitSVG(id)}${campaignPortraitImg(id)}</span>`;
+  // a champion's picture is an octagon seal with transparent corners: no round clip (same as the Great Eight's ring portraits)
+  const oct=/^wt_champion_/.test(id)&&CAMPAIGN_PORTRAIT_SRC[id]?' wt-oct':'';
+  return `<span class="camp-portrait${oct}">${campaignPortraitSVG(id)}${campaignPortraitImg(id)}</span>`;
 }
 
 let campaignData=null;        // last campaignStateOk payload
@@ -10922,7 +10927,7 @@ const WT_PORTRAIT_ART={
   the_charmer:{dir:'charmer',looks:['house','eu_nl_charmer']},
   /* Wildcard: only the Brussels look so far; his house set is on hold until the 'serious' shot is redone (it came back with different hair). Until then he keeps the old portrait before Brussels. */
   the_wildcard:{dir:'wildcard',looks:['eu_be_wildcard']},
-  the_jester:{dir:'jester',looks:['house']},   // house look only; his Warsaw look is still to come
+  the_jester:{dir:'jester',looks:['house','eu_pl_jester']},
 };
 const WT_MOODS=['neutral','smile','surprised','serious'];
 /* Mood per spoken line of the prologue's long-table scene (cue id -> mood).

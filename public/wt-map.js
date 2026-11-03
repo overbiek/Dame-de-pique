@@ -235,11 +235,26 @@ const ASIA=[
  {k:'KOR',id:'410',name:'South Korea',city:'Seoul',games:'Go-Stop · Poker',lead:'scholar'},
  {k:'JPN',id:'392',name:'Japan',city:'Tokyo',games:'Daifugō · Hanafuda',lead:'sharp'}
 ];
-const ALL=EU.concat(ASIA);                       // global country index: Europe 0-9, Asia 10-19 (a table's number on this layer = index*10 + 1..10; its level id = 400 + that)
+/* AFRICA (tables 201-300 on this layer's numbering, levels 601-700): the route is fixed, north to south, as the script says (Cairo, Tunis, Marrakech, Algiers, Accra, Lagos, Kampala, Nairobi,
+   Dar es Salaam, Cape Town). ISO alpha-3 codes like Asia. `games` are local card games in my own words, not from the script (it names only Spar in Accra and Matatu-style play in Kampala). */
+const AFRICA=[
+ {k:'EGY',id:'818',name:'Egypt',city:'Cairo',games:'Tarneeb · Trix',lead:'scholar'},
+ {k:'TUN',id:'788',name:'Tunisia',city:'Tunis',games:'Chkobba · Rami',lead:'closer'},
+ {k:'MAR',id:'504',name:'Morocco',city:'Marrakech',games:'Ronda · Rami',lead:'charmer'},
+ {k:'DZA',id:'012',name:'Algeria',city:'Algiers',games:'Ronda · Dominos',lead:'group'},
+ {k:'GHA',id:'288',name:'Ghana',city:'Accra',games:'Spar · Whot',lead:'optimist'},
+ {k:'NGA',id:'566',name:'Nigeria',city:'Lagos',games:'Whot · Spar',lead:'player'},
+ {k:'UGA',id:'800',name:'Uganda',city:'Kampala',games:'Matatu · Rummy',lead:'wildcard'},
+ {k:'KEN',id:'404',name:'Kenya',city:'Nairobi',games:'Matatu · Gin Rummy',lead:'jester'},
+ {k:'TZA',id:'834',name:'Tanzania',city:'Dar es Salaam',games:'Kasino · Rummy',lead:'sharp'},
+ {k:'ZAF',id:'710',name:'South Africa',city:'Cape Town',games:'Klawerjas · Last Card',lead:'group'}
+];
+const ALL=EU.concat(ASIA,AFRICA);                       // global country index: Europe 0-9, Asia 10-19, Africa 20-29 (a table's number on this layer = index*10 + 1..10; its level id = 400 + that)
 const CID={};ALL.forEach((c,i)=>{CID[c.id]=i;});
-const contOf=i=>i<10?'EU':'AS';
-const listOf=k=>k==='EU'?EU:ASIA;
-const BUILT={EU:1,AS:1};                         // continents that have a map, countries and tables; the other four are still the "not built yet" placeholder
+const LISTS={EU:EU,AS:ASIA,AF:AFRICA},START={EU:0,AS:10,AF:20};
+const contOf=i=>i<10?'EU':i<20?'AS':'AF';
+const listOf=k=>LISTS[k];
+const BUILT={EU:1,AS:1,AF:1};                         // continents that have a map, countries and tables; the other four are still the "not built yet" placeholder
 const CONT={EU:'Europe',AF:'Africa',AS:'Asia',NA:'North America',SA:'South America',OC:'Oceania'};
 const CORDER=['EU','AF','AS','NA','SA','OC'];
 const PREVIEW_KEY={NA:'NORTH AMERICA',SA:'SOUTH AMERICA',AF:'AFRICA',AS:'ASIA',OC:'OCEANIA'};
@@ -250,7 +265,7 @@ const STAGE=[
  [9,9,'Champion decided','A story box crowns the national champion.'],
  [10,10,"The Keeper's Table",'You and two of the Great Eight face the new champion.']
 ];
-const CTINT={IT:'#c07a45',ES:'#d9772b',PT:'#3d8fbf',NL:'#5a7fa0',GB:'#5a6672',BE:'#2f6a4a',DE:'#7a3a9a',PL:'#4a6078',DK:'#7fa8c4',FR:'#c9a24a'};
+const CTINT={IT:'#c07a45',ES:'#d9772b',PT:'#3d8fbf',NL:'#5a7fa0',GB:'#5a6672',BE:'#2f6a4a',DE:'#7a3a9a',PL:'#4a6078',DK:'#7fa8c4',FR:'#c9a24a',EGY:'#c9a24a',TUN:'#b0503a',MAR:'#a8452f',DZA:'#3f8a5a',GHA:'#c9a24a',NGA:'#3f8a5a',UGA:'#c9a24a',KEN:'#8a3a30',TZA:'#3a8f9a',ZAF:'#c9a24a'};
 
 let root=null,D=null,dataLoading=null,svg,landG,routeG,marksG,imgW,imgE,paths=[];
 let view={name:'continent',k:'EU',country:null},W=innerWidth,H=innerHeight,cam={minX:0,minY:0,u:1},anim=null;
@@ -292,8 +307,8 @@ const doneCount=k=>ALL.filter((c,i)=>contOf(i)===(k||'EU')&&tablesDone(i)>=10).l
 const euDone=()=>doneCount('EU')===10;
 const contDone=k=>campaignSeenCues.has('wtx_done_'+k);
 const chosen=()=>CORDER.find(k=>k!=='EU'&&campaignSeenCues.has('wtx_cont_'+k)&&!contDone(k))||null;
-const seats=()=>doneCount('EU')+doneCount('AS')+CORDER.filter(k=>!BUILT[k]&&contDone(k)).length*10;
-function cstate(i){if(tablesDone(i)>=10)return 'done';for(let j=(i<10?0:10);j<i;j++)if(tablesDone(j)<10)return 'locked';return 'active';}   // the first unfinished country of its continent
+const seats=()=>CORDER.reduce((n,k)=>n+(BUILT[k]?doneCount(k):(contDone(k)?10:0)),0);
+function cstate(i){if(tablesDone(i)>=10)return 'done';for(let j=Math.floor(i/10)*10;j<i;j++)if(tablesDone(j)<10)return 'locked';return 'active';}   // the first unfinished country of its continent
 function contState(k){
   if(k==='EU')return euDone()?'done':'active';
   if(!euDone())return 'locked';
@@ -399,7 +414,7 @@ function renderMarks(){
     return;
   }
   if(v.name==='cont')return;
-  const LST=listOf(v.k),G0=v.k==='EU'?0:10;
+  const LST=listOf(v.k),G0=START[v.k];
   const pts=LST.map(c=>D.cities[c.k]);
   for(let i=0;i<pts.length-1;i++){
     el('path',{d:'M'+pts[i][0]+' '+pts[i][1]+'L'+pts[i+1][0]+' '+pts[i+1][1],class:tablesDone(G0+i)>=10?'done':'todo'},routeG);
@@ -589,7 +604,7 @@ function showSheet(k,resume){
 }
 function tapCountry(k){
   const i=idxOf(k),st=cstate(i);
-  if(st==='locked'){const s0=i<10?0:10,f=ALL.findIndex((x,j)=>j>=s0&&tablesDone(j)<10);return toast('Finish '+ALL[f].city+' first.');}
+  if(st==='locked'){const s0=Math.floor(i/10)*10,f=ALL.findIndex((x,j)=>j>=s0&&tablesDone(j)<10);return toast('Finish '+ALL[f].city+' first.');}
   goView({name:'country',k:contOf(i),country:k});
   if(!hasPic(k))setTimeout(()=>playOpening(k),1300);   // with a city picture the opening plays once you step into the city
 }
@@ -642,7 +657,7 @@ function showInvite(c){
     const idx=ALL.indexOf(c),ck=contOf(idx);
     goView({name:'continent',k:ck},{done:async()=>{
       busy=true;await story(c.k+'.handoff');busy=false;
-      if(idx%10===9)return setTimeout(ck==='EU'?showEuropeDone:showAsiaDone,250);   // the last country of the continent
+      if(idx%10===9)return setTimeout(ck==='EU'?showEuropeDone:()=>showContDone(ck),250);   // the last country of the continent
       travel(idx);
     }});
   };
@@ -658,14 +673,14 @@ function travel(idx){
     if(p<1)requestAnimationFrame(step);else{g.remove();toast(ALL[idx+1].city+' is next.');}
   })(t0);
 }
-function showAsiaDone(){
-  wtMarkSeen('wtx_done_AS');
-  const m=$('modal');
-  m.innerHTML='<small>Asia complete</small><h2>10 champions found</h2><div class="meds">'
-   +ASIA.map(c=>'<div class="med"><div class="mono">'+c.k+'</div>'+c.city+'</div>').join('')+'</div>'
+function showContDone(k){                          // Asia and Africa: the last country of the continent was finished
+  wtMarkSeen('wtx_done_'+k);
+  const m=$('modal'),nm=CONT[k];
+  m.innerHTML='<small>'+nm+' complete</small><h2>10 champions found</h2><div class="meds">'
+   +listOf(k).map(c=>'<div class="med"><div class="mono">'+c.k+'</div>'+c.city+'</div>').join('')+'</div>'
    +'<p>'+seats()+' / 60 seats filled.</p><button class="cta" id="wm-mcont">Back to the world map</button>';
   $('scrim').classList.add('show');
-  $('mcont').onclick=()=>{$('scrim').classList.remove('show');goView({name:'world'},{dur:1800,done:()=>toast('ASIA COMPLETE — 100 / 100 • WORLD CHAMPIONSHIP — '+seats()+' / 60')});};
+  $('mcont').onclick=()=>{$('scrim').classList.remove('show');goView({name:'world'},{dur:1800,done:()=>toast(nm.toUpperCase()+' COMPLETE — 100 / 100 • WORLD CHAMPIONSHIP — '+seats()+' / 60')});};
 }
 function showEuropeDone(){
   const m=$('modal');
@@ -768,6 +783,7 @@ function renderDev(){
   const items=[['Clear next table',()=>{if(view.name==='country')devClear();else toast('Open a country first.');}],
    ['Skip: Europe done',()=>{for(let t=1;t<=100;t++)devCleared.add(t);saveDevCleared();goView({name:'continent',k:'EU'},{instant:true});setTimeout(showEuropeDone,200);}],
    ['World map',()=>{if(!euDone())return toast('Finish Europe first (use Skip).');goView({name:'world'});}],
+   ['Open Africa (dev)',()=>{for(let t=1;t<=200;t++)devCleared.add(t);saveDevCleared();if(!wtSeqOf('AF')){wtMarkSeen('wtx_cont_AF');wtMarkSeen('wtx_seq_'+(CORDER.filter(x=>x!=='EU'&&wtSeqOf(x)>0).length+1)+'_AF');}goView({name:'continent',k:'AF'},{instant:true});}],
    ['Open Asia (dev)',()=>{for(let t=1;t<=100;t++)devCleared.add(t);saveDevCleared();if(!wtSeqOf('AS')){wtMarkSeen('wtx_cont_AS');wtMarkSeen('wtx_seq_1_AS');}goView({name:'continent',k:'AS'},{instant:true});}],
    ['Reset (dev)',devReset],['Close',close]];
   if(view.name==='cont')items.splice(1,0,['Finish continent',()=>{wtMarkSeen('wtx_done_'+view.k);toast(CONT[view.k]+' complete — '+seats()+' / 60 seats filled.');goView({name:'world'},{dur:1800});}]);
@@ -823,7 +839,7 @@ function build(){
 }
 function loadData(){
   if(D)return Promise.resolve(D);
-  if(!dataLoading)dataLoading=fetch('/campaign/worldtour/map-data.json?v=2').then(r=>r.json()).then(j=>{D=j;return j;}).catch(e=>{dataLoading=null;throw e;});
+  if(!dataLoading)dataLoading=fetch('/campaign/worldtour/map-data.json?v=3').then(r=>r.json()).then(j=>{D=j;return j;}).catch(e=>{dataLoading=null;throw e;});
   return dataLoading;
 }
 function drawBase(){

@@ -10055,7 +10055,7 @@ const CAMPAIGN_BG_SRC={ conservatory:'/scenes/conservatory.webp' };
 function campaignBgImg(slug,eager){
   if(campaignArtMissing['bg:'+slug]) return '';
   // World Tour tables use their country's location still: slug 'wt_it_2' -> /campaign/worldtour/europe/it_2.webp
-  const src=CAMPAIGN_BG_SRC[slug]||(slug.indexOf('wt_')===0?`/campaign/worldtour/${/^wt_(sau|ind|tha|vnm|phl|idn|twn|chn|kor|jpn)_/.test(slug)?'asia':'europe'}/${slug.slice(3)}.webp`:`/campaign/chapters/${slug}.webp`);   // Europe's stills in europe/, Asia's in asia/
+  const src=CAMPAIGN_BG_SRC[slug]||(slug.indexOf('wt_')===0?`/campaign/worldtour/${/^wt_(sau|ind|tha|vnm|phl|idn|twn|chn|kor|jpn)_/.test(slug)?'asia':/^wt_(egy|tun|mar|dza|gha|nga|uga|ken|tza|zaf)_/.test(slug)?'africa':'europe'}/${slug.slice(3)}.webp`:`/campaign/chapters/${slug}.webp`);   // Europe's stills in europe/, Asia's in asia/, Africa's in africa/ (none yet)
   return `<img class="campaign-bg-img" src="${src}" alt="" aria-hidden="true"`+
          ` loading="${eager?'eager':'lazy'}" decoding="sync" onerror="campaignArtFailed('bg:${slug}',this)"/>`;
 }
@@ -10998,7 +10998,7 @@ const WT_EUROPE_BG={none:WT_BLANK};
 ['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'].forEach(cc=>[1,2,3].forEach(n=>{ WT_EUROPE_BG[cc+n]='/campaign/worldtour/europe/'+cc.toLowerCase()+'_'+n+'.webp'; }));
 /* Asia's location stills (public/campaign/worldtour/asia/<cc>_<1|2|3>.webp, 3 = the Keeper's Table), all 30 present since 2026-11-02; a missing one would show the map behind the scene. Add a key when a file arrives. */
 ['SAU','IND','THA','VNM','PHL','IDN','TWN','CHN','KOR','JPN'].reduce((a,c)=>a.concat([c+'1',c+'2',c+'3']),[]).forEach(k=>{ WT_EUROPE_BG[k]='/campaign/worldtour/asia/'+k.slice(0,3).toLowerCase()+'_'+k.slice(3)+'.webp'; });
-const WT_STORY_VER=7;  // bump when europe-story.json changes (the service worker keeps non-script files)
+const WT_STORY_VER=8;  // bump when europe-story.json changes (the service worker keeps non-script files)
 /* ?wtdev=1 (or ?wtstory=1): World Tour test mode. Story/progress ids are kept on this device only (never sent to the account),
    the map gets a DEV button that clears tables, and the story gallery is available. `var` so wt-map.js sees window.WT_DEV. */
 var WT_DEV=/[?&](wtdev|wtstory)=1\b/.test(location.search);
@@ -11015,8 +11015,8 @@ function wtLoadStory(cb){
   // never wait forever: a hung request must not leave a scene (and the map's buttons) waiting for it
   // Europe's story and Asia's (asia-story.json: ten more countries and the world.* blocks of Asia) are one story object. A missing Asia file only loses Asia.
   const get=u=>fetch(u+'?v='+WT_STORY_VER).then(r=>r.json());
-  Promise.race([Promise.all([get('/campaign/worldtour/europe-story.json'),get('/campaign/worldtour/asia-story.json').catch(()=>null)]),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))])
-    .then(([j,a])=>{ if(a){ const w=Object.assign({},j.world||{},a.world||{}); Object.assign(j,a); j.world=w; } wtStory=j; cb(j); }).catch(()=>cb(null));
+  Promise.race([Promise.all([get('/campaign/worldtour/europe-story.json'),get('/campaign/worldtour/asia-story.json').catch(()=>null),get('/campaign/worldtour/africa-story.json').catch(()=>null)]),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),8000))])
+    .then(([j,a,f])=>{ [a,f].forEach(x=>{ if(x){ const w=Object.assign({},j.world||{},x.world||{}); Object.assign(j,x); j.world=w; } }); wtStory=j; cb(j); }).catch(()=>cb(null));
 }
 function wtStoryBlock(story,id){
   const p=id.split('.');
@@ -11091,6 +11091,7 @@ function wtStoryGallery(){
     WT_ROUTE.forEach(cc=>{
       const c=story[cc]; if(!c) return;
       h+='<div style="margin-top:10px"><b style="color:var(--gold-hi)">'+WT_COUNTRY_NAME[cc]+'</b><br>';
+  // Africa's (africa-story.json) is merged the same way. A missing Asia/Africa file only loses that continent.
       h+=b(cc+'.open','Opening');
       Object.keys(c.after).sort((x,y)=>x-y).forEach(n=>{ h+=b(cc+'.'+n,'After '+n); });
       if(c.handoff&&c.handoff.length) h+=b(cc+'.handoff','Handoff');
@@ -11127,7 +11128,8 @@ var wtReturn=null;                // {abs, wasCleared}: set on leaving a World T
 var wtStartWasCleared=false;      // was the table already cleared when it was started? (a replay never replays its story)
 // The names of the country champions and local players the server seats (wt_champion_<cc>, wt_local_<cc>): same table as server.js's WT_COUNTRIES.
 [['it','Italian'],['es','Spanish'],['pt','Portuguese'],['nl','Dutch'],['gb','British'],['be','Belgian'],['de','German'],['pl','Polish'],['dk','Danish'],['fr','French'],
- ['sau','Saudi'],['ind','Indian'],['tha','Thai'],['vnm','Vietnamese'],['phl','Filipino'],['idn','Indonesian'],['twn','Taiwanese'],['chn','Chinese'],['kor','Korean'],['jpn','Japanese']].forEach(([cc,adj])=>{
+ ['sau','Saudi'],['ind','Indian'],['tha','Thai'],['vnm','Vietnamese'],['phl','Filipino'],['idn','Indonesian'],['twn','Taiwanese'],['chn','Chinese'],['kor','Korean'],['jpn','Japanese'],
+ ['egy','Egyptian'],['tun','Tunisian'],['mar','Moroccan'],['dza','Algerian'],['gha','Ghanaian'],['nga','Nigerian'],['uga','Ugandan'],['ken','Kenyan'],['tza','Tanzanian'],['zaf','South African']].forEach(([cc,adj])=>{
   CAMPAIGN_CHARACTERS['wt_champion_'+cc]={name:adj+' Champion',initial:cc.toUpperCase()};
   CAMPAIGN_CHARACTERS['wt_local_'+cc]={name:adj+' Player',initial:cc.toUpperCase()};
 });

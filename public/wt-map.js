@@ -518,7 +518,6 @@ function renderPanel(){
   h+='</div>';
   const sg=STAGE.find(s=>sel>=s[0]&&sel<=s[1]);
   h+='<div class="cap"><b>Table '+sel+' · '+sg[2]+'</b><p>'+sg[3]+'</p>';
-  if(sel===10)h+='<div class="seats"><span class="you">You</span><span>Champion of '+c.name+'</span><span>'+ln+'</span><span>+1 Great Eight</span></div>';
   h+='</div>';
   if(hasPic(c.k))h+='<button class="cta" id="wm-playbtn">'+(n<10?'Enter '+c.city:'Enter '+c.city+' (cleared)')+'</button>';
   else if(n<10)h+='<button class="cta" id="wm-playbtn">Play table '+cur+'</button>';

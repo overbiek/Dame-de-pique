@@ -11000,7 +11000,7 @@ const WT_EUROPE_BG={none:WT_BLANK};
 ['IT','ES','PT','NL','GB','BE','DE','PL','DK','FR'].forEach(cc=>[1,2,3].forEach(n=>{ WT_EUROPE_BG[cc+n]='/campaign/worldtour/europe/'+cc.toLowerCase()+'_'+n+'.webp'; }));
 /* Asia's location stills (public/campaign/worldtour/asia/<cc>_<1|2|3>.webp, 3 = the Keeper's Table), all 30 present since 2026-11-02; a missing one would show the map behind the scene. Add a key when a file arrives. */
 ['SAU','IND','THA','VNM','PHL','IDN','TWN','CHN','KOR','JPN'].reduce((a,c)=>a.concat([c+'1',c+'2',c+'3']),[]).forEach(k=>{ WT_EUROPE_BG[k]='/campaign/worldtour/asia/'+k.slice(0,3).toLowerCase()+'_'+k.slice(3)+'.webp'; });
-const WT_STORY_VER=9;  // bump when europe-story.json changes (the service worker keeps non-script files)
+const WT_STORY_VER=10;  // bump when europe-story.json changes (the service worker keeps non-script files)
 /* ?wtdev=1 (or ?wtstory=1): World Tour test mode. Story/progress ids are kept on this device only (never sent to the account),
    the map gets a DEV button that clears tables, and the story gallery is available. `var` so wt-map.js sees window.WT_DEV. */
 var WT_DEV=/[?&](wtdev|wtstory)=1\b/.test(location.search);

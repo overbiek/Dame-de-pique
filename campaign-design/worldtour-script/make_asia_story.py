@@ -10,7 +10,7 @@ Country codes are ISO alpha-3 (SAU IND THA VNM PHL IDN TWN CHN KOR JPN) so they 
 Cues, as in europe-story.json: ["s", SPEAKER, text, mood] spoken, ["u", text] on-screen text, ["b", text] story box, ["loc", n, title] location (1/2 public, 3 = Keeper's Table).
 NEW: ["if", cond, [cues]] a conditional section; cond "euas" = "Asia is the SECOND continent played (EUROPE -> ASIA)", "!euas" = Asia is third or later.
 The client flattens it (wtBlockToCues / wtCondOk). Callback sections ("IF NARRATIVE - EUROPE -> ASIA CALLBACK") become ["if","euas",[...]].
-Stage directions (Script Action) are not shown, as the script's own legend says. Moods: the same keyword heuristic as europe-story.json (not hand-set).
+Stage directions (Script Action) ARE shown as story-box cards (the script's legend says not to; the owner decided otherwise, 2026-11-03), cleaned by scene_lines.py. Moods: the same keyword heuristic as europe-story.json (not hand-set).
 """
 import io, json, os, re, sys
 import docx
@@ -21,6 +21,7 @@ SRC = os.path.join(ROOT, 'afbeeldingen', 'World Tour', 'Asia', 'Great_Eight_Worl
 OUT = os.path.join(ROOT, 'public', 'campaign', 'worldtour', 'asia-story.json')
 sys.path.insert(0, HERE)
 from make_europe_story import heuristic   # the same mood heuristic
+import scene_lines                         # scene / action lines shown as narration cards (same cleaning as Europe)
 
 CODES = ['SAU', 'IND', 'THA', 'VNM', 'PHL', 'IDN', 'TWN', 'CHN', 'KOR', 'JPN']
 STY = {'Script Character': 'C', 'Script Dialogue': 'D', 'Script Action': 'V', 'On Screen': 'U', 'Gameplay': 'G', 'Heading 1': 'H1', 'Heading 2': 'H2', 'Story Box': 'B'}
@@ -109,6 +110,9 @@ def parse():
                 block = entry['B']
             if mode == 'appendix' and cb_cur is not None and t.startswith('Preferred trigger'):
                 cb_cur['trigger'] = t.split(':', 1)[1].strip()
+            # Scene / action lines are shown as narration cards (owner, 2026-11-03), except in the callback appendix (implementation notes).
+            card = scene_lines.clean(t) if mode in ('chapter', 'entry', 'flight') else None
+            if card: put(['b', card])
             continue
     # the entry scene: A = before START (played on the 2nd tap of Asia, the script's "You came back"), B = after START (the commit scene)
     world['revisit.ASIA'] = entry['A']

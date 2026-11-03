@@ -8,8 +8,8 @@ Cue shapes in the output (compact, the game reads them):
   ["u", text]                  ON-SCREEN TEXT (the game decides whether it is a banner or a progress UI line)
   ["h", text]                  scene header
   ["loc", n, title]            location change: 1 = first public place, 2 = second, 3 = the Keeper's Table venue
-["b", text]                  narration card (a few scene-setting 'v' lines, see SHOW_V)
-Dropped on purpose: the other ["v"] visual/action direction (never shown) and ["sys"] implementation notes. The 'v' line right before a
+["b", text]                  narration card (every scene / action 'v' line, cleaned by scene_lines.py)
+Dropped on purpose: ["sys"] implementation notes. (Scene / action ["v"] lines ARE shown, as ["b"] cards.) The 'v' line right before a
 spoken line is still read here, to help pick the mood ("smiles", "stops", ...).
 
 Moods are set BY HAND in mood_overrides.json, one string per block listing only the non-neutral lines:
@@ -18,6 +18,8 @@ Every line not listed is neutral. A block with NO entry falls back to `heuristic
 Block ids: <CC>.open, <CC>.<n> (the dialogue after table n), <CC>.handoff, world.return, world.preview.<NAME>, world.commit.
 """
 import io, json, os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import scene_lines
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
@@ -80,34 +82,10 @@ def parse_moods(spec, n):
     return moods
 
 
-# Scene-setting lines of the script that are normally NOT shown (VISUAL / ACTION text) but that the player needs to follow the next lines:
-# {block id: [prefixes of the 'v' lines to show as a narration card]}. The names are written in plain case ("Closer", not "CLOSER").
-SHOW_V = {
-    'IT.open': ['Rome. Warm evening.'],   # the local man who asks CLOSER something in Italian, which the Jester's "No." reacts to
-    'ES.open': ['They continue. OPTIMIST turns left'],   # the shopkeeper OPTIMIST greets in Spanish, which the Jester's "No." reacts to
-    # Porto: every scene line is shown (owner, 2026-11-03: "it looks like some is missing, or at least the pull-ups"). They are Sharp's
-    # character beats (the pull-ups, the glass of port) and the dialogue refers back to them ("JESTER catches it").
-    'PT.open': ['Morning. Porto:', 'The first four public tables', 'SHARP drops down'],
-    'PT.22': ['SHARP hides a smile.'],
-    'PT.23': ['A waiter passes carrying glasses of port.'],
-    'PT.24': ['They cross the Lu', 'Five public tables sit above the river'],
-    'PT.25': ['Drinks arrive.', 'SHARP tastes the port'],
-    'PT.26': ['A focused Portuguese contender'],
-    'PT.27': ['The contender wins again'],
-    'PT.28': ['The contender approaches.', 'PLAYER clears Level 29.'],
-    'PT.29': ['CLOSER hands over the Keeper', 'Night. Rows of barrels'],
-    'PT.30': ['CLOSER places the World Championship invitation', 'The Netherlands begins to glow'],
-}
-# {block id: {prefix of the 'v' line: text to cut the card off at}}: production notes inside a scene line that are not for the player.
-V_CUT = {
-    'PT.open': {'Morning. Porto:': ' SHARP arrives in'},   # the outfit description (the look is in the portrait)
-}
-
-
 # Dialogue that is NOT in the script, written for the app (approved by the owner): {block id: (prefix of the 'v' line it follows, cues, cut)}.
 # A spoken cue here is ['s', SPEAKER, text, mood, English translation] (the translation is left out when the line is already English);
 # ['b', text] is a narration card. These are not counted in the mood-override indexes (those count only the script's own spoken lines).
-# `cut`: the SHOW_V narration of that 'v' line is cut at this text so it does not repeat the exchange; None = the 'v' line is not shown at all
+# `cut`: the narration card of that 'v' line is cut at this text so it does not repeat the exchange; None = the 'v' line is not shown at all
 # (the extra cues carry their own narration cards). Names in the extra cues that are not a Great Eight member become plain name labels.
 EXTRA = {
     # The script only says "a local man asks CLOSER something in Italian. CLOSER answers naturally", and the Jester reacts to it.
@@ -157,15 +135,6 @@ FIRST_WORLD = [
     ['s', 'JESTER', 'And none of us gets a vote on which. Look who is sitting at the head of the table.', 'smile'],
     ['s', 'CLOSER', 'It is not ours to decide. It is yours.', 'neutral'],
 ]
-NAMES = ('CLOSER', 'OPTIMIST', 'SHARP', 'CHARMER', 'WILDCARD', 'SCHOLAR', 'JESTER', 'PLAYER')
-
-
-def nice(txt):
-    """CLOSER -> Closer in a narration card."""
-    for n in NAMES: txt = txt.replace(n, n.capitalize())
-    return txt
-
-
 def convert(bid, cues, spec):
     n_sp = sum(1 for c in cues if c[0] == 's')
     ovr = parse_moods(spec, n_sp) if spec is not None else None
@@ -173,17 +142,18 @@ def convert(bid, cues, spec):
     for c in cues:
         k = c[0]
         if k == 'v':
+            # Every scene / action line is shown as a narration card (owner, 2026-11-03), cleaned by scene_lines.clean. The three scenes
+            # that carry extra written dialogue (EXTRA) show their line cut where the extra exchange takes over, or not at all (cut None).
             prev_v = c[1]
-            if any(c[1].startswith(pre) for pre in SHOW_V.get(bid, [])):
-                txt = c[1]
-                cut = EXTRA[bid][2] if bid in EXTRA else None
-                if cut and cut in txt: txt = txt.split(cut)[0]
-                for pre, at in V_CUT.get(bid, {}).items():
-                    if txt.startswith(pre) and at in txt: txt = txt.split(at)[0]
-                txt = re.sub(r'^PLAYER clears Level \d+\.\s*', '', txt)   # a system sentence at the start of a scene line
-                out.append(['b', nice(txt.strip())])
-            if bid in EXTRA and c[1].startswith(EXTRA[bid][0]):
-                out.extend(EXTRA[bid][1])
+            ex = EXTRA.get(bid)
+            is_extra = ex is not None and c[1].startswith(ex[0])
+            txt = c[1]
+            if is_extra:
+                cut = ex[2]
+                txt = None if cut is None else (txt.split(cut)[0] if cut in txt else txt)
+            card = scene_lines.clean(txt) if txt else None
+            if card: out.append(['b', card])
+            if is_extra: out.extend(ex[1])
             continue
         if k == 'sys': continue
         if k == 's':

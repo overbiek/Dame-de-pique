@@ -438,8 +438,8 @@
   "objective": {
    "type": "beatChampion",
    "championSeat": 1,
-   "minMargin": 22,
-   "goldMargin": 22,
+   "minMargin": 17,
+   "goldMargin": 17,
    "goldFirst": true
   },
   "handList": [
@@ -454,9 +454,9 @@
   ],
   "ceiling": null,
   "aim": 0.138,
-  "measuredClear": 0.11,
-  "measuredGold": 0.03,
-  "trials": 100,
+  "measuredClear": 0.071,
+  "measuredGold": 0.004,
+  "trials": 240,
   "inBand": true
  },
  {

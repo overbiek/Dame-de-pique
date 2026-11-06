@@ -11138,7 +11138,7 @@ var wtStartWasCleared=false;      // was the table already cleared when it was s
 });
 // Countries with their own local portraits (server.js WT_LOCALS, made by campaign-design/worldtour-art/make_local.py): wt_local_<cc>_01..26 are
 // /campaign/worldtour/locals/<cc>/NN.webp (a thin octagon line); _27 is the champion-to-be, seated among tables 1-9 under a local's name, with the champion's own picture.
-[['it','Italian'],['es','Spanish'],['nl','Dutch'],['be','Belgian'],['de','German'],['dk','Danish'],['gb','British'],['fr','French']].forEach(([cc,adj])=>{
+[['it','Italian'],['es','Spanish'],['nl','Dutch'],['be','Belgian'],['de','German'],['dk','Danish'],['gb','British'],['fr','French'],['pt','Portuguese'],['pl','Polish']].forEach(([cc,adj])=>{
   for(let k=1;k<=27;k++){
     const nn=String(k).padStart(2,'0'), id='wt_local_'+cc+'_'+nn;
     CAMPAIGN_CHARACTERS[id]={name:adj+' Player',initial:cc.toUpperCase()};

@@ -17,7 +17,7 @@ ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 SRC_DIR = os.path.join(ROOT, 'afbeeldingen', 'World Tour', 'Europe', 'Local portraits')
 OUT_DIR = os.environ.get('WT_LOCALS_OUT') or os.path.join(ROOT, 'public', 'campaign', 'worldtour', 'locals')
 RING_PATH = os.path.join(HERE, 'rings', 'ring_local.png')
-FOLDERS = {'it': 'italy locals', 'es': 'spain locals', 'be': 'belgium locals', 'dk': 'denmark locals', 'nl': 'netherlands locals', 'de': 'germany locals', 'gb': 'great britain locals', 'fr': 'france locals'}
+FOLDERS = {'it': 'italy locals', 'es': 'spain locals', 'be': 'belgium locals', 'dk': 'denmark locals', 'nl': 'netherlands locals', 'de': 'germany locals', 'gb': 'great britain locals', 'fr': 'france locals', 'pt': 'portugal locals', 'pl': 'poland locals'}
 OUT_PX = 384
 sys.path.insert(0, HERE)
 import make_portrait as mp
@@ -58,7 +58,10 @@ def cutout_model(img):
         res = np.abs(sm - model).max(-1)
         use = strip & (res < 14)
     res = np.abs(sm - model).max(-1)
-    cand = res < float(os.environ.get('WT_TOL', '15'))     # tighten (e.g. 9) when a grey garment is close to the backdrop colour
+    tol = float(os.environ.get('WT_TOL', '15'))             # tighten (e.g. 9) when a grey garment is close to the backdrop colour
+    tol_top = float(os.environ.get('WT_TOL_TOP', tol))      # looser above WT_SPLIT (only hair and backdrop up there): removes the lighter halo beside the head
+    split = float(os.environ.get('WT_SPLIT', '0.70'))
+    cand = res < np.where(ys < split * h, tol_top, tol)
     cand = ndi.binary_opening(cand, np.ones((3, 3), bool), iterations=2)       # cut thin bridges (single hairs) into the person
     lab, n = ndi.label(cand)
     edge = set(np.unique(np.concatenate([lab[0, :], lab[:, 0], lab[:, -1], lab[-1, :]]))) - {0}

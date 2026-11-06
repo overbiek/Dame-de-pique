@@ -5975,7 +5975,7 @@ const WT_EUROPE_DATA = [
 // locals (wt_local_<cc>_01..26) fill tables 1-9 in order, and a 27th (wt_local_<cc>_27) wears the CHAMPION's picture but is still just "<Adjective> Player":
 // the champion-to-be, sitting at one seat of tables 1-9 that is picked once per country (seeded, so it is the same seat every time and after a restart).
 // Countries not listed keep the single generic wt_local_<cc> for all 27 seats.
-const WT_LOCALS = { IT: 26, ES: 26, NL: 26, BE: 26, DE: 26, DK: 26 };
+const WT_LOCALS = { IT: 26, ES: 26, NL: 26, BE: 26, DE: 26, DK: 26, GB: 26, FR: 26 };
 function wtLocalTables(cc, lc, n) {
   const total = 27;                                     // 9 tables x 3 seats = n locals + the champion-to-be
   let h = 7; for (const ch of cc) h = (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0;

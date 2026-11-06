@@ -17,7 +17,7 @@ ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 SRC_DIR = os.path.join(ROOT, 'afbeeldingen', 'World Tour', 'Europe', 'Local portraits')
 OUT_DIR = os.environ.get('WT_LOCALS_OUT') or os.path.join(ROOT, 'public', 'campaign', 'worldtour', 'locals')
 RING_PATH = os.path.join(HERE, 'rings', 'ring_local.png')
-FOLDERS = {'it': 'italy locals', 'es': 'spain locals', 'be': 'belgium locals', 'dk': 'denmark locals', 'nl': 'netherlands locals', 'de': 'germany locals'}
+FOLDERS = {'it': 'italy locals', 'es': 'spain locals', 'be': 'belgium locals', 'dk': 'denmark locals', 'nl': 'netherlands locals', 'de': 'germany locals', 'gb': 'great britain locals', 'fr': 'france locals'}
 OUT_PX = 384
 sys.path.insert(0, HERE)
 import make_portrait as mp
@@ -71,6 +71,11 @@ def cutout_model(img):
         ImageDraw.floodfill(solid, seed, 128)
         keep = Image.fromarray(np.where(np.asarray(solid) == 128, 255, 0).astype(np.uint8), 'L').filter(ImageFilter.MaxFilter(3))
         alpha = ImageChops.multiply(alpha, keep)
+    close = int(os.environ.get('WT_CLOSE', '0'))             # optional: fill small concave bites in the outline (a light jacket edge that matched the backdrop)
+    if close:
+        body = ndi.binary_closing(np.asarray(alpha) > 128, structure=np.ones((3, 3), bool), iterations=close)
+        body = ndi.binary_fill_holes(body)
+        alpha = ImageChops.lighter(alpha, Image.fromarray(np.where(body, 255, 0).astype(np.uint8), 'L').filter(ImageFilter.GaussianBlur(1.3)))
     out = rgb.convert('RGBA'); out.putalpha(alpha)
     return out
 

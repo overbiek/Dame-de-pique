@@ -10169,7 +10169,7 @@ function campaignPortraitSVG(id){
 }
 function campaignPortraitHTML(id){
   // a champion's picture is an octagon seal with transparent corners: no round clip (same as the Great Eight's ring portraits)
-  const oct=/^wt_champion_/.test(id)&&CAMPAIGN_PORTRAIT_SRC[id]?' wt-oct':'';
+  const oct=/^wt_(champion|local)_/.test(id)&&CAMPAIGN_PORTRAIT_SRC[id]?' wt-oct':'';
   return `<span class="camp-portrait${oct}">${campaignPortraitSVG(id)}${campaignPortraitImg(id)}</span>`;
 }
 
@@ -11135,6 +11135,15 @@ var wtStartWasCleared=false;      // was the table already cleared when it was s
  ['sur','Surinamese'],['ven','Venezuelan'],['col','Colombian'],['ecu','Ecuadorian'],['per','Peruvian'],['chl','Chilean'],['arg','Argentine'],['ury','Uruguayan'],['pry','Paraguayan'],['bra','Brazilian']].forEach(([cc,adj])=>{
   CAMPAIGN_CHARACTERS['wt_champion_'+cc]={name:adj+' Champion',initial:cc.toUpperCase()};
   CAMPAIGN_CHARACTERS['wt_local_'+cc]={name:adj+' Player',initial:cc.toUpperCase()};
+});
+// Countries with their own local portraits (server.js WT_LOCALS, made by campaign-design/worldtour-art/make_local.py): wt_local_<cc>_01..26 are
+// /campaign/worldtour/locals/<cc>/NN.webp (a thin octagon line); _27 is the champion-to-be, seated among tables 1-9 under a local's name, with the champion's own picture.
+[['it','Italian'],['es','Spanish']].forEach(([cc,adj])=>{
+  for(let k=1;k<=27;k++){
+    const nn=String(k).padStart(2,'0'), id='wt_local_'+cc+'_'+nn;
+    CAMPAIGN_CHARACTERS[id]={name:adj+' Player',initial:cc.toUpperCase()};
+    CAMPAIGN_PORTRAIT_SRC[id]=k===27?CAMPAIGN_PORTRAIT_SRC['wt_champion_'+cc]:'/campaign/worldtour/locals/'+cc+'/'+nn+'.webp';
+  }
 });
 /* Called by wt-map.js when Play is pressed (abs = table 1-100 across Europe). The server does the rest: the same startCampaignLevel the
    Hundred Tables use (unlock check, attempts, deck, seats), with the level ids 401-500. */

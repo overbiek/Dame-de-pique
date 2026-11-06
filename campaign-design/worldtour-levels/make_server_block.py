@@ -80,19 +80,44 @@ const WT_COUNTRIES = [
 const WT_EUROPE_DATA = [
 @DATA@
 ];
+// Countries that have their own local portraits (public/campaign/worldtour/locals/<cc>/<nn>.webp, made by worldtour-art/make_local.py): 26 different
+// locals (wt_local_<cc>_01..26) fill tables 1-9 in order, and a 27th (wt_local_<cc>_27) wears the CHAMPION's picture but is still just "<Adjective> Player":
+// the champion-to-be, sitting at one seat of tables 1-9 that is picked once per country (seeded, so it is the same seat every time and after a restart).
+// Countries not listed keep the single generic wt_local_<cc> for all 27 seats.
+const WT_LOCALS = { IT: 26, ES: 26 };
+function wtLocalTables(cc, lc, n) {
+  const total = 27;                                     // 9 tables x 3 seats = n locals + the champion-to-be
+  let h = 7; for (const ch of cc) h = (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0;
+  for (let r = 0; r < 3; r++) h = (Math.imul(h, 1664525) + 1013904223) >>> 0;
+  const cslot = (h >>> 8) % total;
+  const slots = []; let next = 1;
+  for (let k = 0; k < total; k++) {
+    const num = k === cslot ? n + 1 : next++;
+    slots.push('wt_local_' + lc + '_' + String(num).padStart(2, '0'));
+  }
+  const tables = [];
+  for (let t = 0; t < 9; t++) tables.push(slots.slice(t * 3, t * 3 + 3));
+  return tables;
+}
 const WT_CHAPTERS = [];
 WT_COUNTRIES.forEach(([cc, adj, city, lead, mate], i) => {
   const lc = cc.toLowerCase();
   WT_CHAPTERS.push({ id: 41 + i, title: city, levelStart: 401 + i * 10, levelEnd: 410 + i * 10, slug: 'wt_' + lc, bossId: 'wt_champion_' + lc });
   CAMPAIGN_CHARACTERS['wt_champion_' + lc] = { id: 'wt_champion_' + lc, name: adj + ' Champion' };
   CAMPAIGN_CHARACTERS['wt_local_' + lc] = { id: 'wt_local_' + lc, name: adj + ' Player' };
+  const nLoc = WT_LOCALS[cc] || 0;
+  const locTables = nLoc ? wtLocalTables(cc, lc, nLoc) : null;
+  for (let k = 1; k <= (nLoc ? nLoc + 1 : 0); k++) {
+    const lid = 'wt_local_' + lc + '_' + String(k).padStart(2, '0');
+    CAMPAIGN_CHARACTERS[lid] = { id: lid, name: adj + ' Player' };
+  }
   const bossRow = WT_EUROPE_DATA.find(d => d.id === 410 + i * 10);
   const cseat = bossRow.o.championSeat;                       // player-seat number 1-3; the roster array is seats 1-3 as indexes 0-2
   // Tables 1-9: three local players. Table 10: the lead and the second Great Eight member in the two seats the champion does not
   // take (the champion's own seat is filled by the usual boss substitution at bossSeat).
   CAMPAIGN_CHAPTER_ROSTER[41 + i] = {
     regulars: (levelId) => {
-      if (levelId % 10 !== 0) return ['wt_local_' + lc, 'wt_local_' + lc, 'wt_local_' + lc];
+      if (levelId % 10 !== 0) return locTables ? locTables[(levelId % 10) - 1].slice() : ['wt_local_' + lc, 'wt_local_' + lc, 'wt_local_' + lc];
       const ids = [null, null, null];
       ids[cseat - 1] = 'wt_champion_' + lc;
       const others = [lead, mate];

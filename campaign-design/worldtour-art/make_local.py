@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageChops
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 SRC_DIR = os.path.join(ROOT, 'afbeeldingen', 'World Tour', 'Europe', 'Local portraits')
-OUT_DIR = os.path.join(ROOT, 'public', 'campaign', 'worldtour', 'locals')
+OUT_DIR = os.environ.get('WT_LOCALS_OUT') or os.path.join(ROOT, 'public', 'campaign', 'worldtour', 'locals')
 RING_PATH = os.path.join(HERE, 'rings', 'ring_local.png')
 FOLDERS = {'it': 'italy locals', 'es': 'spain locals', 'be': 'belgium locals', 'dk': 'denmark locals', 'nl': 'netherlands locals', 'de': 'germany locals'}
 OUT_PX = 384
@@ -34,6 +34,49 @@ def build_ring():
     os.makedirs(os.path.dirname(RING_PATH), exist_ok=True)
     img.save(RING_PATH)
     return RING_PATH
+
+
+def cutout_model(img):
+    """Backdrop removal that models the backdrop instead of guessing a brightness band. The default make_portrait.cutout treats any
+    low-saturation mid-grey pixel as backdrop, which eats grey and white hair and beards (holes in a white beard, bites in white hair) and
+    misses backdrop patches that are a little lighter or darker than the band (grey islands beside a head). Here the smooth backdrop (a flat
+    grey with a soft gradient) is fitted from the picture's top and side strips as a quadratic surface per channel, and a pixel is backdrop
+    only if it matches that surface AND is connected to the border."""
+    from scipy import ndimage as ndi
+    rgb = img.convert('RGB'); a = np.asarray(rgb).astype(np.float32)
+    h, w, _ = a.shape
+    sm = np.stack([ndi.gaussian_filter(a[..., c], 1.4) for c in range(3)], -1)
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32); xn, yn = xs / w - .5, ys / h - .5
+    A = np.stack([np.ones_like(xn), xn, yn, xn * xn, xn * yn, yn * yn], -1)
+    strip = np.zeros((h, w), bool); t = 36
+    strip[:t, :] = True                                    # top
+    strip[:int(h * .55), :t] = True; strip[:int(h * .55), -t:] = True   # sides, down to where the shoulders start
+    use = strip.copy(); model = np.zeros_like(a)
+    for _ in range(4):                                     # robust fit: drop what does not agree (hair tips, an ear at the strip)
+        M = A[use]; coef = [np.linalg.lstsq(M, sm[..., c][use], rcond=None)[0] for c in range(3)]
+        model = np.stack([A @ coef[c] for c in range(3)], -1)
+        res = np.abs(sm - model).max(-1)
+        use = strip & (res < 14)
+    res = np.abs(sm - model).max(-1)
+    cand = res < float(os.environ.get('WT_TOL', '15'))     # tighten (e.g. 9) when a grey garment is close to the backdrop colour
+    cand = ndi.binary_opening(cand, np.ones((3, 3), bool), iterations=2)       # cut thin bridges (single hairs) into the person
+    lab, n = ndi.label(cand)
+    edge = set(np.unique(np.concatenate([lab[0, :], lab[:, 0], lab[:, -1], lab[-1, :]]))) - {0}
+    bgm = np.isin(lab, list(edge))
+    bg = Image.fromarray(np.where(bgm, 255, 0).astype(np.uint8), 'L').filter(ImageFilter.MaxFilter(3))
+    alpha = ImageChops.invert(bg).filter(ImageFilter.GaussianBlur(1.3))
+    solid = alpha.point(lambda v: 255 if v > 128 else 0).copy()
+    seed = next(((x, y) for y in (int(S * .62), int(S * .7), int(S * .55)) for x in (S // 2, S // 2 - 60, S // 2 + 60) if solid.getpixel((x, y)) == 255), None)
+    if seed:                                               # keep only the component that holds the person
+        ImageDraw.floodfill(solid, seed, 128)
+        keep = Image.fromarray(np.where(np.asarray(solid) == 128, 255, 0).astype(np.uint8), 'L').filter(ImageFilter.MaxFilter(3))
+        alpha = ImageChops.multiply(alpha, keep)
+    out = rgb.convert('RGBA'); out.putalpha(alpha)
+    return out
+
+
+if os.environ.get('WT_CUTOUT') == 'model':
+    mp.cutout = cutout_model
 
 
 def one(cc, nn, ring):

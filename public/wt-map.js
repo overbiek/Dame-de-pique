@@ -394,6 +394,70 @@ function updateMarks(){
   svg.querySelectorAll('#wm-marks [data-x]').forEach(g=>{g.setAttribute('transform','translate('+g.dataset.x+' '+g.dataset.y+') scale('+cam.u+')');});
 }
 
+/* ---------- pinch zoom on a continent overview ----------
+   Two fingers moving apart zoom in, together zoom out (and the midpoint drags the map along); once zoomed in, one finger drags it. The markers keep their
+   screen size (updateMarks scales them by cam.u), so zooming in pulls close-together countries (Brussels between Paris, Amsterdam and Cologne) apart and
+   makes them easy to hit. Only on the 'continent' view (the country view has its panel, the world view its own fit); leaving or re-entering a view flies
+   to the view's own camera again, so the zoom never lingers. A pinch or drag swallows the click that follows it. Mouse wheel / trackpad pinch zoom too. */
+function bindZoom(){
+  const pts=new Map();let prev=null,drag=null,swallowUntil=0;
+  const ok=()=>view.name==='continent'&&!anim&&!CITY&&!blocked();
+  const base=()=>targetCam(view);
+  // Set the zoom to u (kept between the limits) so that the world point (wx,wy) sits under the screen point (px,py). Anchoring AFTER the limit is applied is
+  // what keeps the map from sliding sideways when a pinch hits the zoom-out limit.
+  const put=(u,px,py,wx,wy)=>{
+    const b=base();
+    u=Math.max(b.u*.28,Math.min(b.u,u));
+    const c=u>=b.u*.999?b:clampCam({u,minX:wx-px*u,minY:wy-py*u});   // fully zoomed out = exactly the view's own framing again
+    cam.u=c.u;cam.minX=c.minX;cam.minY=c.minY;setVB();
+  };
+  const local=e=>{const r=svg.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+  const zoomAt=(px,py,factor)=>{   // factor > 1 zooms out
+    put(cam.u*factor,px,py,cam.minX+px*cam.u,cam.minY+py*cam.u);
+  };
+  const pair=()=>{const a=Array.from(pts.values());return {mx:(a[0][0]+a[1][0])/2,my:(a[0][1]+a[1][1])/2,d:Math.max(8,Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]))};};
+  svg.addEventListener('pointerdown',e=>{
+    if(!ok())return;
+    pts.set(e.pointerId,local(e));
+    if(pts.size===2){prev=pair();drag=null;swallowUntil=Date.now()+600;}
+    else if(pts.size===1){const p=local(e);drag={id:e.pointerId,x0:p[0],y0:p[1],x:p[0],y:p[1],on:false};}
+  });
+  svg.addEventListener('pointermove',e=>{
+    if(!pts.has(e.pointerId))return;
+    pts.set(e.pointerId,local(e));
+    if(pts.size===2&&prev){
+      const n=pair();
+      put(cam.u*prev.d/n.d,n.mx,n.my,cam.minX+prev.mx*cam.u,cam.minY+prev.my*cam.u);prev=n;swallowUntil=Date.now()+600;
+    }else if(pts.size===1&&drag&&drag.id===e.pointerId){
+      if(!drag.on){
+        const b=base();
+        const p=pts.get(e.pointerId);
+        if(cam.u>b.u*.97||Math.hypot(p[0]-drag.x0,p[1]-drag.y0)<10)return;   // not zoomed in: a drag is just a tap that wandered; a small wobble is still a tap
+        drag.on=true;
+      }
+      const p=pts.get(e.pointerId);
+      put(cam.u,p[0],p[1],cam.minX+drag.x*cam.u,cam.minY+drag.y*cam.u);
+      drag.x=p[0];drag.y=p[1];swallowUntil=Date.now()+600;
+    }
+  });
+  const up=e=>{
+    if(!pts.has(e.pointerId))return;
+    pts.delete(e.pointerId);prev=null;
+    if(drag&&drag.id===e.pointerId){if(drag.on)swallowUntil=Date.now()+350;drag=null;}
+    if(pts.size===1){   // one finger of a pinch is still down: carry on as a drag from where it is, without a jump
+      const [id,p]=Array.from(pts.entries())[0];
+      drag={id,x0:p[0],y0:p[1],x:p[0],y:p[1],on:true};swallowUntil=Date.now()+350;
+    }
+  };
+  svg.addEventListener('pointerup',up);svg.addEventListener('pointercancel',up);
+  svg.addEventListener('click',e=>{if(Date.now()<swallowUntil){e.stopPropagation();e.preventDefault();}},true);   // capture: runs before the markers' and countries' own click handlers
+  svg.addEventListener('wheel',e=>{
+    if(!ok())return;
+    e.preventDefault();
+    const [px,py]=local(e);zoomAt(px,py,Math.exp(Math.max(-60,Math.min(60,e.deltaY))*(e.ctrlKey?.012:.0016)));
+  },{passive:false});
+}
+
 /* ---------- map drawing ---------- */
 const octPts=(r,rot)=>{let s=[];for(let i=0;i<8;i++){const a=(rot+45*i)*Math.PI/180;s.push((r*Math.cos(a)).toFixed(1)+','+(r*Math.sin(a)).toFixed(1));}return s.join(' ');};
 const starPts=(ro,ri)=>{let s=[];for(let i=0;i<16;i++){const a=(22.5*i-90)*Math.PI/180,r=i%2?ri:ro;s.push((r*Math.cos(a)).toFixed(1)+','+(r*Math.sin(a)).toFixed(1));}return s.join(' ');};
@@ -842,6 +906,7 @@ function build(){
   // "running" behind the map. Body-level it sits above the map as intended.
   ['camp-prologue','camp-level-modal','camp-noattempts-modal'].forEach(id=>{ const e=document.getElementById(id); if(e&&e.parentNode!==document.body)document.body.appendChild(e); });
   svg=$('svg');landG=$('land');routeG=$('route');marksG=$('marks');imgW=$('imgW');imgE=$('imgE');
+  bindZoom();
   $('devbtn').onclick=()=>$('devmenu').classList.toggle('show');
   $('lvlX').addEventListener('click',closeLvlModal);
   $('lvlModal').addEventListener('click',e=>{if(e.target.id==='wm-lvlModal')closeLvlModal();});

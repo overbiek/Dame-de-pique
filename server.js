@@ -5628,7 +5628,7 @@ const WT_EUROPE_DATA = [
   {"id":456,"k":"trickCount","s":"ddp-eu-L486-tricks-c0","o":{"type":"trickCount","minTricks":2,"goldTricks":5},"p":"right","h":"5♠ 4♥ J♥ K♥ 2♦ 5♦ 2♣ 3♣ 4♣ 7♣ 8♣ J♣ K♣"},
   {"id":457,"k":"score","s":"ddp-eu-L491-score-c0","o":{"type":"score","min":16,"gold":22},"p":"across","h":"2♠ 9♠ J♠ 5♥ A♥ 5♦ 10♦ K♦ 2♣ 4♣ 8♣ 9♣ Q♣"},
   {"id":458,"k":"score","s":"ddp-eu-L458-score-a1c0","o":{"type":"score","min":10,"gold":16},"p":"keep","h":"4♠ 10♠ Q♠ 3♥ J♥ 5♦ 9♦ 10♦ J♦ A♦ 3♣ 5♣ 9♣"},
-  {"id":459,"k":"score","s":"ddp-eu-L449-score-c0","o":{"type":"score","min":17,"gold":25},"p":"left","h":"2♠ 3♠ 6♠ Q♠ 5♥ 6♥ J♥ Q♥ 7♦ Q♦ 5♣ J♣ Q♣"},
+  {"id":459,"k":"score","s":"ddp-eu-L449-score-c0","o":{"type":"score","min":16,"gold":20},"p":"left","h":"2♠ 3♠ 6♠ Q♠ 5♥ 6♥ J♥ Q♥ 7♦ Q♦ 5♣ J♣ Q♣"},
   {"id":460,"k":"boss","s":"ddp-eu-L460-boss-c0","o":{"type":"beatChampion","championSeat":3,"minMargin":126,"goldMargin":141,"goldFirst":true},"hl":["3♠ J♠ 3♥ 8♥ 9♥ K♥ 3♦ 4♦ 5♦ 7♦ 10♦ 3♣ 6♣","7♠ 8♠ 10♠ J♠ A♠ 2♥ 4♥ J♥ K♥ 3♦ 9♦ 6♣ K♣","6♠ Q♠ 4♥ 7♥ J♥ Q♥ 2♦ 4♦ 5♦ 4♣ 5♣ 6♣ 7♣","3♠ 7♠ J♠ 3♥ 5♥ 7♦ 8♦ 9♦ 2♣ 6♣ 10♣ J♣ Q♣","5♠ A♠ 4♥ 6♥ 9♥ 10♥ J♥ K♥ A♥ 4♦ 7♦ A♦ 4♣","4♠ 5♠ K♠ 2♥ 5♥ Q♥ K♥ 7♦ 10♦ A♦ 4♣ J♣ K♣","8♠ 10♠ J♠ Q♠ 2♥ 4♥ 6♥ 2♦ Q♦ K♦ 2♣ 8♣ 9♣","9♠ 2♥ 4♥ 6♥ 7♥ J♥ K♥ 6♦ 8♦ 10♦ Q♦ 2♣ 9♣"]},
   {"id":461,"k":"score","s":"ddp-eu-L438-score-c1","o":{"type":"score","min":6,"gold":11},"p":"right","h":"5♠ 7♠ 10♠ Q♠ 2♥ 10♥ K♥ 4♦ 7♦ 8♦ 7♣ 8♣ 10♣"},
   {"id":462,"k":"score","s":"ddp-eu-L411-score-c0","o":{"type":"score","min":22,"gold":26},"p":"across","h":"4♠ 10♠ J♠ 3♥ 9♥ 5♦ 6♦ 7♦ 10♦ 2♣ 5♣ 8♣ K♣"},

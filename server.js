@@ -11865,26 +11865,37 @@ async function flushCampaignSnapshots() {
   await Promise.all([...snapState.values()].map(st => st.chain));
 }
 
+// The state one seat sees: the shared public state plus that seat's own hand, legal cards and pass info.
+function stateFor(G, pub, i) {
+  const p = G.players[i];
+  return {
+    ...pub,
+    myIndex: i,
+    isHost: p.token != null && p.token === G.hostToken,
+    myHand: sortH(p.hand),
+    myReceived: G.receivedThisRound ? G.receivedThisRound[i] : [],
+    myPassed: G.passSelected ? (G.passSelected[i] || []) : [],
+    passToIndex: roundPassDir(G) === 'keep' ? null : passTarget(i, roundPassDir(G)),
+    passFromIndex: roundPassDir(G) === 'keep' ? null : passSource(i, roundPassDir(G)),
+    legalCards: G.phase === 'play' ? legalCards(G, i).map(c => c.rank + '|' + c.suit) : [],
+  };
+}
+
 function broadcastRoom(G) {
   G.lastActivity = Date.now();
   if (G.campaign) persistCampaignRoom(G);   // every state change is saved, so a redeploy can pick the hand up again
   const pub = publicState(G);
   for (let i = 0; i < 4; i++) {
     const p = G.players[i];
-    if (!p.isAI && p.socketId) {
-      io.to(p.socketId).emit('gameState', {
-        ...pub,
-        myIndex: i,
-        isHost: p.token != null && p.token === G.hostToken,
-        myHand: sortH(p.hand),
-        myReceived: G.receivedThisRound ? G.receivedThisRound[i] : [],
-        myPassed: G.passSelected ? (G.passSelected[i] || []) : [],
-        passToIndex: roundPassDir(G) === 'keep' ? null : passTarget(i, roundPassDir(G)),
-        passFromIndex: roundPassDir(G) === 'keep' ? null : passSource(i, roundPassDir(G)),
-        legalCards: G.phase === 'play' ? legalCards(G, i).map(c => c.rank + '|' + c.suit) : [],
-      });
-    }
+    if (!p.isAI && p.socketId) io.to(p.socketId).emit('gameState', stateFor(G, pub, i));
   }
+}
+
+// Send ONE seat its current state, nobody else's. The client plays its own card on screen at once (before this server has answered) and
+// relies on this to put things right when a play is refused (not its turn any more, trick already full, illegal card).
+function resyncSeat(G, i) {
+  const p = G.players[i];
+  if (p && !p.isAI && p.socketId) io.to(p.socketId).emit('gameState', stateFor(G, publicState(G), i));
 }
 
 // ── Draw phase ──────────────────────────────────────────────────
@@ -12065,17 +12076,26 @@ function startTricks(G) {
 
 function currentPlayer(G) { return (G.trickLeader + G.currentTrick.length) % 4; }
 
+// Every computer card lands on the same beat. It used to be "wait 650ms, THEN think": the Monte Carlo search runs on this thread for 5-70ms
+// (more on a busy host) so the card arrived at 655-720ms and the rhythm wobbled. Now the search runs first (a few ms after the previous state
+// has been flushed to the sockets) and the card is played at AI_BEAT_MS after that state, whatever the search cost.
+const AI_BEAT_MS = 650;
 function scheduleAI(G) {
   if (G.phase !== 'play' || G.currentTrick.length === 4) return;
   const cp = currentPlayer(G);
-  if (G.players[cp].isAI) setTimeout(() => doAIPlay(G), 650);
+  if (!G.players[cp].isAI) return;
+  const t0 = Date.now(), tn = G.trickNum, n = G.currentTrick.length;
+  setTimeout(() => {
+    if (G.phase !== 'play' || G.trickNum !== tn || G.currentTrick.length !== n || currentPlayer(G) !== cp || !G.players[cp].isAI) return;
+    const card = aiChoose(G, cp);
+    setTimeout(() => doAIPlay(G, cp, card, tn, n), Math.max(0, AI_BEAT_MS - (Date.now() - t0)));
+  }, 15);
 }
 
-function doAIPlay(G) {
+function doAIPlay(G, cp, card, tn, n) {
   if (G.phase !== 'play' || G.currentTrick.length === 4) return;
-  const cp = currentPlayer(G);
-  if (!G.players[cp].isAI) return;
-  doPlayCard(G, cp, aiChoose(G, cp));
+  if (G.trickNum !== tn || G.currentTrick.length !== n || currentPlayer(G) !== cp || !G.players[cp].isAI) return;
+  doPlayCard(G, cp, card);
 }
 
 function doPlayCard(G, pi, card) {
@@ -13556,11 +13576,12 @@ io.on('connection', (socket) => {
   socket.on('playCard', ({ code, playerIndex, card }) => {
     const G = findRoom(code);
     if (!G || G.phase !== 'play') return;
-    if (G.currentTrick.length >= 4) return; // trick is full, waiting on resolveTrick — not anyone's turn
     if (G.players[playerIndex]?.socketId !== socket.id) return;
-    if (playerIndex !== currentPlayer(G)) return;
+    // From here on the sender really sits in this room, so a refused play is answered with the real state (see resyncSeat).
+    if (G.currentTrick.length >= 4) return resyncSeat(G, playerIndex); // trick is full, waiting on resolveTrick - not anyone's turn
+    if (playerIndex !== currentPlayer(G)) return resyncSeat(G, playerIndex);
     const real = G.players[playerIndex].hand.find(c => eqC(c, card));
-    if (!real || !canPlay(G, playerIndex, real)) return;
+    if (!real || !canPlay(G, playerIndex, real)) return resyncSeat(G, playerIndex);
     doPlayCard(G, playerIndex, real);
   });
 

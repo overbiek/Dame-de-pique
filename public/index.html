@@ -15121,17 +15121,58 @@ function handleSfxForState(G){
 }
 
 /* ══════════ ROUTER ══════════ */
-socket.on('gameState',G=>{
-  // NOTE: campaign seat identities (the chapter's cast, the boss's own
-  // seat and its "Chapter Boss" title, and any seat avatar art) are now
-  // set SERVER-side in createCampaignRoom and arrive through publicState
-  // like any other seat data — there used to be a client-side rewrite
-  // here that assumed the boss always sat at seat 1, which stopped being
-  // true once each chapter's roster decided which chair he takes.
+/* ══════════ Smooth card play ══════════
+   Two things made cards drop unevenly on a real connection:
+   1. YOUR card waited for the server. It was dropped, then sat where you let go of it for a full round trip (100-500ms on mobile data) before the
+      next state arrived and moved it into the trick. commitPlay() now plays it on screen at once (predictOwnPlay: the same state the server will
+      send back, minus the round trip) and the server's answer, when it matches, changes nothing on screen. A refused play is answered by the server
+      with the real state (resyncSeat), which puts the card back in the hand.
+   2. States arrive in bursts after a network stall (TCP delivers everything that was held up at once), and each one rebuilt the table over the
+      last, so a card's landing was cut short, a full trick vanished before it was ever seen, or two cards dropped on top of each other. Play states
+      now go through a small pacing queue: at least PLAY_GAP_MS between two renders, and a completed trick stays up for FULL_TRICK_HOLD_MS. On a good
+      connection nothing waits (the server's own beat is 650ms+); after a stall the cards drop one by one instead of in a lump. Sounds follow the
+      render (handleSfxForState runs when a state is applied, not when it arrives), so sound and picture stay together. */
+const PLAY_GAP_MS=320, FULL_TRICK_HOLD_MS=700;
+var optimisticSig=null, paceQ=[], paceTimer=null, paceLastAt=0, paceLastFull=false;
+function playSig(G){
+  return [G.phase,G.round,G.trickNum,G.trickLeader,
+    G.currentTrick.map(t=>t.player+t.card.rank+t.card.suit).join(','),
+    G.myHand.map(c=>c.rank+c.suit).join(','),G.lastTrickMsg||'',
+    G.players.map(p=>p.score+':'+p.cardCount).join(',')].join('/');
+}
+function commitPlay(el){
+  const card={rank:el.dataset.r,suit:el.dataset.s};
+  socket.emit('playCard',{code:room,playerIndex:me,card});
+  predictOwnPlay(card);
+}
+function predictOwnPlay(card){
+  try{
+    if(!S||S.phase!=='play'||tutorialActive||S.currentTrick.length>=4)return;
+    if((S.trickLeader+S.currentTrick.length)%4!==me)return;
+    const hand=S.myHand.filter(c=>!(c.rank===card.rank&&c.suit===card.suit));
+    if(hand.length===S.myHand.length)return;
+    const P=Object.assign({},S,{
+      currentTrick:S.currentTrick.concat([{player:me,card:{rank:card.rank,suit:card.suit}}]),
+      myHand:hand,legalCards:[],lastTrickMsg:'',
+      heartsbroken:S.heartsbroken||card.suit==='♥'||(card.suit==='♠'&&card.rank==='Q'),
+      players:S.players.map((p,i)=>i===me?Object.assign({},p,{cardCount:p.cardCount-1}):p)
+    });
+    S=P;optimisticSig=playSig(P);
+    paceLastAt=Date.now();paceLastFull=P.currentTrick.length===4;
+    handleSfxForState(P);
+    renderPlay(P);
+  }catch(e){ optimisticSig=null; console.error('predictOwnPlay',e); }
+}
+function applyGameState(G){
   S=G; me=G.myIndex; host=G.isHost;
   renderVote(G);
   syncCountdown(G);
   handleSfxForState(G);
+  // The echo of a play already on screen: nothing to redraw.
+  const echo=optimisticSig&&G.phase==='play'&&playSig(G)===optimisticSig;
+  optimisticSig=null;
+  if(echo)return;
+  if(G.phase==='play'){ paceLastAt=Date.now(); paceLastFull=G.currentTrick.length===4; }
   switch(G.phase){
     case 'lobby':        renderLobby(G); break;
     case 'draw':
@@ -15143,6 +15184,30 @@ socket.on('gameState',G=>{
     case 'roundSummary': renderSummary(G); break;
     case 'final':        renderFinal(G); break;
   }
+}
+function paceRun(){
+  if(paceTimer||!paceQ.length)return;
+  const wait=(paceLastFull?FULL_TRICK_HOLD_MS:PLAY_GAP_MS)-(Date.now()-paceLastAt);
+  if(wait>0){ paceTimer=setTimeout(()=>{paceTimer=null;paceRun();},wait); return; }
+  applyGameState(paceQ.shift());
+  if(paceQ.length)paceRun();
+}
+socket.on('gameState',G=>{
+  // NOTE: campaign seat identities (the chapter's cast, the boss's own
+  // seat and its "Chapter Boss" title, and any seat avatar art) are now
+  // set SERVER-side in createCampaignRoom and arrive through publicState
+  // like any other seat data — there used to be a client-side rewrite
+  // here that assumed the boss always sat at seat 1, which stopped being
+  // true once each chapter's roster decided which chair he takes.
+  const inPlay=!tutorialActive&&S&&S.phase==='play'&&G.phase==='play'&&S.code===G.code&&S.round===G.round;
+  if(!inPlay){   // entering or leaving play, or another game: nothing queued is worth holding up
+    paceQ=[]; clearTimeout(paceTimer); paceTimer=null;
+    applyGameState(G); return;
+  }
+  if(!paceQ.length&&optimisticSig&&playSig(G)===optimisticSig){ applyGameState(G); return; }   // the echo of my own card: never delayed
+  paceQ.push(G);
+  if(paceQ.length>4)paceQ.splice(0,paceQ.length-2);   // a long stall: skip ahead instead of replaying every step
+  paceRun();
 });
 
 // Rotating the phone doesn't itself produce a new gameState broadcast,
@@ -15863,7 +15928,10 @@ function renderPlay(G){
         pr.textContent=G.currentTrick.length===4?'…':`Waiting for ${G.players[cur].name}`; }
 
   myStrip(G,'g-me',myTurn);
-  $('g-hand').innerHTML=handHTML(G.myHand,myTurn?'play':null,legal,justReceived);
+  {   // rebuilt only when it changed: an opponent's card leaves my hand untouched, and re-creating thirteen cards (with their art images) on every state is what flickered on iOS
+    const hh=handHTML(G.myHand,myTurn?'play':null,legal,justReceived),gh=$('g-hand');
+    if(gh.__hh!==hh||gh.querySelector('.sel,.dragging,.tap-armed')){ gh.innerHTML=hh; gh.__hh=hh; }
+  }
   syncLandscapeNote('g-table','g-prompt','g-banner');
 
   // Smooth the card that just landed in .mid instead of leaving it to pop
@@ -16017,7 +16085,7 @@ function endCardDrag(e){
     // specifically — everything upstream of this point (the drag itself,
     // the drop-zone hit test) is unmodified real code.
     if(tutorialActive){ tutorialCommitPlay(el.dataset.r,el.dataset.s); return; }
-    socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
+    commitPlay(el);
     return; // the next gameState render replaces this element entirely
   }
 
@@ -16035,7 +16103,7 @@ function endCardDrag(e){
     // so this captures that — the double-tap never dragged anywhere.
     armOwnPlayFlip(el);
     if(tutorialActive){ tutorialCommitPlay(el.dataset.r,el.dataset.s); return; }
-    socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
+    commitPlay(el);
     return;
   }
 
@@ -16100,7 +16168,7 @@ function releasePlayPick(e){
     // that's the FLIP "from".
     armOwnPlayFlip(el);
     if(tutorialActive){ tutorialCommitPlay(el.dataset.r,el.dataset.s); return; }
-    socket.emit('playCard',{code:room,playerIndex:me,card:{rank:el.dataset.r,suit:el.dataset.s}});
+    commitPlay(el);
   }
 }
 function cancelPlayPick(){

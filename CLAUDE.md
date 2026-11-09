@@ -938,6 +938,7 @@ before pushing.
 - Verified at 915×412 and 667×375 at 16/18/20px root font, in all three
   states (unrevealed / seats settled / dealer settled): no overflow on
   any axis, and the Begin button and exit row stay on screen.
+- **The cut card now wears the player's EQUIPPED card front (2026-11-09; owner: the seat draw should use the same cards as the game).** It used to be a drawn imitation (`.dc-ix`/`.dc-pip`, plain face gradient, always Classic). Now `.drawcard` is only a positioned, `--dc`-sized frame around the real `cardHTML(c)` (face up) or `backHTML()` (face down), with `--cw:var(--dc);--ch:calc(var(--dc)*1.4)` handed down so every size inside `.card` follows `--dc` at the real 1:1.4 proportion. Royal Court's skin, the art decks (Noir, Bold, ...) and the blue back therefore all show here for free, with no per-front rule. The win ring/lift moved onto `.drawcard.win>.card`. Height is 1.4 x `--dc` (was 1.43), so the budget is unchanged. Verified at 915x412 and 667x375, 16/20px root font, Classic / Royal Court / Noir: cards inside their rows, no horizontal overflow, scroll only the same 4px at 20px that Classic already had. Chosen card back (if one is ever added) would need a `.card.back` rule, it is not per-front today.
 
 ## Table themes (Bordeaux / Émeraude / Clair / Marquee)
 - Four swappable palettes, picked in **My Account** (`#s-personal`),

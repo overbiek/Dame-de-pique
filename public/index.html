@@ -3722,55 +3722,34 @@ html.landscape-mode #s-draw .dcw .slot-tier{display:none}
    this translate(-50%,-50%) in rather than replace it, same trap
    .l-start-circle:active already documents — plain transform properties
    don't compose across rules. */
+/* The cut card is a REAL card: the same .card markup the hand and the trick use (cardHTML / backHTML), so it wears whatever card front the player has
+   equipped (Royal Court, Noir, Bold, the art decks...) and the same blue back, instead of a drawn imitation. .drawcard is only the positioned,
+   --dc-sized frame around it: --cw/--ch are handed down so every size in .card (corner index, pip, radius, art) follows --dc, at the real 1:1.4 card
+   proportion. */
 .drawcard{
   position:absolute;top:50%;left:min(75%,100% - (var(--dc) / 2) - 6px);transform:translate(-50%,-50%);
-  width:var(--dc);aspect-ratio:.7;border-radius:calc(var(--dc)*.11);
-  display:grid;place-items:center;text-align:center;
-  border:1px solid var(--card-edge);
-  box-shadow:0 5px 14px rgba(var(--ddp-scrim-rgb),.42);
-  transition:transform .2s cubic-bezier(.2,.9,.3,1.2),box-shadow .2s;
-  /* face down: the SAME blue back the table's opponents' cards use, so a
-     draw card reads as a card from this deck rather than a placeholder */
-  background:
-    repeating-linear-gradient(45deg,rgba(var(--ddp-gloss-rgb),.09) 0 3px,transparent 3px 6px),
-    linear-gradient(160deg,#1d5e8a,#123f5e);
-  border-color:#0d2f47;
+  width:var(--dc);height:calc(var(--dc)*1.4);
+  --cw:var(--dc);--ch:calc(var(--dc)*1.4);
+  transition:transform .2s cubic-bezier(.2,.9,.3,1.2);
 }
-/* the back's inset hairline, so it isn't a flat rectangle of blue */
-.drawcard::after{
-  content:'';position:absolute;inset:5px;border-radius:calc(var(--dc)*.07);
-  border:1px solid rgba(var(--ddp-gloss-rgb),.20);pointer-events:none;
-}
+.drawcard>.card{width:100%;height:100%;box-shadow:0 5px 14px rgba(var(--ddp-scrim-rgb),.42)}
 .drawcard.tap{cursor:pointer}
 .drawcard.tap::before{
-  content:'';position:absolute;inset:-4px;border-radius:calc(var(--dc)*.15);
-  border:2px solid var(--gold);opacity:.9;
+  content:'';position:absolute;inset:-4px;border-radius:calc(var(--dc)*.17);
+  border:2px solid var(--gold);opacity:.9;pointer-events:none;
   animation:dc-pulse 1.6s ease-in-out infinite;
 }
 @keyframes dc-pulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.03)}}
 @media (prefers-reduced-motion:reduce){ .drawcard.tap::before{animation:none;opacity:.9} }
 .drawcard.tap:active{transform:translate(-50%,-50%) translateY(-6px) scale(1.03)}
-/* face up: a real card face, corner index + big centre pip */
-.drawcard.flip{
-  background:linear-gradient(158deg,var(--ddp-card-hi),var(--card-face) 55%,var(--ddp-card-lo));
-  border-color:var(--card-edge);color:var(--ink);
-}
-.drawcard.flip::after{border-color:rgba(var(--ddp-spade-rgb),.10)}
-.dc-ix{
-  position:absolute;top:calc(var(--dc)*.06);left:calc(var(--dc)*.08);
-  font-family:'Playfair Display',serif;font-weight:700;line-height:.95;
-  font-size:calc(var(--dc)*.20);text-align:left;
-}
-.dc-ix i{display:block;font-style:normal;font-size:calc(var(--dc)*.17)}
-.dc-pip{font-size:calc(var(--dc)*.42);line-height:1}
 /* the winning cut: brass ring plus a lift, so it reads at a glance which
    card took it without needing the note underneath */
-.drawcard.win{
+.drawcard.win>.card{
   border-color:var(--gold);
   box-shadow:0 0 0 2px var(--gold),0 0 22px rgba(var(--ddp-brass-rgb),.45),
              0 8px 20px rgba(var(--ddp-scrim-rgb),.45);
-  transform:translate(-50%,-50%) translateY(-5px);
 }
+.drawcard.win{transform:translate(-50%,-50%) translateY(-5px)}
 /* .dcn (the old bare name caption) is retired — .slot-name inside
    .dq-id's .slot-mid carries the name now, same class the lobby cards
    use, so the win highlight below targets that instead. */
@@ -15422,14 +15401,11 @@ function renderDraw(G){
     ).join('');
     let card;
     if(up&&c){
-      const col=RED.has(c.suit)?'var(--red)':'var(--ink)';
-      card=`<div class="drawcard flip ${isWin?'win':''}" style="color:${col}">
-        <span class="dc-ix">${c.rank}<i>${c.suit}</i></span>
-        <span class="dc-pip">${c.suit}</span>
-      </div>`;
+      // the real card markup (see .drawcard's CSS note): wears the equipped card front
+      card=`<div class="drawcard flip ${isWin?'win':''}">${cardHTML(c)}</div>`;
     }else{
       card=`<div class="drawcard ${mine?'tap':''}"${mine?' onclick="revealDrawClick()"':''}
-             ${mine?'role="button" tabindex="0" aria-label="Reveal your card"':''}></div>`;
+             ${mine?'role="button" tabindex="0" aria-label="Reveal your card"':''}>${backHTML()}</div>`;
     }
     // Landscape-only real banner background, same idea as the lobby's
     // .slot-bg-art — see .dcw-bg-art's own CSS note for why this is a
